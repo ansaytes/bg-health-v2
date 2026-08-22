@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+// NOTE: Scheduled sync moved to GitHub Actions (no Vercel Hobby timeout limit)
+// This endpoint is for manual trigger only.
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const csvUrl = process.env.GOOGLE_SHEETS_CSV_URL || '';
@@ -134,28 +137,33 @@ export async function POST(request: NextRequest) {
     // 2. Map rows to employee objects (skip header)
     const employees = rows.slice(1).map(mapRowToEmployee).filter(e => e.nik);
 
-    // 3. Upsert to Supabase in batches of 500
+    // 3. Upsert to Supabase in batches of 1000
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     let totalUpserted = 0;
     let batchErrors = 0;
+    const errorNiks: string[] = [];
 
-    for (let i = 0; i < employees.length; i += 500) {
-      const batch = employees.slice(i, i + 500);
+    for (let i = 0; i < employees.length; i += 1000) {
+      const batch = employees.slice(i, i + 1000);
       const { error, count } = await supabase
         .from('employees')
         .upsert(batch, { onConflict: 'nik', count: 'exact' });
 
       if (error) {
-        // Fallback: try one by one
-        for (const emp of batch) {
-          const { error: singleError } = await supabase
+        // Fallback: try smaller batches of 100
+        for (let j = 0; j < batch.length; j += 100) {
+          const smallBatch = batch.slice(j, j + 100);
+          const { error: subError, count: subCount } = await supabase
             .from('employees')
-            .upsert(emp, { onConflict: 'nik' });
-          if (singleError) {
-            batchErrors++;
-            console.error(`Failed to upsert NIK ${emp.nik}:`, singleError.message);
+            .upsert(smallBatch, { onConflict: 'nik', count: 'exact' });
+          if (subError) {
+            // Log individual failures without retrying one-by-one (too slow)
+            for (const emp of smallBatch) {
+              errorNiks.push(String(emp.nik));
+              batchErrors++;
+            }
           } else {
-            totalUpserted++;
+            totalUpserted += subCount || smallBatch.length;
           }
         }
       } else {
