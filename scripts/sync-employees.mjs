@@ -129,6 +129,24 @@ async function upsertBatch(batch) {
   return batch.length;
 }
 
+async function upsertSingle(emp) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/employees`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Prefer': 'resolution=merge-duplicates,return=minimal',
+    },
+    body: JSON.stringify(emp),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`${res.status}: ${err}`);
+  }
+  return 1;
+}
+
 async function main() {
   const start = Date.now();
   console.log('Fetching CSV from Google Sheets...');
@@ -144,24 +162,47 @@ async function main() {
   const skipped = allEmployees.length - employees.length;
   console.log(`Valid employees: ${employees.length} (skipped ${skipped} invalid rows)`);
 
-  let upserted = 0;
-  let errors = 0;
   const BATCH = 500;
+  const failedNiks = [];
 
   for (let i = 0; i < employees.length; i += BATCH) {
     const batch = employees.slice(i, i + BATCH);
- try {
+    const batchNum = Math.floor(i / BATCH) + 1;
+    try {
       const count = await upsertBatch(batch);
       upserted += count;
-      console.log(`  Batch ${Math.floor(i / BATCH) + 1}: +${count} rows`);
+      console.log(`  Batch ${batchNum}: +${count} rows`);
     } catch (err) {
-      errors += batch.length;
-      console.error(`  Batch ${Math.floor(i / BATCH) + 1} failed: ${err.message}`);
+      console.error(`  Batch ${batchNum} (500) failed: ${err.message}`);
+      // Fallback: sub-batches of 50
+      for (let j = 0; j < batch.length; j += 50) {
+        const sub = batch.slice(j, j + 50);
+        try {
+          const count = await upsertBatch(sub);
+          upserted += count;
+        } catch (subErr) {
+          console.error(`    Sub@${i+j} (50) failed: ${subErr.message}`);
+          // Last resort: one-by-one
+          for (const emp of sub) {
+            try {
+              await upsertSingle(emp);
+              upserted++;
+            } catch (singleErr) {
+              errors++;
+              failedNiks.push(emp.nik);
+              console.error(`      NIK ${emp.nik}: ${singleErr.message}`);
+            }
+          }
+        }
+      }
     }
   }
 
   const duration = ((Date.now() - start) / 1000).toFixed(1);
   console.log(`\nDone: ${upserted} upserted, ${skipped} skipped, ${errors} errors, ${duration}s`);
+  if (failedNiks.length > 0) {
+    console.log(`Failed NIKs: ${failedNiks.join(', ')}`);
+  }
 }
 
 main().catch(err => {

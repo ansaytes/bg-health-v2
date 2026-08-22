@@ -179,10 +179,11 @@ export async function POST(request: NextRequest) {
     const employees = allEmployees.filter((e): e is Record<string, unknown> => e !== null);
     const skipped = allEmployees.length - employees.length;
 
-    // 3. Upsert to Supabase in batches of 500
+    // 3. Upsert to Supabase: batch 500 → fallback 50 → fallback 1
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     let totalUpserted = 0;
     let batchErrors = 0;
+    const failedNiks: string[] = [];
 
     for (let i = 0; i < employees.length; i += 500) {
       const batch = employees.slice(i, i + 500);
@@ -191,7 +192,34 @@ export async function POST(request: NextRequest) {
         .upsert(batch, { onConflict: 'nik', count: 'exact' });
 
       if (error) {
-        batchErrors += batch.length;
+        console.error(`Batch@${i} (500) failed: ${error.message}`);
+
+        // Fallback: try sub-batches of 50
+        for (let j = 0; j < batch.length; j += 50) {
+          const sub = batch.slice(j, j + 50);
+          const { error: subErr, count: subCount } = await supabase
+            .from('employees')
+            .upsert(sub, { onConflict: 'nik', count: 'exact' });
+
+          if (subErr) {
+            console.error(`  Sub@${i + j} (50) failed: ${subErr.message}`);
+
+            // Last resort: try one-by-one
+            for (const emp of sub) {
+              const { error: singleErr } = await supabase
+                .from('employees')
+                .upsert(emp, { onConflict: 'nik' });
+              if (singleErr) {
+                failedNiks.push(String(emp.nik));
+                batchErrors++;
+              } else {
+                totalUpserted++;
+              }
+            }
+          } else {
+            totalUpserted += subCount || sub.length;
+          }
+        }
       } else {
         totalUpserted += count || batch.length;
       }
@@ -206,6 +234,7 @@ export async function POST(request: NextRequest) {
       upserted: totalUpserted,
       skipped: skipped,
       errors: batchErrors,
+      failed_niks: failedNiks.slice(0, 20),
       duration_seconds: duration,
     });
   } catch (err) {
