@@ -5,16 +5,18 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const csvUrl = process.env.GOOGLE_SHEETS_CSV_URL || '';
 
-// CSV column mapping (29 columns)
+// CSV column mapping (29 columns from Google Sheets)
+// Index 5 = "USER" column, not stored in DB (skipped)
 const COLUMN_MAP: Record<number, string> = {
   0: 'nik', 1: 'nama', 2: 'gender', 3: 'department', 4: 'division',
-  5: 'job_position', 6: 'level_golongan', 7: 'tanggal_pkwt', 8: 'masa_kerja',
-  9: 'employee_status', 10: 'employment_status', 11: 'tanggal_resign',
-  12: 'national_id', 13: 'phone_number', 14: 'place_of_birth',
-  15: 'birth_date', 16: 'age', 17: 'last_education', 18: 'place_of_hire',
-  19: 'site_name', 20: 'address', 21: 'religion', 22: 'grading',
-  23: 'marital_status', 24: 'child', 25: 'specification_job',
-  26: 'area', 27: 'spesification',
+  // 5: USER (skipped - not in DB)
+  6: 'level_golongan', 7: 'job_position', 8: 'tanggal_pkwt', 9: 'masa_kerja',
+  10: 'employee_status', 11: 'employment_status', 12: 'tanggal_resign',
+  13: 'national_id', 14: 'phone_number', 15: 'place_of_birth',
+  16: 'birth_date', 17: 'age', 18: 'last_education', 19: 'place_of_hire',
+  20: 'site_name', 21: 'address', 22: 'religion', 23: 'grading',
+  24: 'marital_status', 25: 'child', 26: 'specification_job',
+  27: 'area', 28: 'spesification',
 };
 
 // Parse DD/M/YYYY to YYYY-MM-DD
