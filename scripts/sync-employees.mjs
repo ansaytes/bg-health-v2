@@ -3,14 +3,13 @@
 
 const CSV_URL = process.env.GOOGLE_SHEETS_CSV_URL;
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!CSV_URL || !SUPABASE_URL || !SUPABASE_KEY) {
-  console.error('Missing env vars: GOOGLE_SHEETS_CSV_URL, SUPABASE_URL, SUPABASE_SERVICE_KEY');
+  console.error('Missing env vars: GOOGLE_SHEETS_CSV_URL, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY');
   process.exit(1);
 }
 
-// CSV column mapping (29 columns, index 5 = USER skipped)
 const COLUMN_MAP = {
   0: 'nik', 1: 'nama', 2: 'gender', 3: 'department', 4: 'division',
   // 5: USER (skipped)
@@ -25,15 +24,32 @@ const COLUMN_MAP = {
 
 const DATE_COLUMNS = new Set(['tanggal_pkwt', 'tanggal_resign', 'birth_date']);
 
+const GARBAGE_VALUES = new Set([
+  '-', 'xxxx', 'xxxxx', '#n/a', '#value!', '0',
+  'double data', 'double nik', 'nik double',
+  'tgl blm tentu', 'pengajuan di email',
+  'tidak perlu dinonaktifkan bpjsnya (rehire)',
+  'rehire',
+]);
+
 function parseDate(val) {
   if (!val || !val.trim()) return null;
-  const s = val.trim();
+  const s = val.trim().toLowerCase();
+  if (GARBAGE_VALUES.has(s)) return null;
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (m) {
-    const d = m[1].padStart(2, '0');
-    const mo = m[2].padStart(2, '0');
-    return `${m[3]}-${mo}-${d}`;
+  const m4 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m4) {
+    const d = m4[1].padStart(2, '0');
+    const mo = m4[2].padStart(2, '0');
+    return `${m4[3]}-${mo}-${d}`;
+  }
+  const m2 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+  if (m2) {
+    const d = m2[1].padStart(2, '0');
+    const mo = m2[2].padStart(2, '0');
+    const y = parseInt(m2[3], 10);
+    const fullYear = y >= 0 && y <= 30 ? `20${m2[3]}` : `19${m2[3]}`;
+    return `${fullYear}-${mo}-${d}`;
   }
   return null;
 }
@@ -66,6 +82,13 @@ function parseCSV(text) {
   return rows;
 }
 
+function sanitizeValue(val) {
+  if (!val || !val.trim()) return null;
+  const s = val.trim();
+  if (['-', '#n/a', '#value!', '#ref!', '0'].includes(s.toLowerCase())) return null;
+  return s || null;
+}
+
 function mapRow(row) {
   const emp = {};
   for (const [colIdx, dbCol] of Object.entries(COLUMN_MAP)) {
@@ -74,9 +97,15 @@ function mapRow(row) {
       emp[dbCol] = parseDate(val);
     } else if (dbCol === 'age') {
       const n = parseInt(val, 10);
-      emp[dbCol] = isNaN(n) ? null : n;
+      emp[dbCol] = isNaN(n) || n < 0 || n > 150 ? null : n;
+    } else if (dbCol === 'nik') {
+      const s = val.trim();
+      if (!s || s === 'xxx' || s.startsWith('-') || !/^[A-Za-z0-9]+$/.test(s)) {
+        return null;
+      }
+      emp[dbCol] = s;
     } else {
-      emp[dbCol] = val || null;
+      emp[dbCol] = sanitizeValue(val);
     }
   }
   return emp;
@@ -110,39 +139,29 @@ async function main() {
   const rows = parseCSV(csvText);
   console.log(`Parsed ${rows.length - 1} data rows`);
 
-  const employees = rows.slice(1).map(mapRow).filter(e => e.nik);
-  console.log(`Mapped ${employees.length} valid employees`);
+  const allEmployees = rows.slice(1).map(mapRow);
+  const employees = allEmployees.filter(e => e !== null);
+  const skipped = allEmployees.length - employees.length;
+  console.log(`Valid employees: ${employees.length} (skipped ${skipped} invalid rows)`);
 
   let upserted = 0;
   let errors = 0;
-  const BATCH = 1000;
+  const BATCH = 500;
 
   for (let i = 0; i < employees.length; i += BATCH) {
     const batch = employees.slice(i, i + BATCH);
-    try {
+ try {
       const count = await upsertBatch(batch);
       upserted += count;
       console.log(`  Batch ${Math.floor(i / BATCH) + 1}: +${count} rows`);
     } catch (err) {
-      // Fallback: smaller batches of 100
-      console.log(`  Batch ${Math.floor(i / BATCH) + 1} failed, retrying in sub-batches...`);
-      let recovered = false;
-      for (let j = 0; j < batch.length; j += 100) {
-        const sub = batch.slice(j, j + 100);
-        try {
-          const count = await upsertBatch(sub);
-          upserted += count;
-          recovered = true;
-        } catch (subErr) {
-          errors += sub.length;
-          console.error(`    Sub-batch failed: ${subErr.message}`);
-        }
-      }
+      errors += batch.length;
+      console.error(`  Batch ${Math.floor(i / BATCH) + 1} failed: ${err.message}`);
     }
   }
 
   const duration = ((Date.now() - start) / 1000).toFixed(1);
-  console.log(`\nDone: ${upserted} upserted, ${errors} errors, ${duration}s`);
+  console.log(`\nDone: ${upserted} upserted, ${skipped} skipped, ${errors} errors, ${duration}s`);
 }
 
 main().catch(err => {
