@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
+  /* Security: disable source maps in production */
+  productionBrowserSourceMaps: false,
 };
 
 export default nextConfig;

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
 
 /* Jobsite list from Lagging Indicator spreadsheet */
 const JOBSITES = [
@@ -169,6 +170,11 @@ export default function InputLaggingIndicator() {
     setMpSaved(false);
   };
 
+  const handleEmployeeFound = useCallback((_data: EmployeeData) => {
+    // The autoFill prop on EmployeeLookupInput handles the actual field population.
+    // This callback can be used for side-effects if needed later.
+  }, []);
+
   const handleSickSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -291,10 +297,20 @@ export default function InputLaggingIndicator() {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
-                  <label className="admin-label">
-                    NIK Karyawan <span style={{ color: '#ff4d00' }}>*</span>
-                  </label>
-                  <input type="text" value={form.nik || ''} onChange={(e) => handleChange('nik', e.target.value)} placeholder="Contoh: 230802778" className="admin-input" />
+                  <EmployeeLookupInput
+                    value={form.nik || ''}
+                    onChange={(v) => handleChange('nik', v)}
+                    onEmployeeFound={handleEmployeeFound}
+                    onAutoFill={(formFieldId, val) => handleChange(formFieldId, val)}
+                    autoFill={{
+                      nama: 'nama',
+                      job_position: 'jabatan',
+                      site_name: 'jobsite',
+                    }}
+                    placeholder="Contoh: 230802778"
+                    label={<>NIK Karyawan <span style={{ color: '#ff4d00' }}>*</span></>}
+                    required
+                  />
                 </div>
                 <div>
                   <label className="admin-label">

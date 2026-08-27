@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
 
 const JOBSITES = [
   'Aceh','Angsana','Balikpapan','Banjarmasin','Banyuwangi',
@@ -38,6 +39,10 @@ export default function KunjunganBerobatForm() {
     setForm(prev => ({ ...prev, [id]: value }));
     setSaved(false);
   };
+
+  const handleEmployeeFound = useCallback((_data: EmployeeData) => {
+    // The autoFill prop on EmployeeLookupInput handles the actual field population.
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,6 +96,33 @@ export default function KunjunganBerobatForm() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               {FORM_FIELDS.map((field) => {
                 const isFullWidth = field.type === 'textarea';
+                // Special rendering for NIK field with employee lookup
+                if (field.id === 'nik') {
+                  return (
+                    <div key={field.id}>
+                      <EmployeeLookupInput
+                        value={form.nik || ''}
+                        onChange={(v) => handleChange('nik', v)}
+                        onEmployeeFound={handleEmployeeFound}
+                        onAutoFill={(formFieldId, val) => handleChange(formFieldId, val)}
+                        autoFill={{
+                          nama: 'nama',
+                          department: 'departemen',
+                          site_name: 'site',
+                        }}
+                        placeholder={field.placeholder}
+                        label={
+                          <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--foreground)' }}>
+                            {field.label}
+                            {field.required && <span style={{ color: '#ff4d00', marginLeft: 2 }}>*</span>}
+                          </span>
+                        }
+                        required
+                        inputStyle={inputStyle}
+                      />
+                    </div>
+                  );
+                }
                 return (
                   <div key={field.id} style={isFullWidth ? { gridColumn: '1 / -1' } : undefined}>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--foreground)', marginBottom: 6 }}>

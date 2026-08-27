@@ -129,11 +129,10 @@
   top: 0; left: 0;
   height: 100vh;
   background: var(--sidebar);
-  border-right: 1px solid rgba(0,0,0,0.25);
-  box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+  border-right: 1px solid var(--border);
+  z-index: 50;
   display: flex;
   flex-direction: column;
-  z-index: 50;
   transition: background 0.3s, transform 0.3s;
 }
 .sidebar-head {
@@ -147,16 +146,7 @@
   position: relative;
   z-index: 2;
 }
-.sidebar-head::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: -2px;
-  width: 4px;
-  height: 100%;
-  background: var(--card);
-  box-shadow: 4px 0 8px var(--card);
-}
+/* Removed: sidebar-head::after was casting a shadow/border line across the header */
 .sidebar-logo-wrap {
   width: 90px;
   height: 40px;
@@ -327,7 +317,6 @@
   transition: background 0.3s;
   flex-shrink: 0;
   border-bottom: 1px solid var(--border);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 .header-top {
   display: flex;
@@ -1301,12 +1290,14 @@ select:focus { border-color: #ff4d00; }
   .card-head p { font-size: 7.5px; }
   .card-icon { width: 20px; height: 20px; border-radius: 5px; }
   .card-icon svg { width: 10px; height: 10px; }
-  .stats-grid { gap: 4px; padding: 2px; }
-  .stat-box { padding: 6px 8px; gap: 6px; border-radius: 8px; }
-  .stat-val { font-size: 18px; }
-  .stat-label { font-size: 8px; }
-  .stat-wide .stat-val { font-size: 26px; }
-  .stat-wide .stat-label { font-size: 8px; }
+  /* Stats: fix number overflow on mobile */
+  .stats-grid { gap: 4px; padding: 2px; grid-template-columns: 1fr; }
+  .stat-box { padding: 8px 10px; gap: 6px; border-radius: 8px; }
+  .stat-val { font-size: 18px; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .stat-label { font-size: 8px; text-align: left; flex: unset; }
+  .stat-box.stat-wide { padding: 8px 10px; }
+  .stat-wide .stat-val { font-size: 24px; }
+  .stat-wide .stat-label { font-size: 8px; text-align: center; }
   .chart-box { height: 200px; }
   .mcu-total-bar { padding: 4px 8px; gap: 4px; font-size: 9px; flex-wrap: wrap; line-height: 1.6; }
   .mcu-total-num { font-size: 16px; }
@@ -1317,4 +1308,23 @@ select:focus { border-color: #ff4d00; }
   .sick-list { overflow-x: auto; }
   .sidebar { width: 260px; }
   .hamburger { width: 40px; height: 40px; top: 10px; left: 10px; border-radius: 10px; }
+  /* Admin forms mobile */
+  .admin-form-inner { padding: 10px 10px 40px; }
+  .admin-form-card { padding: 14px; }
+  .admin-form-title { font-size: 14px; }
+  /* Raw table mobile */
+  .raw-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .raw-table-scroll td, .raw-table-scroll th { padding: 5px 6px; font-size: 9px; }
+  /* Login card mobile */
+  .login-card { padding: 20px 18px 18px; width: 90vw; }
+  /* Admin toggle arrow mobile */
+  .admin-toggle-arrow { right: 8px; width: 28px; height: 56px; }
+}
+
+/* ═══════════════════════════════════
+   Employee Lookup Spinner
+   ═══════════════════════════════════ */
+@keyframes emp-lookup-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

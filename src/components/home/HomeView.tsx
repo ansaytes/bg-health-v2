@@ -1,41 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 type FeedCategory = 'semua-feed' | 'health-campaign' | 'health-talk' | 'news';
 
-/* ── Placeholder Data ── */
+/* ── Types ── */
 interface FeedItem {
   id: string;
   caption: string;
-  imageHint: string;
+  title?: string;
+  imageHint?: string;
+  image_url?: string;
+  thumbnail_url?: string;
+  video_url?: string;
   source: string;
   date: string;
   type: 'campaign' | 'talk' | 'news';
-  videoUrl?: string;
 }
-
-const CAMPAIGN_DATA: FeedItem[] = [
-  { id: 'c1', caption: 'Cek kesehatan rutin bulan Agustus telah dimulai. Pastikan Anda memenuhi jadwal MCU.', imageHint: 'Health Check', source: 'Admin', date: '15 Agu 2026', type: 'campaign' },
-  { id: 'c2', caption: 'Program vaksinasi influenza gratis untuk seluruh karyawan dan keluarga inti.', imageHint: 'Vaccination', source: 'Admin', date: '10 Agu 2026', type: 'campaign' },
-  { id: 'c3', caption: 'Sosialisasi pencegahan demam berdarah di lingkungan kerja dan perumahan.', imageHint: 'Dengue Prevention', source: 'Admin', date: '5 Agu 2026', type: 'campaign' },
-  { id: 'c4', caption: 'Senam pagi bersama setiap Jumat pukul 06.30 di area parkir utama.', imageHint: 'Morning Exercise', source: 'Admin', date: '1 Agu 2026', type: 'campaign' },
-  { id: 'c5', caption: 'Konsultasi gizi gratis bersama ahli gizi dari RS Partners setiap bulan.', imageHint: 'Nutrition', source: 'Admin', date: '28 Jul 2026', type: 'campaign' },
-];
-
-const TALK_DATA: FeedItem[] = [
-  { id: 't1', caption: 'Mengenal Hipertensi: Penyebab, Gejala, dan Pencegahan', imageHint: 'Hypertension Talk', source: 'Health Talk', date: '14 Agu 2026', type: 'talk', videoUrl: 'https://youtube.com/watch?v=example1' },
-  { id: 't2', caption: 'Tips Menjaga Kesehatan Mental di Tempat Kerja', imageHint: 'Mental Health', source: 'Health Talk', date: '8 Agu 2026', type: 'talk', videoUrl: 'https://youtube.com/watch?v=example2' },
-  { id: 't3', caption: 'Ergonomi di Era Digital: Cara Duduk yang Benar', imageHint: 'Ergonomics', source: 'Health Talk', date: '2 Agu 2026', type: 'talk', videoUrl: 'https://youtube.com/watch?v=example3' },
-  { id: 't4', caption: 'Manfaat Olahraga Ringan 15 Menit Sehari untuk Jantung', imageHint: 'Exercise', source: 'Health Talk', date: '25 Jul 2026', type: 'talk', videoUrl: 'https://youtube.com/watch?v=example4' },
-];
-
-const NEWS_DATA: FeedItem[] = [
-  { id: 'n1', caption: 'Kemenkes tingkatkan pengawasan penyakit menular pasca lonjakan kasus di beberapa wilayah.', imageHint: 'Health News', source: '@BagongNews', date: '16 Agu 2026', type: 'news' },
-  { id: 'n2', caption: 'BPJS Kesehatan perpanjang program pemeriksaan gratis untuk peserta aktif.', imageHint: 'BPJS Update', source: '@BagongNews', date: '12 Agu 2026', type: 'news' },
-  { id: 'n3', caption: 'WHO rekomendasikan vaksinasi booster untuk kelompok risiko tinggi menjelang musim hujan.', imageHint: 'WHO News', source: '@BagongNews', date: '9 Agu 2026', type: 'news' },
-  { id: 'n4', caption: 'Inovasi telemedicine: Konsultasi dokter dari rumah kini lebih mudah diakses.', imageHint: 'Telemedicine', source: '@BagongNews', date: '5 Agu 2026', type: 'news' },
-];
 
 /* ── Gradient backgrounds for placeholder images ── */
 const GRADIENTS = [
@@ -49,35 +30,71 @@ const GRADIENTS = [
   'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)',
 ];
 
+/* Format date for display */
+function fmtDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  } catch {
+    return dateStr;
+  }
+}
+
 /* ── Feed Card Component ── */
 function FeedCard({ item, index }: { item: FeedItem; index: number }) {
   const gradient = GRADIENTS[index % GRADIENTS.length];
   const isVideo = item.type === 'talk';
+  const isCampaign = item.type === 'campaign';
 
   return (
     <div className="home-feed-card">
       {/* Image / Video Thumbnail */}
       <div className="home-feed-card-media" style={{ background: gradient }}>
         {isVideo && (
-          <div className="home-feed-play-btn">
-            <svg viewBox="0 0 24 24" fill="white" width="24" height="24">
+          <a
+            href={item.video_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="home-feed-play-btn"
+            style={{ textDecoration: 'none' }}
+          >
+            <svg viewBox="0 0 24 24" fill="white" width="28" height="28">
               <polygon points="5,3 19,12 5,21" />
             </svg>
-          </div>
+          </a>
         )}
-        {!isVideo && (
+        {isCampaign && item.image_url && (
+          <img
+            src={item.image_url}
+            alt={item.title || ''}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        )}
+        {!isVideo && !isCampaign && (
           <div style={{ padding: 12, textAlign: 'center' }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(0,0,0,0.4)', lineHeight: 1.3 }}>
-              {item.imageHint}
+              {item.imageHint || '@BagongNews'}
             </span>
+          </div>
+        )}
+        {isCampaign && !item.image_url && (
+          <div style={{ padding: 12, textAlign: 'center' }}>
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth="1.5">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
+            </svg>
           </div>
         )}
       </div>
       {/* Caption & Meta */}
       <div className="home-feed-card-body">
+        {item.title && (
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--foreground)', marginBottom: 4, lineHeight: 1.3 }}>{item.title}</p>
+        )}
         <p className="home-feed-card-caption">{item.caption}</p>
         <p className="home-feed-card-meta">
-          {item.source} &middot; {item.date}
+          {isCampaign ? 'Admin' : isVideo ? 'Health Talk' : '@BagongNews'} &middot; {item.date}
         </p>
       </div>
     </div>
@@ -128,20 +145,93 @@ function FeedSection({
 
 /* ── Main Home View ── */
 export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
+  const [newsData, setNewsData] = useState<FeedItem[]>([]);
+  const [talkData, setTalkData] = useState<FeedItem[]>([]);
+  const [campaignData, setCampaignData] = useState<FeedItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        // Fetch social feed (Instagram + YouTube)
+        const socialRes = await fetch('/api/social-feed');
+        if (socialRes.ok) {
+          const socialJson = await socialRes.json();
+          const news: FeedItem[] = (socialJson.news || []).map((p: any) => ({
+            id: p.id,
+            caption: p.caption,
+            title: p.title,
+            imageHint: 'News',
+            media_url: p.media_url,
+            source: '@BagongNews',
+            date: fmtDate(p.published_at),
+            type: 'news' as const,
+          }));
+          setNewsData(news);
+
+          const talks: FeedItem[] = (socialJson.healthTalks || []).map((v: any) => ({
+            id: v.id,
+            caption: v.caption,
+            title: v.title,
+            thumbnail_url: v.thumbnail_url,
+            video_url: v.video_url,
+            source: 'Health Talk',
+            date: fmtDate(v.published_at),
+            type: 'talk' as const,
+          }));
+          setTalkData(talks);
+        }
+
+        // Fetch health campaigns
+        const campRes = await fetch('/api/health-campaigns');
+        if (campRes.ok) {
+          const campJson = await campRes.json();
+          const campaigns: FeedItem[] = (campJson.campaigns || []).map((c: any) => ({
+            id: c.id,
+            caption: c.description || c.title,
+            title: c.title,
+            image_url: c.image_url,
+            imageHint: 'Health Campaign',
+            source: 'Admin',
+            date: fmtDate(c.start_date || c.created_at),
+            type: 'campaign' as const,
+          }));
+          setCampaignData(campaigns);
+        }
+      } catch {
+        // fallback to empty — will show no data message
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="home-feed" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+        <div style={{ textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>
+          <div style={{ width: 24, height: 24, border: '2px solid var(--border)', borderTopColor: 'var(--foreground)', borderRadius: '50%', margin: '0 auto 8px', animation: 'spin 0.8s linear infinite' }} />
+          Memuat feed...
+        </div>
+      </div>
+    );
+  }
+
   if (activeTab === 'semua-feed') {
     return (
       <div className="home-feed">
-        <FeedSection title="News" data={NEWS_DATA} />
-        <FeedSection title="Health Campaign" data={CAMPAIGN_DATA} />
-        <FeedSection title="Health Talk" data={TALK_DATA} />
+        <FeedSection title="News" data={newsData} />
+        <FeedSection title="Health Campaign" data={campaignData} />
+        <FeedSection title="Health Talk" data={talkData} />
       </div>
     );
   }
 
   const config = {
-    'health-campaign': { title: 'Health Campaign', data: CAMPAIGN_DATA },
-    'health-talk': { title: 'Health Talk', data: TALK_DATA },
-    'news': { title: 'News', data: NEWS_DATA },
+    'health-campaign': { title: 'Health Campaign', data: campaignData },
+    'health-talk': { title: 'Health Talk', data: talkData },
+    'news': { title: 'News', data: newsData },
   }[activeTab];
 
   return (

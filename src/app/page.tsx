@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { useMCUStore, type PageTab, type DashSidebar, type AdminSidebar, type HomeSidebar } from '@/lib/store';
+import { useAuth } from '@/lib/auth-context';
+import { supabase } from '@/lib/supabase';
 import DashboardView from '@/components/dashboard/DashboardView';
 import MonitoringMCU from '@/components/dashboard/MonitoringMCU';
 import HasilTindakLanjutMCU from '@/components/dashboard/HasilTindakLanjutMCU';
@@ -12,6 +14,7 @@ import ReviewMCU from '@/components/review-mcu/ReviewMCU';
 import InputLaggingIndicator from '@/components/administrator/InputLaggingIndicator';
 import KunjunganBerobatForm from '@/components/administrator/KunjunganBerobatForm';
 import HealthCampaignForm from '@/components/administrator/HealthCampaignForm';
+import UserManagement from '@/components/administrator/UserManagement';
 import HomeView from '@/components/home/HomeView';
 import DataKesehatanTable from '@/components/dashboard/DataKesehatanTable';
 import DataKunjunganTable from '@/components/dashboard/DataKunjunganTable';
@@ -118,19 +121,30 @@ function IconKunjunganAdmin() {
     </svg>
   );
 }
+function IconUsers() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
 
 /*   Sidebar Configs */
 
-const HEADER_NAV: { key: PageTab; label: string }[] = [
-  { key: 'home', label: 'Home' },
-  { key: 'dashboard', label: 'Dashboard' },
-  { key: 'administrator', label: 'Administrator' },
+const ALL_HEADER_NAV: { key: PageTab; label: string; adminOnly: boolean }[] = [
+  { key: 'home', label: 'Home', adminOnly: false },
+  { key: 'dashboard', label: 'Dashboard', adminOnly: false },
+  { key: 'administrator', label: 'Administrator', adminOnly: true },
 ];
 
 interface SidebarItem {
   key: string;
   label: string;
   icon: React.ReactNode;
+  superuserOnly?: boolean;
 }
 
 const HOME_SIDEBAR: SidebarItem[] = [
@@ -152,6 +166,7 @@ const ADMIN_SIDEBAR: SidebarItem[] = [
   { key: 'input-lagging', label: 'Input Lagging Indicator', icon: <IconInputLagging /> },
   { key: 'health-campaign', label: 'Health Campaign', icon: <IconCampaignAdmin /> },
   { key: 'kunjungan-admin', label: 'Kunjungan Berobat', icon: <IconKunjunganAdmin /> },
+  { key: 'kelola-pengguna', label: 'Kelola Pengguna', icon: <IconUsers />, superuserOnly: true },
 ];
 
 /*   Content Routers */
@@ -237,6 +252,12 @@ function AdminTogglePanel({ formContent, tableContents, hasTable, stepLabels }: 
 
 function AdminContent() {
   const activeAdminSidebar = useMCUStore((s) => s.activeAdminSidebar);
+  const { isAdmin } = useAuth();
+
+  // Kelola Pengguna is standalone (no toggle)
+  if (activeAdminSidebar === 'kelola-pengguna') {
+    return <UserManagement />;
+  }
 
   const panels: Record<string, { form: React.ReactNode; tables: React.ReactNode[]; hasTable: boolean; labels?: string[] }> = {
     'review-mcu': {
@@ -254,8 +275,8 @@ function AdminContent() {
       labels: ['Form Input', 'Karyawan Sakit', 'Man Power'],
       form: <InputLaggingIndicator />,
       tables: [
-        <div className="admin-form-container" key="kesehatan"><DataKesehatanTable /></div>,
-        <div className="admin-form-container" key="manpower"><DataManPowerTable /></div>,
+        <div className="admin-form-container" key="kesehatan"><DataKesehatanTable canEdit={isAdmin} /></div>,
+        <div className="admin-form-container" key="manpower"><DataManPowerTable canEdit={isAdmin} /></div>,
       ],
     },
     'health-campaign': {
@@ -267,7 +288,7 @@ function AdminContent() {
       hasTable: true,
       labels: ['Form Input', 'Data Kunjungan'],
       form: <KunjunganBerobatForm />,
-      tables: [<div className="admin-form-container" key="kunjungan"><DataKunjunganTable /></div>],
+      tables: [<div className="admin-form-container" key="kunjungan"><DataKunjunganTable canEdit={isAdmin} /></div>],
     },
   };
 
@@ -285,12 +306,39 @@ function AdminContent() {
 /*   Login Popup (Apple-style) */
 
 function LoginPopup({ onClose }: { onClose: () => void }) {
-  const [email, setEmail] = useState('');
+  const { refreshProfile } = useAuth();
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onClose();
+    setError('');
+    setLoading(true);
+
+    try {
+      const { data, error: supabaseError } = await supabase.auth.signInWithPassword({
+        email: username,
+        password,
+      });
+
+      if (supabaseError) {
+        setError(supabaseError.message);
+        return;
+      }
+
+      if (data.session) {
+        await refreshProfile();
+        setUsername('');
+        setPassword('');
+        onClose();
+      }
+    } catch {
+      setError('Terjadi kesalahan. Coba lagi.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -314,14 +362,14 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--foreground)', marginBottom: 4 }}>Email</label>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--foreground)', marginBottom: 4 }}>Username</label>
             <input
-              type="email"
+              type="text"
               className="login-input"
-              placeholder="nama@perusahaan.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
+              placeholder="username / email"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
             />
           </div>
           <div>
@@ -335,7 +383,14 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
               autoComplete="current-password"
             />
           </div>
-          <button type="submit" className="login-btn" style={{ marginTop: 4 }}>Masuk</button>
+          {error && (
+            <p style={{ fontSize: 11, color: 'var(--destructive, #ef4444)', margin: 0, padding: '6px 10px', borderRadius: 6, background: 'rgba(239,68,68,0.08)' }}>
+              {error}
+            </p>
+          )}
+          <button type="submit" className="login-btn" style={{ marginTop: 4 }} disabled={loading}>
+            {loading ? 'Memproses...' : 'Masuk'}
+          </button>
         </form>
 
         <p style={{ fontSize: 10, color: 'var(--muted-foreground)', textAlign: 'center', marginTop: 16, marginBottom: 0 }}>
@@ -351,22 +406,46 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
 export default function Home() {
   const store = useMCUStore();
   const { theme, setTheme } = useTheme();
+  const { user, profile, loading: authLoading, isAdmin, isSuperuser } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
   const activePage = store.activePage;
 
+  const isLoggedIn = !!user && !!profile;
+
+  // Redirect non-admin away from administrator page
   useEffect(() => {
-    setLoading(true);
-    const t = setTimeout(() => setLoading(false), 50);
-    return () => clearTimeout(t);
+    if (authLoading) return;
+    if (activePage === 'administrator' && !isAdmin) {
+      store.setActivePage('home');
+    }
+  }, [activePage, isAdmin, authLoading, store]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(true), 0);
+    const t2 = setTimeout(() => setLoading(false), 50);
+    return () => { clearTimeout(t); clearTimeout(t2); };
   }, [activePage, store.activeDashSidebar, store.activeAdminSidebar, store.activeHomeSidebar]);
 
-  const sidebarItems: SidebarItem[] =
-    activePage === 'home' ? HOME_SIDEBAR :
-    activePage === 'dashboard' ? DASH_SIDEBAR :
-    ADMIN_SIDEBAR;
+  // Role-based header nav
+  const headerNav = ALL_HEADER_NAV.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false;
+    return true;
+  });
+
+  // Role-based sidebar items
+  const getSidebarItems = (): SidebarItem[] => {
+    if (activePage === 'home') return HOME_SIDEBAR;
+    if (activePage === 'dashboard') return DASH_SIDEBAR;
+    // Administrator sidebar — filter by role
+    return ADMIN_SIDEBAR.filter((item) => {
+      if (item.superuserOnly && !isSuperuser) return false;
+      return true;
+    });
+  };
+
+  const sidebarItems = getSidebarItems();
 
   const activeSidebarKey =
     activePage === 'home' ? store.activeHomeSidebar :
@@ -374,6 +453,8 @@ export default function Home() {
     store.activeAdminSidebar;
 
   const handleNav = (tab: PageTab) => {
+    // Prevent non-admins from going to administrator
+    if (tab === 'administrator' && !isAdmin) return;
     store.setActivePage(tab);
     setMobileOpen(false);
   };
@@ -385,9 +466,19 @@ export default function Home() {
     setMobileOpen(false);
   };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setShowLogin(false);
+    // If on admin page, redirect to home
+    if (activePage === 'administrator') {
+      store.setActivePage('home');
+    }
   };
+
+  // Get user display name and initials
+  const displayName = profile?.full_name || profile?.username || 'User';
+  const initials = displayName.charAt(0).toUpperCase();
+  const roleLabel = profile?.role === 'superuser' ? 'Superuser' : profile?.role === 'administrator' ? 'Administrator' : 'Viewer';
 
   return (
     <div className="app-shell">
@@ -433,10 +524,10 @@ export default function Home() {
         <div className="sidebar-footer">
           {isLoggedIn ? (
             <div className="sidebar-account">
-              <div className="sidebar-avatar">U</div>
+              <div className="sidebar-avatar">{initials}</div>
               <div className="sidebar-account-info">
-                <div className="sidebar-account-name">User</div>
-                <div className="sidebar-account-role">Administrator</div>
+                <div className="sidebar-account-name">{displayName}</div>
+                <div className="sidebar-account-role">{roleLabel}</div>
               </div>
               <button className="sidebar-logout-btn" onClick={handleLogout}>Keluar</button>
             </div>
@@ -456,7 +547,7 @@ export default function Home() {
           <div className="header-top">
             <div style={{ width: 0, flexShrink: 0 }} />
             <nav className="header-nav">
-              {HEADER_NAV.map((item) => (
+              {headerNav.map((item) => (
                 <button
                   key={item.key}
                   className={`header-nav-item${activePage === item.key ? ' active' : ''}`}
