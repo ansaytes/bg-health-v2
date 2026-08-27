@@ -1320,6 +1320,8 @@ select:focus { border-color: #ff4d00; }
   .login-card { padding: 20px 18px 18px; width: 90vw; }
   /* Admin toggle arrow mobile */
   .admin-toggle-arrow { right: 8px; width: 28px; height: 56px; }
+  /* User register grid mobile */
+  .user-register-grid { grid-template-columns: 1fr; }
 }
 
 /* ═══════════════════════════════════
@@ -1328,4 +1330,17 @@ select:focus { border-color: #ff4d00; }
 @keyframes emp-lookup-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* ═══════════════════════════════════
+   User Management — Register Form Grid
+   ═══════════════════════════════════ */
+.user-register-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.user-register-btn-cell {
+  display: flex;
+  align-items: flex-end;
 }

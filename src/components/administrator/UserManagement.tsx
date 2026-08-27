@@ -123,27 +123,29 @@ export default function UserManagement() {
   return (
     <div className="admin-form-inner">
       {/* Header */}
-      <div style={{ marginBottom: 16 }}>
+      <div style={{ marginBottom: 16, flexShrink: 0 }}>
         <h1 className="admin-form-title">Kelola Pengguna</h1>
         <p className="admin-form-subtitle">Kelola akun dan akses pengguna sistem BG-Health</p>
       </div>
 
       {/* Add user button */}
       {isSuperuser && (
-        <button
-          onClick={() => { setShowRegister(!showRegister); setRegError(''); setRegSuccess(''); }}
-          className="admin-form-btn-primary"
-          style={{ maxWidth: 200, marginBottom: 16 }}
-        >
-          {showRegister ? 'Tutup Form' : '+ Tambah Pengguna'}
-        </button>
+        <div style={{ flexShrink: 0, marginBottom: 12 }}>
+          <button
+            onClick={() => { setShowRegister(!showRegister); setRegError(''); setRegSuccess(''); }}
+            className="admin-form-btn-primary"
+            style={{ maxWidth: 220, height: 36, fontSize: 12 }}
+          >
+            {showRegister ? 'Tutup Form' : '+ Tambah Pengguna'}
+          </button>
+        </div>
       )}
 
-      {/* Register Form */
+      {/* Register Form */}
       {isSuperuser && showRegister && (
-        <div className="admin-form-card" style={{ marginBottom: 16 }}>
-          <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--foreground)', margin: '0 0 12px' }}>Daftarkan Pengguna Baru</h3>
-          <form onSubmit={handleRegister} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="admin-form-card" style={{ marginBottom: 16, flexShrink: 0 }}>
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--foreground)', margin: '0 0 14px' }}>Daftarkan Pengguna Baru</h3>
+          <form onSubmit={handleRegister} className="user-register-grid">
             <div>
               <label className="admin-label">Username (Email)</label>
               <input
@@ -188,7 +190,7 @@ export default function UserManagement() {
                 placeholder="Opsional" className="admin-input"
               />
             </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <div className="user-register-btn-cell">
               <button type="submit" disabled={regLoading} className="admin-form-btn-primary" style={{ width: '100%' }}>
                 {regLoading ? 'Menyimpan...' : 'Daftarkan'}
               </button>
@@ -201,14 +203,14 @@ export default function UserManagement() {
 
       {/* Error state */}
       {error && !loading && (
-        <div style={{ padding: 20, textAlign: 'center', color: '#ef4444' }}>
+        <div style={{ padding: 20, textAlign: 'center', color: '#ef4444', flexShrink: 0 }}>
           <p>{error}</p>
           <button onClick={fetchUsers} style={{ marginTop: 8, fontSize: 12, color: '#ff4d00', cursor: 'pointer', background: 'none', border: 'none', textDecoration: 'underline' }}>Coba lagi</button>
         </div>
       )}
 
-      {/* Users table */
-      <div className="raw-table-container" style={{ flex: 1, minHeight: 0 }}>
+      {/* Users table */}
+      <div className="raw-table-container">
         <div className="raw-table-scroll">
           <table>
             <thead>
@@ -270,3 +272,4 @@ export default function UserManagement() {
     </div>
   );
 }
+
