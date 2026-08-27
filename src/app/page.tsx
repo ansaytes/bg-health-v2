@@ -256,7 +256,7 @@ function AdminContent() {
 
   // Kelola Pengguna is standalone (no toggle)
   if (activeAdminSidebar === 'kelola-pengguna') {
-    return <UserManagement />;
+    return <div className="admin-form-container"><UserManagement /></div>;
   }
 
   const panels: Record<string, { form: React.ReactNode; tables: React.ReactNode[]; hasTable: boolean; labels?: string[] }> = {

@@ -139,15 +139,25 @@ export default function ReviewMCU() {
       });
       const json = await res.json();
       if (json.success && json.data) {
-        store.setEmployee(json.data);
+        // API returns array of raw records; take first and map fields
+        const emp = Array.isArray(json.data) ? json.data[0] : json.data;
+        const mapped = {
+          nikKaryawan: emp.nik || '',
+          nama: emp.nama || '',
+          gender: emp.gender || '',
+          jabatan: emp.job_position || '',
+          site: emp.site_name || '',
+          usia: emp.age ? String(emp.age) : '',
+        };
+        store.setEmployee(mapped);
         // Auto-fill identity fields
         const updates: Record<string, string> = {};
-        if (json.data.nikKaryawan) updates.nikKaryawan = json.data.nikKaryawan;
-        if (json.data.nama) updates.nama = json.data.nama;
-        if (json.data.gender) updates.jenisKelamin = json.data.gender;
-        if (json.data.jabatan) updates.jabatan = json.data.jabatan;
-        if (json.data.site) updates.site = json.data.site;
-        if (json.data.usia) updates.usia = json.data.usia;
+        if (mapped.nikKaryawan) updates.nikKaryawan = mapped.nikKaryawan;
+        if (mapped.nama) updates.nama = mapped.nama;
+        if (mapped.gender) updates.jenisKelamin = mapped.gender;
+        if (mapped.jabatan) updates.jabatan = mapped.jabatan;
+        if (mapped.site) updates.site = mapped.site;
+        if (mapped.usia) updates.usia = mapped.usia;
         updates.nikKtp = nikInput.trim();
         store.setFormBatch(updates);
         store.showToast('Data karyawan ditemukan', 'success');
