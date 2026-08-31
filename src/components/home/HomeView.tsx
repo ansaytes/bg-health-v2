@@ -134,7 +134,7 @@ function FeedCard({ item, index }: { item: FeedItem; index: number }) {
         )}
         <p className="home-feed-card-caption">{item.caption}</p>
         <p className="home-feed-card-meta">
-          {isCampaign ? 'Admin' : isVideo ? 'Health Talk' : '@BagongNews'}
+          {isCampaign ? 'Admin' : (isVideo || item.source === 'youtube') ? '@BagongNewsYoutube' : '@BagongNews'}
           {item.views ? ` · ${item.views.toLocaleString('id-ID')} views` : ''}
           {' · '}{item.date}
         </p>

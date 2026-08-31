@@ -964,7 +964,23 @@ select:focus { border-color: #ff4d00; }
   width: 340px;
   max-width: 90vw;
   box-shadow: 0 20px 60px rgba(0,0,0,0.2);
- border: 1px solid var(--border);
+  border: 1px solid var(--border);
+}
+.dark .login-card {
+  background: #1a1a1a;
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.dark .login-input {
+  background: #252525;
+  border-color: rgba(255,255,255,0.12);
+  color: #f0f0f0;
+}
+.dark .login-input::placeholder {
+  color: #777;
+}
+.dark .login-overlay {
+  background: rgba(0,0,0,0.6);
 }
 .login-card h2 {
   font-size: 18px;
@@ -1346,4 +1362,29 @@ select:focus { border-color: #ff4d00; }
 .user-register-btn-cell {
   display: flex;
   align-items: flex-end;
+}
+
+/* ═══════════════════════════════════
+   Dark Mode — Image Borders
+   ═══════════════════════════════════ */
+.dark .sidebar-logo-img {
+  filter: brightness(0.9);
+}
+.dark .header-right-logo {
+  border-color: rgba(255,255,255,0.2);
+  box-shadow: 0 0 0 0.5px rgba(255,255,255,0.15);
+}
+.dark .sidebar-tuwuh-img {
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+}
+.dark .home-feed-card-media img {
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.dark .home-feed-card-media {
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.dark img[src="/Bus2023.png"] {
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 6px;
 }
