@@ -178,6 +178,33 @@ function HomeContent() {
 
 function DashContent() {
   const activeDashSidebar = useMCUStore((s) => s.activeDashSidebar);
+  const isLoggedIn = !!useAuth().user && !!useAuth().profile;
+
+  if (!isLoggedIn) {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        flex: 1, textAlign: 'center', padding: 40,
+      }}>
+        <div style={{
+          width: 64, height: 64, borderRadius: 16,
+          background: 'rgba(255,77,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          marginBottom: 16,
+        }}>
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#ff4d00" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+        </div>
+        <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--foreground)', marginBottom: 6 }}>
+          Silahkan Login Untuk Mengakses Halaman Ini!
+        </p>
+        <p style={{ fontSize: 12, color: 'var(--muted-foreground)' }}>
+          Masuk dengan akun Anda untuk melihat data dashboard.
+        </p>
+      </div>
+    );
+  }
+
   switch (activeDashSidebar) {
     case 'statistik': return <DashboardView />;
     case 'monitoring': return <MonitoringMCU />;
@@ -347,22 +374,27 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
+      transition={{ duration: 0.25 }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <motion.div
         className="login-card"
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        style={{ position: 'relative' }}
+        initial={{ opacity: 0, scale: 0.92, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+        exit={{ opacity: 0, scale: 0.92, y: 20 }}
+        transition={{ type: 'spring', stiffness: 350, damping: 32 }}
       >
+        <button className="login-close-btn" onClick={onClose}>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
+        </button>
+
         <h2>Masuk</h2>
         <p>Silakan masuk untuk mengakses semua fitur</p>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--foreground)', marginBottom: 4 }}>Username</label>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--foreground)', marginBottom: 6 }}>Username</label>
             <input
               type="text"
               className="login-input"
@@ -373,7 +405,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
             />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--foreground)', marginBottom: 4 }}>Password</label>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--foreground)', marginBottom: 6 }}>Password</label>
             <input
               type="password"
               className="login-input"
@@ -384,16 +416,14 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
             />
           </div>
           {error && (
-            <p style={{ fontSize: 11, color: 'var(--destructive, #ef4444)', margin: 0, padding: '6px 10px', borderRadius: 6, background: 'rgba(239,68,68,0.08)' }}>
-              {error}
-            </p>
+            <p className="login-error-msg">{error}</p>
           )}
           <button type="submit" className="login-btn" style={{ marginTop: 4 }} disabled={loading}>
             {loading ? 'Memproses...' : 'Masuk'}
           </button>
         </form>
 
-        <p style={{ fontSize: 10, color: 'var(--muted-foreground)', textAlign: 'center', marginTop: 16, marginBottom: 0 }}>
+        <p className="login-footer-text">
           Belum punya akun? Hubungi administrator
         </p>
       </motion.div>
