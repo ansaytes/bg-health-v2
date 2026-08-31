@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 type FeedCategory = 'semua-feed' | 'health-campaign' | 'health-talk' | 'news';
 
@@ -12,10 +12,14 @@ interface FeedItem {
   imageHint?: string;
   image_url?: string;
   thumbnail_url?: string;
+  media_url?: string;
   video_url?: string;
+  external_url?: string;
   source: string;
   date: string;
   type: 'campaign' | 'talk' | 'news';
+  views?: number;
+  lengthSeconds?: number;
 }
 
 /* ── Gradient backgrounds for placeholder images ── */
@@ -42,59 +46,100 @@ function fmtDate(dateStr: string): string {
   }
 }
 
+/* Format seconds to mm:ss or h:mm:ss */
+function fmtDuration(secs: number): string {
+  if (!secs || secs <= 0) return '';
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
 /* ── Feed Card Component ── */
 function FeedCard({ item, index }: { item: FeedItem; index: number }) {
   const gradient = GRADIENTS[index % GRADIENTS.length];
   const isVideo = item.type === 'talk';
   const isCampaign = item.type === 'campaign';
+  const isYouTube = item.source === 'youtube' || item.type === 'talk';
+  const thumbnail = item.media_url || item.thumbnail_url || item.image_url;
+  const clickUrl = item.video_url || item.external_url || '';
+
+  const handleClick = useCallback(() => {
+    if (clickUrl) {
+      window.open(clickUrl, '_blank', 'noopener,noreferrer');
+    }
+  }, [clickUrl]);
 
   return (
-    <div className="home-feed-card">
-      {/* Image / Video Thumbnail */}
-      <div className="home-feed-card-media" style={{ background: gradient }}>
-        {isVideo && (
-          <a
-            href={item.video_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="home-feed-play-btn"
-            style={{ textDecoration: 'none' }}
-          >
-            <svg viewBox="0 0 24 24" fill="white" width="28" height="28">
-              <polygon points="5,3 19,12 5,21" />
-            </svg>
-          </a>
-        )}
-        {isCampaign && item.image_url && (
+    <div
+      className="home-feed-card"
+      role={clickUrl ? 'button' : undefined}
+      tabIndex={clickUrl ? 0 : undefined}
+      onClick={clickUrl ? handleClick : undefined}
+      onKeyDown={clickUrl ? (e) => { if (e.key === 'Enter') handleClick(); } : undefined}
+      style={clickUrl ? { cursor: 'pointer' } : undefined}
+    >
+      {/* Image / Video Thumbnail */
+      <div
+        className="home-feed-card-media"
+        style={{
+          background: thumbnail ? '#111' : gradient,
+          aspectRatio: isYouTube ? '16 / 9' : undefined,
+        }}
+      >
+        {thumbnail ? (
           <img
-            src={item.image_url}
+            src={thumbnail}
             alt={item.title || ''}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            loading="lazy"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            onError={(e) => {
+              const img = e.target as HTMLImageElement;
+              img.style.opacity = '0';
+            }}
           />
-        )}
-        {!isVideo && !isCampaign && (
+        ) : !isCampaign ? (
           <div style={{ padding: 12, textAlign: 'center' }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(0,0,0,0.4)', lineHeight: 1.3 }}>
               {item.imageHint || '@BagongNews'}
             </span>
           </div>
+        ) : null}
+        {isVideo && (
+          <div className="home-feed-play-btn">
+            <svg viewBox="0 0 24 24" fill="white" width="28" height="28">
+              <polygon points="5,3 19,12 5,21" />
+            </svg>
+          </div>
         )}
-        {isCampaign && !item.image_url && (
+        {isCampaign && !thumbnail && (
           <div style={{ padding: 12, textAlign: 'center' }}>
             <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth="1.5">
               <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
             </svg>
           </div>
         )}
+        {/* Video duration badge */
+        {isVideo && item.lengthSeconds && item.lengthSeconds > 0 && (
+          <span style={{
+            position: 'absolute', bottom: 6, right: 6, background: 'rgba(0,0,0,0.8)',
+            color: '#fff', fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
+          }}>
+            {fmtDuration(item.lengthSeconds)}
+          </span>
+        )}
       </div>
-      {/* Caption & Meta */}
+      {/* Caption & Meta */
       <div className="home-feed-card-body">
         {item.title && (
           <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--foreground)', marginBottom: 4, lineHeight: 1.3 }}>{item.title}</p>
         )}
         <p className="home-feed-card-caption">{item.caption}</p>
         <p className="home-feed-card-meta">
-          {isCampaign ? 'Admin' : isVideo ? 'Health Talk' : '@BagongNews'} &middot; {item.date}
+          {isCampaign ? 'Admin' : isVideo ? 'Health Talk' : '@BagongNews'}
+          {item.views ? ` · ${item.views.toLocaleString('id-ID')} views` : ''}
+          {' · '}{item.date}
         </p>
       </div>
     </div>
@@ -114,6 +159,7 @@ function FeedSection({
   const [expanded, setExpanded] = useState(false);
   const visible = expanded ? data : data.slice(0, defaultCount);
   const hasMore = data.length > defaultCount;
+  const remainingCount = data.length - defaultCount;
 
   return (
     <div className="home-feed-section">
@@ -127,7 +173,7 @@ function FeedSection({
           ))}
         </div>
       ) : (
-        <div style={{ textAlign: 'center', padding: 20, color: 'var(--fg-dim)', fontSize: 11 }}>
+        <div style={{ textAlign: 'center', padding: 20, color: 'var(--muted-foreground)', fontSize: 11 }}>
           Belum ada postingan.
         </div>
       )}
@@ -136,7 +182,7 @@ function FeedSection({
           className="lihat-selengkapnya"
           onClick={() => setExpanded(!expanded)}
         >
-          {expanded ? 'Tutup' : 'Lihat Selengkapnya'}
+          {expanded ? 'Tutup' : `Lihat Selengkapnya (${remainingCount} lagi)`}
         </button>
       )}
     </div>
@@ -153,7 +199,7 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
   useEffect(() => {
     async function fetchData() {
       try {
-        // Fetch social feed (Instagram + YouTube)
+        // Fetch social feed (YouTube RSS)
         const socialRes = await fetch('/api/social-feed');
         if (socialRes.ok) {
           const socialJson = await socialRes.json();
@@ -163,9 +209,12 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
             title: p.title,
             imageHint: 'News',
             media_url: p.media_url,
-            source: '@BagongNews',
+            video_url: p.video_url || p.external_url,
+            external_url: p.external_url,
+            source: p.source === 'youtube' ? 'youtube' : '@BagongNews',
             date: fmtDate(p.published_at),
             type: 'news' as const,
+            views: p.views || 0,
           }));
           setNewsData(news);
 
@@ -173,11 +222,14 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
             id: v.id,
             caption: v.caption,
             title: v.title,
-            thumbnail_url: v.thumbnail_url,
+            media_url: v.media_url,
             video_url: v.video_url,
-            source: 'Health Talk',
+            external_url: v.external_url,
+            source: 'youtube',
             date: fmtDate(v.published_at),
             type: 'talk' as const,
+            views: v.views || 0,
+            lengthSeconds: v.lengthSeconds || 0,
           }));
           setTalkData(talks);
         }
@@ -199,7 +251,7 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
           setCampaignData(campaigns);
         }
       } catch {
-        // fallback to empty — will show no data message
+        // fallback to empty
       } finally {
         setLoading(false);
       }

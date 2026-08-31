@@ -806,19 +806,22 @@ select:focus { border-color: #ff4d00; }
   border-radius: 12px;
   overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
-  cursor: pointer;
 }
 .home-feed-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0,0,0,0.08);
 }
 .home-feed-card-media {
- width: 100%;
+  width: 100%;
   aspect-ratio: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
+  overflow: hidden;
+}
+.home-feed-card-media img {
+  transition: opacity 0.3s;
 }
 .home-feed-play-btn {
   width: 40px; height: 40px;
