@@ -80,7 +80,6 @@ function FeedCard({ item, index }: { item: FeedItem; index: number }) {
       onKeyDown={clickUrl ? (e) => { if (e.key === 'Enter') handleClick(); } : undefined}
       style={clickUrl ? { cursor: 'pointer' } : undefined}
     >
-      {/* Image / Video Thumbnail */
       <div
         className="home-feed-card-media"
         style={{
@@ -120,7 +119,6 @@ function FeedCard({ item, index }: { item: FeedItem; index: number }) {
             </svg>
           </div>
         )}
-        {/* Video duration badge */
         {isVideo && item.lengthSeconds && item.lengthSeconds > 0 && (
           <span style={{
             position: 'absolute', bottom: 6, right: 6, background: 'rgba(0,0,0,0.8)',
@@ -130,7 +128,6 @@ function FeedCard({ item, index }: { item: FeedItem; index: number }) {
           </span>
         )}
       </div>
-      {/* Caption & Meta */
       <div className="home-feed-card-body">
         {item.title && (
           <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--foreground)', marginBottom: 4, lineHeight: 1.3 }}>{item.title}</p>
