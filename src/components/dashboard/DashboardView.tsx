@@ -71,11 +71,6 @@ function N(v: number | string | null | undefined): number {
   return isNaN(n) ? 0 : n;
 }
 
-function fmtNum(v: number): string {
-  if (v >= 1000000) return (v / 1000000).toFixed(v % 1000000 === 0 ? 0 : 1) + 'M';
-  if (v >= 1000) return (v / 1000).toFixed(v % 1000 === 0 ? 0 : 1) + 'K';
-  return Math.round(v).toLocaleString('id-ID');
-}
 
 function fmtDate(d: string | null): string {
   if (!d) return '-';
@@ -210,20 +205,6 @@ export default function DashboardView() {
     return vals;
   }, [lagging, monthFilter, getActiveMonthKey]);
 
-  const quickStats = useMemo(() => {
-    const getVal = (kw: string): number => {
-      const entry = findByLabel(leading, kw);
-      if (!entry) return 0;
-      if (monthFilter === 'all') return N(entry.total);
-      return N(entry[getActiveMonthKey as keyof LeadingEntry]);
-    };
-    return {
-      manPower: getVal('Man Power'),
-      manHours: getVal('Man Hours'),
-      tkSakit: getVal('Tenaga Kerja Sakit'),
-      absensiSakit: getVal('Total Absensi Sakit'),
-    };
-  }, [leading, monthFilter, getActiveMonthKey]);
 
   const asrRanking = useMemo(() => {
     if (asrAllSites.length === 0) return [];
@@ -282,6 +263,7 @@ export default function DashboardView() {
     const H = rect.height;
     const isDark = document.documentElement.classList.contains('dark');
     const tickColor = isDark ? '#aaaaaa' : '#666666';
+    const siteNameColor = isDark ? '#d0d0d0' : '#1a1a1a';
     const gridColor = isDark ? '#333333' : 'rgba(0,0,0,0.06)';
 
     ctx.clearRect(0, 0, W, H);
@@ -320,7 +302,7 @@ export default function DashboardView() {
       ctx.roundRect(pad.left, y, w, barH, 3);
       ctx.fill();
 
-      ctx.fillStyle = tickColor;
+      ctx.fillStyle = siteNameColor;
       ctx.font = '8px sans-serif';
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
@@ -352,8 +334,8 @@ export default function DashboardView() {
 
       <div className="header-filter">
         <div className="header-filter-left">
-          <div className="filter-tag">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ width: 11, height: 11 }}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
+          <div className="filter-tag" style={{ fontSize: '8px' }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ width: 9, height: 9 }}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
             Filtering
           </div>
           <select value={selectedSite} onChange={handleSiteChange}>
@@ -365,27 +347,7 @@ export default function DashboardView() {
           </select>
           <select value="2026" disabled><option value="2026">Tahun</option></select>
         </div>
-        <div className="health-quick-stats">
-          <div className="hqs-item">
-            <span className="hqs-val">{fmtNum(quickStats.manPower)}</span>
-            <span className="hqs-label">Man Power</span>
-          </div>
-          <div style={{ width: 1, height: 16, background: 'var(--border)' }} />
-          <div className="hqs-item">
-            <span className="hqs-val">{fmtNum(quickStats.manHours)}</span>
-            <span className="hqs-label">Man Hours</span>
-          </div>
-          <div style={{ width: 1, height: 16, background: 'var(--border)' }} />
-          <div className="hqs-item">
-            <span className="hqs-val" style={{ color: '#FF6347' }}>{Math.round(quickStats.tkSakit)}</span>
-            <span className="hqs-label">TK Sakit</span>
-          </div>
-          <div style={{ width: 1, height: 16, background: 'var(--border)' }} />
-          <div className="hqs-item">
-            <span className="hqs-val" style={{ color: '#FF8C42' }}>{Math.round(quickStats.absensiSakit)}</span>
-            <span className="hqs-label">Hari Absensi</span>
-          </div>
-        </div>
+
       </div>
 
       <div className="health-main-grid">
