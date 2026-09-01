@@ -14,6 +14,7 @@ import ReviewMCU from '@/components/review-mcu/ReviewMCU';
 import InputLaggingIndicator from '@/components/administrator/InputLaggingIndicator';
 import KunjunganBerobatForm from '@/components/administrator/KunjunganBerobatForm';
 import HealthCampaignForm from '@/components/administrator/HealthCampaignForm';
+import HealthStatisticsForm from '@/components/administrator/HealthStatisticsForm';
 import UserManagement from '@/components/administrator/UserManagement';
 import HomeView from '@/components/home/HomeView';
 import DataKesehatanTable from '@/components/dashboard/DataKesehatanTable';
@@ -100,6 +101,13 @@ function IconReviewMCU() {
     </svg>
   );
 }
+function IconStatistikHealth() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" /><circle cx="12" cy="7" r="3" /><path d="M12 4v1" />
+    </svg>
+  );
+}
 function IconInputLagging() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -162,8 +170,9 @@ const DASH_SIDEBAR: SidebarItem[] = [
 ];
 
 const ADMIN_SIDEBAR: SidebarItem[] = [
+  { key: 'statistik-health', label: 'Input Lagging Indicator', icon: <IconStatistikHealth /> },
   { key: 'review-mcu', label: 'Review MCU', icon: <IconReviewMCU /> },
-  { key: 'input-lagging', label: 'Input Lagging Indicator', icon: <IconInputLagging /> },
+  { key: 'input-lagging', label: 'Data Karyawan Sakit', icon: <IconInputLagging /> },
   { key: 'health-campaign', label: 'Health Campaign', icon: <IconCampaignAdmin /> },
   { key: 'kunjungan-admin', label: 'Kunjungan Berobat', icon: <IconKunjunganAdmin /> },
   { key: 'kelola-pengguna', label: 'Kelola Pengguna', icon: <IconUsers />, superuserOnly: true },
@@ -287,6 +296,11 @@ function AdminContent() {
   }
 
   const panels: Record<string, { form: React.ReactNode; tables: React.ReactNode[]; hasTable: boolean; labels?: string[] }> = {
+    'statistik-health': {
+      hasTable: false,
+      form: <HealthStatisticsForm />,
+      tables: [],
+    },
     'review-mcu': {
       hasTable: true,
       labels: ['Form Input', 'Record MCU'],
@@ -380,52 +394,63 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
       <motion.div
         className="login-card"
         style={{ position: 'relative' }}
-        initial={{ opacity: 0, scale: 0.92, y: 20 }}
+        initial={{ opacity: 0, scale: 0.88, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.92, y: 20 }}
-        transition={{ type: 'spring', stiffness: 350, damping: 32 }}
+        exit={{ opacity: 0, scale: 0.88, y: 24 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
       >
         <button className="login-close-btn" onClick={onClose}>
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
         </button>
 
-        <h2>Masuk</h2>
-        <p>Silakan masuk untuk mengakses semua fitur</p>
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--foreground)', marginBottom: 6 }}>Username</label>
-            <input
-              type="text"
-              className="login-input"
-              placeholder="username / email"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoComplete="username"
-            />
+        <div style={{ paddingTop: 28, paddingBottom: 4 }}>
+          <div className="login-card-icon">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+              <path d="M12 8v4M12 16h.01" />
+            </svg>
           </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--foreground)', marginBottom: 6 }}>Password</label>
-            <input
-              type="password"
-              className="login-input"
-              placeholder="Masukkan password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-            />
-          </div>
-          {error && (
-            <p className="login-error-msg">{error}</p>
-          )}
-          <button type="submit" className="login-btn" style={{ marginTop: 4 }} disabled={loading}>
-            {loading ? 'Memproses...' : 'Masuk'}
-          </button>
-        </form>
+        </div>
 
-        <p className="login-footer-text">
-          Belum punya akun? Hubungi administrator
-        </p>
+        <div className="login-card-body">
+          <h2>Masuk</h2>
+          <p className="login-card-subtitle">Masuk ke BG-Health untuk mengakses dashboard</p>
+
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
+            <div className="login-input-group">
+              <label className="login-input-label">Username / Email</label>
+              <input
+                type="text"
+                className="login-input"
+                placeholder="username@email.com"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+              />
+            </div>
+            <div className="login-input-group">
+              <label className="login-input-label">Password</label>
+              <input
+                type="password"
+                className="login-input"
+                placeholder="Masukkan password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+            </div>
+            {error && (
+              <p className="login-error-msg">{error}</p>
+            )}
+            <button type="submit" className="login-btn" disabled={loading}>
+              {loading ? 'Memproses...' : 'Masuk'}
+            </button>
+          </form>
+
+          <p className="login-footer-text">
+            Belum punya akun? Hubungi administrator
+          </p>
+        </div>
       </motion.div>
     </motion.div>
   );

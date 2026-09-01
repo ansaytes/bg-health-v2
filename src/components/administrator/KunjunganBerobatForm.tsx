@@ -40,8 +40,17 @@ export default function KunjunganBerobatForm() {
     setSaved(false);
   };
 
-  const handleEmployeeFound = useCallback((_data: EmployeeData) => {
-    // The autoFill prop on EmployeeLookupInput handles the actual field population.
+  const handleEmployeeFound = useCallback((data: EmployeeData) => {
+    // Smart-fill: match site_name against JOBSITES (case-insensitive)
+    const siteName = (data.site_name || '').trim();
+    if (siteName) {
+      const matched = JOBSITES.find(j =>
+        j.toLowerCase() === siteName.toLowerCase() ||
+        siteName.toLowerCase().includes(j.toLowerCase()) ||
+        j.toLowerCase().includes(siteName.toLowerCase())
+      );
+      handleChange('site', matched || siteName);
+    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -108,7 +117,6 @@ export default function KunjunganBerobatForm() {
                         autoFill={{
                           nama: 'nama',
                           department: 'departemen',
-                          site_name: 'site',
                         }}
                         placeholder={field.placeholder}
                         label={

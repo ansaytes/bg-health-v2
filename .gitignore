@@ -32,20 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
-!.env.example
 
 # vercel
 .vercel
-
-# non-source directories
-/examples/
-/tests/
-/db/
-/upload/
-/tool-results/
-/download/
-/screenshot-*.png
-/ss-*.png
 
 
 # typescript

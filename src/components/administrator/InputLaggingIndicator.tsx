@@ -170,9 +170,24 @@ export default function InputLaggingIndicator() {
     setMpSaved(false);
   };
 
-  const handleEmployeeFound = useCallback((_data: EmployeeData) => {
-    // The autoFill prop on EmployeeLookupInput handles the actual field population.
-    // This callback can be used for side-effects if needed later.
+  const handleEmployeeFound = useCallback((data: EmployeeData) => {
+    // Smart-fill: match site_name against JOBSITES (case-insensitive)
+    const siteName = (data.site_name || '').trim();
+    if (siteName) {
+      const matched = JOBSITES.find(j =>
+        j.toLowerCase() === siteName.toLowerCase() ||
+        siteName.toLowerCase().includes(j.toLowerCase()) ||
+        j.toLowerCase().includes(siteName.toLowerCase())
+      );
+      if (matched) {
+        handleChange('jobsite', matched);
+        setCustomSite('');
+      } else {
+        // No match — use custom input
+        handleChange('jobsite', '__custom__');
+        setCustomSite(siteName);
+      }
+    }
   }, []);
 
   const handleSickSubmit = async (e: React.FormEvent) => {
@@ -305,7 +320,6 @@ export default function InputLaggingIndicator() {
                     autoFill={{
                       nama: 'nama',
                       job_position: 'jabatan',
-                      site_name: 'jobsite',
                     }}
                     placeholder="Contoh: 230802778"
                     label={<>NIK Karyawan <span style={{ color: '#ff4d00' }}>*</span></>}

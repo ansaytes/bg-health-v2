@@ -4,7 +4,7 @@ import { assessZonasi, calcBMI, calcMCHC, calcPct, calcDiabetes, calcPerluFU, ca
 
 export type PageTab = 'home' | 'dashboard' | 'administrator';
 export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan';
-export type AdminSidebar = 'review-mcu' | 'input-lagging' | 'kunjungan-admin' | 'health-campaign' | 'kelola-pengguna';
+export type AdminSidebar = 'statistik-health' | 'review-mcu' | 'input-lagging' | 'kunjungan-admin' | 'health-campaign' | 'kelola-pengguna';
 export type HomeSidebar = 'semua-feed' | 'health-campaign' | 'health-talk' | 'news';
 export type ReviewStep = 'search' | 'ocr' | 'form';
 
