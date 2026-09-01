@@ -1,5 +1,6 @@
 DROP TABLE IF EXISTS lagging_indicators CASCADE;
 DROP TABLE IF EXISTS health_indicators CASCADE;
+DROP TABLE IF EXISTS sick_employees CASCADE;
 DROP TABLE IF EXISTS health_statistics_sites CASCADE;
 DROP TABLE IF EXISTS health_statistics CASCADE;
 DROP VIEW IF EXISTS v_kpi_all_site CASCADE;
@@ -58,3 +59,31 @@ COMMENT ON COLUMN health_indicators.ssr IS 'Sick Shift Rate';
 COMMENT ON COLUMN health_indicators.asr IS 'Absence Severity Rate';
 COMMENT ON COLUMN health_indicators.fr_pak IS 'Frequency Rate Penyakit Akibat Kerja';
 COMMENT ON COLUMN health_indicators.kaptk IS 'Kejadian Akibat Penyakit Tenaga Kerja';
+
+CREATE TABLE sick_employees (
+  id                    BIGSERIAL PRIMARY KEY,
+  nik                   TEXT,
+  nama                  TEXT NOT NULL,
+  jobsite               TEXT,
+  jabatan               TEXT,
+  tanggal_mulai_a       DATE,
+  tanggal_selesai_a     DATE,
+  jumlah_hari_a         INTEGER DEFAULT 0,
+  tanggal_mulai_b       DATE,
+  tanggal_selesai_b     DATE,
+  jumlah_hari_b         INTEGER DEFAULT 0,
+  tanggal_mulai_c       DATE,
+  tanggal_selesai_c     DATE,
+  jumlah_hari_c         INTEGER DEFAULT 0,
+  jumlah_spell          INTEGER DEFAULT 0,
+  created_at            TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_sick_jobsite ON sick_employees(jobsite);
+CREATE INDEX idx_sick_tanggal_a ON sick_employees(tanggal_mulai_a);
+CREATE INDEX idx_sick_tanggal_b ON sick_employees(tanggal_mulai_b);
+CREATE INDEX idx_sick_tanggal_c ON sick_employees(tanggal_mulai_c);
+
+ALTER TABLE sick_employees ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "sick_public_read" ON sick_employees FOR SELECT USING (true);
+CREATE POLICY "sick_auth_all" ON sick_employees FOR ALL USING (auth.role() = 'authenticated');

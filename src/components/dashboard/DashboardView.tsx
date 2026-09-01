@@ -45,6 +45,22 @@ interface AsrSite {
   sep: number; oct: number; nov: number; dec: number;
 }
 
+interface SickEmployee {
+  nama: string;
+  jobsite: string;
+  jabatan: string;
+  tanggal_mulai_a: string;
+  tanggal_selesai_a: string;
+  jumlah_hari_a: number;
+  tanggal_mulai_b: string;
+  tanggal_selesai_b: string;
+  jumlah_hari_b: number;
+  tanggal_mulai_c: string;
+  tanggal_selesai_c: string;
+  jumlah_hari_c: number;
+  jumlah_spell: number;
+}
+
 function findByLabel<T extends { indicator: string }>(arr: T[], kw: string): T | undefined {
   return arr.find(e => e.indicator.toUpperCase().includes(kw.toUpperCase()));
 }
@@ -61,12 +77,18 @@ function fmtNum(v: number): string {
   return Math.round(v).toLocaleString('id-ID');
 }
 
+function fmtDate(d: string | null): string {
+  if (!d) return '-';
+  return d;
+}
+
 export default function DashboardView() {
   const [sites, setSites] = useState<string[]>(['All Site']);
   const [selectedSite, setSelectedSite] = useState('All Site');
   const [monthFilter, setMonthFilter] = useState('all');
   const [siteCache, setSiteCache] = useState<Record<string, SiteData>>({});
   const [asrAllSites, setAsrAllSites] = useState<AsrSite[]>([]);
+  const [sickList, setSickList] = useState<SickEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [chartReady, setChartReady] = useState(false);
   const chartDrawnRef = useRef(false);
@@ -97,6 +119,27 @@ export default function DashboardView() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (monthFilter === 'all') {
+      setSickList([]);
+      return;
+    }
+    const mIdx = MONTHS.indexOf(monthFilter as typeof MONTHS[number]) + 1;
+    (async () => {
+      try {
+        const params = new URLSearchParams({ bulan: String(mIdx) });
+        if (selectedSite !== 'All Site') params.set('site', selectedSite);
+        const res = await fetch(`/api/sick-employees?${params}`);
+        const json = await res.json();
+        if (json.success) {
+          setSickList(json.data || []);
+        }
+      } catch {
+        setSickList([]);
+      }
+    })();
+  }, [monthFilter, selectedSite]);
 
   const loadSite = useCallback(async (site: string) => {
     if (siteCache[site]) return;
@@ -244,11 +287,12 @@ export default function DashboardView() {
     ctx.clearRect(0, 0, W, H);
 
     const maxVal = Math.max(...asrRanking.map(d => d.asr), 1);
-    const pad = { top: 8, right: 40, bottom: 8, left: 85 };
+    const pad = { top: 4, right: 40, bottom: 4, left: 90 };
     const chartW = W - pad.left - pad.right;
     const chartH = H - pad.top - pad.bottom;
-    const barH = Math.min(16, (chartH / asrRanking.length) * 0.55);
-    const gap = chartH / asrRanking.length;
+    const count = asrRanking.length;
+    const barH = Math.min(14, (chartH / count) * 0.6);
+    const gap = chartH / count;
 
     const gridLines = 4;
     for (let i = 0; i <= gridLines; i++) {
@@ -258,10 +302,10 @@ export default function DashboardView() {
       ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, H - pad.bottom); ctx.stroke();
       const val = (maxVal / gridLines) * i;
       ctx.fillStyle = tickColor;
-      ctx.font = '9px sans-serif';
+      ctx.font = '8px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      ctx.fillText(val.toFixed(0), x, H - pad.bottom + 2);
+      ctx.fillText(val.toFixed(0), x, H - pad.bottom + 1);
     }
 
     asrRanking.forEach((d, i) => {
@@ -277,13 +321,13 @@ export default function DashboardView() {
       ctx.fill();
 
       ctx.fillStyle = tickColor;
-      ctx.font = '9px sans-serif';
+      ctx.font = '8px sans-serif';
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
-      ctx.fillText(d.name, pad.left - 6, y + barH / 2);
+      ctx.fillText(d.name, pad.left - 4, y + barH / 2);
 
       ctx.fillStyle = tickColor;
-      ctx.font = 'bold 9px sans-serif';
+      ctx.font = 'bold 8px sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(d.asr.toFixed(2), pad.left + w + 4, y + barH / 2);
     });
@@ -296,6 +340,8 @@ export default function DashboardView() {
 
   const statsSubtitle = `${selectedSite}${monthFilter !== 'all' ? ' - ' + String(monthFilter) + ' 2026' : ' - YTD 2026'}`;
 
+  const totalSick = sickList.length;
+
   return (
     <div className="dashboard" style={{ position: 'relative' }}>
       {loading && (
@@ -304,7 +350,21 @@ export default function DashboardView() {
         </div>
       )}
 
-      <div className="mcu-total-bar" style={{ justifyContent: 'flex-end' }}>
+      <div className="header-filter">
+        <div className="header-filter-left">
+          <div className="filter-tag">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ width: 11, height: 11 }}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
+            Filtering
+          </div>
+          <select value={selectedSite} onChange={handleSiteChange}>
+            {sites.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select value={monthFilter} onChange={handleMonthChange}>
+            <option value="all">Bulan</option>
+            {MONTHS.map((m, i) => <option key={i} value={m}>{m}</option>)}
+          </select>
+          <select value="2026" disabled><option value="2026">Tahun</option></select>
+        </div>
         <div className="health-quick-stats">
           <div className="hqs-item">
             <span className="hqs-val">{fmtNum(quickStats.manPower)}</span>
@@ -328,25 +388,9 @@ export default function DashboardView() {
         </div>
       </div>
 
-      <div className="header-filter">
-        <div className="header-filter-left">
-          <div className="filter-tag">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ width: 11, height: 11 }}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
-            Filtering
-          </div>
-          <select value={selectedSite} onChange={handleSiteChange}>
-            {sites.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <select value={monthFilter} onChange={handleMonthChange}>
-            <option value="all">Bulan</option>
-            {MONTHS.map((m, i) => <option key={i} value={m}>{m}</option>)}
-          </select>
-          <select value="2026" disabled><option value="2026">Tahun</option></select>
-        </div>
-      </div>
       <div className="health-main-grid">
         <div className="health-left-col">
-          <div className="card glow-orange" style={{ flex: 1.3, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div className="card glow-orange" style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column' }}>
             <div className="card-head" style={{ flexShrink: 0 }}>
               <div className="card-icon" style={{ background: 'rgba(255,77,0,.1)' }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="#ff4d00" strokeWidth="2" strokeLinecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
@@ -375,7 +419,7 @@ export default function DashboardView() {
             </div>
           </div>
 
-          <div className="card glow-amber" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div className="card glow-amber" style={{ flex: '1 1 0', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <div className="card-head" style={{ flexShrink: 0 }}>
               <div className="card-icon" style={{ background: 'rgba(255,140,66,.1)' }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="#ff8c42" strokeWidth="2" strokeLinecap="round"><rect x="4" y="2" width="16" height="20" rx="2" /><path d="M9 22v-4h6v4M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01" /></svg>
@@ -400,8 +444,8 @@ export default function DashboardView() {
               <h2>List Karyawan Sakit</h2>
               <p>
                 {monthFilter === 'all'
-                  ? 'Harap Pilih Periode Bulan Untuk Menampilkan List Karyawan Sakit'
-                  : selectedSite + ' - ' + String(monthFilter) + ' 2026'
+                  ? 'Harap Pilih Periode Bulan'
+                  : selectedSite + ' - ' + String(monthFilter) + ' 2026' + (totalSick > 0 ? ' (' + totalSick + ' orang)' : '')
                 }
               </p>
             </div>
@@ -411,10 +455,37 @@ export default function DashboardView() {
               <div style={{ textAlign: 'center', padding: '24px 16px', color: 'var(--fg-dim)', fontSize: 10 }}>
                 Harap Pilih Periode Bulan Untuk Menampilkan List Karyawan Sakit
               </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '24px 16px', color: 'var(--fg-dim)', fontSize: 9 }}>
-                Data karyawan sakit akan diambil dari sumber terpisah.
+            ) : sickList.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '24px 16px', color: 'var(--fg-dim)', fontSize: 10 }}>
+                Tidak ada data karyawan sakit untuk periode ini.
               </div>
+            ) : (
+              <table className="sick-table">
+                <thead>
+                  <tr>
+                    <th>Nama</th>
+                    <th>Jobsite</th>
+                    <th>Jabatan</th>
+                    <th>Mulai A</th>
+                    <th>Selesai A</th>
+                    <th>Hari</th>
+                    <th>Spell</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sickList.map((emp, idx) => (
+                    <tr key={idx}>
+                      <td>{emp.nama}</td>
+                      <td>{emp.jobsite}</td>
+                      <td>{emp.jabatan}</td>
+                      <td>{fmtDate(emp.tanggal_mulai_a)}</td>
+                      <td>{fmtDate(emp.tanggal_selesai_a)}</td>
+                      <td style={{ textAlign: 'center' }}>{emp.jumlah_hari_a}</td>
+                      <td style={{ textAlign: 'center' }}>{emp.jumlah_spell}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
         </div>
