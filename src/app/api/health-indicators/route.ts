@@ -7,28 +7,7 @@ const ALLOWED_FIELDS = [
   'rkk','cmr','mfr','ssr','asr','fr_pak','kaptk',
 ] as const;
 
-/** Returns true if Supabase is properly configured (not placeholder) */
-function isSupabaseConfigured(): boolean {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  return !!(url && key && !url.includes('placeholder'));
-}
-
 export async function GET(request: NextRequest) {
-  // Fail-fast: if Supabase is not configured, return empty data so frontend falls back to static
-  if (!isSupabaseConfigured()) {
-    const { searchParams } = new URL(request.url);
-    const asr_ranking = searchParams.get('asr_ranking');
-    const sites_list = searchParams.get('sites_list');
-    if (sites_list === 'true') {
-      return NextResponse.json({ success: true, data: ['All Site'] });
-    }
-    if (asr_ranking === 'true') {
-      return NextResponse.json({ success: true, data: [] });
-    }
-    return NextResponse.json({ success: true, data: [] });
-  }
-
   try {
     const { searchParams } = new URL(request.url);
     const tahun = searchParams.get('tahun');
@@ -53,6 +32,8 @@ export async function GET(request: NextRequest) {
     }
 
     // ── ASR ranking: top 10 jobsites by ASR ───────────────────
+    // For YTD (no bulan), return ALL sites with ASR > 0 — client aggregates across months.
+    // For specific bulan, limit to top 10.
     if (asr_ranking === 'true') {
       let q = supabase
         .from('health_indicators')
@@ -60,8 +41,15 @@ export async function GET(request: NextRequest) {
         .neq('jobsite', 'All Site')
         .gt('asr', 0);
       if (tahun) q = q.eq('tahun', parseInt(tahun));
-      if (bulan) q = q.eq('bulan', parseInt(bulan));
-      q = q.order('asr', { ascending: false }).limit(10);
+      if (bulan) {
+        // Specific month → limit to top 10
+        q = q.eq('bulan', parseInt(bulan))
+            .order('asr', { ascending: false })
+            .limit(10);
+      } else {
+        // YTD → return all rows for the year (client will aggregate)
+        q = q.order('jobsite', { ascending: true });
+      }
       const { data, error } = await q;
       if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
       return NextResponse.json({ success: true, data: data || [] });

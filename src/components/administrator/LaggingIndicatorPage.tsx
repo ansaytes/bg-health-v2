@@ -95,7 +95,7 @@ export default function LaggingIndicatorPage() {
         <div style={{ marginBottom: 18 }}>
           <h1 className="admin-form-title">Lagging Indicator</h1>
           <p className="admin-form-subtitle">
-            Input data bulanan per jobsite untuk dashboard Statistik Kesehatan. Leading indicators (Review MCU, Kunjungan Berobat, Health Campaign, Health Talk) sudah ada di halaman masing-masing.
+            Input data bulanan per jobsite untuk dashboard Statistik Kesehatan.
           </p>
         </div>
 

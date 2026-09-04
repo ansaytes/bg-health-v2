@@ -624,6 +624,69 @@
   min-width: 0;
 }
 
+/* Sick list card — proper scroll container */
+.sick-list-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.sick-list-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.sick-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10.5px;
+}
+.sick-table thead tr {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--muted);
+}
+.sick-table th {
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.sick-table th.num-col { text-align: center; }
+.sick-table td {
+  padding: 6px 10px;
+  color: var(--foreground);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+.sick-table td.num-col { text-align: center; }
+.sick-table td.nik-cell {
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+.sick-table td.nama-cell { font-weight: 600; }
+.sick-table td.spell-cell { font-weight: 700; color: var(--brand-primary); }
+.sick-table tbody tr { transition: background 0.15s; }
+.sick-table tbody tr:hover { background: var(--hover); }
+.sick-empty-state {
+  text-align: center;
+  padding: 24px 16px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
 /* ═══════════════════════════════════
    Filter Bar
    ═══════════════════════════════════ */

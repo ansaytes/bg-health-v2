@@ -5,21 +5,16 @@ import { JOBSITES } from '@/lib/lagging-data';
 /**
  * GET /api/jobsites
  * Query params: ?tahun=2026   (filter to sites that have data for the year)
- *               ?static=true   (return hardcoded list, skip Supabase)
  *
- * Response: { success: true, data: string[] }  ("All Site" always first)
+ * Returns distinct jobsites that have rows in health_indicators for the given
+ * tahun (or all sites if no tahun filter). "All Site" is always prepended.
+ *
+ * Response: { success: true, data: string[] }
  */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const tahun = searchParams.get('tahun');
-    const onlyStatic = searchParams.get('static') === 'true';
-
-    // Fallback: Supabase not configured → return hardcoded list
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (onlyStatic || !supabaseUrl) {
-      return NextResponse.json({ success: true, data: JOBSITES });
-    }
 
     let q = supabase
       .from('health_indicators')
@@ -30,13 +25,18 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await q;
     if (error) {
-      // Fall back to static list on error
-      return NextResponse.json({ success: true, data: JOBSITES });
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      );
     }
     const unique = ['All Site', ...new Set((data || []).map((r: { jobsite: string }) => r.jobsite))];
-    return NextResponse.json({ success: true, data: unique.length > 1 ? unique : JOBSITES });
+    return NextResponse.json({
+      success: true,
+      data: unique.length > 1 ? unique : JOBSITES,
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Gagal mengambil daftar jobsite';
-    return NextResponse.json({ success: false, error: msg, data: JOBSITES }, { status: 500 });
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }

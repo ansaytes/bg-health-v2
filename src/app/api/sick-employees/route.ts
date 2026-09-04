@@ -1,20 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-/** Returns true if Supabase is properly configured (not placeholder) */
-function isSupabaseConfigured(): boolean {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  return !!(url && key && !url.includes('placeholder'));
-}
-
 /**
  * GET /api/sick-employees
  */
 export async function GET(request: NextRequest) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ success: true, data: [] });
-  }
   try {
     const { searchParams } = new URL(request.url);
     const jobsite = searchParams.get('jobsite') || '';
