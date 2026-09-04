@@ -170,9 +170,9 @@ const DASH_SIDEBAR: SidebarItem[] = [
 ];
 
 const ADMIN_SIDEBAR: SidebarItem[] = [
-  { key: 'statistik-health', label: 'Input Lagging Indicator', icon: <IconStatistikHealth /> },
+  { key: 'statistik-health', label: 'Statistik Kesehatan', icon: <IconStatistikHealth /> },
   { key: 'review-mcu', label: 'Review MCU', icon: <IconReviewMCU /> },
-  { key: 'input-lagging', label: 'Data Karyawan Sakit', icon: <IconInputLagging /> },
+  { key: 'input-lagging', label: 'Input Lagging Indicator', icon: <IconInputLagging /> },
   { key: 'health-campaign', label: 'Health Campaign', icon: <IconCampaignAdmin /> },
   { key: 'kunjungan-admin', label: 'Kunjungan Berobat', icon: <IconKunjunganAdmin /> },
   { key: 'kelola-pengguna', label: 'Kelola Pengguna', icon: <IconUsers />, superuserOnly: true },
@@ -600,7 +600,7 @@ export default function Home() {
       <div className="main">
         <div className="header">
           <div className="header-top">
-            <div style={{ width: 0, flexShrink: 0 }} />
+            <div className="header-left-spacer" />
             <nav className="header-nav">
               {headerNav.map((item) => (
                 <button

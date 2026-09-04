@@ -59,7 +59,7 @@ function fmtDuration(secs: number): string {
 /* ── Feed Card Component ── */
 function FeedCard({ item, index }: { item: FeedItem; index: number }) {
   const gradient = GRADIENTS[index % GRADIENTS.length];
-  const isVideo = item.type === 'talk';
+  const isVideo = item.type === 'talk' || (item.type === 'news' && (!!item.video_url || !!item.media_url));
   const isCampaign = item.type === 'campaign';
   const isYouTube = item.source === 'youtube' || item.type === 'talk';
   const thumbnail = item.media_url || item.thumbnail_url || item.image_url;
@@ -105,10 +105,10 @@ function FeedCard({ item, index }: { item: FeedItem; index: number }) {
             </span>
           </div>
         ) : null}
-        {isVideo && (
+        {(isVideo || clickUrl) && (
           <div className="home-feed-play-btn">
             <svg viewBox="0 0 24 24" fill="white" width="28" height="28">
-              <polygon points="5,3 19,12 5,21" />
+              <polygon points="6,3 20,12 6,21" />
             </svg>
           </div>
         )}
@@ -260,7 +260,9 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
     return (
       <div className="home-feed" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
         <div style={{ textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>
-          <div style={{ width: 24, height: 24, border: '2px solid var(--border)', borderTopColor: 'var(--foreground)', borderRadius: '50%', margin: '0 auto 8px', animation: 'spin 0.8s linear infinite' }} />
+          <div className="loading-spinner" style={{ margin: '0 auto 10px' }}>
+            <img src="/BM.png" alt="Loading" />
+          </div>
           Memuat feed...
         </div>
       </div>

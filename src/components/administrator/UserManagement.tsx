@@ -115,7 +115,16 @@ export default function UserManagement() {
   if (!isAdmin) {
     return (
       <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted-foreground)' }}>
-        Akses ditolak
+        <div style={{
+          width: 48, height: 48, borderRadius: 12, margin: '0 auto 12px',
+          background: 'rgba(239,68,68,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+        </div>
+        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--foreground)', marginBottom: 4 }}>Akses Ditolak</p>
+        <p style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>Anda memerlukan akses administrator untuk mengelola pengguna.</p>
       </div>
     );
   }
@@ -133,10 +142,23 @@ export default function UserManagement() {
         <div style={{ flexShrink: 0, marginBottom: 12 }}>
           <button
             onClick={() => { setShowRegister(!showRegister); setRegError(''); setRegSuccess(''); }}
-            className="admin-form-btn-primary"
-            style={{ maxWidth: 220, height: 36, fontSize: 12 }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              padding: '0 16px', height: 36, fontSize: 12, lineHeight: '36px',
+              background: showRegister ? 'var(--muted)' : '#ff4d00',
+              color: showRegister ? 'var(--foreground)' : '#fff',
+              border: 'none', borderRadius: 8, cursor: 'pointer',
+              fontWeight: 600, whiteSpace: 'nowrap',
+              transition: 'background 0.2s, color 0.2s',
+              width: '100%',
+            }}
           >
-            {showRegister ? 'Tutup Form' : '+ Tambah Pengguna'}
+            {showRegister ? (
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            ) : (
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            )}
+            {showRegister ? 'Tutup Form' : 'Tambah Pengguna'}
           </button>
         </div>
       )}
@@ -203,9 +225,28 @@ export default function UserManagement() {
 
       {/* Error state */}
       {error && !loading && (
-        <div style={{ padding: 20, textAlign: 'center', color: '#ef4444', flexShrink: 0 }}>
-          <p>{error}</p>
-          <button onClick={fetchUsers} style={{ marginTop: 8, fontSize: 12, color: '#ff4d00', cursor: 'pointer', background: 'none', border: 'none', textDecoration: 'underline' }}>Coba lagi</button>
+        <div style={{ padding: 20, textAlign: 'center', flexShrink: 0 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 10, margin: '0 auto 8px',
+            background: 'rgba(239,68,68,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+          <p style={{ fontSize: 12, fontWeight: 600, color: '#ef4444', marginBottom: 4 }}>{error}</p>
+          <p style={{ fontSize: 10, color: 'var(--muted-foreground)', marginBottom: 8 }}>Pastikan sesi Anda masih aktif dan coba lagi.</p>
+          <button
+            onClick={fetchUsers}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '6px 14px', fontSize: 11, fontWeight: 600,
+              color: '#fff', background: '#ff4d00', border: 'none', borderRadius: 6, cursor: 'pointer',
+            }}
+          >
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>
+            Coba Lagi
+          </button>
         </div>
       )}
 

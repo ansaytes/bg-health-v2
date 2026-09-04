@@ -122,9 +122,7 @@ export default function InputLaggingIndicator() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [activeTab, setActiveTab] = useState<'karyawan' | 'manpower'>('karyawan');
   const [customSite, setCustomSite] = useState('');
-  const [customMpSite, setCustomMpSite] = useState('');
 
   /* Auto-calculate Spell based on diagnosis continuity across periods */
   const calcSpell = () => {
@@ -264,40 +262,8 @@ export default function InputLaggingIndicator() {
           <h1 className="admin-form-title">Input Data Kesehatan Kerja</h1>
         </div>
 
-        {/* Tab Switcher */}
-        <div style={{
-          display: 'flex', gap: 4, marginBottom: 20,
-          background: 'var(--muted)', borderRadius: 10, padding: 3,
-        }}>
-          <button
-            onClick={() => setActiveTab('karyawan')}
-            style={{
-              flex: 1, height: 34, borderRadius: 8, border: 'none',
-              fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
-              background: activeTab === 'karyawan' ? 'var(--card)' : 'transparent',
-              color: activeTab === 'karyawan' ? 'var(--foreground)' : 'var(--muted-foreground)',
-              boxShadow: activeTab === 'karyawan' ? 'var(--shadow)' : 'none',
-            }}
-          >
-            Data Karyawan Sakit
-          </button>
-          <button
-            onClick={() => setActiveTab('manpower')}
-            style={{
-              flex: 1, height: 34, borderRadius: 8, border: 'none',
-              fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
-              background: activeTab === 'manpower' ? 'var(--card)' : 'transparent',
-              color: activeTab === 'manpower' ? 'var(--foreground)' : 'var(--muted-foreground)',
-              boxShadow: activeTab === 'manpower' ? 'var(--shadow)' : 'none',
-            }}
-          >
-            Man Power Bulanan
-          </button>
-        </div>
-
-        {/* TAB 1: Data Karyawan Sakit */}
-        {activeTab === 'karyawan' && (
-          <form onSubmit={handleSickSubmit}>
+        {/* Form: Data Karyawan Sakit */}
+        <form onSubmit={handleSickSubmit}>
             <div className="admin-form-card">
               {/* Section: Identitas Karyawan */}
               <div style={{
@@ -448,109 +414,6 @@ export default function InputLaggingIndicator() {
               </div>
             </div>
           </form>
-        )}
-
-        {/* TAB 2: Man Power Bulanan */}
-        {activeTab === 'manpower' && (
-          <form onSubmit={handleMpSubmit}>
-            <div className="admin-form-card">
-              <div style={{
-                background: 'rgba(255,77,0,0.06)', borderRadius: 8, padding: '10px 14px', marginBottom: 16,
-                border: '1px solid rgba(255,77,0,0.12)', display: 'flex', gap: 10, alignItems: 'flex-start',
-              }}>
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ff4d00" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}>
-                  <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
-                </svg>
-                <p style={{ fontSize: 11, color: 'var(--foreground)', margin: 0, lineHeight: 1.5 }}>
-                  Data Man Power diperlukan untuk menghitung RKK, CMR, MFR, SSR, ASR, FR PAK, dan KAPTK.
-                  Man Hours akan dihitung otomatis dari Man Power x hari kerja per bulan.
-                </p>
-              </div>
-
-              <div style={{
-                fontSize: 11, fontWeight: 700, color: '#ff4d00',
-                textTransform: 'uppercase', letterSpacing: '0.06em',
-                marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6,
-              }}>
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
-                Data Man Power per Site per Bulan
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
-                <div>
-                  <label className="admin-label">
-                    Jobsite <span style={{ color: '#ff4d00' }}>*</span>
-                  </label>
-                  <select value={mpForm.mpSite === '__custom__' ? '__custom__' : (mpForm.mpSite || '')} onChange={(e) => { handleMpChange('mpSite', e.target.value); if (e.target.value !== '__custom__') setCustomMpSite(''); }} className="admin-input" style={{ appearance: 'none', cursor: 'pointer' }}>
-                    <option value="">Pilih Jobsite...</option>
-                    {JOBSITES.filter(s => s !== 'All Site').map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                    <option value="__custom__">+ Lainnya (input manual)</option>
-                  </select>
-                  {mpForm.mpSite === '__custom__' && (
-                    <input type="text" value={customMpSite} onChange={(e) => { setCustomMpSite(e.target.value); handleMpChange('mpSite', '__custom__'); }} placeholder="Ketik nama jobsite..." className="admin-input" style={{ marginTop: 6 }} />
-                  )}
-                </div>
-                <div>
-                  <label className="admin-label">
-                    Bulan <span style={{ color: '#ff4d00' }}>*</span>
-                  </label>
-                  <select value={mpForm.mpBulan || ''} onChange={(e) => handleMpChange('mpBulan', e.target.value)} className="admin-input" style={{ appearance: 'none', cursor: 'pointer' }}>
-                    <option value="">Pilih Bulan...</option>
-                    {MONTHS.map(m => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="admin-label">
-                    Tahun <span style={{ color: '#ff4d00' }}>*</span>
-                  </label>
-                  <input type="number" min="2020" max="2099" value={mpForm.mpTahun || '2026'} onChange={(e) => handleMpChange('mpTahun', e.target.value)} className="admin-input" />
-                </div>
-                <div>
-                  <label className="admin-label">
-                    Man Power <span style={{ color: '#ff4d00' }}>*</span>
-                  </label>
-                  <input type="number" min="0" value={mpForm.mpManPower || ''} onChange={(e) => handleMpChange('mpManPower', e.target.value)} className="admin-input" placeholder="Jumlah tenaga kerja" />
-                </div>
-                <div>
-                  <label className="admin-label">Kunjungan Klinik</label>
-                  <input type="number" min="0" value={mpForm.mpKunjungan || ''} onChange={(e) => handleMpChange('mpKunjungan', e.target.value)} className="admin-input" placeholder="Total kunjungan FAS/Klinik" />
-                </div>
-                <div>
-                  <label className="admin-label">Hari Kerja Bulan Ini</label>
-                  <input type="number" min="0" max="31" value={mpForm.mpHariKerja || ''} onChange={(e) => handleMpChange('mpHariKerja', e.target.value)} className="admin-input" placeholder="Contoh: 21" />
-                  <p style={{ fontSize: 10, color: 'var(--muted-foreground)', margin: '4px 0 0', lineHeight: 1.4 }}>
-                    Untuk kalkulasi Man Hours
-                  </p>
-                </div>
-              </div>
-
-              {/* Buttons */}
-              <div style={{ marginTop: 20, display: 'flex', gap: 10, maxWidth: '100%' }}>
-                {errorMsg && <p style={{ fontSize: 11, color: '#FF4444', margin: '0 0 8px' }}>{errorMsg}</p>}
-                <button
-                  type="submit"
-                  className="admin-form-btn-primary"
-                  disabled={mpSaving}
-                  style={mpSaved ? { background: 'linear-gradient(135deg, #00B894, #00D2A0)' } : undefined}
-                >
-                  {mpSaving ? 'Menyimpan...' : mpSaved ? 'Tersimpan!' : 'Simpan Man Power'}
-                </button>
-                <button
-                  type="button"
-                  className="admin-form-btn-secondary"
-                  onClick={() => setMpForm({})}
-                >
-                  Reset
-                </button>
-              </div>
-            </div>
-          </form>
-        )}
 
         {/* Spell Info Reference */}
         <div style={{
