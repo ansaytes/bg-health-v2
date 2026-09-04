@@ -65,7 +65,7 @@ const DENOMINATOR_FIELDS: { key: keyof IndicatorRow; label: string; hint?: strin
 ];
 
 const AGGREGATE_FIELDS: { key: keyof IndicatorRow; label: string; hint?: string; sourcePage?: string }[] = [
-  { key: 'kunjungan_klinik', label: 'Total Kunjungan Klinik', hint: 'Jumlah visit ke klinik', sourcePage: 'Halaman Kunjungan Berobat' },
+  { key: 'kunjungan_klinik', label: 'Total Kunjungan Klinik', hint: 'Hanya Head Office yang ter-auto-aggregate dari Halaman Kunjungan Berobat' },
   { key: 'tk_sakit', label: 'Tenaga Kerja Sakit', hint: 'Jumlah karyawan yang sakit', sourcePage: 'Tab Data Karyawan Sakit' },
   { key: 'absensi_sakit', label: 'Total Absensi Sakit (hari)', hint: 'Total hari sakit', sourcePage: 'Tab Data Karyawan Sakit' },
   { key: 'spell', label: 'Spell', hint: 'Jumlah Spell (Kepdirjen 1855.K/2019)', sourcePage: 'Tab Data Karyawan Sakit' },
@@ -181,8 +181,7 @@ function StatistikKesehatanForm() {
         // kejadian_penyakit_tk not derivable from sick_employees — keep existing value
       }));
       setAggregateInfo(
-        `Ter-aggregate: ${src.kunjungan_berobat_rows} kunjungan + ${src.sick_employees_rows} karyawan sakit ` +
-        `(periode ${src.period_used.bulan}/${src.period_used.tahun}${src.period_used.jobsite !== 'All Site' ? ', ' + src.period_used.jobsite : ''})`
+        `${src.kunjungan_berobat_rows} kunjungan${row.jobsite === 'Head Office' || row.jobsite === 'All Site' ? '' : ' (HO only)'} + ${src.sick_employees_rows} karyawan sakit`
       );
       setSaved(false);
     } catch (err) {
@@ -247,90 +246,84 @@ function StatistikKesehatanForm() {
 
   return (
     <form onSubmit={handleSave}>
-      <div className="admin-form-card">
+      <div className="admin-form-card" style={{ padding: '14px 16px' }}>
         {/* Section: Periode & Site */}
         <SectionHeader icon="calendar" title="Periode & Jobsite" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
           <div>
             <label className="admin-label">Tahun <span style={{ color: 'var(--brand-primary)' }}>*</span></label>
             <input type="number" min="2020" max="2099"
               value={row.tahun}
               onChange={(e) => setRow(prev => ({ ...prev, tahun: parseInt(e.target.value) || 2026 }))}
-              className="admin-input" />
+              className="admin-input compact-input" />
           </div>
           <div>
             <label className="admin-label">Bulan <span style={{ color: 'var(--brand-primary)' }}>*</span></label>
             <select value={row.bulan} onChange={(e) => setRow(prev => ({ ...prev, bulan: parseInt(e.target.value) }))}
-              className="admin-input">
+              className="admin-input compact-input">
               {FULL_MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
             </select>
           </div>
           <div>
             <label className="admin-label">Jobsite <span style={{ color: 'var(--brand-primary)' }}>*</span></label>
             <select value={row.jobsite} onChange={(e) => setRow(prev => ({ ...prev, jobsite: e.target.value }))}
-              className="admin-input">
+              className="admin-input compact-input">
               {JOBSITES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
         </div>
 
-        <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
+        <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
           <button type="button" onClick={handleLoad} disabled={loading}
-            className="admin-form-btn-secondary">
+            className="admin-form-btn-secondary compact-btn">
             {loading ? 'Memuat...' : 'Muat Data'}
           </button>
         </div>
 
-        <div style={{ height: 1, background: 'var(--border)', margin: '20px 0' }} />
+        <div style={{ height: 1, background: 'var(--border)', margin: '12px 0' }} />
 
         {/* Section: Denominator / Data Konteks Bulanan */}
         <SectionHeader icon="users" title="Data Konteks Bulanan" subtitle="Denominator untuk perhitungan lagging indicators" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
           {DENOMINATOR_FIELDS.map(f => (
             <div key={f.key}>
               <label className="admin-label">{f.label}</label>
               <input type="number" min="0" step="any"
                 value={row[f.key] as number}
                 onChange={(e) => setField(f.key, e.target.value)}
-                className="admin-input" placeholder="0" />
-              {f.hint && (
-                <p style={{ fontSize: 10, color: 'var(--muted-foreground)', margin: '4px 0 0', lineHeight: 1.4 }}>
-                  {f.hint}
-                </p>
-              )}
+                className="admin-input compact-input" placeholder="0" />
             </div>
           ))}
         </div>
 
-        <div style={{ height: 1, background: 'var(--border)', margin: '20px 0' }} />
+        <div style={{ height: 1, background: 'var(--border)', margin: '12px 0' }} />
 
         {/* Section: Aggregate Count Bulanan */}
-        <SectionHeader icon="chart" title="Aggregate Count Bulanan" subtitle="Jumlah kejadian bulan ini — bisa di-auto-aggregate dari halaman lain" />
-        <div style={{ marginBottom: 14, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <SectionHeader icon="chart" title="Aggregate Count Bulanan" subtitle="Jumlah kejadian bulan ini — bisa di-auto-aggregate" />
+        <div style={{ marginBottom: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <button type="button" onClick={handleAutoAggregate} disabled={aggregating}
-            className="admin-form-btn-secondary"
-            style={{ fontSize: 11, flex: 'unset', width: 'auto', padding: '0 16px', height: 34 }}>
+            className="admin-form-btn-secondary compact-btn">
             {aggregating ? 'Meng-aggregate...' : 'Auto-Aggregate dari Halaman Lain'}
           </button>
           {aggregateInfo && (
-            <span style={{ fontSize: 10.5, color: 'var(--success)', fontWeight: 500 }}>
+            <span style={{ fontSize: 10, color: 'var(--success)', fontWeight: 500 }}>
               ✓ {aggregateInfo}
             </span>
           )}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
           {AGGREGATE_FIELDS.map(f => (
             <div key={f.key}>
               <label className="admin-label">{f.label}</label>
               <input type="number" min="0" step="any"
                 value={row[f.key] as number}
                 onChange={(e) => setField(f.key, e.target.value)}
-                className="admin-input" placeholder="0" />
+                className="admin-input compact-input" placeholder="0" />
               {f.hint && (
-                <p style={{ fontSize: 10, color: 'var(--muted-foreground)', margin: '4px 0 0', lineHeight: 1.4 }}>
+                <p style={{ fontSize: 9.5, color: 'var(--muted-foreground)', margin: '2px 0 0', lineHeight: 1.3 }}>
                   {f.hint}
                   {f.sourcePage && (
-                    <span style={{ display: 'block', marginTop: 2, color: 'var(--brand-primary)', fontWeight: 600 }}>
+                    <span style={{ display: 'block', color: 'var(--brand-primary)', fontWeight: 600 }}>
                       ↳ Sumber: {f.sourcePage}
                     </span>
                   )}
@@ -340,42 +333,37 @@ function StatistikKesehatanForm() {
           ))}
         </div>
 
-        <div style={{ height: 1, background: 'var(--border)', margin: '20px 0' }} />
+        <div style={{ height: 1, background: 'var(--border)', margin: '12px 0' }} />
 
         {/* Section: Lagging Indicators */}
         <SectionHeader icon="pulse" title="Lagging Indicators" subtitle="7 indikator turunan — bisa input manual atau auto-hitung" />
-        <div style={{ marginBottom: 14 }}>
+        <div style={{ marginBottom: 10 }}>
           <button type="button" onClick={autoCalcLagging}
-            className="admin-form-btn-secondary"
-            style={{ fontSize: 11 }}>
+            className="admin-form-btn-secondary compact-btn">
             Auto-Hitung dari Aggregate
           </button>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           {LAGGING_FIELDS.map(f => (
             <div key={f.key}>
               <label className="admin-label">{f.label}</label>
               <input type="number" step="any"
                 value={row[f.key] as number}
                 onChange={(e) => setField(f.key, e.target.value)}
-                className="admin-input" placeholder="0" />
-              <p style={{ fontSize: 10, color: 'var(--muted-foreground)', margin: '4px 0 0', lineHeight: 1.4 }}>
-                <code style={{ background: 'var(--muted)', padding: '2px 5px', borderRadius: 3, fontSize: 9.5, color: 'var(--foreground)' }}>{f.formula}</code>
-                {f.isPercent && <span style={{ marginLeft: 6 }}>→ display ×100%</span>}
-              </p>
+                className="admin-input compact-input" placeholder="0" />
             </div>
           ))}
         </div>
 
         {/* Buttons */}
-        {errorMsg && <p className="login-error-msg" style={{ marginTop: 16 }}>{errorMsg}</p>}
-        <div style={{ marginTop: 20, display: 'flex', gap: 10, maxWidth: '100%' }}>
+        {errorMsg && <p className="login-error-msg" style={{ marginTop: 12, marginBottom: 8 }}>{errorMsg}</p>}
+        <div style={{ marginTop: 14, display: 'flex', gap: 8, maxWidth: '100%' }}>
           <button type="submit" disabled={saving}
-            className={`admin-form-btn-primary${saved ? ' saved' : ''}`}>
+            className={`admin-form-btn-primary compact-btn${saved ? ' saved' : ''}`}>
             {saving ? 'Menyimpan...' : saved ? 'Tersimpan!' : 'Simpan Data'}
           </button>
           <button type="button" onClick={() => setRow(EMPTY_ROW)}
-            className="admin-form-btn-secondary">
+            className="admin-form-btn-secondary compact-btn">
             Reset
           </button>
         </div>

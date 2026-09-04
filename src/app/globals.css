@@ -47,11 +47,11 @@
   --border: #E3DED4;
   --input: #E3DED4;
   --ring: rgba(229,75,26,0.28);
-  --sidebar: #FFFFFF;
+  --sidebar: #F5F5F5;
   --sidebar-foreground: #0E1116;
   --sidebar-accent: rgba(229,75,26,0.04);
   --sidebar-accent-foreground: #0E1116;
-  --sidebar-border: #E3DED4;
+  --sidebar-border: #D5CFC4;
   --sidebar-ring: rgba(229,75,26,0.28);
   --fg-dim: #9CA3AF;
   --shadow: 0 1px 2px rgba(15,17,22,0.04), 0 1px 3px rgba(15,17,22,0.06);
@@ -93,11 +93,11 @@
   --border: #232830;
   --input: #2A2F37;
   --ring: rgba(255,107,53,0.35);
-  --sidebar: #0F1116;
+  --sidebar: #161616;
   --sidebar-foreground: #F1F5F9;
   --sidebar-accent: rgba(255,107,53,0.06);
   --sidebar-accent-foreground: #F1F5F9;
-  --sidebar-border: #232830;
+  --sidebar-border: #2A2F37;
   --sidebar-ring: rgba(255,107,53,0.35);
   --fg-dim: #64748B;
   --shadow: 0 1px 2px rgba(0,0,0,0.30), 0 1px 3px rgba(0,0,0,0.20);
@@ -169,11 +169,14 @@
   height: 100vh;
   background: var(--sidebar);
   border-right: 1px solid var(--sidebar-border);
-  box-shadow: 1px 0 0 var(--sidebar-border);
+  box-shadow: 2px 0 12px rgba(0,0,0,0.08);
   z-index: 50;
   display: flex;
   flex-direction: column;
   transition: background 0.3s, transform 0.3s;
+}
+.dark .sidebar {
+  box-shadow: 2px 0 12px rgba(0,0,0,0.40);
 }
 .sidebar-head {
   padding: 0 16px;
@@ -1426,6 +1429,29 @@ select.admin-input {
 .admin-tab-btn.active {
   color: var(--brand-primary);
   border-bottom-color: var(--brand-primary);
+}
+
+/* Compact variants for Lagging Indicator form */
+.admin-input.compact-input {
+  height: 32px;
+  font-size: 12px;
+  padding: 0 10px;
+  border-radius: 6px;
+}
+select.admin-input.compact-input {
+  padding-right: 26px;
+  background-position: right 8px center;
+}
+.admin-form-btn-primary.compact-btn,
+.admin-form-btn-secondary.compact-btn {
+  flex: unset;
+  width: auto;
+  padding: 0 14px;
+  height: 32px;
+  font-size: 11.5px;
+}
+.admin-form-card .admin-label {
+  margin-bottom: 4px;
 }
 /* ═══════════════════════════════════
    Admin Toggle Arrow — fixed right, rotating

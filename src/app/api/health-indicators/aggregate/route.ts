@@ -64,31 +64,34 @@ export async function GET(request: NextRequest) {
     const bulanNum = parseInt(bulan);
 
     // ── 1. Aggregate from kunjungan_berobat ────────────────────
-    // Filter by EXTRACT(MONTH/YEAR FROM tanggal) + jobsite (optional)
-    let kunjQuery = supabase
-      .from('kunjungan_berobat')
-      .select('id, jobsite, tanggal', { count: 'exact', head: false });
+    // NOTE: Kunjungan Berobat form is only filled for Head Office.
+    // For other sites, the kunjungan_klinik field must be input manually
+    // (the form auto-aggregate will leave it at 0).
+    let kunjungan_klinik = 0;
+    if (jobsite === 'Head Office' || jobsite === 'All Site') {
+      let kunjQuery = supabase
+        .from('kunjungan_berobat')
+        .select('id, jobsite, tanggal', { count: 'exact', head: false });
 
-    // We can't filter by EXTRACT(MONTH...) directly via Supabase client,
-    // so we fetch all rows for the year then filter client-side.
-    // For better performance, we'd use an RPC function — but this is fine
-    // for typical monthly volumes (< 1000 rows/month).
-    const startDate = `${tahunNum}-${String(bulanNum).padStart(2, '0')}-01`;
-    const endDate = `${tahunNum}-${String(bulanNum).padStart(2, '0')}-31`;
-    kunjQuery = kunjQuery.gte('tanggal', startDate).lte('tanggal', endDate);
+      const startDate = `${tahunNum}-${String(bulanNum).padStart(2, '0')}-01`;
+      const endDate = `${tahunNum}-${String(bulanNum).padStart(2, '0')}-31`;
+      kunjQuery = kunjQuery.gte('tanggal', startDate).lte('tanggal', endDate);
 
-    if (jobsite !== 'All Site') {
-      kunjQuery = kunjQuery.eq('jobsite', jobsite);
+      if (jobsite === 'Head Office') {
+        kunjQuery = kunjQuery.eq('jobsite', 'Head Office');
+      }
+      // For 'All Site': don't filter by jobsite — count all kunjungan_berobat rows
+      // (typically only Head Office rows will exist, so result is the same in practice)
+
+      const { data: kunjRows, error: kunjErr } = await kunjQuery;
+      if (kunjErr) {
+        return NextResponse.json(
+          { success: false, error: `Gagal query kunjungan_berobat: ${kunjErr.message}` },
+          { status: 500 }
+        );
+      }
+      kunjungan_klinik = kunjRows?.length || 0;
     }
-
-    const { data: kunjRows, error: kunjErr } = await kunjQuery;
-    if (kunjErr) {
-      return NextResponse.json(
-        { success: false, error: `Gagal query kunjungan_berobat: ${kunjErr.message}` },
-        { status: 500 }
-      );
-    }
-    const kunjungan_klinik = kunjRows?.length || 0;
 
     // ── 2. Aggregate from sick_employees ────────────────────────
     let sickQuery = supabase
