@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
   reactStrictMode: false,
   /* Security: disable source maps in production */
   productionBrowserSourceMaps: false,
+  /* Allow preview URLs from space-z.ai platform */
+  allowedDevOrigins: [
+    "preview-*.space-z.ai",
+    "*.space-z.ai",
+  ],
 };
 
 export default nextConfig;

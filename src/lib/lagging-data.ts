@@ -5,6 +5,25 @@
 
 export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'] as const;
 
+/**
+ * All 53 jobsite names (52 sites + "All Site"). Mirrors Excel sheet order.
+ * Used as fallback when Supabase is not configured.
+ */
+export const JOBSITES: string[] = [
+  'All Site',
+  'Aceh', 'Angsana', 'Tanjung Tabalong', 'Tuhup', 'Batu Kajang',
+  'Bengalon', 'Tanjung Redeb', 'Binuang', 'Bontang', 'Kapuas Tengah',
+  'Bunyu', 'Balikpapan', 'Banjarmasin', 'Banyuwangi', 'Binungan',
+  'Bukit Pinang', 'Gunung Sari', 'Gunung Bintang Awai', 'Gorontalo',
+  'Halmahera Timur', 'Ketapang', 'Kaliorang', 'Kaubun', 'Gunung Mas',
+  'Kayong Utara', 'Kelubir', 'Konawe', 'Kota Baru', 'Labanan',
+  'Lahat', 'Luwu', 'Malinau', 'Kotamobagu', 'Melak',
+  'Morowali', 'Muara Bungo', 'Muara Enim', 'Muara Teweh', 'Murung Raya',
+  'Palu', 'Rantau', 'Samarinda', 'Sangatta', 'Satui',
+  'Sebakis', 'Senakin', 'Soroako', 'Tabang', 'Tenggarong',
+  'Tri Yoga Morowali', 'Wetar', 'Head Office',
+];
+
 export const ALL_SITE = {
   leading: {
     man_power:     [3173, 1369, 1095, 1358, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -23,7 +42,7 @@ export const ALL_SITE = {
     mfr:  [278.15, 431.30, 127.05, 393.72, 0, 0, 0, 0, 0, 0, 0, 0],
     ssr:  [3.075, 3.328, 4.0, 2.537, 0, 0, 0, 0, 0, 0, 0, 0],
     asr:  [855.23, 1435.43, 508.21, 982.70, 0, 0, 0, 0, 0, 0, 0, 0],
-    pak:  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    fr_pak:  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     kaptk:[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   },
 };
@@ -53,6 +72,40 @@ export const SITE_ASR_DATA: SiteASR[] = [
   { site: 'Tuhup',           asr: [326.3, 0, 0, 0, 0,0,0,0,0,0,0,0], man_power: [120, 0, 0, 0, 0,0,0,0,0,0,0,0] },
   { site: 'Sangatta',        asr: [0, 0, 0, 0, 0,0,0,0,0,0,0,0], man_power: [0, 0, 0, 0, 0,0,0,0,0,0,0,0] },
   { site: 'Samarinda',       asr: [0, 0, 0, 0, 0,0,0,0,0,0,0,0], man_power: [0, 0, 0, 0, 0,0,0,0,0,0,0,0] },
+];
+
+/**
+ * Static sick-employees sample (mirrors Excel "Data Karyawan Sakit" Jan 2026 entries).
+ * Used as fallback when Supabase is not configured.
+ */
+export interface SickEmployeeStatic {
+  nik: string;
+  nama: string;
+  jobsite: string;
+  jabatan: string;
+  tgl_mulai_a: string | null;
+  tgl_selesai_a: string | null;
+  hari_a: number;
+  tgl_mulai_b: string | null;
+  tgl_selesai_b: string | null;
+  hari_b: number;
+  tgl_mulai_c: string | null;
+  tgl_selesai_c: string | null;
+  hari_c: number;
+  jumlah_spell: number;
+  bulan: number;
+  tahun: number;
+}
+
+export const SICK_EMPLOYEES_STATIC: SickEmployeeStatic[] = [
+  { nik: '230802778', nama: 'Putra Gunawan',    jobsite: 'Aceh',     jabatan: 'Driver - Operation', tgl_mulai_a: '2025-12-21', tgl_selesai_a: '2025-12-25', hari_a: 5,  tgl_mulai_b: null, tgl_selesai_b: null, hari_b: 0, tgl_mulai_c: null, tgl_selesai_c: null, hari_c: 0, jumlah_spell: 1, bulan: 1, tahun: 2026 },
+  { nik: '240704222', nama: 'Deki Maulana',     jobsite: 'Aceh',     jabatan: 'Driver - Operation', tgl_mulai_a: '2025-12-21', tgl_selesai_a: '2026-01-20', hari_a: 31, tgl_mulai_b: null, tgl_selesai_b: null, hari_b: 0, tgl_mulai_c: null, tgl_selesai_c: null, hari_c: 0, jumlah_spell: 1, bulan: 1, tahun: 2026 },
+  { nik: '250905424', nama: 'Haidi Ansyari',     jobsite: 'Angsana',  jabatan: 'Driver - Operation', tgl_mulai_a: '2025-12-31', tgl_selesai_a: '2025-12-31', hari_a: 1,  tgl_mulai_b: '2026-01-02', tgl_selesai_b: '2026-01-02', hari_b: 1, tgl_mulai_c: null, tgl_selesai_c: null, hari_c: 0, jumlah_spell: 1, bulan: 1, tahun: 2026 },
+  { nik: '241105309', nama: 'Rizky Pratama',     jobsite: 'Head Office', jabatan: 'Staff - HR',     tgl_mulai_a: '2026-01-05', tgl_selesai_a: '2026-01-08', hari_a: 4,  tgl_mulai_b: null, tgl_selesai_b: null, hari_b: 0, tgl_mulai_c: null, tgl_selesai_c: null, hari_c: 0, jumlah_spell: 1, bulan: 1, tahun: 2026 },
+  { nik: '230401198', nama: 'Bayu Saputra',      jobsite: 'Balikpapan', jabatan: 'Operator',       tgl_mulai_a: '2025-12-22', tgl_selesai_a: '2025-12-28', hari_a: 7,  tgl_mulai_b: null, tgl_selesai_b: null, hari_b: 0, tgl_mulai_c: null, tgl_selesai_c: null, hari_c: 0, jumlah_spell: 1, bulan: 1, tahun: 2026 },
+  { nik: '210602855', nama: 'Andi Wijaya',        jobsite: 'Sangatta',  jabatan: 'Driver - Operation', tgl_mulai_a: '2025-12-25', tgl_selesai_a: '2026-01-15', hari_a: 22, tgl_mulai_b: null, tgl_selesai_b: null, hari_b: 0, tgl_mulai_c: null, tgl_selesai_c: null, hari_c: 0, jumlah_spell: 1, bulan: 1, tahun: 2026 },
+  { nik: '220708934', nama: 'Eko Prasetyo',       jobsite: 'Bontang',   jabatan: 'Mechanic',       tgl_mulai_a: '2025-12-29', tgl_selesai_a: '2026-01-03', hari_a: 6,  tgl_mulai_b: '2026-01-10', tgl_selesai_b: '2026-01-12', hari_b: 3, tgl_mulai_c: null, tgl_selesai_c: null, hari_c: 0, jumlah_spell: 1, bulan: 1, tahun: 2026 },
+  { nik: '240902761', nama: 'Fajar Nugroho',      jobsite: 'Banyuwangi', jabatan: 'Operator',      tgl_mulai_a: '2026-01-08', tgl_selesai_a: '2026-01-12', hari_a: 5,  tgl_mulai_b: null, tgl_selesai_b: null, hari_b: 0, tgl_mulai_c: null, tgl_selesai_c: null, hari_c: 0, jumlah_spell: 1, bulan: 1, tahun: 2026 },
 ];
 
 export function getLatestMonthIndex(): number {

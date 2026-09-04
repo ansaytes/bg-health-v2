@@ -1,16 +1,28 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { MONTHS, ALL_SITE, getASRRanking as getStaticASRRanking, type SiteASR } from '@/lib/lagging-data';
+import {
+  MONTHS, JOBSITES, ALL_SITE, SITE_ASR_DATA, SICK_EMPLOYEES_STATIC,
+  getASRRanking as getStaticASRRanking,
+} from '@/lib/lagging-data';
+
+/* ──────────────────────────────────────────────────────────────
+   Types
+   ────────────────────────────────────────────────────────────── */
 
 interface KpiRow {
   tahun: number;
   bulan: number;
+  jobsite: string;
   man_power: number;
   man_hours: number;
+  kunjungan_klinik: number;
   tk_sakit: number;
   absensi_sakit: number;
   spell: number;
+  penyakit_akibat_kerja: number;
+  kejadian_penyakit_tk: number;
+  layak_bekerja: number;
   rkk: number;
   cmr: number;
   mfr: number;
@@ -20,23 +32,43 @@ interface KpiRow {
   kaptk: number;
 }
 
-interface SiteRow {
-  tahun: number;
-  bulan: number;
+interface AsrRankRow {
   jobsite: string;
-  man_power: number;
   asr: number;
+  man_power: number;
+  bulan: number;
+  tahun: number;
 }
 
 interface SickEmployee {
+  id?: number;
+  nik: string | null;
   nama: string;
   jobsite: string;
-  jabatan: string;
-  tanggal_mulai_a: string;
-  tanggal_selesai_a: string;
-  jumlah_hari_a: number;
+  jabatan: string | null;
+  tgl_mulai_a: string | null;
+  tgl_selesai_a: string | null;
+  hari_a: number;
+  tgl_mulai_b: string | null;
+  tgl_selesai_b: string | null;
+  hari_b: number;
+  tgl_mulai_c: string | null;
+  tgl_selesai_c: string | null;
+  hari_c: number;
   jumlah_spell: number;
+  bulan: number | null;
+  tahun: number | null;
 }
+
+/* ──────────────────────────────────────────────────────────────
+   Helpers
+   ────────────────────────────────────────────────────────────── */
+
+const SUPABASE_CONFIGURED = !!(
+  typeof process !== 'undefined' &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 function getStaticMonthIndex(): number {
   for (let i = 11; i >= 0; i--) {
@@ -45,87 +77,214 @@ function getStaticMonthIndex(): number {
   return 0;
 }
 
-function getLatestMonthFromData(data: KpiRow[]): number {
-  if (data.length === 0) return getStaticMonthIndex();
-  const sorted = [...data].sort((a, b) => a.bulan - b.bulan);
-  return sorted[sorted.length - 1].bulan - 1;
+/** Period range for sick list: 21st of previous month → 20th of selected month */
+function getSickPeriodRange(bulan: number, tahun: number): { start: string; end: string; label: string } {
+  const MONTHS_FULL = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  const prevMonth = bulan === 1 ? 12 : bulan - 1;
+  const prevYear = bulan === 1 ? tahun - 1 : tahun;
+  const start = `${prevYear}-${String(prevMonth).padStart(2, '0')}-21`;
+  const end = `${tahun}-${String(bulan).padStart(2, '0')}-20`;
+  return {
+    start,
+    end,
+    label: `21 ${MONTHS_FULL[prevMonth - 1]} ${prevYear} - 20 ${MONTHS_FULL[bulan - 1]} ${tahun}`,
+  };
 }
 
+/* ──────────────────────────────────────────────────────────────
+   Main Component
+   ────────────────────────────────────────────────────────────── */
+
 export default function DashboardView() {
-  const [apiData, setApiData] = useState<KpiRow[]>([]);
-  const [siteData, setSiteData] = useState<SiteRow[]>([]);
-  const [fetching, setFetching] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState<number>(getStaticMonthIndex());
-  const [chartReady, setChartReady] = useState(false);
+  const [selectedSite, setSelectedSite] = useState<string>('All Site');
+  const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [selectedMonth, setSelectedMonth] = useState<number | 'all'>('all');
+
+  const [kpiData, setKpiData] = useState<KpiRow[]>([]);
+  const [asrRanking, setAsrRanking] = useState<AsrRankRow[]>([]);
   const [sickList, setSickList] = useState<SickEmployee[]>([]);
-  const fetchedRef = useRef(false);
+  const [fetching, setFetching] = useState(false);
+  const [chartReady, setChartReady] = useState(false);
 
-  const useAPI = apiData.length > 0;
+  const dataCache = useRef<Record<string, KpiRow[]>>({});
 
+  /* Fetch KPI data when site/year changes */
   useEffect(() => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-
+    const cacheKey = `${selectedSite}-${selectedYear}`;
+    if (dataCache.current[cacheKey]) {
+      setKpiData(dataCache.current[cacheKey]);
+      return;
+    }
+    setFetching(true);
     (async () => {
       try {
-        const [kpiRes, siteRes] = await Promise.all([
-          fetch('/api/health-statistics?tahun=2026'),
-          fetch('/api/health-statistics-sites?tahun=2026'),
-        ]);
-        const kpiJson = await kpiRes.json();
-        const siteJson = await siteRes.json();
-
-        if (kpiJson.success && kpiJson.data.length > 0) {
-          setApiData(kpiJson.data);
-          const latestBulan = kpiJson.data.sort((a: KpiRow, b: KpiRow) => b.bulan - a.bulan)[0].bulan;
-          setSelectedMonth(latestBulan - 1);
-        }
-        if (siteJson.success) {
-          setSiteData(siteJson.data);
-        }
-
-        // Fetch sick employees for latest month
-        const sickBulan = kpiJson.data && kpiJson.data.length > 0
-          ? kpiJson.data.sort((a: KpiRow, b: KpiRow) => b.bulan - a.bulan)[0].bulan
-          : 7;
-        const sickRes = await fetch(`/api/sick-employees?bulan=${sickBulan}`);
-        const sickJson = await sickRes.json();
-        if (sickJson.success) {
-          setSickList(sickJson.data || []);
+        const view = selectedSite === 'All Site' ? 'view=all_site&' : '';
+        const siteParam = selectedSite === 'All Site' ? '' : `jobsite=${encodeURIComponent(selectedSite)}&`;
+        const url = `/api/health-indicators?${view}${siteParam}tahun=${selectedYear}`;
+        const res = await fetch(url);
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setKpiData(json.data);
+          dataCache.current[cacheKey] = json.data;
+        } else {
+          setKpiData([]);
         }
       } catch {
-        // fallback to static data
+        setKpiData([]);
       } finally {
         setFetching(false);
       }
     })();
-  }, []);
+  }, [selectedSite, selectedYear]);
 
-  const monthIdx = selectedMonth;
-  const bulanNum = monthIdx + 1;
-
-  const currentMonth = useMemo((): KpiRow | null => {
-    if (useAPI) {
-      return apiData.find(r => r.bulan === bulanNum) || null;
+  /* Determine effective month for KPI display */
+  const effectiveMonthIdx: number = useMemo(() => {
+    if (selectedMonth === 'all') {
+      if (kpiData.length > 0) {
+        const maxBulan = kpiData.reduce((max, r) => Math.max(max, r.bulan), 0);
+        if (maxBulan > 0) return maxBulan - 1;
+      }
+      return getStaticMonthIndex();
     }
-    return {
-      tahun: 2026,
-      bulan: bulanNum,
-      man_power: ALL_SITE.leading.man_power[monthIdx],
-      man_hours: ALL_SITE.leading.man_hours[monthIdx],
-      tk_sakit: ALL_SITE.leading.tk_sakit[monthIdx],
-      absensi_sakit: ALL_SITE.leading.absensi_sakit[monthIdx],
-      spell: ALL_SITE.leading.spell[monthIdx],
-      rkk: ALL_SITE.lagging.rkk[monthIdx],
-      cmr: ALL_SITE.lagging.cmr[monthIdx],
-      mfr: ALL_SITE.lagging.mfr[monthIdx],
-      ssr: ALL_SITE.lagging.ssr[monthIdx],
-      asr: ALL_SITE.lagging.asr[monthIdx],
-      fr_pak: ALL_SITE.lagging.pak[monthIdx],
-      kaptk: ALL_SITE.lagging.kaptk[monthIdx],
-    };
-  }, [useAPI, apiData, bulanNum, monthIdx]);
+    return selectedMonth - 1;
+  }, [selectedMonth, kpiData]);
 
+  const bulanNum = effectiveMonthIdx + 1;
+  const isYTD = selectedMonth === 'all' && selectedSite === 'All Site';
+
+  /* Current month's KPI row — fallback to static if no API data */
+  const currentMonth = useMemo((): KpiRow | null => {
+    const useStatic = !SUPABASE_CONFIGURED || kpiData.length === 0;
+    if (useStatic) {
+      // For static fallback, only show All Site data
+      if (selectedSite !== 'All Site') return null;
+      return {
+        tahun: 2026, bulan: bulanNum, jobsite: 'All Site',
+        man_power: ALL_SITE.leading.man_power[effectiveMonthIdx],
+        man_hours: ALL_SITE.leading.man_hours[effectiveMonthIdx],
+        kunjungan_klinik: ALL_SITE.leading.kunjungan[effectiveMonthIdx],
+        tk_sakit: ALL_SITE.leading.tk_sakit[effectiveMonthIdx],
+        absensi_sakit: ALL_SITE.leading.absensi_sakit[effectiveMonthIdx],
+        spell: ALL_SITE.leading.spell[effectiveMonthIdx],
+        penyakit_akibat_kerja: ALL_SITE.leading.pak[effectiveMonthIdx],
+        kejadian_penyakit_tk: ALL_SITE.leading.kaptk[effectiveMonthIdx],
+        layak_bekerja: ALL_SITE.leading.layak_kerja[effectiveMonthIdx],
+        rkk: ALL_SITE.lagging.rkk[effectiveMonthIdx],
+        cmr: ALL_SITE.lagging.cmr[effectiveMonthIdx],
+        mfr: ALL_SITE.lagging.mfr[effectiveMonthIdx],
+        ssr: ALL_SITE.lagging.ssr[effectiveMonthIdx],
+        asr: ALL_SITE.lagging.asr[effectiveMonthIdx],
+        fr_pak: ALL_SITE.lagging.fr_pak[effectiveMonthIdx],
+        kaptk: ALL_SITE.lagging.kaptk[effectiveMonthIdx],
+      };
+    }
+
+    if (isYTD) {
+      // YTD = average/sum across months
+      const rows = kpiData.filter(r => r.man_power > 0 || r.man_hours > 0);
+      if (rows.length === 0) return null;
+      const sum = (k: keyof KpiRow) => rows.reduce((acc, r) => acc + (r[k] as number), 0);
+      const avg = (k: keyof KpiRow) => {
+        const valid = rows.filter(r => (r.man_power > 0 && (k === 'rkk' || k === 'cmr' || k === 'fr_pak')) ||
+                                       (r.man_hours > 0 && (k === 'mfr' || k === 'asr')) ||
+                                       (r.tk_sakit > 0 && k === 'ssr'));
+        if (valid.length === 0) return 0;
+        return valid.reduce((acc, r) => acc + (r[k] as number), 0) / valid.length;
+      };
+      return {
+        tahun: selectedYear, bulan: 0, jobsite: selectedSite,
+        man_power: Math.round(sum('man_power') / rows.length),
+        man_hours: sum('man_hours'),
+        kunjungan_klinik: sum('kunjungan_klinik'),
+        tk_sakit: sum('tk_sakit'),
+        absensi_sakit: sum('absensi_sakit'),
+        spell: sum('spell'),
+        penyakit_akibat_kerja: sum('penyakit_akibat_kerja'),
+        kejadian_penyakit_tk: sum('kejadian_penyakit_tk'),
+        layak_bekerja: Math.round(sum('layak_bekerja') / rows.length),
+        rkk: avg('rkk'), cmr: avg('cmr'), mfr: avg('mfr'),
+        ssr: avg('ssr'), asr: avg('asr'), fr_pak: avg('fr_pak'),
+        kaptk: sum('kaptk'),
+      };
+    }
+
+    return kpiData.find(r => r.bulan === bulanNum) || null;
+  }, [kpiData, bulanNum, effectiveMonthIdx, isYTD, selectedSite, selectedYear]);
+
+  /* ASR ranking */
+  const asrRank = useMemo(() => {
+    const useStatic = !SUPABASE_CONFIGURED || kpiData.length === 0;
+    if (useStatic) {
+      return getStaticASRRanking(effectiveMonthIdx);
+    }
+    if (selectedMonth === 'all') {
+      // YTD: aggregate ASR across months for each site
+      const bySite: Record<string, { sum: number; count: number; mp: number }> = {};
+      kpiData.forEach(r => {
+        if (r.jobsite === 'All Site' || r.asr <= 0) return;
+        if (!bySite[r.jobsite]) bySite[r.jobsite] = { sum: 0, count: 0, mp: 0 };
+        bySite[r.jobsite].sum += r.asr;
+        if (r.man_hours > 0) bySite[r.jobsite].count++;
+        bySite[r.jobsite].mp = Math.max(bySite[r.jobsite].mp, r.man_power);
+      });
+      return Object.entries(bySite)
+        .map(([site, v]) => ({ site, asr: v.count > 0 ? v.sum / v.count : 0, mp: v.mp }))
+        .filter(s => s.asr > 0)
+        .sort((a, b) => b.asr - a.asr)
+        .slice(0, 10);
+    }
+    return asrRanking.filter(r => r.bulan === bulanNum).slice(0, 10);
+  }, [kpiData, asrRanking, selectedMonth, effectiveMonthIdx, bulanNum]);
+
+  /* Fetch ASR ranking when needed */
+  useEffect(() => {
+    if (!SUPABASE_CONFIGURED || kpiData.length === 0) return;
+    if (selectedMonth === 'all') return; // Use YTD aggregation
+    (async () => {
+      try {
+        const res = await fetch(`/api/health-indicators?asr_ranking=true&tahun=${selectedYear}&bulan=${bulanNum}`);
+        const json = await res.json();
+        if (json.success) {
+          setAsrRanking(json.data || []);
+        }
+      } catch { /* ignore */ }
+    })();
+  }, [selectedYear, bulanNum, selectedMonth, kpiData.length]);
+
+  /* Fetch sick list when month != 'all' */
+  useEffect(() => {
+    if (selectedMonth === 'all') {
+      setSickList([]);
+      return;
+    }
+    setFetching(true);
+    const period = getSickPeriodRange(bulanNum, selectedYear);
+    (async () => {
+      try {
+        const url = `/api/sick-employees?bulan=${bulanNum}&tahun=${selectedYear}` +
+          (selectedSite !== 'All Site' ? `&jobsite=${encodeURIComponent(selectedSite)}` : '') +
+          `&period_start=${period.start}&period_end=${period.end}`;
+        const res = await fetch(url);
+        const json = await res.json();
+        if (json.success) {
+          setSickList(json.data || []);
+        } else {
+          // Fallback to static sample
+          setSickList(selectedSite === 'All Site' ? SICK_EMPLOYEES_STATIC :
+            SICK_EMPLOYEES_STATIC.filter(s => s.jobsite === selectedSite));
+        }
+      } catch {
+        // Use static sample as fallback
+        setSickList(selectedSite === 'All Site' ? SICK_EMPLOYEES_STATIC :
+          SICK_EMPLOYEES_STATIC.filter(s => s.jobsite === selectedSite));
+      } finally {
+        setFetching(false);
+      }
+    })();
+  }, [selectedMonth, bulanNum, selectedYear, selectedSite]);
+
+  /* Stat values */
   const rkk = (currentMonth?.rkk ?? 0) * 100;
   const cmr = (currentMonth?.cmr ?? 0) * 100;
   const mfr = currentMonth?.mfr ?? 0;
@@ -138,38 +297,21 @@ export default function DashboardView() {
   const tkSakit = currentMonth?.tk_sakit ?? 0;
   const absensiSakit = currentMonth?.absensi_sakit ?? 0;
 
-  const asrRanking = useMemo(() => {
-    if (useAPI) {
-      return siteData
-        .filter(s => s.bulan === bulanNum && s.asr > 0)
-        .map(s => ({ site: s.jobsite, asr: s.asr, mp: s.man_power }))
-        .sort((a, b) => b.asr - a.asr)
-        .slice(0, 10);
-    }
-    return getStaticASRRanking(monthIdx);
-  }, [useAPI, siteData, bulanNum, monthIdx]);
+  /* Period label for subtitle */
+  const periodLabel = selectedMonth === 'all'
+    ? (selectedSite === 'All Site' ? 'YTD 2026' : `${MONTHS[effectiveMonthIdx]} 2026`)
+    : getSickPeriodRange(bulanNum, selectedYear).label;
 
+  /* Handle month change */
   const handleMonthChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    const m = parseInt(e.target.value);
-    setSelectedMonth(m);
+    const v = e.target.value;
+    setSelectedMonth(v === 'all' ? 'all' : parseInt(v));
     setChartReady(false);
-    // Fetch sick employees for selected month
-    (async () => {
-      try {
-        const res = await fetch(`/api/sick-employees?bulan=${m + 1}`);
-        const json = await res.json();
-        if (json.success) setSickList(json.data || []);
-      } catch { setSickList([]); }
-    })();
   }, []);
 
-  const hasData = useAPI
-    ? apiData.some(r => r.bulan === bulanNum)
-    : ALL_SITE.leading.man_power[monthIdx] > 0;
-
+  /* Chart canvas drawing */
   useEffect(() => {
-    if (!chartReady || asrRanking.length === 0) return;
-
+    if (!chartReady || asrRank.length === 0) return;
     const canvas = document.getElementById('asrChart') as HTMLCanvasElement | null;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -186,38 +328,34 @@ export default function DashboardView() {
 
     const W = rect.width;
     const H = rect.height;
-    const pad = { top: 20, right: 16, bottom: 56, left: 52 };
+    const pad = { top: 16, right: 60, bottom: 16, left: 110 };
     const chartW = W - pad.left - pad.right;
     const chartH = H - pad.top - pad.bottom;
 
     const isDark = document.documentElement.classList.contains('dark');
     const textCol = isDark ? '#aaaaaa' : '#666666';
     const gridCol = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
-    const maxVal = Math.max(...asrRanking.map(d => d.asr), 1);
+    const maxVal = Math.max(...asrRank.map(d => d.asr), 1);
 
     ctx.clearRect(0, 0, W, H);
 
-    const gridLines = 5;
-    for (let i = 0; i <= gridLines; i++) {
-      const y = pad.top + (chartH / gridLines) * i;
-      ctx.strokeStyle = gridCol;
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
-      const val = Math.round(maxVal - (maxVal / gridLines) * i);
-      ctx.fillStyle = textCol;
-      ctx.font = '9px sans-serif';
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(val.toLocaleString('id-ID'), pad.left - 6, y);
-    }
+    const barCount = asrRank.length;
+    const gap = chartH / barCount;
+    const barH = Math.min(22, gap * 0.7);
 
-    const barH = Math.min(24, (chartH / asrRanking.length) * 0.65);
-    const gap = chartH / asrRanking.length;
-
-    asrRanking.forEach((d, i) => {
+    asrRank.forEach((d, i) => {
       const y = pad.top + gap * i + (gap - barH) / 2;
       const w = (d.asr / maxVal) * chartW;
 
+      // Site name on the left (truncated)
+      ctx.fillStyle = isDark ? '#f0f0f0' : '#1a1a1a';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      const label = d.site.length > 14 ? d.site.slice(0, 12) + '..' : d.site;
+      ctx.fillText(label, pad.left - 8, y + barH / 2);
+
+      // Bar
       const grad = ctx.createLinearGradient(pad.left, 0, pad.left + w, 0);
       grad.addColorStop(0, '#ff4d00');
       grad.addColorStop(1, '#ff8c42');
@@ -226,48 +364,62 @@ export default function DashboardView() {
       ctx.roundRect(pad.left, y, Math.max(w, 2), barH, 4);
       ctx.fill();
 
-      ctx.fillStyle = isDark ? '#f0f0f0' : '#1a1a1a';
-      ctx.font = '9px sans-serif';
+      // Datalabel at bar end
+      ctx.fillStyle = textCol;
+      ctx.font = 'bold 10px sans-serif';
       ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      const label = d.site.length > 18 ? d.site.slice(0, 16) + '..' : d.site;
-      ctx.fillText(label, pad.left + 4, y + barH / 2);
-
-      if (w > 80) {
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.textAlign = 'right';
-        ctx.font = 'bold 9px sans-serif';
-        ctx.fillText(d.asr.toLocaleString('id-ID', { maximumFractionDigits: 0 }), pad.left + w - 8, y + barH / 2);
-      }
+      ctx.fillText(d.asr.toFixed(2), pad.left + w + 6, y + barH / 2);
     });
-  }, [chartReady, asrRanking]);
 
-  useEffect(() => {
-    setChartReady(true);
-  }, [monthIdx]);
+    // Vertical grid lines (subtle)
+    const gridLines = 4;
+    for (let i = 1; i <= gridLines; i++) {
+      const x = pad.left + (chartW / gridLines) * i;
+      ctx.strokeStyle = gridCol;
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + chartH); ctx.stroke();
+      const val = Math.round((maxVal / gridLines) * i);
+      ctx.fillStyle = textCol;
+      ctx.font = '8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(val.toLocaleString('id-ID'), x, pad.top + chartH + 12);
+    }
+  }, [chartReady, asrRank]);
+
+  useEffect(() => { setChartReady(true); }, [selectedMonth, selectedSite, selectedYear]);
+
+  const sickListCount = sickList.length;
 
   return (
     <div className="dashboard">
+      {/* Header filter bar */}
       <div className="header-filter">
         <div className="filter-tag">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+          </svg>
           Filtering
         </div>
-        <select value="All Site"><option>All Site</option></select>
-        <select value={String(monthIdx)} onChange={handleMonthChange}>
+        <select value={selectedSite} onChange={(e) => setSelectedSite(e.target.value)}>
+          {JOBSITES.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select value={String(selectedMonth)} onChange={handleMonthChange}>
+          <option value="all">Bulan (YTD)</option>
           {MONTHS.map((m, i) => (
-            <option key={i} value={i} disabled={
-              useAPI
-                ? !apiData.some(r => r.bulan === i + 1)
-                : ALL_SITE.leading.man_power[i] === 0
-            }>{m}</option>
+            <option key={i} value={i + 1}>{m}</option>
           ))}
         </select>
-        <select value="2026" disabled><option value="2026">Tahun</option></select>
+        <select value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))}>
+          <option value={2025}>2025</option>
+          <option value={2026}>2026</option>
+          <option value={2027}>2027</option>
+        </select>
       </div>
 
       <div className="health-main-grid">
+        {/* LEFT column */}
         <div className="health-left-col">
+          {/* Stat card */}
           <div className="card glow-orange" style={{ flex: 1.3, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <div className="card-head" style={{ flexShrink: 0 }}>
               <div className="card-icon" style={{ background: 'rgba(255,77,0,.1)' }}>
@@ -275,13 +427,13 @@ export default function DashboardView() {
               </div>
               <div>
                 <h2>Statistik Kesehatan</h2>
-                <p>Seluruh jobsite - {MONTHS[monthIdx]} 2026</p>
+                <p>{selectedSite === 'All Site' ? 'Seluruh jobsite' : selectedSite} - {periodLabel}</p>
               </div>
             </div>
             <div className="stats-grid">
               <div className="stat-box stat-wide" style={{ borderLeft: '3px solid #00B894' }}>
                 <div className="stat-val" style={{ color: '#00B894' }}>{rkk.toFixed(2)}%</div>
-                <div className="stat-label">RKK</div>
+                <div className="stat-label">RKK - Rasio Kelayakan Kerja</div>
               </div>
               <div className="stat-box" style={{ borderLeft: '3px solid #00CEC9' }}>
                 <div className="stat-val" style={{ color: '#00CEC9' }}>{cmr.toFixed(2)}%</div>
@@ -293,7 +445,7 @@ export default function DashboardView() {
               </div>
               <div className="stat-box" style={{ borderLeft: '3px solid #FF6347' }}>
                 <div className="stat-val" style={{ color: '#FF6347' }}>{ssr.toFixed(2)}</div>
-                <div className="stat-label">SSR (Spell)</div>
+                <div className="stat-label">SSR</div>
               </div>
               <div className="stat-box" style={{ borderLeft: '3px solid #ff4d00' }}>
                 <div className="stat-val" style={{ color: '#ff4d00' }}>{asr.toFixed(2)}</div>
@@ -304,7 +456,7 @@ export default function DashboardView() {
                 <div className="stat-label">FR PAK</div>
               </div>
               <div className="stat-box" style={{ borderLeft: '3px solid #FF4444' }}>
-                <div className="stat-val" style={{ color: '#FF4444' }}>{kaptk.toFixed(2)}</div>
+                <div className="stat-val" style={{ color: '#FF4444' }}>{kaptk.toFixed(0)}</div>
                 <div className="stat-label">KAPTK</div>
               </div>
             </div>
@@ -316,6 +468,7 @@ export default function DashboardView() {
             </div>
           </div>
 
+          {/* ASR ranking card */}
           <div className="card glow-amber" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <div className="card-head" style={{ flexShrink: 0 }}>
               <div className="card-icon" style={{ background: 'rgba(255,140,66,.1)' }}>
@@ -323,15 +476,21 @@ export default function DashboardView() {
               </div>
               <div>
                 <h2>10 Jobsite dengan ASR tertinggi</h2>
-                <p>Keparahan Absensi Rate - {MONTHS[monthIdx]} 2026</p>
+                <p>{selectedMonth === 'all' ? `YTD ${selectedYear}` : `${MONTHS[effectiveMonthIdx]} ${selectedYear}`}</p>
               </div>
             </div>
             <div className="chart-box" style={{ flex: 1, minHeight: 0, position: 'relative' }}>
               <canvas id="asrChart" style={{ position: 'absolute', inset: 0 }} />
+              {asrRank.length === 0 && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted-foreground)', fontSize: 11 }}>
+                  Belum ada data ASR untuk periode ini
+                </div>
+              )}
             </div>
           </div>
         </div>
 
+        {/* RIGHT column - Sick list */}
         <div className="card glow-coral" style={{ display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
           <div className="card-head" style={{ flexShrink: 0 }}>
             <div className="card-icon" style={{ background: 'rgba(255,99,71,.1)' }}>
@@ -339,34 +498,46 @@ export default function DashboardView() {
             </div>
             <div>
               <h2>List Karyawan Sakit</h2>
-              <p>{MONTHS[monthIdx]} 2026{tkSakit > 0 ? ` (${tkSakit} orang)` : ''}</p>
+              <p>{selectedMonth === 'all'
+                ? 'Harap Pilih Periode Bulan'
+                : `${sickListCount} karyawan ${selectedSite !== 'All Site' ? `(${selectedSite})` : ''} - ${periodLabel}`}</p>
             </div>
           </div>
           <div className="sick-list">
-            {sickList.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 16, color: 'var(--muted-foreground)', fontSize: 9 }}>
-                {tkSakit > 0 ? 'Data karyawan sakit belum tersedia di database.' : 'Tidak ada karyawan sakit untuk periode ini.'}
+            {selectedMonth === 'all' ? (
+              <div style={{ textAlign: 'center', padding: 24, color: 'var(--muted-foreground)', fontSize: 11, lineHeight: 1.6 }}>
+                Harap Pilih Periode Bulan Untuk Menampilkan List Karyawan Sakit
+              </div>
+            ) : sickList.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 24, color: 'var(--muted-foreground)', fontSize: 11 }}>
+                Tidak ada karyawan sakit untuk periode ini.
               </div>
             ) : (
               <div className="raw-table-scroll">
-                <table style={{ width: '100%' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
-                      <th>Nama</th>
-                      <th>Jobsite</th>
-                      <th>Mulai</th>
-                      <th>Hari</th>
-                      <th>Spell</th>
+                      <th style={{ textAlign: 'left', padding: '6px 8px' }}>NIK</th>
+                      <th style={{ textAlign: 'left', padding: '6px 8px' }}>Nama</th>
+                      <th style={{ textAlign: 'left', padding: '6px 8px' }}>Jobsite</th>
+                      <th style={{ textAlign: 'left', padding: '6px 8px' }}>Jabatan</th>
+                      <th style={{ textAlign: 'center', padding: '6px 8px' }}>Hari A</th>
+                      <th style={{ textAlign: 'center', padding: '6px 8px' }}>Hari B</th>
+                      <th style={{ textAlign: 'center', padding: '6px 8px' }}>Hari C</th>
+                      <th style={{ textAlign: 'center', padding: '6px 8px' }}>Spell</th>
                     </tr>
                   </thead>
                   <tbody>
                     {sickList.map((emp, idx) => (
-                      <tr key={idx}>
-                        <td style={{ fontWeight: 500, fontSize: 9 }}>{emp.nama}</td>
-                        <td style={{ fontSize: 9 }}>{emp.jobsite}</td>
-                        <td style={{ fontSize: 9 }}>{emp.tanggal_mulai_a || '-'}</td>
-                        <td style={{ textAlign: 'center', fontSize: 9 }}>{emp.jumlah_hari_a}</td>
-                        <td style={{ textAlign: 'center', fontSize: 9 }}>{emp.jumlah_spell}</td>
+                      <tr key={emp.id ?? idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ fontSize: 10, padding: '6px 8px' }}>{emp.nik || '-'}</td>
+                        <td style={{ fontSize: 10, padding: '6px 8px', fontWeight: 600 }}>{emp.nama}</td>
+                        <td style={{ fontSize: 10, padding: '6px 8px' }}>{emp.jobsite}</td>
+                        <td style={{ fontSize: 10, padding: '6px 8px' }}>{emp.jabatan || '-'}</td>
+                        <td style={{ fontSize: 10, padding: '6px 8px', textAlign: 'center' }}>{emp.hari_a || '-'}</td>
+                        <td style={{ fontSize: 10, padding: '6px 8px', textAlign: 'center' }}>{emp.hari_b || '-'}</td>
+                        <td style={{ fontSize: 10, padding: '6px 8px', textAlign: 'center' }}>{emp.hari_c || '-'}</td>
+                        <td style={{ fontSize: 10, padding: '6px 8px', textAlign: 'center', fontWeight: 600 }}>{emp.jumlah_spell}</td>
                       </tr>
                     ))}
                   </tbody>

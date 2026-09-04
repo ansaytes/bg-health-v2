@@ -82,26 +82,35 @@ export default function KunjunganBerobatForm() {
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
-    height: 36,
-    borderRadius: 8,
+    height: 38,
+    borderRadius: 7,
     border: '1px solid var(--border)',
     background: 'var(--background)',
     padding: '0 12px',
-    fontSize: 12,
+    fontSize: 13,
     color: 'var(--foreground)',
     outline: 'none',
+    fontFamily: 'inherit',
+    transition: 'border 0.18s, box-shadow 0.18s',
   };
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', width: '90%', margin: '0 auto' }}>
-      <div style={{ padding: '16px 0', overflowY: 'auto', flex: 1, minHeight: 0 }}>
-        <div style={{ marginBottom: 20 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--foreground)', marginBottom: 4 }}>Input Kunjungan Berobat</h2>
-          <p style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>Tambahkan data kunjungan berobat karyawan. Data dari form ini akan ditampilkan di Dashboard.</p>
+      <div className="admin-form-inner">
+        {/* Header */}
+        <div style={{ marginBottom: 18 }}>
+          <h1 className="admin-form-title">Kunjungan Berobat</h1>
+          <p className="admin-form-subtitle">Tambahkan data kunjungan berobat karyawan. Data dari form ini akan ditampilkan di Dashboard.</p>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, boxShadow: 'var(--shadow)' }}>
+          <div className="admin-form-card">
+            <div className="admin-section-header">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--brand-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: -2 }}>
+                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z" />
+              </svg>
+              <h3 className="admin-section-title">Detail Kunjungan</h3>
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               {FORM_FIELDS.map((field) => {
                 const isFullWidth = field.type === 'textarea';
@@ -120,9 +129,9 @@ export default function KunjunganBerobatForm() {
                         }}
                         placeholder={field.placeholder}
                         label={
-                          <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--foreground)' }}>
+                          <span className="admin-label" style={{ marginBottom: 0 }}>
                             {field.label}
-                            {field.required && <span style={{ color: '#ff4d00', marginLeft: 2 }}>*</span>}
+                            {field.required && <span style={{ color: 'var(--brand-primary)', marginLeft: 2 }}>*</span>}
                           </span>
                         }
                         required
@@ -133,9 +142,9 @@ export default function KunjunganBerobatForm() {
                 }
                 return (
                   <div key={field.id} style={isFullWidth ? { gridColumn: '1 / -1' } : undefined}>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--foreground)', marginBottom: 6 }}>
+                    <label className="admin-label">
                       {field.label}
-                      {field.required && <span style={{ color: '#ff4d00', marginLeft: 2 }}>*</span>}
+                      {field.required && <span style={{ color: 'var(--brand-primary)', marginLeft: 2 }}>*</span>}
                     </label>
                     {field.type === 'textarea' ? (
                       <textarea
@@ -143,13 +152,14 @@ export default function KunjunganBerobatForm() {
                         onChange={(e) => handleChange(field.id, e.target.value)}
                         placeholder={field.placeholder}
                         rows={3}
-                        style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit', padding: '8px 12px' }}
+                        className="admin-input"
+                        style={{ height: 'auto', resize: 'vertical', padding: '10px 12px', lineHeight: 1.5 }}
                       />
                     ) : field.type === 'select' ? (
                       <select
                         value={form[field.id] || ''}
                         onChange={(e) => handleChange(field.id, e.target.value)}
-                        style={{ ...inputStyle, appearance: 'none', cursor: 'pointer' }}
+                        className="admin-input"
                       >
                         <option value="">Pilih...</option>
                         {field.options?.map((opt) => (
@@ -160,7 +170,7 @@ export default function KunjunganBerobatForm() {
                       <select
                         value={form[field.id] || ''}
                         onChange={(e) => handleChange(field.id, e.target.value)}
-                        style={{ ...inputStyle, appearance: 'none', cursor: 'pointer' }}
+                        className="admin-input"
                       >
                         <option value="">Pilih Jobsite...</option>
                         {JOBSITES.map((opt) => (
@@ -168,42 +178,33 @@ export default function KunjunganBerobatForm() {
                         ))}
                       </select>
                     ) : field.type === 'date' ? (
-                      <input type="date" value={form[field.id] || ''} onChange={(e) => handleChange(field.id, e.target.value)} style={inputStyle} />
+                      <input type="date" value={form[field.id] || ''} onChange={(e) => handleChange(field.id, e.target.value)} className="admin-input" />
                     ) : (
                       <input
                         type="text"
                         value={form[field.id] || ''}
                         onChange={(e) => handleChange(field.id, e.target.value)}
                         placeholder={field.placeholder}
-                        style={inputStyle}
+                        className="admin-input"
                       />
                     )}
                   </div>
                 );
               })}
             </div>
-            {errorMsg && <p style={{ fontSize: 11, color: '#FF4444', marginBottom: 8 }}>{errorMsg}</p>}
-            <div style={{ marginTop: 20, display: 'flex', gap: 8 }}>
+            {errorMsg && <p className="login-error-msg" style={{ marginTop: 16 }}>{errorMsg}</p>}
+            <div style={{ marginTop: 20, display: 'flex', gap: 10 }}>
               <button
                 type="submit"
                 disabled={saving}
-                style={{
-                  flex: 1, height: 40, borderRadius: 10, border: 'none',
-                  background: saved ? 'linear-gradient(135deg, #00B894, #00D2A0)' : 'linear-gradient(135deg, #ff4d00, #ff6b2b)',
-                  color: '#fff', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
-                  opacity: saving ? 0.7 : 1,
-                }}
+                className={`admin-form-btn-primary${saved ? ' saved' : ''}`}
               >
                 {saving ? 'Menyimpan...' : saved ? 'Tersimpan!' : 'Simpan Data'}
               </button>
               <button
                 type="button"
                 onClick={() => setForm({})}
-                style={{
-                  height: 40, padding: '0 16px', borderRadius: 10,
-                  border: '1px solid var(--border)', background: 'transparent',
-                  color: 'var(--foreground)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                }}
+                className="admin-form-btn-secondary"
               >
                 Reset
               </button>

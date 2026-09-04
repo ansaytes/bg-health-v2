@@ -12,9 +12,9 @@ import HasilTindakLanjutMCU from '@/components/dashboard/HasilTindakLanjutMCU';
 import KunjunganBerobat from '@/components/dashboard/KunjunganBerobat';
 import ReviewMCU from '@/components/review-mcu/ReviewMCU';
 import InputLaggingIndicator from '@/components/administrator/InputLaggingIndicator';
+import LaggingIndicatorPage from '@/components/administrator/LaggingIndicatorPage';
 import KunjunganBerobatForm from '@/components/administrator/KunjunganBerobatForm';
 import HealthCampaignForm from '@/components/administrator/HealthCampaignForm';
-import HealthStatisticsForm from '@/components/administrator/HealthStatisticsForm';
 import UserManagement from '@/components/administrator/UserManagement';
 import HomeView from '@/components/home/HomeView';
 import DataKesehatanTable from '@/components/dashboard/DataKesehatanTable';
@@ -170,9 +170,8 @@ const DASH_SIDEBAR: SidebarItem[] = [
 ];
 
 const ADMIN_SIDEBAR: SidebarItem[] = [
-  { key: 'statistik-health', label: 'Statistik Kesehatan', icon: <IconStatistikHealth /> },
+  { key: 'lagging-indicator', label: 'Lagging Indicator', icon: <IconInputLagging /> },
   { key: 'review-mcu', label: 'Review MCU', icon: <IconReviewMCU /> },
-  { key: 'input-lagging', label: 'Input Lagging Indicator', icon: <IconInputLagging /> },
   { key: 'health-campaign', label: 'Health Campaign', icon: <IconCampaignAdmin /> },
   { key: 'kunjungan-admin', label: 'Kunjungan Berobat', icon: <IconKunjunganAdmin /> },
   { key: 'kelola-pengguna', label: 'Kelola Pengguna', icon: <IconUsers />, superuserOnly: true },
@@ -296,10 +295,14 @@ function AdminContent() {
   }
 
   const panels: Record<string, { form: React.ReactNode; tables: React.ReactNode[]; hasTable: boolean; labels?: string[] }> = {
-    'statistik-health': {
-      hasTable: false,
-      form: <HealthStatisticsForm />,
-      tables: [],
+    'lagging-indicator': {
+      hasTable: true,
+      labels: ['Lagging Indicator', 'Data Kesehatan', 'Man Power'],
+      form: <LaggingIndicatorPage />,
+      tables: [
+        <div className="admin-form-container" key="kesehatan"><DataKesehatanTable canEdit={isAdmin} /></div>,
+        <div className="admin-form-container" key="manpower"><DataManPowerTable canEdit={isAdmin} /></div>,
+      ],
     },
     'review-mcu': {
       hasTable: true,
@@ -310,15 +313,6 @@ function AdminContent() {
         </div>
       ),
       tables: [<div className="admin-form-container" key="mcu"><RecordMCUTable /></div>],
-    },
-    'input-lagging': {
-      hasTable: true,
-      labels: ['Form Input', 'Karyawan Sakit', 'Man Power'],
-      form: <InputLaggingIndicator />,
-      tables: [
-        <div className="admin-form-container" key="kesehatan"><DataKesehatanTable canEdit={isAdmin} /></div>,
-        <div className="admin-form-container" key="manpower"><DataManPowerTable canEdit={isAdmin} /></div>,
-      ],
     },
     'health-campaign': {
       hasTable: false,
@@ -388,52 +382,56 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.25 }}
+      transition={{ duration: 0.2 }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <motion.div
         className="login-card"
-        style={{ position: 'relative' }}
-        initial={{ opacity: 0, scale: 0.88, y: 24 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.88, y: 24 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+        initial={{ opacity: 0, y: 12, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 12, scale: 0.98 }}
+        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
       >
-        <button className="login-close-btn" onClick={onClose}>
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
+        <button className="login-close-btn" onClick={onClose} aria-label="Tutup">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
         </button>
 
-        <div style={{ paddingTop: 28, paddingBottom: 4 }}>
-          <div className="login-card-icon">
-            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
-              <path d="M12 8v4M12 16h.01" />
-            </svg>
+        {/* Header — branded, solid background */}
+        <div className="login-card-header">
+          <div className="login-brand-mark">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/LogoBDM.png" alt="BG-Health" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 6, filter: 'brightness(0) invert(1)' }} />
           </div>
+          <h2 className="login-brand-name">BG-Health v2</h2>
+          <p className="login-brand-tagline">Dashboard Kesehatan Karyawan</p>
         </div>
 
+        {/* Body — login form */}
         <div className="login-card-body">
-          <h2>Masuk</h2>
-          <p className="login-card-subtitle">Masuk ke BG-Health untuk mengakses dashboard</p>
+          <h2>Masuk ke Akun</h2>
+          <p className="login-card-subtitle">Gunakan kredensial yang diberikan administrator</p>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
             <div className="login-input-group">
-              <label className="login-input-label">Username / Email</label>
+              <label className="login-input-label" htmlFor="login-username">Username / Email</label>
               <input
+                id="login-username"
                 type="text"
                 className="login-input"
                 placeholder="username@email.com"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
+                autoFocus
               />
             </div>
             <div className="login-input-group">
-              <label className="login-input-label">Password</label>
+              <label className="login-input-label" htmlFor="login-password">Password</label>
               <input
+                id="login-password"
                 type="password"
                 className="login-input"
-                placeholder="Masukkan password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
@@ -448,7 +446,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
           </form>
 
           <p className="login-footer-text">
-            Belum punya akun? Hubungi administrator
+            Belum punya akun? Hubungi administrator sistem.
           </p>
         </div>
       </motion.div>
@@ -522,6 +520,11 @@ export default function Home() {
   };
 
   const handleLogout = async () => {
+    // Preview mode: keep mock session, just close login popup
+    if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_PREVIEW_ROLE) {
+      setShowLogin(false);
+      return;
+    }
     await supabase.auth.signOut();
     setShowLogin(false);
     // If on admin page, redirect to home
@@ -553,7 +556,7 @@ export default function Home() {
         {/* Bus 2023 image - full width, reduced height, 85% opacity */}
         <div style={{ padding: '0 12px', flexShrink: 0 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/Bus2023.png" alt="" style={{ width: '100%', height: 80, objectFit: 'cover', objectPosition: 'center', opacity: 0.85, borderRadius: 6, display: 'block' }} />
+          <img src="/Bus2023_cropped.png" alt="" style={{ width: '100%', height: 80, objectFit: 'cover', objectPosition: 'center', opacity: 0.85, borderRadius: 6, display: 'block' }} />
         </div>
 
         <div className="sidebar-label">BG-Health v2</div>

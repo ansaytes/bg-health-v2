@@ -22,16 +22,12 @@ interface FeedItem {
   lengthSeconds?: number;
 }
 
-/* ── Gradient backgrounds for placeholder images ── */
-const GRADIENTS = [
-  'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
-  'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
-  'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)',
-  'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
-  'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)',
-  'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)',
-  'linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%)',
-  'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)',
+/* ── Neutral placeholder backgrounds (no pastel gradients) ── */
+const PLACEHOLDER_BG = [
+  { bg: 'var(--brand-navy)', label: 'BG-Health' },
+  { bg: 'var(--brand-navy-soft)', label: 'News' },
+  { bg: 'var(--muted-foreground)', label: 'Health Talk' },
+  { bg: 'var(--brand-primary)', label: 'Campaign' },
 ];
 
 /* Format date for display */
@@ -58,7 +54,7 @@ function fmtDuration(secs: number): string {
 
 /* ── Feed Card Component ── */
 function FeedCard({ item, index }: { item: FeedItem; index: number }) {
-  const gradient = GRADIENTS[index % GRADIENTS.length];
+  const placeholder = PLACEHOLDER_BG[index % PLACEHOLDER_BG.length];
   const isVideo = item.type === 'talk' || (item.type === 'news' && (!!item.video_url || !!item.media_url));
   const isCampaign = item.type === 'campaign';
   const isYouTube = item.source === 'youtube' || item.type === 'talk';
@@ -83,7 +79,7 @@ function FeedCard({ item, index }: { item: FeedItem; index: number }) {
       <div
         className="home-feed-card-media"
         style={{
-          background: thumbnail ? '#111' : gradient,
+          background: thumbnail ? '#0a0b0e' : placeholder.bg,
           aspectRatio: isYouTube ? '16 / 9' : undefined,
         }}
       >
@@ -98,30 +94,28 @@ function FeedCard({ item, index }: { item: FeedItem; index: number }) {
               img.style.opacity = '0';
             }}
           />
-        ) : !isCampaign ? (
-          <div style={{ padding: 12, textAlign: 'center' }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(0,0,0,0.4)', lineHeight: 1.3 }}>
-              {item.imageHint || '@BagongNews'}
+        ) : (
+          <div style={{ padding: 16, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 8 }}>
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.65)', lineHeight: 1.3 }}>
+              {placeholder.label}
             </span>
           </div>
-        ) : null}
-        {(isVideo || clickUrl) && (
-          <div className="home-feed-play-btn">
-            <svg viewBox="0 0 24 24" fill="white" width="28" height="28">
-              <polygon points="6,3 20,12 6,21" />
-            </svg>
-          </div>
         )}
-        {isCampaign && !thumbnail && (
-          <div style={{ padding: 12, textAlign: 'center' }}>
-            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth="1.5">
-              <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
+        {(isVideo || clickUrl) && thumbnail && (
+          <div className="home-feed-play-btn">
+            <svg viewBox="0 0 24 24" fill="white" width="22" height="22">
+              <polygon points="6,3 20,12 6,21" />
             </svg>
           </div>
         )}
         {isVideo && item.lengthSeconds && item.lengthSeconds > 0 && (
           <span style={{
-            position: 'absolute', bottom: 6, right: 6, background: 'rgba(0,0,0,0.8)',
+            position: 'absolute', bottom: 6, right: 6, background: 'rgba(0,0,0,0.85)',
             color: '#fff', fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
           }}>
             {fmtDuration(item.lengthSeconds)}

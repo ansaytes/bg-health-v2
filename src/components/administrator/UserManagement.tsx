@@ -142,15 +142,15 @@ export default function UserManagement() {
         <div style={{ flexShrink: 0, marginBottom: 12 }}>
           <button
             onClick={() => { setShowRegister(!showRegister); setRegError(''); setRegSuccess(''); }}
+            className={`admin-form-btn-${showRegister ? 'secondary' : 'primary'}`}
             style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              padding: '0 16px', height: 36, fontSize: 12, lineHeight: '36px',
-              background: showRegister ? 'var(--muted)' : '#ff4d00',
-              color: showRegister ? 'var(--foreground)' : '#fff',
-              border: 'none', borderRadius: 8, cursor: 'pointer',
-              fontWeight: 600, whiteSpace: 'nowrap',
-              transition: 'background 0.2s, color 0.2s',
-              width: '100%',
+              flex: 'unset',
+              width: 'auto',
+              padding: '0 18px',
+              height: 38,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
             }}
           >
             {showRegister ? (
@@ -238,10 +238,15 @@ export default function UserManagement() {
           <p style={{ fontSize: 10, color: 'var(--muted-foreground)', marginBottom: 8 }}>Pastikan sesi Anda masih aktif dan coba lagi.</p>
           <button
             onClick={fetchUsers}
+            className="admin-form-btn-primary"
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-              padding: '6px 14px', fontSize: 11, fontWeight: 600,
-              color: '#fff', background: '#ff4d00', border: 'none', borderRadius: 6, cursor: 'pointer',
+              flex: 'unset',
+              width: 'auto',
+              padding: '0 16px',
+              height: 36,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
             }}
           >
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>
