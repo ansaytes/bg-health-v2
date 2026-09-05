@@ -415,8 +415,8 @@ export default function DashboardView() {
                     <div className="stat-val" style={{ color: '#FF6347' }}>{ssr.toFixed(2)}</div>
                     <div className="stat-label">SSR</div>
                   </div>
-                  <div className="stat-box" style={{ borderLeft: '3px solid var(--brand-primary)' }}>
-                    <div className="stat-val" style={{ color: 'var(--brand-primary)' }}>{asr.toFixed(2)}</div>
+                  <div className="stat-box" style={{ borderLeft: '3px solid #ff4d00' }}>
+                    <div className="stat-val" style={{ color: '#ff4d00' }}>{asr.toFixed(2)}</div>
                     <div className="stat-label">ASR</div>
                   </div>
                   <div className="stat-box" style={{ borderLeft: '3px solid #778899' }}>
