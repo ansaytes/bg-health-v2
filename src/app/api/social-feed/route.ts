@@ -155,25 +155,9 @@ export async function GET() {
   const ytNews = allVideos.filter(v => !/HEALTH\s*TALK/i.test(v.title));
   const news: FeedItem[] = igPosts.length > 0 ? igPosts : ytNews;
 
-  cachedNews = news.length > 0 ? news : [{
-    id: 'ig-link',
-    title: 'Bagong News di Instagram',
-    caption: 'Follow @Bagongnews untuk update berita dan informasi terbaru dari PT Bagong Dekaka Makmur.',
-    media_url: '',
-    source: 'instagram' as const,
-    published_at: new Date().toISOString(),
-    external_url: 'https://www.instagram.com/bagongnews/',
-  }];
-
-  cachedTalks = talks.length > 0 ? talks : [{
-    id: 'yt-link',
-    title: 'Health Talk - Bagong News',
-    caption: 'Subscribe channel YouTube @BagongNewsYoutube untuk konten kesehatan dan keselamatan kerja.',
-    media_url: '',
-    source: 'youtube' as const,
-    published_at: new Date().toISOString(),
-    video_url: 'https://www.youtube.com/@BagongNewsYoutube',
-  }];
+  // No mock data — return real data or empty array
+  cachedNews = news;
+  cachedTalks = talks;
 
   cacheTime = Date.now();
   return NextResponse.json({ news: cachedNews, healthTalks: cachedTalks });

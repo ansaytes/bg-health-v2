@@ -1059,7 +1059,7 @@ select:focus { border-color: #ff4d00; }
   height: 65%;
   border-radius: 50%;
   object-fit: contain;
-  opacity: 0.15;
+  opacity: 0.40;
   z-index: 0;
   pointer-events: none;
   animation: login-spin 12s linear infinite;
