@@ -395,56 +395,61 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.25 }}
+      transition={{ duration: 0.2 }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <motion.div
         className={`login-circle${shake ? ' shake' : ''}`}
-        initial={{ opacity: 0, scale: 0.85, y: 20 }}
+        initial={{ opacity: 0, scale: 0.92, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.85, y: 20 }}
-        transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+        exit={{ opacity: 0, scale: 0.92, y: 16 }}
+        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
       >
-        <div className="login-mask">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/BM.png" alt="" className="login-logo-bg" />
-        </div>
-        <button className="login-close-btn" onClick={onClose} aria-label="Tutup">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
-        </button>
-
         <div className="login-card">
-          <form onSubmit={handleSubmit}>
-            <h2>Login</h2>
-            {error && <p className="login-error-msg">{error}</p>}
-            <div className="login-input-group">
-              <input
-                type="text"
-                className="login-input"
-                placeholder=" "
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
-                required
-              />
-              <label className="login-input-label">Username / Email</label>
-            </div>
-            <div className="login-input-group">
-              <input
-                type="password"
-                className="login-input"
-                placeholder=" "
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                required
-              />
-              <label className="login-input-label">Password</label>
-            </div>
-            <button type="submit" className="login-btn" disabled={loading}>
-              {loading ? 'Memproses...' : 'Sign In'}
-            </button>
-          </form>
+          <button className="login-close-btn" onClick={onClose} aria-label="Tutup">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
+          </button>
+
+          {/* Header — BM logo berputar full */}
+          <div className="login-header">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/BM.png" alt="BG-Health" className="login-logo-bg" />
+          </div>
+
+          {/* Body — form */}
+          <div className="login-card-body">
+            <form onSubmit={handleSubmit}>
+              <h2>Login</h2>
+              {error && <p className="login-error-msg">{error}</p>}
+              <div className="login-input-group">
+                <input
+                  type="text"
+                  className="login-input"
+                  placeholder=" "
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
+                  required
+                />
+                <label className="login-input-label">Username / Email</label>
+              </div>
+              <div className="login-input-group">
+                <input
+                  type="password"
+                  className="login-input"
+                  placeholder=" "
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                />
+                <label className="login-input-label">Password</label>
+              </div>
+              <button type="submit" className="login-btn" disabled={loading}>
+                {loading ? 'Memproses...' : 'Sign In'}
+              </button>
+            </form>
+          </div>
 
           {/* Success overlay — green checkmark */}
           <div className={`login-success${showSuccess ? ' active' : ''}`}>

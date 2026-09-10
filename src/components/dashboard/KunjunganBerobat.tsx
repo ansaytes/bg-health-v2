@@ -28,29 +28,28 @@ export default function KunjunganBerobat() {
   }, []);
 
   return (
-    <div className="dashboard scrollable" ref={containerRef} style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-      {/* Top Bar — filter kiri, total kanan, satu baris */}
-      <div className="kunjungan-top-bar">
-        <div className="kunjungan-filter-bar">
+    <div className="dashboard" ref={containerRef} style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      {/* Top Bar — filter + total, satu baris */}
+      <div className="dashboard-top-bar">
+        <div className="header-filter">
           <div className="filter-tag">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
-            Filter
+            Filtering
           </div>
           <select defaultValue="all"><option value="all">Semua Bulan</option></select>
           <select defaultValue="all"><option value="all">Semua Week</option></select>
           <select defaultValue="all"><option value="all">Semua Departemen</option></select>
         </div>
-        <div className="kunjungan-total-right">
-          <span className="mcu-total-label">Total Kunjungan:</span>
+        <div className="mcu-total-bar">
+          <span className="mcu-total-label">Total:</span>
           <span className="mcu-total-num">0</span>
-          <span style={{ color: 'var(--border)' }}>|</span>
-          <span style={{ color: '#00B894', fontWeight: 700 }}>Pasien Unik: 0</span>
-          <span style={{ color: '#FF4444', fontWeight: 700 }}>Rujuk RS: 0</span>
+          <span style={{ color: '#00B894', fontWeight: 700 }}>Unik: 0</span>
+          <span style={{ color: '#FF4444', fontWeight: 700 }}>Rujuk: 0</span>
         </div>
       </div>
 
-      {/* Main Content — scrollable, fills remaining height */}
-      <div className="kunjungan-scroll-content" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
+      {/* Main Content — fills remaining height, scrollable */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 20 }}>
         {/* Trend Row — 2 charts */}
         <div className="kunjungan-trend-row">
           <div className="card glow-orange" style={{ padding: '6px 8px' }}>
