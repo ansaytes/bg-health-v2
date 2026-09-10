@@ -1,4 +1,5 @@
 'use client';
+import NotificationBell from '@/components/header/NotificationBell';
 
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -346,6 +347,13 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<"login"|"register">("login");
+  const [regNik, setRegNik] = useState("");
+  const [regNama, setRegNama] = useState("");
+  const [regJabatan, setRegJabatan] = useState("");
+  const [regJobsite, setRegJobsite] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPassword, setRegPassword] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -397,19 +405,16 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
         </button>
 
-        <div style={{ paddingTop: 28, paddingBottom: 4 }}>
-          <div className="login-card-icon">
-            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
-              <path d="M12 8v4M12 16h.01" />
-            </svg>
-          </div>
+        <div style={{ paddingTop: 24, paddingBottom: 4, textAlign: 'center' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/BM.png" alt="BG-Health" style={{ width: 48, height: 48, objectFit: 'contain', margin: '0 auto', display: 'block' }} />
         </div>
 
         <div className="login-card-body">
-          <h2>Masuk</h2>
-          <p className="login-card-subtitle">Masuk ke BG-Health untuk mengakses dashboard</p>
+          <h2>{mode === 'login' ? 'Masuk' : 'Daftar'}</h2>
+          <p className="login-card-subtitle">{mode === 'login' ? 'Masuk ke BG-Health untuk mengakses dashboard' : 'Daftar akun baru — menunggu persetujuan superuser'}</p>
 
+          {mode === 'login' ? (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
             <div className="login-input-group">
               <label className="login-input-label">Username / Email</label>
@@ -442,8 +447,93 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
           </form>
 
           <p className="login-footer-text">
-            Belum punya akun? Hubungi administrator
+            Belum punya akun?{' '}
+            <button type="button" onClick={() => { setMode('register'); setError(''); }} style={{ background: 'none', border: 'none', color: '#ff4d00', fontWeight: 600, cursor: 'pointer', fontSize: 12, padding: 0 }}>
+              Daftar di sini
+            </button>
           </p>
+          ) : (
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            setError('');
+            setLoading(true);
+            try {
+              const res = await fetch('/api/notifications', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  /* register via notifications API */
+                  email: regEmail,
+                  password: regPassword,
+                  full_name: regNama,
+                  role: 'viewer',
+                  national_id: regNik,
+                  username: regNik,
+                }),
+              });
+              const json = await res.json();
+              if (!json.success) throw new Error(json.error || 'Gagal mendaftar');
+              setMode('login');
+              setError('');
+              alert('Pendaftaran berhasil! Akun Anda menunggu persetujuan superuser.');
+            } catch (err) {
+              setError(err instanceof Error ? err.message : 'Gagal mendaftar');
+            } finally {
+              setLoading(false);
+            }
+          }} style={{ display: 'flex', flexDirection: 'column' }}>
+            <div className="login-input-group">
+              <label className="login-input-label">NIK (National ID) *</label>
+              <input
+                type="text"
+                className="login-input"
+                placeholder="Masukkan NIK"
+                value={regNik}
+                onChange={async (e) => {
+                  const val = e.target.value;
+                  setRegNik(val);
+                  if (val.length >= 6) {
+                    try {
+                      const res = await fetch('/api/employee', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: val }),
+                      });
+                      const json = await res.json();
+                      if (json.success && json.data && json.data.length > 0) {
+                        const emp = json.data[0];
+                        setRegNama(emp.nama || '');
+                        setRegJabatan(emp.job_position || '');
+                        setRegJobsite(emp.site_name || '');
+                        setRegEmail(emp.nik ? `${String(emp.nik)}@bg-health.local` : '');
+                      }
+                    } catch {}
+                  }
+                }}
+              />
+              {regNama && (
+                <div style={{ marginTop: 6, fontSize: 11, color: 'var(--muted-foreground)', background: 'var(--muted)', padding: '4px 8px', borderRadius: 6 }}>
+                  ✓ {regNama} — {regJabatan} — {regJobsite}
+                </div>
+              )}
+            </div>
+            <div className="login-input-group">
+              <label className="login-input-label">Email *</label>
+              <input type="email" className="login-input" placeholder="email@perusahaan.com" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} required />
+            </div>
+            <div className="login-input-group">
+              <label className="login-input-label">Password *</label>
+              <input type="password" className="login-input" placeholder="Minimal 6 karakter" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} required />
+            </div>
+            {error && <p className="login-error-msg">{error}</p>}
+            <button type="submit" className="login-btn" disabled={loading}>
+              {loading ? 'Memproses...' : 'Daftar'}
+            </button>
+            <button type="button" onClick={() => { setMode('login'); setError(''); }} style={{ marginTop: 8, background: 'none', border: 'none', color: 'var(--muted-foreground)', fontSize: 12, cursor: 'pointer', padding: 0 }}>
+              ← Kembali ke Login
+            </button>
+          </form>
+          )}
         </div>
       </motion.div>
     </motion.div>
@@ -609,6 +699,7 @@ export default function Home() {
             <div className="header-right">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/BestK3.png" alt="BestK3" className="header-right-logo" />
+              <NotificationBell isSuperuser={isSuperuser} />
               <button className="theme-btn" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
                 {theme === 'dark'
                   ? <svg viewBox="0 0 24 24" fill="none" stroke="#FDCB6E" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>

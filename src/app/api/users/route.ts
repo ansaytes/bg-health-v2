@@ -17,10 +17,13 @@ async function getCallerRole(req: NextRequest): Promise<{ userId: string; role: 
   }
   if (!accessToken) return null;
 
-  const { data: { user }, error } = await supabase.auth.getUser(accessToken);
+  // Pakai admin client (service role) untuk getUser — bypass RLS
+  const client = supabaseServiceKey ? supabaseAdmin : supabase;
+  const { data: { user }, error } = await client.auth.getUser(accessToken);
   if (error || !user) return null;
 
-  const { data: profile } = await supabase
+  // Baca profile dengan admin client (bypass RLS di user_profiles)
+  const { data: profile } = await client
     .from('user_profiles')
     .select('role')
     .eq('user_id', user.id)
@@ -35,10 +38,17 @@ export async function GET(req: NextRequest) {
   try {
     const caller = await getCallerRole(req);
     if (!caller || !['superuser', 'administrator'].includes(caller.role)) {
-      return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
+      return NextResponse.json({ 
+        error: 'Akses ditolak',
+        detail: !caller ? 'Tidak bisa memverifikasi sesi login. Pastikan SUPABASE_SERVICE_ROLE_KEY sudah diisi.' : 'Role Anda tidak punya akses ke halaman ini.',
+        caller_found: !!caller,
+        caller_role: caller?.role || null,
+      }, { status: 403 });
     }
 
-    const { data, error } = await supabase
+    // Pakai admin client untuk bypass RLS
+    const client = supabaseServiceKey ? supabaseAdmin : supabase;
+    const { data, error } = await client
       .from('user_profiles')
       .select('*')
       .order('created_at', { ascending: true });
