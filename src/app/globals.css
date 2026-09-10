@@ -632,15 +632,16 @@ select:focus { border-color: #ff4d00; }
 .mcu-total-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 10px;
-  font-size: 10px;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 2px 10px;
+  font-size: 9px;
   color: var(--muted-foreground);
   flex-shrink: 0;
   flex-wrap: wrap;
 }
-.mcu-total-label { font-weight: 700; }
-.mcu-total-num { font-size: 14px; font-weight: 800; color: #ff4d00; }
+.mcu-total-label { font-weight: 700; font-size: 9px; }
+.mcu-total-num { font-size: 12px; font-weight: 800; color: #ff4d00; }
 
 /* ═══════════════════════════════════
    MCU Grid — 3-col, viewport-fit cards
@@ -717,8 +718,9 @@ select:focus { border-color: #ff4d00; }
 .kunjungan-total-right {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 10px;
+  justify-content: flex-end;
+  gap: 6px;
+  font-size: 9px;
   color: var(--muted-foreground);
   flex-shrink: 0;
   margin-left: auto;
@@ -1809,8 +1811,8 @@ select.admin-input.compact-input {
   .stat-wide .stat-val { font-size: 20px; }
   .stat-wide .stat-label { font-size: 8px; text-align: center; }
   .chart-box { height: 180px; }
-  .mcu-total-bar { padding: 4px 8px; gap: 4px; font-size: 9px; flex-wrap: wrap; line-height: 1.6; }
-  .mcu-total-num { font-size: 16px; }
+  .mcu-total-bar { padding: 2px 8px; gap: 4px; font-size: 8px; flex-wrap: wrap; line-height: 1.4; justify-content: flex-end; }
+  .mcu-total-num { font-size: 10px; }
   .kunjungan-filter-bar { gap: 4px; }
   .kunjungan-filter-bar select { height: 28px; font-size: 10px; flex: 1 1 auto; min-width: 0; }
   .kunjungan-trend-row .chart-box { height: 200px; }
