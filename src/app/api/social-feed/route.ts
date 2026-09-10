@@ -137,7 +137,8 @@ async function fetchInstagramPosts(): Promise<FeedItem[]> {
    MAIN HANDLER
    ═══════════════════════════════════════════════════════════════ */
 export async function GET() {
-  if (isCacheValid()) {
+  // Only use cache if it contains actual data (not empty arrays)
+  if (isCacheValid() && cachedNews!.length > 0 && cachedTalks!.length > 0) {
     return NextResponse.json({ news: cachedNews, healthTalks: cachedTalks });
   }
 
@@ -155,10 +156,15 @@ export async function GET() {
   const ytNews = allVideos.filter(v => !/HEALTH\s*TALK/i.test(v.title));
   const news: FeedItem[] = igPosts.length > 0 ? igPosts : ytNews;
 
-  // No mock data — return real data or empty array
-  cachedNews = news;
-  cachedTalks = talks;
+  // Only cache if we have real data — don't cache empty results
+  // so next request can retry fetching
+  if (news.length > 0) cachedNews = news;
+  if (talks.length > 0) cachedTalks = talks;
+  if (news.length > 0 && talks.length > 0) cacheTime = Date.now();
 
-  cacheTime = Date.now();
-  return NextResponse.json({ news: cachedNews, healthTalks: cachedTalks });
+  // Return whatever we have (real data or empty arrays)
+  return NextResponse.json({
+    news: cachedNews || [],
+    healthTalks: cachedTalks || [],
+  });
 }
