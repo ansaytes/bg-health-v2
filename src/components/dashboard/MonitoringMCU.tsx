@@ -18,17 +18,17 @@ export default function MonitoringMCU() {
             </svg>
             Filtering
           </div>
-          <select defaultValue="">
-            <option value="">- Pilih Jobsite -</option>
+          <select>
+            
             {JOBSITES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-          <select defaultValue="">
-            <option value="">- Pilih Bulan -</option>
+          <select>
+            
             <option value="all">Bulan (YTD)</option>
             {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
           </select>
-          <select defaultValue="">
-            <option value="">- Pilih Tahun -</option>
+          <select>
+            
             <option value={2025}>2025</option>
             <option value={2026}>2026</option>
             <option value={2027}>2027</option>

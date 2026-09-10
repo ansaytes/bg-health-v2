@@ -92,9 +92,9 @@ interface DataKunjunganTableProps {
 }
 
 export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTableProps) {
-  const [siteFilter, setSiteFilter] = useState('');
-  const [monthFilter, setMonthFilter] = useState('');
-  const [yearFilter, setYearFilter] = useState('');
+  const [siteFilter, setSiteFilter] = useState('All Site');
+  const [monthFilter, setMonthFilter] = useState('Semua');
+  const [yearFilter, setYearFilter] = useState('2026');
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 

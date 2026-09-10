@@ -41,7 +41,7 @@ interface IndicatorRow {
 }
 
 const EMPTY_ROW: IndicatorRow = {
-  tahun: 2026, bulan: 1, jobsite: 'Aceh',
+  tahun: 0, bulan: 0, jobsite: '',
   man_power: 0, man_hours: 0, kunjungan_klinik: 0, tk_sakit: 0,
   absensi_sakit: 0, spell: 0, penyakit_akibat_kerja: 0,
   kejadian_penyakit_tk: 0, layak_bekerja: 0,
@@ -253,21 +253,24 @@ function StatistikKesehatanForm() {
           <div>
             <label className="admin-label">Tahun <span style={{ color: 'var(--brand-primary)' }}>*</span></label>
             <input type="number" min="2020" max="2099"
-              value={row.tahun}
-              onChange={(e) => setRow(prev => ({ ...prev, tahun: parseInt(e.target.value) || 2026 }))}
+              value={row.tahun || ''}
+              onChange={(e) => setRow(prev => ({ ...prev, tahun: parseInt(e.target.value) || 0 }))}
+              placeholder="- Pilih Tahun -"
               className="admin-input compact-input" />
           </div>
           <div>
             <label className="admin-label">Bulan <span style={{ color: 'var(--brand-primary)' }}>*</span></label>
-            <select value={row.bulan} onChange={(e) => setRow(prev => ({ ...prev, bulan: parseInt(e.target.value) }))}
+            <select value={row.bulan || ''} onChange={(e) => setRow(prev => ({ ...prev, bulan: parseInt(e.target.value) || 0 }))}
               className="admin-input compact-input">
+              <option value="">- Pilih Bulan -</option>
               {FULL_MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
             </select>
           </div>
           <div>
             <label className="admin-label">Jobsite <span style={{ color: 'var(--brand-primary)' }}>*</span></label>
-            <select value={row.jobsite} onChange={(e) => setRow(prev => ({ ...prev, jobsite: e.target.value }))}
+            <select value={row.jobsite || ''} onChange={(e) => setRow(prev => ({ ...prev, jobsite: e.target.value }))}
               className="admin-input compact-input">
+              <option value="">- Pilih Jobsite -</option>
               {JOBSITES.filter(s => s !== 'All Site').map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>

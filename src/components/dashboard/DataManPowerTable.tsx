@@ -59,9 +59,9 @@ interface DataManPowerTableProps {
 }
 
 export default function DataManPowerTable({ canEdit = false }: DataManPowerTableProps) {
-  const [siteFilter, setSiteFilter] = useState('');
-  const [monthFilter, setMonthFilter] = useState('');
-  const [yearFilter, setYearFilter] = useState('');
+  const [siteFilter, setSiteFilter] = useState('All Site');
+  const [monthFilter, setMonthFilter] = useState('Semua');
+  const [yearFilter, setYearFilter] = useState('2026');
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -184,7 +184,6 @@ export default function DataManPowerTable({ canEdit = false }: DataManPowerTable
           {MONTHS.map(m => (<option key={m} value={m}>{m}</option>))}
         </select>
         <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
-          <option value="">- Pilih Tahun -</option>
             <option value="2026">2026</option><option value="2025">2025</option><option value="2024">2024</option>
         </select>
       </div>
