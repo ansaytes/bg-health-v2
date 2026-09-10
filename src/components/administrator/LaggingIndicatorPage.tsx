@@ -252,7 +252,7 @@ function StatistikKesehatanForm() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
           <div>
             <label className="admin-label">Tahun <span style={{ color: 'var(--brand-primary)' }}>*</span></label>
-            <input type="number" min="2020" max="2099"
+            
               value={row.tahun}
               onChange={(e) => setRow(prev => ({ ...prev, tahun: parseInt(e.target.value) || 2026 }))}
               className="admin-input compact-input" />

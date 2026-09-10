@@ -9,7 +9,7 @@ const ChartPlaceholder = ({ id }: { id: string }) => (
 export default function HasilTindakLanjutMCU() {
   return (
     <div className="dashboard">
-      {/* Filter + Total Bar — satu baris, filter kiri, total kanan */}
+      {/* Filter + Total Bar — satu baris */}
       <div className="dashboard-top-bar">
         <div className="header-filter">
           <div className="filter-tag">
@@ -18,14 +18,17 @@ export default function HasilTindakLanjutMCU() {
             </svg>
             Filtering
           </div>
-          <select>
+          <select defaultValue="">
+            <option value="">- Pilih Jobsite -</option>
             {JOBSITES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-          <select>
+          <select defaultValue="">
+            <option value="">- Pilih Bulan -</option>
             <option value="all">Bulan (YTD)</option>
             {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
           </select>
-          <select>
+          <select defaultValue="">
+            <option value="">- Pilih Tahun -</option>
             <option value={2025}>2025</option>
             <option value={2026}>2026</option>
             <option value={2027}>2027</option>

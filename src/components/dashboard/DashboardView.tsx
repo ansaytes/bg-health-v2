@@ -77,8 +77,8 @@ function getSickPeriodRange(bulan: number, tahun: number) {
 
 export default function DashboardView() {
   const [selectedSite, setSelectedSite] = useState<string>('All Site');
-  const [selectedYear, setSelectedYear] = useState<number>(2026);
-  const [selectedMonth, setSelectedMonth] = useState<number | 'all'>(1);
+  const [selectedYear, setSelectedYear] = useState<number | ''>('');
+  const [selectedMonth, setSelectedMonth] = useState<number | 'all' | ''>('');
 
   const [kpiData, setKpiData] = useState<KpiRow[]>([]);
   const [asrRanking, setAsrRanking] = useState<AsrRankRow[]>([]);
@@ -96,7 +96,7 @@ export default function DashboardView() {
       try {
         const view = selectedSite === 'All Site' ? 'view=all_site&' : '';
         const siteParam = selectedSite === 'All Site' ? '' : `jobsite=${encodeURIComponent(selectedSite)}&`;
-        const url = `/api/health-indicators?${view}${siteParam}tahun=${selectedYear}`;
+        const url = `/api/health-indicators?${view}${siteParam}tahun=${selectedYear || ''}`;
         const res = await fetch(url);
         const json = await res.json();
         if (!cancelled && json.success && Array.isArray(json.data)) {
@@ -126,7 +126,7 @@ export default function DashboardView() {
   }, [selectedMonth, kpiData]);
 
   const bulanNum = effectiveMonthIdx + 1;
-  const isYTD = selectedMonth === 'all';
+  const isYTD = selectedMonth === 'all' || selectedMonth === '';
 
   /* ─── Compute currentMonth (single row to display) ─────── */
   const currentMonth = useMemo((): KpiRow | null => {
@@ -173,8 +173,8 @@ export default function DashboardView() {
     (async () => {
       try {
         const url = isYTD
-          ? `/api/health-indicators?asr_ranking=true&tahun=${selectedYear}`
-          : `/api/health-indicators?asr_ranking=true&tahun=${selectedYear}&bulan=${bulanNum}`;
+          ? `/api/health-indicators?asr_ranking=true&tahun=${selectedYear || ''}`
+          : `/api/health-indicators?asr_ranking=true&tahun=${selectedYear || ''}&bulan=${bulanNum}`;
         const res = await fetch(url);
         const json = await res.json();
         if (!cancelled && json.success) {
@@ -222,7 +222,7 @@ export default function DashboardView() {
     const period = getSickPeriodRange(bulanNum, selectedYear);
     (async () => {
       try {
-        const url = `/api/sick-employees?bulan=${bulanNum}&tahun=${selectedYear}` +
+        const url = `/api/sick-employees?bulan=${bulanNum}&tahun=${selectedYear || ''}` +
           (selectedSite !== 'All Site' ? `&jobsite=${encodeURIComponent(selectedSite)}` : '') +
           `&period_start=${period.start}&period_end=${period.end}`;
         const res = await fetch(url);
@@ -262,7 +262,7 @@ export default function DashboardView() {
   /* ─── Handle month change ──────────────────────────────── */
   const handleMonthChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     const v = e.target.value;
-    setSelectedMonth(v === 'all' ? 'all' : parseInt(v));
+    setSelectedMonth(v === '' ? '' : v === 'all' ? 'all' : parseInt(v));
     setChartReady(false);
   }, []);
 
@@ -366,12 +366,14 @@ export default function DashboardView() {
           {JOBSITES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         <select value={String(selectedMonth)} onChange={handleMonthChange}>
+          <option value="">- Pilih Bulan -</option>
           <option value="all">Bulan (YTD)</option>
           {MONTHS.map((m, i) => (
             <option key={i} value={i + 1}>{m}</option>
           ))}
         </select>
-        <select value={selectedYear} onChange={(e) => { setSelectedYear(parseInt(e.target.value)); setChartReady(false); }}>
+        <select value={String(selectedYear)} onChange={(e) => { setSelectedYear(e.target.value ? parseInt(e.target.value) : ""); setChartReady(false); }}>
+          <option value="">- Pilih Tahun -</option>
           <option value={2025}>2025</option>
           <option value={2026}>2026</option>
           <option value={2027}>2027</option>

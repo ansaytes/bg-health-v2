@@ -20,8 +20,11 @@ export async function GET(request: NextRequest) {
     if (jobsite && jobsite !== 'All Site') query = query.eq('jobsite', jobsite);
     if (bulan) query = query.eq('bulan', parseInt(bulan));
     if (tahun) query = query.eq('tahun', parseInt(tahun));
-    if (periodStart) query = query.gte('tgl_mulai_a', periodStart);
-    if (periodEnd) query = query.lte('tgl_mulai_a', periodEnd);
+    // Note: period_start/period_end filter dihapus karena sebagian besar rows
+    // punya tgl_mulai_a = NULL. Filtering pakai bulan+tahun saja (sudah di-set
+    // saat import berdasarkan aturan periode 21st prev month → 20th current month).
+    // if (periodStart) query = query.gte('tgl_mulai_a', periodStart);
+    // if (periodEnd) query = query.lte('tgl_mulai_a', periodEnd);
 
     const { data, error } = await query;
     if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });

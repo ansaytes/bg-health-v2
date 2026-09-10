@@ -36,9 +36,9 @@ export default function KunjunganBerobat() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
             Filter
           </div>
-          <select defaultValue="all"><option value="all">Semua Bulan</option></select>
-          <select defaultValue="all"><option value="all">Semua Week</option></select>
-          <select defaultValue="all"><option value="all">Semua Departemen</option></select>
+          <select defaultValue=""><option value="">- Pilih Bulan -</option><option value="all">Semua Bulan</option></select>
+          <select defaultValue=""><option value="">- Pilih Week -</option><option value="all">Semua Week</option></select>
+          <select defaultValue=""><option value="">- Pilih Departemen -</option><option value="all">Semua Departemen</option></select>
         </div>
         <div className="kunjungan-total-right">
           <span className="mcu-total-label">Total Kunjungan:</span>
