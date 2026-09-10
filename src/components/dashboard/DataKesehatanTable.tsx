@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-/* Column definitions matching Excel: Data Karyawan Sakit */
+/* Column definitions matching sick_employees table */
 const COLUMNS = [
   { key: 'nik', label: 'NIK' },
   { key: 'nama', label: 'Nama' },
@@ -36,7 +36,7 @@ const COLUMNS = [
   { key: 'tgl_mulai_c', label: 'Tgl Mulai C' },
   { key: 'tgl_selesai_c', label: 'Tgl Selesai C' },
   { key: 'hari_c', label: 'Hari C' },
-  { key: 'spell', label: 'Spell' },
+  { key: 'jumlah_spell', label: 'Spell' },
 ];
 
 /* Editable fields (subset of COLUMNS) */
@@ -54,7 +54,7 @@ const EDITABLE_FIELDS = [
   { key: 'tgl_mulai_c', label: 'Tgl Mulai C', type: 'date' },
   { key: 'tgl_selesai_c', label: 'Tgl Selesai C', type: 'date' },
   { key: 'hari_c', label: 'Hari C', type: 'number' },
-  { key: 'spell', label: 'Spell', type: 'number' },
+  { key: 'jumlah_spell', label: 'Spell', type: 'number' },
 ];
 
 const JOBSITES = [
@@ -92,7 +92,7 @@ function toDateInput(d: string | null): string {
 }
 
 const DATE_KEYS = new Set(['tgl_mulai_a','tgl_selesai_a','tgl_mulai_b','tgl_selesai_b','tgl_mulai_c','tgl_selesai_c']);
-const NUM_KEYS = new Set(['hari_a','hari_b','hari_c','spell']);
+const NUM_KEYS = new Set(['hari_a','hari_b','hari_c','jumlah_spell']);
 
 /* Get auth token for API calls */
 async function getAuthHeaders(): Promise<Record<string, string>> {
@@ -134,7 +134,7 @@ export default function DataKesehatanTable({ canEdit = false }: DataKesehatanTab
       if (monthFilter !== 'Semua') params.set('bulan', String(MONTHS.indexOf(monthFilter)));
       params.set('tahun', yearFilter);
 
-      const res = await fetch(`/api/absensi?${params}`);
+      const res = await fetch(`/api/sick-employees?${params}`);
       const json = await res.json();
       if (json.success) setRows(json.data || []);
     } catch {
@@ -147,7 +147,7 @@ export default function DataKesehatanTable({ canEdit = false }: DataKesehatanTab
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const totalSick = rows.reduce((s, r) => s + (r.hari_a || 0) + (r.hari_b || 0) + (r.hari_c || 0), 0);
-  const totalSpell = rows.reduce((s, r) => s + (r.spell || 0), 0);
+  const totalSpell = rows.reduce((s: number, r: any) => s + (r.jumlah_spell || 0), 0);
   const uniqueEmployees = new Set(rows.map((r: any) => r.nik)).size;
 
   /* Edit handlers */
@@ -179,7 +179,7 @@ export default function DataKesehatanTable({ canEdit = false }: DataKesehatanTab
         }
       });
 
-      const res = await fetch(`/api/absensi/${editRow.id}`, {
+      const res = await fetch(`/api/sick-employees/${editRow.id}`, {
         method: 'PATCH',
         headers,
         body: JSON.stringify(body),
@@ -207,7 +207,7 @@ export default function DataKesehatanTable({ canEdit = false }: DataKesehatanTab
     setDeleting(true);
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch(`/api/absensi/${deleteRow.id}`, {
+      const res = await fetch(`/api/sick-employees/${deleteRow.id}`, {
         method: 'DELETE',
         headers,
       });

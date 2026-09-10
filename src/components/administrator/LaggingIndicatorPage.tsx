@@ -83,10 +83,10 @@ const LAGGING_FIELDS: { key: keyof IndicatorRow; label: string; formula: string;
   { key: 'kaptk',  label: 'Kejadian Akibat Penyakit TK (KAPTK)',   formula: 'Count kejadian' },
 ];
 
-type TabKey = 'statistik' | 'karyawan-sakit';
+type TabKey = 'karyawan-sakit' | 'statistik';
 
 export default function LaggingIndicatorPage() {
-  const [tab, setTab] = useState<TabKey>('statistik');
+  const [tab, setTab] = useState<TabKey>('karyawan-sakit');
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', width: '90%', margin: '0 auto' }}>
@@ -99,19 +99,19 @@ export default function LaggingIndicatorPage() {
           </p>
         </div>
 
-        {/* Tab Switcher */}
+        {/* Tab Switcher — Data Karyawan Sakit first, Statistik Kesehatan second */}
         <div className="admin-tab-row">
-          <button
-            className={`admin-tab-btn${tab === 'statistik' ? ' active' : ''}`}
-            onClick={() => setTab('statistik')}
-          >
-            Statistik Kesehatan
-          </button>
           <button
             className={`admin-tab-btn${tab === 'karyawan-sakit' ? ' active' : ''}`}
             onClick={() => setTab('karyawan-sakit')}
           >
             Data Karyawan Sakit
+          </button>
+          <button
+            className={`admin-tab-btn${tab === 'statistik' ? ' active' : ''}`}
+            onClick={() => setTab('statistik')}
+          >
+            Statistik Kesehatan
           </button>
         </div>
 
@@ -121,7 +121,7 @@ export default function LaggingIndicatorPage() {
   );
 }
 
-/* ═══ Tab A: Statistik Kesehatan Form ═══ */
+/* ═══ Tab: Statistik Kesehatan Form ═══ */
 function StatistikKesehatanForm() {
   const [row, setRow] = useState<IndicatorRow>(EMPTY_ROW);
   const [saving, setSaving] = useState(false);
@@ -131,29 +131,30 @@ function StatistikKesehatanForm() {
   const [aggregating, setAggregating] = useState(false);
   const [aggregateInfo, setAggregateInfo] = useState<string>('');
 
-  const setField = (key: keyof IndicatorRow, value: string) => {
-    const num = parseFloat(value);
-    setRow(prev => ({ ...prev, [key]: isNaN(num) ? 0 : num }));
-    setSaved(false);
-  };
-
-  /* Auto-calculate lagging from leading when user clicks the helper button */
-  const autoCalcLagging = () => {
-    const mp = row.man_power || 0;
-    const mh = row.man_hours || 0;
-    const tks = row.tk_sakit || 0;
-    const abs = row.absensi_sakit || 0;
-    const pak = row.penyakit_akibat_kerja || 0;
-    const lb = row.layak_bekerja || 0;
-    setRow(prev => ({
-      ...prev,
+  /* Auto-calculate lagging indicators from leading data — runs on every change */
+  const calcLagging = (r: IndicatorRow): IndicatorRow => {
+    const mp = r.man_power || 0;
+    const mh = r.man_hours || 0;
+    const tks = r.tk_sakit || 0;
+    const abs = r.absensi_sakit || 0;
+    const pak = r.penyakit_akibat_kerja || 0;
+    const lb = r.layak_bekerja || 0;
+    return {
+      ...r,
       rkk:    mp > 0 ? lb / mp : 0,
       cmr:    mp > 0 ? tks / mp : 0,
       mfr:    mh > 0 ? (tks * 1_000_000) / mh : 0,
       ssr:    tks > 0 ? abs / tks : 0,
       asr:    mh > 0 ? (abs * 1_000_000) / mh : 0,
       fr_pak: mp > 0 ? pak / mp : 0,
-    }));
+      kaptk:  r.kejadian_penyakit_tk,
+    };
+  };
+
+  const setField = (key: keyof IndicatorRow, value: string) => {
+    const num = parseFloat(value);
+    const newVal = isNaN(num) ? 0 : num;
+    setRow(prev => calcLagging({ ...prev, [key]: newVal }));
     setSaved(false);
   };
 
@@ -171,14 +172,13 @@ function StatistikKesehatanForm() {
       }
       const agg = json.data;
       const src = json.sources;
-      setRow(prev => ({
+      setRow(prev => calcLagging({
         ...prev,
         kunjungan_klinik: agg.kunjungan_klinik,
         tk_sakit: agg.tk_sakit,
         absensi_sakit: agg.absensi_sakit,
         spell: agg.spell,
         penyakit_akibat_kerja: agg.penyakit_akibat_kerja,
-        // kejadian_penyakit_tk not derivable from sick_employees — keep existing value
       }));
       setAggregateInfo(
         `${src.kunjungan_berobat_rows} kunjungan${row.jobsite === 'Head Office' || row.jobsite === 'All Site' ? '' : ' (HO only)'} + ${src.sick_employees_rows} karyawan sakit`
@@ -213,7 +213,6 @@ function StatistikKesehatanForm() {
           kaptk: found.kaptk || 0,
         });
       } else {
-        // No data — keep empty
         setRow(prev => ({ ...EMPTY_ROW, tahun: row.tahun, bulan: row.bulan, jobsite: row.jobsite }));
       }
     } catch (err) {
@@ -226,12 +225,14 @@ function StatistikKesehatanForm() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    // Pastikan lagging sudah dihitung sebelum save
+    const finalRow = calcLagging(row);
     setSaving(true);
     try {
       const res = await fetch('/api/health-indicators', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(row),
+        body: JSON.stringify(finalRow),
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Gagal menyimpan');
@@ -251,22 +252,22 @@ function StatistikKesehatanForm() {
         <SectionHeader icon="calendar" title="Periode & Jobsite" />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
           <div>
-            <label className="admin-label">Tahun <span style={{ color: 'var(--brand-primary)' }}>*</span></label>
+            <label className="admin-label">Tahun</label>
             <input type="number" min="2020" max="2099"
               value={row.tahun}
-              onChange={(e) => setRow(prev => ({ ...prev, tahun: parseInt(e.target.value) || 2026 }))}
+              onChange={(e) => setRow(prev => calcLagging({ ...prev, tahun: parseInt(e.target.value) || 2026 }))}
               className="admin-input compact-input" />
           </div>
           <div>
-            <label className="admin-label">Bulan <span style={{ color: 'var(--brand-primary)' }}>*</span></label>
-            <select value={row.bulan} onChange={(e) => setRow(prev => ({ ...prev, bulan: parseInt(e.target.value) }))}
+            <label className="admin-label">Bulan</label>
+            <select value={row.bulan} onChange={(e) => setRow(prev => calcLagging({ ...prev, bulan: parseInt(e.target.value) }))}
               className="admin-input compact-input">
               {FULL_MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
             </select>
           </div>
           <div>
-            <label className="admin-label">Jobsite <span style={{ color: 'var(--brand-primary)' }}>*</span></label>
-            <select value={row.jobsite} onChange={(e) => setRow(prev => ({ ...prev, jobsite: e.target.value }))}
+            <label className="admin-label">Jobsite</label>
+            <select value={row.jobsite} onChange={(e) => setRow(prev => calcLagging({ ...prev, jobsite: e.target.value }))}
               className="admin-input compact-input">
               {JOBSITES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -282,8 +283,8 @@ function StatistikKesehatanForm() {
 
         <div style={{ height: 1, background: 'var(--border)', margin: '12px 0' }} />
 
-        {/* Section: Denominator / Data Konteks Bulanan */}
-        <SectionHeader icon="users" title="Data Konteks Bulanan" subtitle="Denominator untuk perhitungan lagging indicators" />
+        {/* Section: Data Konteks Bulanan */}
+        <SectionHeader icon="users" title="Data Konteks Bulanan" />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
           {DENOMINATOR_FIELDS.map(f => (
             <div key={f.key}>
@@ -291,7 +292,7 @@ function StatistikKesehatanForm() {
               <input type="number" min="0" step="any"
                 value={row[f.key] as number}
                 onChange={(e) => setField(f.key, e.target.value)}
-                className="admin-input compact-input" placeholder="0" />
+                className="admin-input compact-input" />
             </div>
           ))}
         </div>
@@ -318,41 +319,30 @@ function StatistikKesehatanForm() {
               <input type="number" min="0" step="any"
                 value={row[f.key] as number}
                 onChange={(e) => setField(f.key, e.target.value)}
-                className="admin-input compact-input" placeholder="0" />
-              {f.hint && (
-                <p style={{ fontSize: 9.5, color: 'var(--muted-foreground)', margin: '2px 0 0', lineHeight: 1.3 }}>
-                  {f.hint}
-                  {f.sourcePage && (
-                    <span style={{ display: 'block', color: 'var(--brand-primary)', fontWeight: 600 }}>
-                      ↳ Sumber: {f.sourcePage}
-                    </span>
-                  )}
-                </p>
-              )}
+                className="admin-input compact-input" />
             </div>
           ))}
         </div>
 
         <div style={{ height: 1, background: 'var(--border)', margin: '12px 0' }} />
 
-        {/* Section: Lagging Indicators */}
-        <SectionHeader icon="pulse" title="Lagging Indicators" subtitle="7 indikator turunan — bisa input manual atau auto-hitung" />
-        <div style={{ marginBottom: 10 }}>
-          <button type="button" onClick={autoCalcLagging}
-            className="admin-form-btn-secondary compact-btn">
-            Auto-Hitung dari Aggregate
-          </button>
-        </div>
+        {/* Section: Lagging Indicators — AUTO-CALCULATED (read-only) */}
+        <SectionHeader icon="pulse" title="Lagging Indicators" subtitle="Otomatis dihitung sesuai Kepdirjen 1855.K/2019" />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          {LAGGING_FIELDS.map(f => (
-            <div key={f.key}>
-              <label className="admin-label">{f.label}</label>
-              <input type="number" step="any"
-                value={row[f.key] as number}
-                onChange={(e) => setField(f.key, e.target.value)}
-                className="admin-input compact-input" placeholder="0" />
-            </div>
-          ))}
+          {LAGGING_FIELDS.map(f => {
+            const val = row[f.key] as number;
+            const displayVal = f.isPercent ? (val * 100).toFixed(2) + '%' : val.toFixed(2);
+            return (
+              <div key={f.key}>
+                <label className="admin-label">{f.label}</label>
+                <input type="text"
+                  value={displayVal}
+                  readOnly
+                  className="admin-input compact-input"
+                  style={{ background: 'var(--muted)', color: 'var(--muted-foreground)', cursor: 'default', fontWeight: 600 }} />
+              </div>
+            );
+          })}
         </div>
 
         {/* Buttons */}

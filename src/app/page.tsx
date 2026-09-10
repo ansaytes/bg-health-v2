@@ -346,6 +346,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -365,9 +366,13 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
 
       if (data.session) {
         await refreshProfile();
+        setShowSuccess(true);
         setUsername('');
         setPassword('');
-        onClose();
+        setTimeout(() => {
+          onClose();
+          setShowSuccess(false);
+        }, 1500);
       }
     } catch {
       setError('Terjadi kesalahan. Coba lagi.');
@@ -386,64 +391,56 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <motion.div
-        className="login-card"
-        style={{ position: 'relative' }}
-        initial={{ opacity: 0, scale: 0.88, y: 24 }}
+        className="login-circle"
+        initial={{ opacity: 0, scale: 0.85, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.88, y: 24 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+        exit={{ opacity: 0, scale: 0.85, y: 20 }}
+        transition={{ type: 'spring', stiffness: 350, damping: 28 }}
       >
-        <button className="login-close-btn" onClick={onClose}>
+        <div className="login-mask" />
+        <button className="login-close-btn" onClick={onClose} aria-label="Tutup">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
         </button>
 
-        <div style={{ paddingTop: 28, paddingBottom: 4 }}>
-          <div className="login-card-icon">
-            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
-              <path d="M12 8v4M12 16h.01" />
-            </svg>
-          </div>
-        </div>
-
-        <div className="login-card-body">
-          <h2>Masuk</h2>
-          <p className="login-card-subtitle">Masuk ke BG-Health untuk mengakses dashboard</p>
-
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className="login-card">
+          <form id="loginForm" onSubmit={handleSubmit}>
+            <h2>Login</h2>
+            {error && <p className="login-error-msg">{error}</p>}
             <div className="login-input-group">
-              <label className="login-input-label">Username / Email</label>
               <input
                 type="text"
                 className="login-input"
-                placeholder="username@email.com"
+                placeholder=" "
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
+                required
               />
+              <label className="login-input-label">Username / Email</label>
             </div>
             <div className="login-input-group">
-              <label className="login-input-label">Password</label>
               <input
                 type="password"
                 className="login-input"
-                placeholder="Masukkan password"
+                placeholder=" "
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
+                required
               />
+              <label className="login-input-label">Password</label>
             </div>
-            {error && (
-              <p className="login-error-msg">{error}</p>
-            )}
             <button type="submit" className="login-btn" disabled={loading}>
-              {loading ? 'Memproses...' : 'Masuk'}
+              {loading ? 'Memproses...' : 'Sign In'}
             </button>
           </form>
 
-          <p className="login-footer-text">
-            Belum punya akun? Hubungi administrator
-          </p>
+          {/* Success overlay */}
+          <div className={`login-success${showSuccess ? ' active' : ''}`}>
+            <div className="login-check">✓</div>
+            <h3>Success!</h3>
+            <p>Login Berhasil</p>
+          </div>
         </div>
       </motion.div>
     </motion.div>
