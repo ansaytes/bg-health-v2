@@ -20,8 +20,10 @@ export default function NotificationBell({ isSuperuser }: { isSuperuser: boolean
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const canView = isSuperuser;
+
   const fetchApprovals = async () => {
-    if (!isSuperuser) return;
+    if (!canView) return;
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -38,12 +40,12 @@ export default function NotificationBell({ isSuperuser }: { isSuperuser: boolean
   };
 
   useEffect(() => {
-    if (isSuperuser) fetchApprovals();
-  }, [isSuperuser]);
+    if (canView) fetchApprovals();
+  }, [canView]);
 
   // Poll every 30 seconds
   useEffect(() => {
-    if (!isSuperuser) return;
+    if (!canView) return;
     const interval = setInterval(fetchApprovals, 30000);
     return () => clearInterval(interval);
   }, [isSuperuser]);
@@ -105,7 +107,7 @@ export default function NotificationBell({ isSuperuser }: { isSuperuser: boolean
     }
   };
 
-  if (!isSuperuser) return null;
+  if (!canView) return null;
 
   const count = approvals.length;
 
