@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       .select('*')
       .order('jobsite', { ascending: true })
       .order('nama', { ascending: true })
-      .limit(10000);
+      .range(0, 9999);  // Explicitly request up to 10000 rows
 
     if (jobsite && jobsite !== 'All Site') {
       query = query.eq('jobsite', jobsite);

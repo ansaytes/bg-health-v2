@@ -28,7 +28,7 @@ export default function KunjunganBerobat() {
   }, []);
 
   return (
-    <div className="dashboard scrollable" ref={containerRef} style={{ position: 'relative' }}>
+    <div className="dashboard scrollable" ref={containerRef} style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       {/* Top Bar — filter kiri, total kanan, satu baris */}
       <div className="kunjungan-top-bar">
         <div className="kunjungan-filter-bar">
@@ -45,12 +45,12 @@ export default function KunjunganBerobat() {
           <span className="mcu-total-num">0</span>
           <span style={{ color: 'var(--border)' }}>|</span>
           <span style={{ color: '#00B894', fontWeight: 700 }}>Pasien Unik: 0</span>
-          <span style={{ marginLeft: 8, color: '#FF4444', fontWeight: 700 }}>Rujuk RS: 0</span>
+          <span style={{ color: '#FF4444', fontWeight: 700 }}>Rujuk RS: 0</span>
         </div>
       </div>
 
-      {/* Main Content — scrollable, like reference */}
-      <div className="kunjungan-scroll-content">
+      {/* Main Content — scrollable, fills remaining height */}
+      <div className="kunjungan-scroll-content" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
         {/* Trend Row — 2 charts */}
         <div className="kunjungan-trend-row">
           <div className="card glow-orange" style={{ padding: '6px 8px' }}>
