@@ -149,10 +149,13 @@ export default function NotificationBell({ isSuperuser }: { isSuperuser: boolean
             style={{
               position: 'absolute', top: 38, right: 0,
               width: 340, maxWidth: '90vw',
-              background: 'var(--card)', border: '1px solid var(--border)',
-              borderRadius: 14, boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+              background: 'solid var(--card)',
+              backgroundColor: '#ffffff',
+              border: '1px solid #E0E0E0',
+              borderRadius: 14, boxShadow: '0 8px 32px rgba(0,0,0,0.20)',
               zIndex: 200, overflow: 'hidden',
             }}
+            className="notification-dropdown"
           >
             <div style={{
               padding: '12px 16px', borderBottom: '1px solid var(--border)',

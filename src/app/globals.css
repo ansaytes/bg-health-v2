@@ -1659,3 +1659,15 @@ select.admin-input.compact-input {
   border-color: rgba(255, 140, 66, 0.50);
   box-shadow: 0 0 12px rgba(255, 140, 66, 0.25), inset 0 0 6px rgba(255, 140, 66, 0.10);
 }
+
+/* ═══════════════════════════════════
+   Notification Dropdown — solid, tidak transparan
+   ═══════════════════════════════════ */
+.notification-dropdown {
+  background-color: #ffffff !important;
+  border: 1px solid #E0E0E0 !important;
+}
+.dark .notification-dropdown {
+  background-color: #1a1a1a !important;
+  border: 1px solid #2a2a2a !important;
+}
