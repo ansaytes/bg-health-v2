@@ -256,7 +256,7 @@ export default function InputLaggingIndicator() {
   };
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', width: '100%' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto', width: '100%', paddingBottom: 60 }}>
       <form onSubmit={handleSickSubmit}>
         <div className="admin-form-card">
           {/* Section: Identitas Karyawan */}
