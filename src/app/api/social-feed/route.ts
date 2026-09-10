@@ -137,8 +137,7 @@ async function fetchInstagramPosts(): Promise<FeedItem[]> {
    MAIN HANDLER
    ═══════════════════════════════════════════════════════════════ */
 export async function GET() {
-  // Only use cache if it contains actual data (not empty arrays)
-  if (isCacheValid() && cachedNews!.length > 0 && cachedTalks!.length > 0) {
+  if (isCacheValid()) {
     return NextResponse.json({ news: cachedNews, healthTalks: cachedTalks });
   }
 
@@ -156,15 +155,26 @@ export async function GET() {
   const ytNews = allVideos.filter(v => !/HEALTH\s*TALK/i.test(v.title));
   const news: FeedItem[] = igPosts.length > 0 ? igPosts : ytNews;
 
-  // Only cache if we have real data — don't cache empty results
-  // so next request can retry fetching
-  if (news.length > 0) cachedNews = news;
-  if (talks.length > 0) cachedTalks = talks;
-  if (news.length > 0 && talks.length > 0) cacheTime = Date.now();
+  cachedNews = news.length > 0 ? news : [{
+    id: 'ig-link',
+    title: 'Bagong News di Instagram',
+    caption: 'Follow @Bagongnews untuk update berita dan informasi terbaru dari PT Bagong Dekaka Makmur.',
+    media_url: '',
+    source: 'instagram' as const,
+    published_at: new Date().toISOString(),
+    external_url: 'https://www.instagram.com/bagongnews/',
+  }];
 
-  // Return whatever we have (real data or empty arrays)
-  return NextResponse.json({
-    news: cachedNews || [],
-    healthTalks: cachedTalks || [],
-  });
+  cachedTalks = talks.length > 0 ? talks : [{
+    id: 'yt-link',
+    title: 'Health Talk - Bagong News',
+    caption: 'Subscribe channel YouTube @BagongNewsYoutube untuk konten kesehatan dan keselamatan kerja.',
+    media_url: '',
+    source: 'youtube' as const,
+    published_at: new Date().toISOString(),
+    video_url: 'https://www.youtube.com/@BagongNewsYoutube',
+  }];
+
+  cacheTime = Date.now();
+  return NextResponse.json({ news: cachedNews, healthTalks: cachedTalks });
 }

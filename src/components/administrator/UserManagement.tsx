@@ -208,8 +208,30 @@ export default function UserManagement() {
               <label className="admin-label">NIK (National ID)</label>
               <input
                 type="text" value={regForm.national_id}
-                onChange={(e) => setRegForm({ ...regForm, national_id: e.target.value })}
-                placeholder="Opsional" className="admin-input"
+                onChange={async (e) => {
+                  const nikVal = e.target.value;
+                  setRegForm({ ...regForm, national_id: nikVal });
+                  if (nikVal.length >= 6) {
+                    try {
+                      const res = await fetch('/api/employee', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: nikVal }),
+                      });
+                      const json = await res.json();
+                      if (json.success && json.data && json.data.length > 0) {
+                        const emp = json.data[0];
+                        setRegForm(prev => ({
+                          ...prev,
+                          national_id: nikVal,
+                          full_name: emp.nama || prev.full_name,
+                          username: emp.nik ? String(emp.nik) : prev.username,
+                        }));
+                      }
+                    } catch {}
+                  }
+                }}
+                placeholder="Ketik NIK untuk auto-fill" className="admin-input"
               />
             </div>
             <div className="user-register-btn-cell">

@@ -150,7 +150,7 @@
 /* Removed: sidebar-head::after was casting a shadow/border line across the header */
 .sidebar-logo-wrap {
   width: 90px;
-  height: 40px;
+  height: 52px;
   border-radius: 6px;
   overflow: hidden;
   flex-shrink: 0;
@@ -164,13 +164,6 @@
   height: 38px;
   object-fit: contain;
   flex-shrink: 0;
-  filter: none;
-}
-.dark .sidebar-logo-img {
-  filter:
-    drop-shadow(0 0 1px rgba(255, 255, 255, 1))
-    drop-shadow(0 0 2px rgba(255, 255, 255, 0.85))
-    drop-shadow(0 0 3px rgba(255, 255, 255, 0.6));
 }
 .sidebar-head-text {
   display: flex;
@@ -315,8 +308,9 @@
    Header — nav center, BGBEST logo right
    ═══════════════════════════════════ */
 .header {
+  height: 52px;
   background: var(--card);
-  padding: 6px 16px;
+  padding: 0 16px;
   position: sticky;
   top: 0;
   z-index: 20;
@@ -329,7 +323,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  height: 40px;
+  height: 52px;
 }
 .header-right {
   display: flex;
@@ -347,15 +341,8 @@
   object-fit: contain;
   flex-shrink: 0;
   border-radius: 8px;
-  border: none;
-  filter: none;
-}
-.dark .header-right-logo {
-  border: none;
-  filter:
-    drop-shadow(0 0 1.5px rgba(255, 255, 255, 1))
-    drop-shadow(0 0 3px rgba(255, 255, 255, 0.85))
-    drop-shadow(0 0 4px rgba(255, 255, 255, 0.6));
+  border: 1.5px solid #FFFFFF;
+  box-shadow: 0 0 0 0.5px rgba(255,255,255,0.3);
 }
 
 /* Header Nav — pill buttons */
@@ -632,16 +619,15 @@ select:focus { border-color: #ff4d00; }
 .mcu-total-bar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  padding: 2px 10px;
-  font-size: 9px;
+  gap: 8px;
+  padding: 4px 10px;
+  font-size: 10px;
   color: var(--muted-foreground);
   flex-shrink: 0;
   flex-wrap: wrap;
 }
-.mcu-total-label { font-weight: 700; font-size: 9px; }
-.mcu-total-num { font-size: 12px; font-weight: 800; color: #ff4d00; }
+.mcu-total-label { font-weight: 700; }
+.mcu-total-num { font-size: 14px; font-weight: 800; color: #ff4d00; }
 
 /* ═══════════════════════════════════
    MCU Grid — 3-col, viewport-fit cards
@@ -707,21 +693,6 @@ select:focus { border-color: #ff4d00; }
   padding: 0 4px;
   flex-shrink: 0;
 }
-.dashboard-top-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0 4px;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-}
-.dashboard-top-bar .header-filter {
-  margin-top: 0;
-}
-.dashboard-top-bar .mcu-total-bar {
-  padding: 2px 8px;
-}
 .kunjungan-filter-bar {
   display: flex;
   align-items: center;
@@ -733,9 +704,8 @@ select:focus { border-color: #ff4d00; }
 .kunjungan-total-right {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  font-size: 9px;
+  gap: 8px;
+  font-size: 10px;
   color: var(--muted-foreground);
   flex-shrink: 0;
   margin-left: auto;
@@ -757,10 +727,7 @@ select:focus { border-color: #ff4d00; }
   flex-direction: column;
   gap: 8px;
   padding-bottom: 20px;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  flex-shrink: 0;
 }
 .kunjungan-trend-row {
   display: grid;
@@ -867,7 +834,7 @@ select:focus { border-color: #ff4d00; }
   transform: translate(-50%, -50%);
   width: 44px; height: 44px;
   border-radius: 50%;
-  background: rgba(0,0,0,0.55);
+  background: rgba(0,0,0,0.85);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -991,271 +958,186 @@ select:focus { border-color: #ff4d00; }
 }
 
 /* ═══════════════════════════════════
-   Login Popup — iPhone Style + BM Logo Spinner
+   Login Popup (Apple-style)
    ═══════════════════════════════════ */
 .login-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0,0,0,0.75);
   z-index: 100;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
 }
-.dark .login-overlay { background: rgba(0, 0, 0, 0.7); }
-
-/* Shake animation on login fail */
-.login-circle.shake { animation: login-shake 0.5s ease-in-out; }
-
-/* Card — iPhone style rounded rectangle */
+.dark .login-overlay {
+  background: rgba(0,0,0,0.85);
+}
 .login-card {
-  width: 340px;
-  max-width: 92vw;
-  padding: 0;
+  background: rgba(255,255,255,0.78);
+  backdrop-filter: blur(60px) saturate(200%);
+  -webkit-backdrop-filter: blur(60px) saturate(200%);
   border-radius: 24px;
-  background: var(--card);
+  padding: 0;
+  width: 380px;
+  max-width: 92vw;
   box-shadow:
-    0 0 0 0.5px rgba(0, 0, 0, 0.06),
-    0 8px 24px rgba(0, 0, 0, 0.12),
-    0 24px 60px rgba(0, 0, 0, 0.10);
+    0 0 0 0.5px rgba(0,0,0,0.04),
+    0 4px 12px rgba(0,0,0,0.04),
+    0 16px 40px rgba(0,0,0,0.08),
+    0 32px 80px rgba(0,0,0,0.06);
+  border: none;
   overflow: hidden;
-  position: relative;
-  display: flex;
-  flex-direction: column;
 }
 .dark .login-card {
+  background: rgba(30,30,30,0.78);
   box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.06),
-    0 8px 24px rgba(0, 0, 0, 0.40),
-    0 24px 60px rgba(0, 0, 0, 0.30);
+    0 0 0 0.5px rgba(255,255,255,0.06),
+    0 4px 12px rgba(0,0,0,0.2),
+    0 16px 40px rgba(0,0,0,0.3),
+    0 32px 80px rgba(0,0,0,0.2);
 }
-
-/* Header area — BM logo full circle spinning */
-.login-header {
-  width: 100%;
-  height: 160px;
-  background: var(--muted);
+.login-card-icon {
+  width: 40px;
+  height: 52px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #ff4d00, #ff6b2b);
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  overflow: hidden;
+  margin: 0 auto;
+  box-shadow: 0 4px 16px rgba(255,77,0,0.3);
 }
-.dark .login-header { background: var(--muted); }
-
-.login-logo-bg {
-  width: 110px;
-  height: 110px;
-  border-radius: 50%;
-  object-fit: contain;
-  opacity: 1;
-  z-index: 1;
-  pointer-events: none;
-  animation: login-spin 4s linear infinite;
-}
-
-/* Body — form area */
 .login-card-body {
   padding: 24px 28px 28px;
-  display: flex;
-  flex-direction: column;
 }
-
-/* Title */
 .login-card h2 {
-  margin: 0 0 20px 0;
-  color: var(--foreground);
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
-  letter-spacing: -0.3px;
   text-align: center;
+  margin: 0 0 4px 0;
+  color: var(--foreground);
+  letter-spacing: -0.5px;
 }
-
-/* Input group */
+.login-card > .login-card-body > p,
+.login-card-subtitle {
+  font-size: 13px;
+  color: var(--muted-foreground);
+  text-align: center;
+  margin: 0 0 24px 0;
+  line-height: 1.4;
+}
 .login-input-group {
-  position: relative;
   margin-bottom: 16px;
 }
-
-/* Input — clean iPhone style */
+.login-input-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  margin-bottom: 6px;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
 .login-input {
   width: 100%;
-  height: 44px;
+  height: 48px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  background: rgba(0,0,0,0.03);
   padding: 0 16px;
-  border: 1px solid var(--border);
+  font-size: 16px;
   outline: none;
-  border-radius: 12px;
-  background: var(--background);
+  transition: border 0.25s, box-shadow 0.25s, background 0.25s;
   color: var(--foreground);
-  font-size: 15px;
   font-family: inherit;
-  transition: border 0.20s, box-shadow 0.20s;
 }
-.login-input::placeholder { color: var(--fg-dim); }
+.dark .login-input {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.1);
+}
 .login-input:focus {
   border-color: #ff4d00;
-  box-shadow: 0 0 0 3px rgba(255, 77, 0, 0.12);
+  background: rgba(255,77,0,0.02);
+  box-shadow: 0 0 0 4px rgba(255,77,0,0.1);
 }
-
-/* Floating label */
-.login-input-label {
-  position: absolute;
-  left: 16px;
-  top: 14px;
+.dark .login-input:focus {
+  background: rgba(255,77,0,0.04);
+}
+.login-input::placeholder {
   color: var(--muted-foreground);
   font-size: 15px;
-  pointer-events: none;
-  transition: 0.20s ease;
 }
-.login-input:focus ~ .login-input-label,
-.login-input:not(:placeholder-shown) ~ .login-input-label {
-  top: -8px;
-  left: 10px;
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: var(--card);
-  color: #ff4d00;
-  font-weight: 600;
-}
-
-/* Login button — solid orange, iPhone style */
 .login-btn {
   width: 100%;
-  height: 46px;
+  height: 50px;
+  border-radius: 14px;
   border: none;
-  border-radius: 12px;
   background: linear-gradient(180deg, #ff6b2b 0%, #ff4d00 100%);
-  color: #fff;
-  font-size: 16px;
+  color: white;
+  font-size: 17px;
   font-weight: 600;
   cursor: pointer;
-  font-family: inherit;
-  letter-spacing: -0.2px;
-  margin-top: 6px;
-  transition: opacity 0.15s, transform 0.10s;
+  transition: opacity 0.2s, transform 0.15s;
+  letter-spacing: -0.3px;
+  margin-top: 4px;
 }
-.login-btn:hover:not(:disabled) { opacity: 0.92; }
-.login-btn:active:not(:disabled) { transform: scale(0.98); }
-.login-btn:disabled { opacity: 0.50; }
-
-/* Close button */
+.login-btn:hover {
+  opacity: 0.92;
+  transform: scale(1.01);
+}
+.login-btn:active {
+  transform: scale(0.98);
+  opacity: 0.85;
+}
+.login-btn:disabled {
+  opacity: 0.45;
+  transform: none;
+}
 .login-close-btn {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 28px;
-  height: 28px;
+  top: 16px;
+  right: 16px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   border: none;
-  background: rgba(0, 0, 0, 0.08);
-  color: var(--foreground);
+  background: rgba(0,0,0,0.06);
+  color: var(--muted-foreground);
   font-size: 14px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s;
-  z-index: 5;
+  transition: background 0.2s;
+  z-index: 2;
 }
-.dark .login-close-btn { background: rgba(255, 255, 255, 0.10); }
-.login-close-btn:hover { background: rgba(0, 0, 0, 0.15); }
-.dark .login-close-btn:hover { background: rgba(255, 255, 255, 0.18); }
-
-/* Error message */
+.dark .login-close-btn {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.6);
+}
+.login-close-btn:hover {
+  background: rgba(0,0,0,0.1);
+}
+.dark .login-close-btn:hover {
+  background: rgba(255,255,255,0.15);
+}
 .login-error-msg {
-  font-size: 12px;
+  font-size: 13px;
   color: #FF3B30;
-  margin: 0 0 10px 0;
-  padding: 8px 12px;
+  margin: 0;
+  padding: 10px 14px;
   border-radius: 10px;
-  background: rgba(255, 59, 48, 0.08);
+  background: rgba(255,59,48,0.08);
   text-align: center;
   font-weight: 500;
 }
-.dark .login-error-msg {
-  color: #ff6b6b;
-  background: rgba(255, 107, 107, 0.10);
-}
-
-/* Success overlay */
-.login-success {
-  position: absolute;
-  inset: 0;
-  border-radius: 24px;
-  background: var(--card);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  opacity: 0;
-  visibility: hidden;
-  transform: scale(0.9);
-  transition: 0.40s;
-  z-index: 10;
-}
-.login-success.active {
-  opacity: 1;
-  visibility: visible;
-  transform: scale(1);
-}
-
-/* Green checkmark */
-.login-check {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 40px;
-  color: #4CAF50;
-  background: var(--muted);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.20);
-  animation: login-pop 0.4s ease;
-}
-.login-success h3 {
-  margin-top: 16px;
-  color: #4CAF50;
-  font-size: 22px;
-  font-weight: 700;
-}
-.login-success p {
-  margin-top: 6px;
+.login-footer-text {
+  font-size: 12px;
   color: var(--muted-foreground);
-  font-size: 14px;
-}
-
-/* Animations */
-@keyframes login-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-@keyframes login-shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
-  20%, 40%, 60%, 80% { transform: translateX(8px); }
-}
-@keyframes login-pop {
-  0% { transform: scale(0); }
-  100% { transform: scale(1); }
-}
-
-/* Mobile responsive */
-@media (max-width: 640px) {
-  .login-card { width: 92vw; border-radius: 20px; }
-  .login-header { height: 140px; }
-  .login-logo-bg { width: 90px; height: 90px; }
-  .login-card-body { padding: 20px 22px 24px; }
-  .login-card h2 { font-size: 20px; margin-bottom: 16px; }
-  .login-input { height: 40px; font-size: 14px; }
-  .login-input-label { font-size: 14px; top: 12px; }
-  .login-btn { height: 42px; font-size: 15px; }
-  .login-input-group { margin-bottom: 14px; }
-  .login-error-msg { font-size: 11px; padding: 6px 10px; }
+  text-align: center;
+  margin-top: 20px;
+  margin-bottom: 0;
+  opacity: 0.8;
 }
 
 /* ═══════════════════════════════════
@@ -1644,7 +1526,8 @@ select.admin-input.compact-input {
   .sidebar.open { transform: translateX(0); }
   .hamburger { display: flex; }
   .main { margin-left: 0 !important; }
-  .header { padding-left: 52px; }
+  .header {
+  height: 52px; padding-left: 52px; }
   .health-main-grid { grid-template-columns: 1fr; }
   .health-left-col { flex: unset; }
   .header-nav-item { padding: 4px 10px; font-size: 10px; }
@@ -1672,7 +1555,8 @@ select.admin-input.compact-input {
   .dashboard { overflow-y: visible; overflow-x: hidden; flex: unset; height: auto; min-height: 0; padding: 6px; gap: 6px; }
   .health-main-grid { height: auto; flex: unset; grid-template-columns: 1fr; }
   .health-left-col { flex: unset; height: auto; }
-  .header { padding: 6px 10px 6px 44px; }
+  .header {
+  height: 52px; padding: 6px 10px 6px 44px; }
   .header-right-logo { height: 18px; }
   .header-nav { gap: 0; overflow-x: auto; justify-content: center; width: 100%; }
   .header-nav-item { padding: 4px 10px; font-size: 9px; }
@@ -1702,15 +1586,15 @@ select.admin-input.compact-input {
   .stat-wide .stat-val { font-size: 20px; }
   .stat-wide .stat-label { font-size: 8px; text-align: center; }
   .chart-box { height: 180px; }
-  .mcu-total-bar { padding: 2px 8px; gap: 4px; font-size: 8px; flex-wrap: wrap; line-height: 1.4; justify-content: flex-end; }
-  .mcu-total-num { font-size: 10px; }
+  .mcu-total-bar { padding: 4px 8px; gap: 4px; font-size: 9px; flex-wrap: wrap; line-height: 1.6; }
+  .mcu-total-num { font-size: 16px; }
   .kunjungan-filter-bar { gap: 4px; }
   .kunjungan-filter-bar select { height: 28px; font-size: 10px; flex: 1 1 auto; min-width: 0; }
   .kunjungan-trend-row .chart-box { height: 200px; }
   .kunjungan-row-charts .chart-box { height: 200px; }
   .sick-list { overflow-x: auto; min-height: 120px; }
   .sidebar { width: 260px; }
-  .hamburger { width: 40px; height: 40px; top: 10px; left: 10px; border-radius: 10px; }
+  .hamburger { width: 40px; height: 52px; top: 10px; left: 10px; border-radius: 10px; }
   /* Admin forms mobile */
   .admin-form-inner { padding: 10px 10px 40px; }
   .admin-form-card { padding: 14px; }
@@ -1718,38 +1602,12 @@ select.admin-input.compact-input {
   /* Raw table mobile */
   .raw-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .raw-table-scroll td, .raw-table-scroll th { padding: 5px 6px; font-size: 9px; }
-  /* Login card mobile — neumorphic circle */
-  .login-circle { width: 300px; height: 300px; }
-  .login-card { width: 280px; height: 280px; padding: 35px 28px; }
-  .login-card h2 { font-size: 22px; margin-bottom: 16px; }
-  .login-input { padding: 12px 12px 8px; font-size: 13px; }
-  .login-input-label { top: 11px; left: 12px; font-size: 13px; }
-  .login-btn { padding: 10px; font-size: 14px; }
-  .login-input-group { margin-bottom: 16px; }
+  /* Login card mobile */
+  .login-card { width: 92vw; border-radius: 20px; }
   /* Admin toggle arrow mobile */
-  .admin-toggle-arrow { right: 8px; width: 28px; height: 56px; }
+  .admin-toggle-arrow { right: 8px; width: 28px; height: 52px; }
   /* User register grid mobile */
   .user-register-grid { grid-template-columns: 1fr; }
-  /* Sidebar login button mobile — selalu tampil tanpa scroll */
-  .sidebar-nav { flex: 0 1 auto; max-height: 60vh; overflow-y: auto; }
-  .sidebar-footer { padding: 8px 12px 10px; flex-shrink: 0; position: sticky; bottom: 0; background: var(--sidebar); z-index: 10; }
-  .sidebar-login-btn { padding: 7px; font-size: 10.5px; border-width: 1.5px; box-shadow: 0 2px 0 0 rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06); }
-  .sidebar-account-name { font-size: 10px; }
-  .sidebar-account-role { font-size: 8px; }
-  .sidebar-avatar { width: 24px; height: 24px; font-size: 10px; }
-  /* Admin form scroll mobile */
-  .admin-form-inner { padding: 10px 10px 60px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  .admin-form-card { padding: 12px; }
-  .admin-form-title { font-size: 13px; }
-  .admin-form-subtitle { font-size: 10px; }
-  .admin-input { height: 32px; font-size: 11px; padding: 0 10px; }
-  .admin-input.compact-input { height: 30px; font-size: 11px; }
-  .admin-label { font-size: 10px; margin-bottom: 3px; }
-  .admin-form-btn-primary, .admin-form-btn-secondary { height: 32px; font-size: 11px; }
-  .admin-form-btn-primary.compact-btn, .admin-form-btn-secondary.compact-btn { height: 30px; font-size: 11px; padding: 0 12px; }
-  .admin-tab-btn { padding: 8px 12px; font-size: 11px; }
-  .admin-section-title { font-size: 10px; }
-  .admin-section-subtitle { font-size: 9px; }
 }
 
 /* ═══════════════════════════════════
@@ -1773,3 +1631,31 @@ select.admin-input.compact-input {
   align-items: flex-end;
 }
 
+
+/* ═══════════════════════════════════
+   Dark mode dropdown fix — kontras option
+   ═══════════════════════════════════ */
+.dark select option {
+  background: #1a1a1a;
+  color: #f0f0f0;
+}
+.dark select option:checked {
+  background: #ff4d00;
+  color: #fff;
+}
+.dark select option:hover {
+  background: #2a2a2a;
+  color: #ff8c42;
+}
+
+/* ═══════════════════════════════════
+   Theme button — glow effect di dark mode
+   ═══════════════════════════════════ */
+.dark .theme-btn {
+  border: 1px solid rgba(255, 140, 66, 0.30);
+  box-shadow: 0 0 8px rgba(255, 140, 66, 0.15), inset 0 0 4px rgba(255, 140, 66, 0.05);
+}
+.dark .theme-btn:hover {
+  border-color: rgba(255, 140, 66, 0.50);
+  box-shadow: 0 0 12px rgba(255, 140, 66, 0.25), inset 0 0 6px rgba(255, 140, 66, 0.10);
+}

@@ -297,11 +297,11 @@ function AdminContent() {
   const panels: Record<string, { form: React.ReactNode; tables: React.ReactNode[]; hasTable: boolean; labels?: string[] }> = {
     'lagging-indicator': {
       hasTable: true,
-      labels: ['Lagging Indicator', 'Data Kesehatan', 'Denominator'],
+      labels: ['Lagging Indicator', 'Data Kesehatan', 'Σ Man Power'],
       form: <LaggingIndicatorPage />,
       tables: [
         <div className="admin-form-container" key="kesehatan"><DataKesehatanTable canEdit={isAdmin} /></div>,
-        <div className="admin-form-container" key="denominator"><DataManPowerTable canEdit={isAdmin} /></div>,
+        <div className="admin-form-container" key="manpower"><DataManPowerTable canEdit={isAdmin} /></div>,
       ],
     },
     'review-mcu': {
@@ -346,13 +346,6 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [shake, setShake] = useState(false);
-
-  const triggerShake = () => {
-    setShake(true);
-    setTimeout(() => setShake(false), 500);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -367,23 +360,17 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
 
       if (supabaseError) {
         setError(supabaseError.message);
-        triggerShake();
         return;
       }
 
       if (data.session) {
         await refreshProfile();
-        setShowSuccess(true);
         setUsername('');
         setPassword('');
-        setTimeout(() => {
-          onClose();
-          setShowSuccess(false);
-        }, 1500);
+        onClose();
       }
     } catch {
       setError('Terjadi kesalahan. Coba lagi.');
-      triggerShake();
     } finally {
       setLoading(false);
     }
@@ -395,68 +382,68 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
+      transition={{ duration: 0.25 }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <motion.div
-        className={`login-circle${shake ? ' shake' : ''}`}
-        initial={{ opacity: 0, scale: 0.92, y: 16 }}
+        className="login-card"
+        style={{ position: 'relative' }}
+        initial={{ opacity: 0, scale: 0.88, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.92, y: 16 }}
-        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+        exit={{ opacity: 0, scale: 0.88, y: 24 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
       >
-        <div className="login-card">
-          <button className="login-close-btn" onClick={onClose} aria-label="Tutup">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
-          </button>
+        <button className="login-close-btn" onClick={onClose}>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
+        </button>
 
-          {/* Header — BM logo berputar full */}
-          <div className="login-header">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/BM.png" alt="BG-Health" className="login-logo-bg" />
+        <div style={{ paddingTop: 28, paddingBottom: 4 }}>
+          <div className="login-card-icon">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+              <path d="M12 8v4M12 16h.01" />
+            </svg>
           </div>
+        </div>
 
-          {/* Body — form */}
-          <div className="login-card-body">
-            <form onSubmit={handleSubmit}>
-              <h2>Login</h2>
-              {error && <p className="login-error-msg">{error}</p>}
-              <div className="login-input-group">
-                <input
-                  type="text"
-                  className="login-input"
-                  placeholder=" "
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  autoComplete="username"
-                  required
-                />
-                <label className="login-input-label">Username / Email</label>
-              </div>
-              <div className="login-input-group">
-                <input
-                  type="password"
-                  className="login-input"
-                  placeholder=" "
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                  required
-                />
-                <label className="login-input-label">Password</label>
-              </div>
-              <button type="submit" className="login-btn" disabled={loading}>
-                {loading ? 'Memproses...' : 'Sign In'}
-              </button>
-            </form>
-          </div>
+        <div className="login-card-body">
+          <h2>Masuk</h2>
+          <p className="login-card-subtitle">Masuk ke BG-Health untuk mengakses dashboard</p>
 
-          {/* Success overlay — green checkmark */}
-          <div className={`login-success${showSuccess ? ' active' : ''}`}>
-            <div className="login-check">✓</div>
-            <h3>Success!</h3>
-            <p>Login Berhasil</p>
-          </div>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
+            <div className="login-input-group">
+              <label className="login-input-label">Username / Email</label>
+              <input
+                type="text"
+                className="login-input"
+                placeholder="username@email.com"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+              />
+            </div>
+            <div className="login-input-group">
+              <label className="login-input-label">Password</label>
+              <input
+                type="password"
+                className="login-input"
+                placeholder="Masukkan password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+            </div>
+            {error && (
+              <p className="login-error-msg">{error}</p>
+            )}
+            <button type="submit" className="login-btn" disabled={loading}>
+              {loading ? 'Memproses...' : 'Masuk'}
+            </button>
+          </form>
+
+          <p className="login-footer-text">
+            Belum punya akun? Hubungi administrator
+          </p>
         </div>
       </motion.div>
     </motion.div>

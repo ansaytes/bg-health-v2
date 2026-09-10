@@ -17,13 +17,10 @@ async function getCallerRole(req: NextRequest): Promise<{ userId: string; role: 
   }
   if (!accessToken) return null;
 
-  // Pakai admin client (service role) supaya bisa getUser dengan access token
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+  const { data: { user }, error } = await supabase.auth.getUser(accessToken);
   if (error || !user) return null;
 
-  // Cari profile — kalau service role key ada, pakai admin client (bypass RLS)
-  const client = supabaseServiceKey ? supabaseAdmin : supabase;
-  const { data: profile } = await client
+  const { data: profile } = await supabase
     .from('user_profiles')
     .select('role')
     .eq('user_id', user.id)
@@ -38,17 +35,10 @@ export async function GET(req: NextRequest) {
   try {
     const caller = await getCallerRole(req);
     if (!caller || !['superuser', 'administrator'].includes(caller.role)) {
-      return NextResponse.json({ 
-        error: 'Akses ditolak',
-        detail: 'Pastikan Anda login sebagai superuser/administrator dan memiliki row di tabel user_profiles dengan role yang sesuai.',
-        caller_found: !!caller,
-        caller_role: caller?.role || null,
-      }, { status: 403 });
+      return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
     }
 
-    // Pakai admin client untuk bypass RLS (user_profiles mungkin RLS-protected)
-    const client = supabaseServiceKey ? supabaseAdmin : supabase;
-    const { data, error } = await client
+    const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
       .order('created_at', { ascending: true });
@@ -58,9 +48,8 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ users: data });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Terjadi kesalahan server';
-    return NextResponse.json({ error: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Terjadi kesalahan server' }, { status: 500 });
   }
 }
 

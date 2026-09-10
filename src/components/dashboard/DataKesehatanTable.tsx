@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-/* Column definitions matching sick_employees table */
+/* Column definitions matching Excel: Data Karyawan Sakit */
 const COLUMNS = [
   { key: 'nik', label: 'NIK' },
   { key: 'nama', label: 'Nama' },
@@ -36,7 +36,7 @@ const COLUMNS = [
   { key: 'tgl_mulai_c', label: 'Tgl Mulai C' },
   { key: 'tgl_selesai_c', label: 'Tgl Selesai C' },
   { key: 'hari_c', label: 'Hari C' },
-  { key: 'jumlah_spell', label: 'Spell' },
+  { key: 'spell', label: 'Spell' },
 ];
 
 /* Editable fields (subset of COLUMNS) */
@@ -147,7 +147,7 @@ export default function DataKesehatanTable({ canEdit = false }: DataKesehatanTab
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const totalSick = rows.reduce((s, r) => s + (r.hari_a || 0) + (r.hari_b || 0) + (r.hari_c || 0), 0);
-  const totalSpell = rows.reduce((s: number, r: any) => s + (r.jumlah_spell || 0), 0);
+  const totalSpell = rows.reduce((s, r) => s + (r.jumlah_spell || 0), 0);
   const uniqueEmployees = new Set(rows.map((r: any) => r.nik)).size;
 
   /* Edit handlers */

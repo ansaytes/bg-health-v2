@@ -153,25 +153,34 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   if (!csvUrl) {
-    return NextResponse.json({ error: 'GOOGLE_SHEETS_CSV_URL not configured' }, { status: 500 });
+    return NextResponse.json({ error: 'GOOGLE_SHEETS_CSV_URL not configured. Set di .env.local atau Vercel env vars.' }, { status: 500 });
   }
   if (!supabaseUrl || !supabaseServiceKey) {
-    return NextResponse.json({ error: 'Supabase credentials not configured' }, { status: 500 });
+    return NextResponse.json({ error: 'Supabase credentials not configured. NEXT_PUBLIC_SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY wajib diisi.' }, { status: 500 });
   }
 
   try {
-    // 1. Fetch CSV from Google Sheets
-    const csvRes = await fetch(csvUrl, { cache: 'no-store' });
+    // 1. Fetch CSV from Google Sheets — dengan timeout 15 detik
+    const csvRes = await fetch(csvUrl, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(15000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (BG-Health/2.0)' },
+    });
     if (!csvRes.ok) {
       return NextResponse.json({
-        error: `Failed to fetch CSV: ${csvRes.status} ${csvRes.statusText}`,
+        error: `Gagal fetch CSV dari Google Sheets: HTTP ${csvRes.status} ${csvRes.statusText}. URL: ${csvUrl.substring(0, 50)}...`,
       }, { status: 502 });
     }
     const csvText = await csvRes.text();
+
+    if (!csvText || csvText.length < 50) {
+      return NextResponse.json({ error: 'CSV kosong atau tidak valid' }, { status: 400 });
+    }
+
     const rows = parseCSV(csvText);
 
     if (rows.length < 2) {
-      return NextResponse.json({ error: 'CSV is empty or has no data rows' }, { status: 400 });
+      return NextResponse.json({ error: 'CSV tidak ada data rows (hanya header)' }, { status: 400 });
     }
 
     // 2. Map rows to employee objects (skip header + invalid rows)

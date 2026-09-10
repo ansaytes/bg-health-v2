@@ -40,7 +40,7 @@ const EDITABLE_FIELDS = [
   { key: 'jobsite', label: 'Jobsite', type: 'text' },
   { key: 'bulan', label: 'Bulan', type: 'number' },
   { key: 'tahun', label: 'Tahun', type: 'number' },
-  { key: 'man_power', label: 'Denominator', type: 'number' },
+  { key: 'man_power', label: 'Σ Man Power', type: 'number' },
   { key: 'hari_kerja', label: 'Hari Kerja', type: 'number' },
   { key: 'kunjungan_klinik', label: 'Kunjungan Klinik', type: 'number' },
 ];
@@ -169,7 +169,7 @@ export default function DataManPowerTable({ canEdit = false }: DataManPowerTable
   return (
     <div className="raw-table-container">
       <div className="raw-table-header-bar">
-        <span>Data Denominator per Site per Bulan</span>
+        <span>Data Σ Man Power per Site per Bulan</span>
         <span style={{ color: 'var(--fg-dim)' }}>{rows.length} records</span>
       </div>
       <div className="raw-table-filter-bar">
@@ -195,7 +195,7 @@ export default function DataManPowerTable({ canEdit = false }: DataManPowerTable
               <th>Jobsite</th>
               <th>Bulan</th>
               <th>Tahun</th>
-              <th>Denominator</th>
+              <th>Σ Man Power</th>
               <th>Hari Kerja</th>
               <th>Man Hours</th>
               <th>Kunjungan Klinik</th>
@@ -210,7 +210,7 @@ export default function DataManPowerTable({ canEdit = false }: DataManPowerTable
             ) : rows.length === 0 ? (
               <tr>
                 <td colSpan={8 + (canEdit ? 1 : 0)} style={{ textAlign: 'center', padding: 24, color: 'var(--fg-dim)' }}>
-                  Belum ada data. Input melalui tab Denominator Bulanan.
+                  Belum ada data. Input melalui tab Σ Man Power Bulanan.
                 </td>
               </tr>
             ) : (
@@ -256,14 +256,14 @@ export default function DataManPowerTable({ canEdit = false }: DataManPowerTable
       </div>
       <div className="raw-table-notes">
         <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
-        <span>Man Hours = Denominator x Hari Kerja (dihitung otomatis oleh Supabase). Data ini menjadi denominator perhitungan RKK, CMR, MFR, SSR, ASR, FR PAK, KAPTK.</span>
+        <span>Man Hours = Σ Man Power x Hari Kerja (dihitung otomatis oleh Supabase). Data ini menjadi denominator perhitungan RKK, CMR, MFR, SSR, ASR, FR PAK, KAPTK.</span>
       </div>
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle style={{ fontSize: 15 }}>Edit Data Denominator</DialogTitle>
+            <DialogTitle style={{ fontSize: 15 }}>Edit Data Σ Man Power</DialogTitle>
             <DialogDescription>{editRow?.jobsite} — {MONTHS[editRow?.bulan]} {editRow?.tahun}</DialogDescription>
           </DialogHeader>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -301,7 +301,7 @@ export default function DataManPowerTable({ canEdit = false }: DataManPowerTable
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus Data Denominator</AlertDialogTitle>
+            <AlertDialogTitle>Hapus Data Σ Man Power</AlertDialogTitle>
             <AlertDialogDescription>
               Yakin ingin menghapus data <strong>{deleteRow?.jobsite} — {MONTHS[deleteRow?.bulan]} {deleteRow?.tahun}</strong>? Tindakan ini tidak dapat dibatalkan.
             </AlertDialogDescription>

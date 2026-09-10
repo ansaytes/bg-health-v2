@@ -153,7 +153,7 @@ export default function InputLaggingIndicator() {
     return spells.length;
   };
 
-  /* Denominator state */
+  /* Man Power state */
   const [mpForm, setMpForm] = useState<Record<string, string>>({});
   const [mpSaving, setMpSaving] = useState(false);
   const [mpSaved, setMpSaved] = useState(false);
