@@ -415,6 +415,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
           <p className="login-card-subtitle">{mode === 'login' ? 'Masuk ke BG-Health untuk mengakses dashboard' : 'Daftar akun baru — menunggu persetujuan superuser'}</p>
 
           {mode === 'login' ? (
+          <>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
             <div className="login-input-group">
               <label className="login-input-label">Username / Email</label>
@@ -452,7 +453,9 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
               Daftar di sini
             </button>
           </p>
+          </>
           ) : (
+          <>
           <form onSubmit={async (e) => {
             e.preventDefault();
             setError('');
@@ -533,6 +536,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
               ← Kembali ke Login
             </button>
           </form>
+          </>
           )}
         </div>
       </motion.div>
