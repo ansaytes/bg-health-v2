@@ -1685,3 +1685,39 @@ select.admin-input.compact-input {
   background-color: #1a1a1a !important;
   border: 1px solid #2a2a2a !important;
 }
+
+/* ═══════════════════════════════════
+   Dark mode — solid background untuk semua tabel header
+   ═══════════════════════════════════ */
+.dark .sick-table thead tr,
+.dark .raw-table-scroll thead tr,
+.dark table thead tr {
+  background: #1a1a1a !important;
+}
+.dark .sick-table th,
+.dark .raw-table-scroll th,
+.dark table th {
+  background: #1a1a1a !important;
+  color: #aaaaaa !important;
+}
+.dark .sick-table tbody tr:hover,
+.dark .raw-table-scroll tbody tr:hover,
+.dark table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* Solid background untuk dropdown select di dark mode */
+.dark select option,
+.dark select option:checked,
+.dark select option:hover {
+  background: #1a1a1a !important;
+  color: #f0f0f0 !important;
+}
+.dark select option:checked {
+  background: #ff4d00 !important;
+  color: #ffffff !important;
+}
+.dark select option:hover {
+  background: #2a2a2a !important;
+  color: #ff8c42 !important;
+}
