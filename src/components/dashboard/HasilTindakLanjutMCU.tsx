@@ -1,5 +1,7 @@
 'use client';
 
+import { JOBSITES, MONTHS } from '@/lib/lagging-data';
+
 const ChartPlaceholder = ({ id }: { id: string }) => (
   <div className="chart-box"><canvas id={id} /></div>
 );
@@ -7,6 +9,28 @@ const ChartPlaceholder = ({ id }: { id: string }) => (
 export default function HasilTindakLanjutMCU() {
   return (
     <div className="dashboard">
+      {/* Filter bar — seragam dengan dashboard lain */}
+      <div className="header-filter">
+        <div className="filter-tag">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+          </svg>
+          Filtering
+        </div>
+        <select>
+          {JOBSITES.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select>
+          <option value="all">Bulan (YTD)</option>
+          {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+        </select>
+        <select>
+          <option value={2025}>2025</option>
+          <option value={2026}>2026</option>
+          <option value={2027}>2027</option>
+        </select>
+      </div>
+
       {/* Total Bar — NO update button */}
       <div className="mcu-total-bar">
         <span className="mcu-total-label">Total Karyawan:</span>
