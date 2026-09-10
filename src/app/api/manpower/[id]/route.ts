@@ -104,7 +104,7 @@ export async function DELETE(
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, message: 'Data Man Power berhasil dihapus' });
+    return NextResponse.json({ success: true, message: 'Data Denominator berhasil dihapus' });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Gagal menghapus data man power';
     return NextResponse.json({ error: msg }, { status: 500 });

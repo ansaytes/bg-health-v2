@@ -16,8 +16,9 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('sick_employees')
       .select('*')
-      .order('tgl_mulai_a', { ascending: false, nullsFirst: false })
-      .order('created_at', { ascending: false });
+      .order('jobsite', { ascending: true })
+      .order('nama', { ascending: true })
+      .limit(10000);
 
     if (jobsite && jobsite !== 'All Site') {
       query = query.eq('jobsite', jobsite);

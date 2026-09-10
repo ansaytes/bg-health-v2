@@ -59,7 +59,7 @@ const EMPTY_ROW: IndicatorRow = {
  */
 
 const DENOMINATOR_FIELDS: { key: keyof IndicatorRow; label: string; hint?: string }[] = [
-  { key: 'man_power', label: 'Man Power', hint: 'Jumlah karyawan aktif bulan ini' },
+  { key: 'man_power', label: 'Denominator', hint: 'Jumlah karyawan aktif bulan ini (denominator)' },
   { key: 'man_hours', label: 'Man Hours', hint: 'Total jam kerja produktif' },
   { key: 'layak_bekerja', label: 'Layak Bekerja', hint: 'Jumlah yang dinyatakan fit-to-work' },
 ];
@@ -74,12 +74,12 @@ const AGGREGATE_FIELDS: { key: keyof IndicatorRow; label: string; hint?: string;
 ];
 
 const LAGGING_FIELDS: { key: keyof IndicatorRow; label: string; formula: string; isPercent?: boolean }[] = [
-  { key: 'rkk',    label: 'Rasio Kelayakan Kerja (RKK)',         formula: '= Layak Bekerja / Man Power', isPercent: true },
-  { key: 'cmr',    label: 'Angka Kesakitan Kasar (CMR)',          formula: '= TK Sakit / Man Power', isPercent: true },
+  { key: 'rkk',    label: 'Rasio Kelayakan Kerja (RKK)',         formula: '= Layak Bekerja / Denominator', isPercent: true },
+  { key: 'cmr',    label: 'Angka Kesakitan Kasar (CMR)',          formula: '= TK Sakit / Denominator', isPercent: true },
   { key: 'mfr',    label: 'Kekerapan Kesakitan (MFR)',            formula: '= (TK Sakit × 10⁶) / Man Hours' },
   { key: 'ssr',    label: 'Keparahan Penyakit (SSR)',             formula: '= Total Absensi Sakit / TK Sakit' },
   { key: 'asr',    label: 'Keparahan Absensi (ASR)',              formula: '= (Absensi Sakit × 10⁶) / Man Hours' },
-  { key: 'fr_pak', label: 'Frekuensi PAK (FR PAK)',               formula: '= Penyakit Akibat Kerja / Man Power', isPercent: true },
+  { key: 'fr_pak', label: 'Frekuensi PAK (FR PAK)',               formula: '= Penyakit Akibat Kerja / Denominator', isPercent: true },
   { key: 'kaptk',  label: 'Kejadian Akibat Penyakit TK (KAPTK)',   formula: 'Count kejadian' },
 ];
 

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { MONTHS } from '@/lib/lagging-data';
 
 const FIELDS = [
-  { key: 'man_power', label: 'Man Power', type: 'number' },
+  { key: 'man_power', label: 'Denominator', type: 'number' },
   { key: 'man_hours', label: 'Man Hours', type: 'number' },
   { key: 'tk_sakit', label: 'TK Sakit', type: 'number' },
   { key: 'absensi_sakit', label: 'Hari Absensi Sakit', type: 'number' },
@@ -268,7 +268,7 @@ export default function HealthStatisticsForm() {
               <thead>
                 <tr>
                   <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid var(--border)', color: 'var(--muted-foreground)', fontWeight: 600, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Jobsite</th>
-                  <th style={{ textAlign: 'right', padding: '6px 8px', borderBottom: '1px solid var(--border)', color: 'var(--muted-foreground)', fontWeight: 600, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.3px', width: 100 }}>Man Power</th>
+                  <th style={{ textAlign: 'right', padding: '6px 8px', borderBottom: '1px solid var(--border)', color: 'var(--muted-foreground)', fontWeight: 600, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.3px', width: 100 }}>Denominator</th>
                   <th style={{ textAlign: 'right', padding: '6px 8px', borderBottom: '1px solid var(--border)', color: 'var(--muted-foreground)', fontWeight: 600, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.3px', width: 120 }}>ASR</th>
                 </tr>
               </thead>

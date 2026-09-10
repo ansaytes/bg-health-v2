@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 const MKEYS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 
 const LEADING_MAP: Record<string, string> = {
-  'Man Power': 'man_power',
+  'Denominator': 'man_power',
   'Man Hours': 'man_hours',
   'Total Kunjungan Klinik': 'kunjungan_klinik',
   'Tenaga Kerja Sakit': 'tk_sakit',

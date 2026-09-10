@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     if (!jobsite || !bulan || !tahun || !man_power) {
       return NextResponse.json(
-        { success: false, error: 'Jobsite, Bulan, Tahun, dan Man Power wajib diisi' },
+        { success: false, error: 'Jobsite, Bulan, Tahun, dan Denominator wajib diisi' },
         { status: 400 }
       );
     }
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Data Man Power berhasil disimpan',
+      message: 'Data Denominator berhasil disimpan',
       data,
     });
   } catch (err) {

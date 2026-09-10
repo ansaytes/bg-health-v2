@@ -297,11 +297,11 @@ function AdminContent() {
   const panels: Record<string, { form: React.ReactNode; tables: React.ReactNode[]; hasTable: boolean; labels?: string[] }> = {
     'lagging-indicator': {
       hasTable: true,
-      labels: ['Lagging Indicator', 'Data Kesehatan', 'Man Power'],
+      labels: ['Lagging Indicator', 'Data Kesehatan', 'Denominator'],
       form: <LaggingIndicatorPage />,
       tables: [
         <div className="admin-form-container" key="kesehatan"><DataKesehatanTable canEdit={isAdmin} /></div>,
-        <div className="admin-form-container" key="manpower"><DataManPowerTable canEdit={isAdmin} /></div>,
+        <div className="admin-form-container" key="denominator"><DataManPowerTable canEdit={isAdmin} /></div>,
       ],
     },
     'review-mcu': {

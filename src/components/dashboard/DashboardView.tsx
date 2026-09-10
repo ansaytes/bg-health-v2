@@ -429,7 +429,7 @@ export default function DashboardView() {
                   </div>
                 </div>
                 <div style={{ padding: '8px 12px', borderTop: '1px solid var(--border)', display: 'flex', gap: 20, flexWrap: 'wrap', flexShrink: 0 }}>
-                  <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}><b style={{ color: 'var(--foreground)' }}>{manPower.toLocaleString('id-ID')}</b> Man Power</span>
+                  <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}><b style={{ color: 'var(--foreground)' }}>{manPower.toLocaleString('id-ID')}</b> Denominator</span>
                   <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}><b style={{ color: 'var(--foreground)' }}>{(manHours / 1000).toFixed(0)}K</b> Man Hours</span>
                   <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}><b style={{ color: 'var(--foreground)' }}>{tkSakit}</b> TK Sakit</span>
                   <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}><b style={{ color: 'var(--foreground)' }}>{absensiSakit}</b> Hari Absensi</span>
@@ -471,16 +471,22 @@ export default function DashboardView() {
 
         {/* RIGHT column - Sick list */}
         <div className="card glow-coral sick-list-card">
-          <div className="card-head" style={{ flexShrink: 0 }}>
-            <div className="card-icon" style={{ background: 'rgba(255,99,71,.1)' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#ff6347" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" /></svg>
+          <div className="card-head" style={{ flexShrink: 0, justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <div className="card-icon" style={{ background: 'rgba(255,99,71,.1)' }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#ff6347" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" /></svg>
+              </div>
+              <div>
+                <h2>List Karyawan Sakit</h2>
+                <p>{isYTD ? 'Harap Pilih Periode Bulan' : periodLabel}</p>
+              </div>
             </div>
-            <div>
-              <h2>List Karyawan Sakit</h2>
-              <p>{isYTD
-                ? 'Harap Pilih Periode Bulan'
-                : `${sickListCount} karyawan ${selectedSite !== 'All Site' ? `(${selectedSite})` : ''} - ${periodLabel}`}</p>
-            </div>
+            {!isYTD && sickListCount > 0 && (
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <span style={{ fontSize: 18, fontWeight: 800, color: '#ff4d00' }}>{sickListCount}</span>
+                <span style={{ fontSize: 10, color: 'var(--muted-foreground)', display: 'block' }}>karyawan</span>
+              </div>
+            )}
           </div>
           <div className="sick-list-scroll">
             {isYTD ? (
@@ -495,6 +501,7 @@ export default function DashboardView() {
               <table className="sick-table">
                 <thead>
                   <tr>
+                    <th className="num-col" style={{ width: 28 }}>No</th>
                     <th>NIK</th>
                     <th>Nama</th>
                     <th>Jobsite</th>
@@ -508,6 +515,7 @@ export default function DashboardView() {
                 <tbody>
                   {sickList.map((emp, idx) => (
                     <tr key={emp.id ?? idx}>
+                      <td className="num-col" style={{ color: 'var(--muted-foreground)', fontSize: 9 }}>{idx + 1}</td>
                       <td className="nik-cell">{emp.nik || '-'}</td>
                       <td className="nama-cell">{emp.nama}</td>
                       <td>{emp.jobsite}</td>
