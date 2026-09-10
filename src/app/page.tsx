@@ -347,6 +347,12 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [shake, setShake] = useState(false);
+
+  const triggerShake = () => {
+    setShake(true);
+    setTimeout(() => setShake(false), 500);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -361,6 +367,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
 
       if (supabaseError) {
         setError(supabaseError.message);
+        triggerShake();
         return;
       }
 
@@ -376,6 +383,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
       }
     } catch {
       setError('Terjadi kesalahan. Coba lagi.');
+      triggerShake();
     } finally {
       setLoading(false);
     }
@@ -391,19 +399,22 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <motion.div
-        className="login-circle"
+        className={`login-circle${shake ? ' shake' : ''}`}
         initial={{ opacity: 0, scale: 0.85, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.85, y: 20 }}
         transition={{ type: 'spring', stiffness: 350, damping: 28 }}
       >
-        <div className="login-mask" />
+        <div className="login-mask">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/BM.png" alt="" className="login-logo-bg" />
+        </div>
         <button className="login-close-btn" onClick={onClose} aria-label="Tutup">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
         </button>
 
         <div className="login-card">
-          <form id="loginForm" onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit}>
             <h2>Login</h2>
             {error && <p className="login-error-msg">{error}</p>}
             <div className="login-input-group">
@@ -435,7 +446,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
             </button>
           </form>
 
-          {/* Success overlay */}
+          {/* Success overlay — green checkmark */}
           <div className={`login-success${showSuccess ? ' active' : ''}`}>
             <div className="login-check">✓</div>
             <h3>Success!</h3>
