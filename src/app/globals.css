@@ -707,6 +707,21 @@ select:focus { border-color: #ff4d00; }
   padding: 0 4px;
   flex-shrink: 0;
 }
+.dashboard-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.dashboard-top-bar .header-filter {
+  margin-top: 0;
+}
+.dashboard-top-bar .mcu-total-bar {
+  padding: 2px 8px;
+}
 .kunjungan-filter-bar {
   display: flex;
   align-items: center;
