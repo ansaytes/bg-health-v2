@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 async function getCallerRole(req: NextRequest): Promise<{ userId: string; role: string } | null> {
   const authHeader = req.headers.get('authorization');
@@ -10,10 +17,11 @@ async function getCallerRole(req: NextRequest): Promise<{ userId: string; role: 
   }
   if (!accessToken) return null;
 
-  const { data: { user }, error } = await supabase.auth.getUser(accessToken);
+  const client = supabaseServiceKey ? supabaseAdmin : supabase;
+  const { data: { user }, error } = await client.auth.getUser(accessToken);
   if (error || !user) return null;
 
-  const { data: profile } = await supabase
+  const { data: profile } = await client
     .from('user_profiles')
     .select('role')
     .eq('user_id', user.id)
@@ -23,7 +31,7 @@ async function getCallerRole(req: NextRequest): Promise<{ userId: string; role: 
   return { userId: user.id, role: profile.role };
 }
 
-// GET /api/health-campaigns — list active campaigns (public)
+/** GET /api/health-campaigns — list active campaigns (public) */
 export async function GET() {
   try {
     const { data, error } = await supabase
@@ -32,18 +40,14 @@ export async function GET() {
       .eq('is_active', true)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      // Table may not exist yet — return empty array
-      return NextResponse.json({ campaigns: [] });
-    }
-
+    if (error) return NextResponse.json({ campaigns: [] });
     return NextResponse.json({ campaigns: data || [] });
   } catch {
     return NextResponse.json({ campaigns: [] });
   }
 }
 
-// POST /api/health-campaigns — create campaign (admin/superuser only)
+/** POST /api/health-campaigns — create campaign (admin/superuser only) */
 export async function POST(req: NextRequest) {
   try {
     const caller = await getCallerRole(req);
@@ -52,13 +56,14 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { title, description, image_url, content, is_active, start_date, end_date } = body;
+    const { title, description, image_url, content, is_active } = body;
 
     if (!title) {
       return NextResponse.json({ error: 'Judul wajib diisi' }, { status: 400 });
     }
 
-    const { data, error } = await supabase
+    const client = supabaseServiceKey ? supabaseAdmin : supabase;
+    const { data, error } = await client
       .from('health_campaigns')
       .insert({
         title,
@@ -67,8 +72,6 @@ export async function POST(req: NextRequest) {
         content: content || null,
         author_id: caller.userId,
         is_active: is_active ?? true,
-        start_date: start_date || null,
-        end_date: end_date || null,
       })
       .select()
       .single();
@@ -78,12 +81,13 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, campaign: data });
-  } catch {
-    return NextResponse.json({ error: 'Terjadi kesalahan server' }, { status: 500 });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Terjadi kesalahan server';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
-// PATCH /api/health-campaigns — update campaign (admin/superuser only)
+/** PATCH /api/health-campaigns — update campaign (admin/superuser only) */
 export async function PATCH(req: NextRequest) {
   try {
     const caller = await getCallerRole(req);
@@ -98,12 +102,12 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'ID kampanye wajib diisi' }, { status: 400 });
     }
 
-    // Remove fields that shouldn't be directly updated
-    delete (updates as Record<string, unknown>).id;
-    delete (updates as Record<string, unknown>).created_at;
-    delete (updates as Record<string, unknown>).author_id;
+    delete updates.id;
+    delete updates.created_at;
+    delete updates.author_id;
 
-    const { data, error } = await supabase
+    const client = supabaseServiceKey ? supabaseAdmin : supabase;
+    const { data, error } = await client
       .from('health_campaigns')
       .update(updates)
       .eq('id', id)
@@ -115,12 +119,13 @@ export async function PATCH(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, campaign: data });
-  } catch {
-    return NextResponse.json({ error: 'Terjadi kesalahan server' }, { status: 500 });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Terjadi kesalahan server';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
-// DELETE /api/health-campaigns?id=xxx — delete campaign (admin/superuser only)
+/** DELETE /api/health-campaigns?id=xxx (admin/superuser only) */
 export async function DELETE(req: NextRequest) {
   try {
     const caller = await getCallerRole(req);
@@ -135,7 +140,8 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'ID kampanye wajib diisi' }, { status: 400 });
     }
 
-    const { error } = await supabase
+    const client = supabaseServiceKey ? supabaseAdmin : supabase;
+    const { error } = await client
       .from('health_campaigns')
       .delete()
       .eq('id', campaignId);

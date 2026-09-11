@@ -2,38 +2,16 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 
 interface Campaign {
   id: string;
   title: string;
   description: string | null;
   image_url: string | null;
-  content: string | null;
   is_active: boolean;
-  start_date: string | null;
-  end_date: string | null;
   created_at: string;
 }
 
-/* Get auth token for API calls */
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const { data: { session } } = await supabase.auth.getSession();
   return {
@@ -42,38 +20,20 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   };
 }
 
-interface FormState {
-  title: string;
-  description: string;
-  image_url: string;
-  content: string;
-  start_date: string;
-  end_date: string;
-  is_active: boolean;
-}
-
-const emptyForm: FormState = {
-  title: '',
-  description: '',
-  image_url: '',
-  content: '',
-  start_date: '',
-  end_date: '',
-  is_active: true,
-};
-
 export default function HealthCampaignForm() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState<FormState>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  // Delete state
-  const [deleteTarget, setDeleteTarget] = useState<Campaign | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  // Form fields — simple social media style
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [isActive, setIsActive] = useState(true);
 
   const fetchCampaigns = useCallback(async () => {
     setLoading(true);
@@ -84,7 +44,7 @@ export default function HealthCampaignForm() {
         setCampaigns(json.campaigns || []);
       }
     } catch {
-      // fallback
+      // error
     } finally {
       setLoading(false);
     }
@@ -92,33 +52,38 @@ export default function HealthCampaignForm() {
 
   useEffect(() => { fetchCampaigns(); }, [fetchCampaigns]);
 
+  const resetForm = () => {
+    setTitle('');
+    setDescription('');
+    setImageUrl('');
+    setIsActive(true);
+    setEditingId(null);
+    setErrorMsg('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title.trim()) return;
+    if (!title.trim()) return;
     setSaving(true);
+    setErrorMsg('');
 
     try {
       const headers = await getAuthHeaders();
       const body = {
-        title: form.title.trim(),
-        description: form.description.trim() || null,
-        image_url: form.image_url.trim() || null,
-        content: form.content.trim() || null,
-        start_date: form.start_date || null,
-        end_date: form.end_date || null,
-        is_active: form.is_active,
+        title: title.trim(),
+        description: description.trim() || null,
+        image_url: imageUrl.trim() || null,
+        is_active: isActive,
       };
 
       let res: Response;
       if (editingId) {
-        // Update existing
         res = await fetch('/api/health-campaigns', {
           method: 'PATCH',
           headers,
           body: JSON.stringify({ id: editingId, ...body }),
         });
       } else {
-        // Create new
         res = await fetch('/api/health-campaigns', {
           method: 'POST',
           headers,
@@ -128,293 +93,153 @@ export default function HealthCampaignForm() {
 
       const json = await res.json();
       if (res.ok) {
-        setForm(emptyForm);
-        setEditingId(null);
+        resetForm();
         setShowForm(false);
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
         fetchCampaigns();
+      } else {
+        setErrorMsg(json.error || 'Gagal menyimpan');
       }
     } catch {
-      // error
+      setErrorMsg('Gagal terhubung ke server');
     } finally {
       setSaving(false);
     }
   };
 
-  const openEdit = (campaign: Campaign) => {
-    setEditingId(campaign.id);
-    setForm({
-      title: campaign.title,
-      description: campaign.description || '',
-      image_url: campaign.image_url || '',
-      content: campaign.content || '',
-      start_date: campaign.start_date || '',
-      end_date: campaign.end_date || '',
-      is_active: campaign.is_active,
-    });
+  const openEdit = (c: Campaign) => {
+    setEditingId(c.id);
+    setTitle(c.title);
+    setDescription(c.description || '');
+    setImageUrl(c.image_url || '');
+    setIsActive(c.is_active);
     setShowForm(true);
+    setErrorMsg('');
   };
 
-  const cancelForm = () => {
-    setForm(emptyForm);
-    setEditingId(null);
-    setShowForm(false);
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
+  const handleDelete = async (id: string) => {
+    if (!confirm('Hapus postingan ini?')) return;
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch(`/api/health-campaigns?id=${deleteTarget.id}`, {
-        method: 'DELETE',
-        headers,
-      });
-      if (res.ok) {
-        setDeleteTarget(null);
-        fetchCampaigns();
-      }
+      const res = await fetch(`/api/health-campaigns?id=${id}`, { method: 'DELETE', headers });
+      if (res.ok) fetchCampaigns();
     } catch {
       // error
-    } finally {
-      setDeleting(false);
     }
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    height: 34,
-    borderRadius: 8,
-    border: '1px solid var(--border)',
-    background: 'var(--card)',
-    padding: '0 10px',
-    fontSize: 12,
-    color: 'var(--foreground)',
-    outline: 'none',
-    boxSizing: 'border-box',
+  const fmtDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+      return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    } catch { return dateStr; }
   };
 
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    fontSize: 11,
-    fontWeight: 600,
-    color: 'var(--foreground)',
-    marginBottom: 4,
-  };
+  if (loading) {
+    return (
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+        <div className="loading-spinner"><img src="/BM.png" alt="Loading" /></div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', width: '90%', margin: '0 auto' }}>
-      <div style={{ padding: '16px 0', overflowY: 'auto', flex: 1, minHeight: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto', paddingBottom: 60 }}>
+      <div className="admin-form-inner">
+        {/* Header */}
+        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--foreground)', marginBottom: 2 }}>Health Campaign</h2>
-            <p style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>Kelola postingan health campaign untuk halaman Home.</p>
+            <h1 className="admin-form-title">Health Campaign</h1>
+            <p className="admin-form-subtitle">Posting konten kampanye kesehatan — tampil di Home page</p>
           </div>
           <button
-            onClick={() => { if (showForm) cancelForm(); else setShowForm(true); }}
-            style={{ height: 34, padding: '0 14px', borderRadius: 8, border: 'none', background: showForm ? 'var(--muted)' : 'linear-gradient(135deg, #ff4d00, #ff6b2b)', color: showForm ? 'var(--foreground)' : '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+            onClick={() => { if (showForm) { resetForm(); setShowForm(false); } else { resetForm(); setShowForm(true); } }}
+            className={`admin-form-btn-${showForm ? 'secondary' : 'primary'}`}
+            style={{ flex: 'unset', width: 'auto', padding: '0 16px', height: 36, display: 'inline-flex', alignItems: 'center', gap: 6 }}
           >
-            {showForm ? 'Batal' : <span>Buat Postingan</span>}
+            {showForm ? (
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            ) : (
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            )}
+            {showForm ? 'Tutup' : 'Buat Postingan'}
           </button>
         </div>
 
+        {/* Form */}
         {showForm && (
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 16, boxShadow: 'var(--shadow)' }}>
+          <div className="admin-form-card" style={{ marginBottom: 16 }}>
+            {errorMsg && <p className="login-error-msg" style={{ marginBottom: 10 }}>{errorMsg}</p>}
             <form onSubmit={handleSubmit}>
-              <div style={{ marginBottom: 12 }}>
-                <label style={labelStyle}>Judul Campaign *</label>
-                <input
-                  type="text"
-                  value={form.title}
-                  onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
-                  placeholder="Masukkan judul campaign..."
-                  style={inputStyle}
-                />
+              <div style={{ marginBottom: 14 }}>
+                <label className="admin-label">Judul <span style={{ color: 'var(--brand-primary)' }}>*</span></label>
+                <input type="text" className="admin-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Judul postingan" required />
               </div>
-
-              <div style={{ marginBottom: 12 }}>
-                <label style={labelStyle}>Deskripsi</label>
-                <textarea
-                  value={form.description}
-                  onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-                  placeholder="Tulis deskripsi singkat..."
-                  rows={3}
-                  style={{ ...inputStyle, height: 'auto', padding: '8px 10px', resize: 'vertical', fontFamily: 'inherit' }}
-                />
+              <div style={{ marginBottom: 14 }}>
+                <label className="admin-label">Deskripsi</label>
+                <textarea className="admin-input" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Tulis deskripsi postingan..." rows={4} style={{ height: 'auto', padding: '10px 12px', resize: 'vertical', lineHeight: 1.5 }} />
               </div>
-
-              <div style={{ marginBottom: 12, borderRadius: 10, border: '2px dashed var(--border)', padding: 24, textAlign: 'center' as const, background: 'var(--background)' }}>
-                <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--muted-foreground)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 8 }}>
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21 15 16 10 5 21" />
-                </svg>
-                <p style={{ fontSize: 11, color: 'var(--muted-foreground)', marginBottom: 8 }}>Upload gambar ke Google Drive, lalu tempel link di bawah</p>
-                <input
-                  type="url"
-                  value={form.image_url}
-                  onChange={e => setForm(p => ({ ...p, image_url: e.target.value }))}
-                  placeholder="Tempel link gambar (Google Drive, dll)..."
-                  style={inputStyle}
-                />
+              <div style={{ marginBottom: 14 }}>
+                <label className="admin-label">URL Gambar (Google Drive / link langsung)</label>
+                <input type="text" className="admin-input" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://drive.google.com/... atau https://..." />
+                {imageUrl && (
+                  <div style={{ marginTop: 8, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)', maxWidth: 300 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={imageUrl} alt="Preview" style={{ width: '100%', height: 'auto', display: 'block' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  </div>
+                )}
               </div>
-
-              <div style={{ marginBottom: 12 }}>
-                <label style={labelStyle}>Konten Lengkap (opsional)</label>
-                <textarea
-                  value={form.content}
-                  onChange={e => setForm(p => ({ ...p, content: e.target.value }))}
-                  placeholder="Konten lengkap campaign..."
-                  rows={4}
-                  style={{ ...inputStyle, height: 'auto', padding: '8px 10px', resize: 'vertical', fontFamily: 'inherit' }}
-                />
+              <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <label className="admin-label" style={{ margin: 0 }}>Aktif?</label>
+                <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} style={{ width: 16, height: 16, cursor: 'pointer' }} />
               </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
-                <div>
-                  <label style={labelStyle}>Tanggal Mulai</label>
-                  <input
-                    type="date"
-                    value={form.start_date}
-                    onChange={e => setForm(p => ({ ...p, start_date: e.target.value }))}
-                    style={inputStyle}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>Tanggal Selesai</label>
-                  <input
-                    type="date"
-                    value={form.end_date}
-                    onChange={e => setForm(p => ({ ...p, end_date: e.target.value }))}
-                    style={inputStyle}
-                  />
-                </div>
-              </div>
-
-              <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--foreground)' }}>Status Aktif</label>
-                <button
-                  type="button"
-                  onClick={() => setForm(p => ({ ...p, is_active: !p.is_active }))}
-                  style={{
-                    width: 40, height: 22, borderRadius: 11, border: 'none',
-                    background: form.is_active ? '#00B894' : 'var(--muted)',
-                    position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
-                  }}
-                >
-                  <div style={{
-                    width: 16, height: 16, borderRadius: '50%', background: '#fff',
-                    position: 'absolute', top: 3, left: form.is_active ? 21 : 3,
-                    transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                  }} />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="submit" disabled={saving} className={`admin-form-btn-primary${saved ? ' saved' : ''}`}>
+                  {saving ? 'Menyimpan...' : saved ? 'Tersimpan!' : editingId ? 'Update' : 'Posting'}
                 </button>
-                <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>{form.is_active ? 'Aktif' : 'Tidak aktif'}</span>
+                <button type="button" onClick={resetForm} className="admin-form-btn-secondary">
+                  Reset
+                </button>
               </div>
-
-              <button
-                type="submit"
-                disabled={!form.title.trim() || saving}
-                style={{ width: '100%', height: 38, borderRadius: 10, border: 'none', background: (!form.title.trim() || saving) ? 'var(--muted)' : 'linear-gradient(135deg, #ff4d00, #ff6b2b)', color: (!form.title.trim() || saving) ? 'var(--muted-foreground)' : '#fff', fontSize: 13, fontWeight: 600, cursor: (!form.title.trim() || saving) ? 'not-allowed' : 'pointer' }}
-              >
-                {saving ? 'Menyimpan...' : saved ? 'Tersimpan!' : editingId ? 'Perbarui Campaign' : 'Publikasikan'}
-              </button>
             </form>
           </div>
         )}
 
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 40, color: 'var(--fg-dim)', fontSize: 12 }}>Memuat campaigns...</div>
-        ) : campaigns.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 40, color: 'var(--fg-dim)' }}>
-            <p style={{ fontSize: 12 }}>Belum ada postingan health campaign.</p>
+        {/* Campaign List */}
+        {campaigns.length === 0 ? (
+          <div className="admin-form-card" style={{ textAlign: 'center', padding: 40, color: 'var(--muted-foreground)', fontSize: 12 }}>
+            Belum ada postingan. Klik "Buat Postingan" untuk membuat.
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
-            {campaigns.map(campaign => (
-              <div key={campaign.id} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow)' }}>
-                {campaign.image_url && (
-                  <div style={{ height: 120, overflow: 'hidden' }}>
-                    <img src={campaign.image_url} alt={campaign.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          campaigns.map((c) => (
+            <div key={c.id} className="admin-form-card" style={{ marginBottom: 10, padding: '14px 16px' }}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                {c.image_url && (
+                  <div style={{ width: 60, height: 60, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={c.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }} />
                   </div>
                 )}
-                {!campaign.image_url && (
-                  <div style={{ height: 80, background: 'linear-gradient(135deg, rgba(255,77,0,.15), rgba(255,77,0,.05))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--muted-foreground)" strokeWidth="1.5">
-                      <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
-                    </svg>
-                  </div>
-                )}
-                <div style={{ padding: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-                    <h4 style={{ fontSize: 13, fontWeight: 700, color: 'var(--foreground)', margin: 0, lineHeight: 1.3 }}>{campaign.title}</h4>
-                    <span style={{
-                      fontSize: 9, fontWeight: 600, padding: '2px 8px', borderRadius: 10, flexShrink: 0,
-                      background: campaign.is_active ? 'rgba(0,184,148,0.12)' : 'var(--muted)',
-                      color: campaign.is_active ? '#00B894' : 'var(--muted-foreground)',
-                    }}>
-                      {campaign.is_active ? 'Aktif' : 'Nonaktif'}
-                    </span>
-                  </div>
-                  {campaign.description && (
-                    <p style={{ fontSize: 11, color: 'var(--muted-foreground)', lineHeight: 1.5, marginBottom: 8, margin: '0 0 8px 0' }}>{campaign.description}</p>
-                  )}
-                  {campaign.start_date && (
-                    <p style={{ fontSize: 9, color: 'var(--muted-foreground)', marginBottom: 8, margin: '0 0 8px 0' }}>
-                      {campaign.start_date}{campaign.end_date ? ` — ${campaign.end_date}` : ''}
-                    </p>
-                  )}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 9, color: 'var(--muted-foreground)' }}>{new Date(campaign.created_at).toLocaleDateString('id-ID')}</span>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      <button
-                        onClick={() => openEdit(campaign)}
-                        style={{ fontSize: 9, color: 'var(--muted-foreground)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}
-                      >
-                        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" />
-                        </svg>
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(campaign)}
-                        style={{ fontSize: 9, color: '#FF4444', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}
-                      >
-                        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                        </svg>
-                        Hapus
-                      </button>
-                    </div>
-                  </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--foreground)', margin: '0 0 4px' }}>{c.title}</p>
+                  {c.description && <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '0 0 4px', lineHeight: 1.4 }}>{c.description}</p>}
+                  <p style={{ fontSize: 9, color: 'var(--fg-dim)', margin: 0 }}>{fmtDate(c.created_at)} · {c.is_active ? 'Aktif' : 'Nonaktif'}</p>
+                </div>
+                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                  <button onClick={() => openEdit(c)} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--muted-foreground)" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                  </button>
+                  <button onClick={() => handleDelete(c.id)} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#FF4444" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                  </button>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))
         )}
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Hapus Campaign</AlertDialogTitle>
-            <AlertDialogDescription>
-              Yakin ingin menghapus campaign <strong>"{deleteTarget?.title}"</strong>? Tindakan ini tidak dapat dibatalkan.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Batal</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleting}
-              style={{ background: '#FF4444', color: '#fff' }}
-            >
-              {deleting ? 'Menghapus...' : 'Hapus'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
