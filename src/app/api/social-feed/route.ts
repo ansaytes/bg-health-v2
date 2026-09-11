@@ -54,14 +54,19 @@ function parseYouTubeRSS(xml: string): FeedItem[] {
 
 async function fetchYouTubeRSS(): Promise<FeedItem[]> {
   try {
+    // YouTube RSS URL yang benar: /xml/feeds/videos.xml (bukan /feeds/videos.xml)
     const res = await fetch(
-      'https://www.youtube.com/feeds/videos.xml?channel_id=UCmwnNhvM3VomoVkAkjR5AoQ',
-      { headers: { 'User-Agent': 'Mozilla/5.0 (BG-Health/2.0)' }, signal: AbortSignal.timeout(12000) }
+      'https://www.youtube.com/xml/feeds/videos.xml?channel_id=UCmwnNhvM3VomoVkAkjR5AoQ',
+      {
+        headers: { 'User-Agent': 'Mozilla/5.0 (BG-Health/2.0)' },
+        signal: AbortSignal.timeout(12000),
+      }
     );
     if (!res.ok) throw new Error(`RSS ${res.status}`);
     const xml = await res.text();
+    if (!xml || xml.length < 50) throw new Error('Empty XML');
     const items = parseYouTubeRSS(xml);
-    if (items.length === 0) throw new Error('No items');
+    if (items.length === 0) throw new Error('No items parsed');
     return items;
   } catch (err) {
     console.error('YouTube RSS failed:', err);
@@ -101,7 +106,7 @@ async function fetchInstagramPosts(): Promise<FeedItem[]> {
 
 export async function GET() {
   // Only use cache if it contains ACTUAL data (not empty)
-  if (isCacheValid() && cachedNews!.length > 0 && cachedTalks!.length > 0) {
+  if (isCacheValid() && cachedNews!.length > 0) {
     return NextResponse.json({ news: cachedNews, healthTalks: cachedTalks });
   }
 
