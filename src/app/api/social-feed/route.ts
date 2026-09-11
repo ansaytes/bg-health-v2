@@ -10,7 +10,6 @@ interface FeedItem {
   video_url?: string;
   external_url?: string;
   views?: number;
-  lengthSeconds?: number;
 }
 
 let cachedNews: FeedItem[] | null = null;
@@ -22,54 +21,69 @@ function isCacheValid(): boolean {
   return cachedNews !== null && cachedTalks !== null && Date.now() - cacheTime < CACHE_DURATION;
 }
 
-function parseYouTubeRSS(xml: string): FeedItem[] {
-  const items: FeedItem[] = [];
-  const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;
-  let match;
-  while ((match = entryRegex.exec(xml)) !== null) {
-    const entry = match[1];
-    const videoIdMatch = entry.match(/<yt:videoId>([\s\S]*?)<\/yt:videoId>/);
-    const videoId = videoIdMatch?.[1]?.trim();
-    if (!videoId) continue;
-    const titleMatch = entry.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/);
-    const title = titleMatch?.[1]?.trim().replace(/&amp;/g, '&') || '';
-    const publishedMatch = entry.match(/<published>([\s\S]*?)<\/published>/);
-    const thumbMatch = entry.match(/<media:thumbnail[^>]+url="([^"]+)"/);
-    const thumbnail = thumbMatch?.[1] || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
-    const descMatch = entry.match(/<media:description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/media:description>/);
-    const desc = descMatch?.[1]?.trim().replace(/\n/g, ' ').slice(0, 300) || '';
-    const viewsMatch = entry.match(/<media:statistics[^>]+views="(\d+)"/);
-    const views = viewsMatch ? parseInt(viewsMatch[1]) : 0;
-    items.push({
-      id: `yt-${videoId}`, title, caption: desc, media_url: thumbnail,
-      source: 'youtube' as const,
-      published_at: publishedMatch?.[1]?.trim() || new Date().toISOString(),
-      video_url: `https://www.youtube.com/watch?v=${videoId}`,
-      external_url: `https://www.youtube.com/watch?v=${videoId}`, views,
-    });
-    if (items.length >= 15) break;
-  }
-  return items;
-}
-
-async function fetchYouTubeRSS(): Promise<FeedItem[]> {
+/**
+ * Scrape video IDs from YouTube channel page
+ * YouTube RSS feed tidak lagi return video entries,
+ * jadi kita scrape halaman channel untuk dapat video IDs
+ */
+async function fetchYouTubeVideos(): Promise<FeedItem[]> {
   try {
-    // YouTube RSS URL yang benar: /xml/feeds/videos.xml (bukan /feeds/videos.xml)
     const res = await fetch(
-      'https://www.youtube.com/xml/feeds/videos.xml?channel_id=UCmwnNhvM3VomoVkAkjR5AoQ',
+      'https://www.youtube.com/@BagongNewsYoutube/videos',
       {
-        headers: { 'User-Agent': 'Mozilla/5.0 (BG-Health/2.0)' },
-        signal: AbortSignal.timeout(12000),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+        signal: AbortSignal.timeout(15000),
       }
     );
-    if (!res.ok) throw new Error(`RSS ${res.status}`);
-    const xml = await res.text();
-    if (!xml || xml.length < 50) throw new Error('Empty XML');
-    const items = parseYouTubeRSS(xml);
-    if (items.length === 0) throw new Error('No items parsed');
+    if (!res.ok) throw new Error(`YouTube page ${res.status}`);
+    const html = await res.text();
+
+    // Extract unique video IDs
+    const videoIds = new Set<string>();
+    const matches = html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g);
+    for (const m of matches) {
+      videoIds.add(m[1]);
+    }
+    
+    if (videoIds.size === 0) throw new Error('No video IDs found');
+    
+    // Get metadata for each video via noembed (no API key needed)
+    const items: FeedItem[] = [];
+    const ids = Array.from(videoIds).slice(0, 15);
+    
+    for (const videoId of ids) {
+      try {
+        const metaRes = await fetch(
+          `https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`,
+          { signal: AbortSignal.timeout(5000) }
+        );
+        if (metaRes.ok) {
+          const meta = await metaRes.json();
+          if (meta && meta.title) {
+            items.push({
+              id: `yt-${videoId}`,
+              title: meta.title,
+              caption: meta.author_name || 'Bagong News Youtube',
+              media_url: meta.thumbnail_url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+              source: 'youtube' as const,
+              published_at: new Date().toISOString(),
+              video_url: `https://www.youtube.com/watch?v=${videoId}`,
+              external_url: `https://www.youtube.com/watch?v=${videoId}`,
+            });
+          }
+        }
+      } catch {
+        // Skip this video if noembed fails
+      }
+    }
+    
+    if (items.length === 0) throw new Error('No metadata fetched');
     return items;
   } catch (err) {
-    console.error('YouTube RSS failed:', err);
+    console.error('YouTube fetch failed:', err);
     return [];
   }
 }
@@ -105,12 +119,11 @@ async function fetchInstagramPosts(): Promise<FeedItem[]> {
 }
 
 export async function GET() {
-  // Only use cache if it contains ACTUAL data (not empty)
   if (isCacheValid() && cachedNews!.length > 0) {
     return NextResponse.json({ news: cachedNews, healthTalks: cachedTalks });
   }
 
-  const allVideos = await fetchYouTubeRSS();
+  const allVideos = await fetchYouTubeVideos();
   const talks: FeedItem[] = [];
   for (const v of allVideos) {
     if (/HEALTH\s*TALK/i.test(v.title)) talks.push(v);
@@ -120,12 +133,10 @@ export async function GET() {
   const ytNews = allVideos.filter(v => !/HEALTH\s*TALK/i.test(v.title));
   const news: FeedItem[] = igPosts.length > 0 ? igPosts : ytNews;
 
-  // ONLY cache if we have real data — don't cache empty results
   if (news.length > 0) cachedNews = news;
   if (talks.length > 0) cachedTalks = talks;
   if (news.length > 0 && talks.length > 0) cacheTime = Date.now();
 
-  // Return real data or empty arrays — NO MOCK FALLBACK
   return NextResponse.json({
     news: cachedNews || [],
     healthTalks: cachedTalks || [],
