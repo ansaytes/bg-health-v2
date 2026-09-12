@@ -101,11 +101,11 @@ function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOp
   return (
     <div
       className="home-feed-card"
-      role={clickUrl ? 'button' : undefined}
-      tabIndex={clickUrl ? 0 : undefined}
-      onClick={clickUrl ? handleClick : undefined}
-      onKeyDown={clickUrl ? (e) => { if (e.key === 'Enter') handleClick(); } : undefined}
-      style={clickUrl ? { cursor: 'pointer' } : undefined}
+      role="button"
+      tabIndex={0}
+      onClick={handleClick}
+      onKeyDown={(e) => { if (e.key === 'Enter') handleClick(); }}
+      style={{ cursor: 'pointer' }}
     >
       <div
         className="home-feed-card-media"
@@ -134,7 +134,7 @@ function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOp
             </span>
           </div>
         )}
-        {(isVideo || clickUrl) && showImage && (
+        {isVideo && showImage && (
           <div className="home-feed-play-btn">
             <svg viewBox="0 0 24 24" fill="white" width="22" height="22">
               <polygon points="6,3 20,12 6,21" />
