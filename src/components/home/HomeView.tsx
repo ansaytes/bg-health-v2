@@ -20,6 +20,7 @@ interface FeedItem {
   type: 'campaign' | 'talk' | 'news';
   views?: number;
   lengthSeconds?: number;
+  publishedAt?: number; // unix timestamp for sorting
 }
 
 /* ── Neutral placeholder backgrounds (no pastel gradients) ── */
@@ -79,26 +80,23 @@ function normalizeImageUrl(raw: string | null | undefined): string | null {
 const LONG_CAPTION_THRESHOLD = 120;
 
 /* ── Feed Card Component ── */
-function FeedCard({ item, index }: { item: FeedItem; index: number }) {
+function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOpen: (item: FeedItem) => void }) {
   const placeholder = PLACEHOLDER_BG[index % PLACEHOLDER_BG.length];
   const isVideo = item.type === 'talk' || (item.type === 'news' && (!!item.video_url || !!item.media_url));
   const isCampaign = item.type === 'campaign';
   const isYouTube = item.source === 'youtube' || item.type === 'talk';
   // Normalize the thumbnail URL (auto-converts Google Drive share links to direct image URLs)
   const thumbnail = normalizeImageUrl(item.media_url || item.thumbnail_url || item.image_url);
-  const clickUrl = item.video_url || item.external_url || '';
   const [imgError, setImgError] = useState(false);
-  const [captionExpanded, setCaptionExpanded] = useState(false);
   const captionText = item.caption || '';
   const isCaptionLong = captionText.length > LONG_CAPTION_THRESHOLD || captionText.split('\n').length > 2;
 
-  const handleClick = useCallback(() => {
-    if (clickUrl) {
-      window.open(clickUrl, '_blank', 'noopener,noreferrer');
-    }
-  }, [clickUrl]);
-
   const showImage = !!thumbnail && !imgError;
+
+  const handleClick = useCallback(() => {
+    onOpen(item);
+  }, [onOpen, item]);
+
 
   return (
     <div
@@ -113,7 +111,7 @@ function FeedCard({ item, index }: { item: FeedItem; index: number }) {
         className="home-feed-card-media"
         style={{
           background: showImage ? '#0a0b0e' : placeholder.bg,
-          aspectRatio: isYouTube ? '16 / 9' : '4 / 3',
+          aspectRatio: '4 / 3',
         }}
       >
         {showImage ? (
@@ -158,20 +156,10 @@ function FeedCard({ item, index }: { item: FeedItem; index: number }) {
         )}
         <p
           className="home-feed-card-caption"
-          style={captionExpanded ? { WebkitLineClamp: 'unset', overflow: 'visible' } : undefined}
+          style={{ WebkitLineClamp: 'unset', overflow: 'visible' }}
         >
           {captionText}
         </p>
-        {isCaptionLong && (
-          <button
-            type="button"
-            className="caption-toggle-btn"
-            onClick={(e) => { e.stopPropagation(); setCaptionExpanded(v => !v); }}
-            aria-expanded={captionExpanded}
-          >
-            {captionExpanded ? 'Tutup' : 'Baca selengkapnya'}
-          </button>
-        )}
         <p className="home-feed-card-meta">
           {isCampaign ? 'Admin' : (isVideo || item.source === 'youtube') ? '@BagongNewsYoutube' : '@BagongNews'}
           {item.views ? ` · ${item.views.toLocaleString('id-ID')} views` : ''}
@@ -187,10 +175,12 @@ function FeedSection({
   title,
   data,
   defaultCount = 3,
+  onOpen,
 }: {
   title: string;
   data: FeedItem[];
   defaultCount?: number;
+  onOpen: (item: FeedItem) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const visible = expanded ? data : data.slice(0, defaultCount);
@@ -205,7 +195,7 @@ function FeedSection({
       {visible.length > 0 ? (
         <div className="home-feed-grid">
           {visible.map((item, i) => (
-            <FeedCard key={item.id} item={item} index={i} />
+            <FeedCard key={item.id} item={item} index={i} onOpen={onOpen} />
           ))}
         </div>
       ) : (
@@ -225,12 +215,66 @@ function FeedSection({
   );
 }
 
+/* ── Content Modal (zoom popup for video/image) ── */
+function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () => void }) {
+  if (!item) return null;
+  const isVideo = item.type === 'talk' || (item.type === 'news' && (!!item.video_url || !!item.media_url));
+  const thumbnail = normalizeImageUrl(item.media_url || item.thumbnail_url || item.image_url);
+  const videoUrl = item.video_url || item.external_url || '';
+  // Convert YouTube URL to embed URL
+  const getYouTubeEmbed = (url: string): string | null => {
+    const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    return m ? `https://www.youtube.com/embed/${m[1]}?autoplay=1&rel=0` : null;
+  };
+  const embedUrl = isVideo ? getYouTubeEmbed(videoUrl) : null;
+
+  return (
+    <div className="content-modal-overlay" onClick={onClose}>
+      <div className="content-modal" onClick={(e) => e.stopPropagation()}>
+        <button className="content-modal-close" onClick={onClose} aria-label="Tutup">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
+        </button>
+        <div className="content-modal-media">
+          {isVideo && embedUrl ? (
+            <iframe
+              src={embedUrl}
+              title={item.title || 'Video Player'}
+              allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+              allowFullScreen
+              style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+            />
+          ) : isVideo && videoUrl ? (
+            <video src={videoUrl} controls autoPlay style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', background: '#000' }} />
+          ) : thumbnail ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={thumbnail} alt={item.title || ''} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', background: '#000' }} />
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted-foreground)' }}>Tidak ada media</div>
+          )}
+        </div>
+        <div className="content-modal-body">
+          {item.title && <h3 className="content-modal-title">{item.title}</h3>}
+          <p className="content-modal-caption">{item.caption}</p>
+          <p className="content-modal-meta">
+            {item.type === 'campaign' ? 'Admin' : (isVideo || item.source === 'youtube') ? '@BagongNewsYoutube' : '@BagongNews'}
+            {item.views ? ` · ${item.views.toLocaleString('id-ID')} views` : ''}
+            {' · '}{item.date}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main Home View ── */
 export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
   const [newsData, setNewsData] = useState<FeedItem[]>([]);
   const [talkData, setTalkData] = useState<FeedItem[]>([]);
   const [campaignData, setCampaignData] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedItem, setSelectedItem] = useState<FeedItem | null>(null);
+  const handleOpenItem = useCallback((item: FeedItem) => setSelectedItem(item), []);
+  const handleCloseItem = useCallback(() => setSelectedItem(null), []);
 
   useEffect(() => {
     async function fetchData() {
@@ -251,7 +295,9 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
             date: fmtDate(p.published_at),
             type: 'news' as const,
             views: p.views || 0,
+            publishedAt: p.published_at ? new Date(p.published_at).getTime() : 0,
           }));
+          news.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
           setNewsData(news);
 
           const talks: FeedItem[] = (socialJson.healthTalks || []).map((v: any) => ({
@@ -266,7 +312,9 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
             type: 'talk' as const,
             views: v.views || 0,
             lengthSeconds: v.lengthSeconds || 0,
+            publishedAt: v.published_at ? new Date(v.published_at).getTime() : 0,
           }));
+          talks.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
           setTalkData(talks);
         }
 
@@ -283,7 +331,9 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
             source: 'Admin',
             date: fmtDate(c.start_date || c.created_at),
             type: 'campaign' as const,
+            publishedAt: c.start_date ? new Date(c.start_date).getTime() : (c.created_at ? new Date(c.created_at).getTime() : 0),
           }));
+          campaigns.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
           setCampaignData(campaigns);
         }
       } catch {
@@ -311,9 +361,10 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
   if (activeTab === 'semua-feed') {
     return (
       <div className="home-feed">
-        <FeedSection title="News" data={newsData} />
-        <FeedSection title="Health Campaign" data={campaignData} />
-        <FeedSection title="Health Talk" data={talkData} />
+        <FeedSection title="Health Campaign" data={campaignData} onOpen={handleOpenItem} />
+        <FeedSection title="Health Talk" data={talkData} onOpen={handleOpenItem} />
+        <FeedSection title="News" data={newsData} onOpen={handleOpenItem} />
+        <ContentModal item={selectedItem} onClose={handleCloseItem} />
       </div>
     );
   }
@@ -326,7 +377,8 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
 
   return (
     <div className="home-feed">
-      <FeedSection title={config.title} data={config.data} defaultCount={99} />
+      <FeedSection title={config.title} data={config.data} defaultCount={99} onOpen={handleOpenItem} />
+      <ContentModal item={selectedItem} onClose={handleCloseItem} />
     </div>
   );
 }

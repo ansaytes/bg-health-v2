@@ -158,9 +158,9 @@ interface SidebarItem {
 
 const HOME_SIDEBAR: SidebarItem[] = [
   { key: 'semua-feed', label: 'Semua Feed', icon: <IconSemuaFeed /> },
-  { key: 'news', label: 'News', icon: <IconNews /> },
   { key: 'health-campaign', label: 'Health Campaign', icon: <IconHealthCampaign /> },
   { key: 'health-talk', label: 'Health Talk', icon: <IconHealthTalk /> },
+  { key: 'news', label: 'News', icon: <IconNews /> },
 ];
 
 const DASH_SIDEBAR: SidebarItem[] = [
@@ -354,6 +354,8 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
   const [regJobsite, setRegJobsite] = useState("");
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegPassword, setShowRegPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -407,12 +409,12 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
 
         <div style={{ paddingTop: 24, paddingBottom: 4, textAlign: 'center' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/BM.png" alt="BG-Health" style={{ width: 48, height: 48, objectFit: 'contain', margin: '0 auto', display: 'block' }} />
+          <img src="/BM.png" alt="BG-Health" className="login-logo-rotating" />
         </div>
 
         <div className="login-card-body">
           <h2>{mode === 'login' ? 'Masuk' : 'Daftar'}</h2>
-          <p className="login-card-subtitle">{mode === 'login' ? 'Masuk ke BG-Health untuk mengakses dashboard' : 'Daftar akun baru — menunggu persetujuan superuser'}</p>
+          <p className="login-card-subtitle">{mode === 'login' ? 'Masuk ke BG-Health untuk mengakses dashboard' : 'Daftar akun baru'}</p>
 
           {mode === 'login' ? (
           <>
@@ -430,14 +432,33 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
             </div>
             <div className="login-input-group">
               <label className="login-input-label">Password</label>
-              <input
-                type="password"
-                className="login-input"
-                placeholder="Masukkan password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showLoginPassword ? 'text' : 'password'}
+                  className="login-input"
+                  placeholder="Masukkan password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  style={{ paddingRight: 40 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPassword(!showLoginPassword)}
+                  className="password-toggle-btn"
+                  aria-label={showLoginPassword ? 'Sembunyikan sandi' : 'Tampilkan sandi'}
+                >
+                  {showLoginPassword ? (
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
             {error && (
               <p className="login-error-msg">{error}</p>
@@ -478,7 +499,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
               if (!json.success) throw new Error(json.error || 'Gagal mendaftar');
               setMode('login');
               setError('');
-              alert('Pendaftaran berhasil! Akun Anda menunggu persetujuan superuser.');
+              alert('Pendaftaran berhasil! Silakan login.');
             } catch (err) {
               setError(err instanceof Error ? err.message : 'Gagal mendaftar');
             } finally {
@@ -526,7 +547,33 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
             </div>
             <div className="login-input-group">
               <label className="login-input-label">Password *</label>
-              <input type="password" className="login-input" placeholder="Minimal 6 karakter" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} required />
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showRegPassword ? 'text' : 'password'}
+                  className="login-input"
+                  placeholder="Minimal 6 karakter"
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  required
+                  style={{ paddingRight: 40 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowRegPassword(!showRegPassword)}
+                  className="password-toggle-btn"
+                  aria-label={showRegPassword ? 'Sembunyikan sandi' : 'Tampilkan sandi'}
+                >
+                  {showRegPassword ? (
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
             {error && <p className="login-error-msg">{error}</p>}
             <button type="submit" className="login-btn" disabled={loading}>

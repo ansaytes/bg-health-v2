@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+import DownloadButton from '@/components/ui/download-button';
 const JOBSITES = [
   'All Site','Aceh','Angsana','Balikpapan','Banjarmasin','Banyuwangi',
   'Batu Kajang','Bengalon','Binuang','Binungan','Bontang','Bukit Pinang',
@@ -221,7 +222,7 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
           <span style={{ margin: '0 6px', opacity: 0.3 }}>|</span>
           {rujukCount} rujuk RS
         </span>
-      </div>
+       <DownloadButton getData={() => rows} filename="kunjungan" title="DataKunjungan" variant="compact" /></div>
 
       {/* Filters */}
       <div className="raw-table-filter-bar">

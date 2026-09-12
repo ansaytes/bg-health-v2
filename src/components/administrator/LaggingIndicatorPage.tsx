@@ -302,11 +302,11 @@ function StatistikKesehatanForm() {
         <div style={{ height: 1, background: 'var(--border)', margin: '12px 0' }} />
 
         {/* Section: Aggregate Count Bulanan */}
-        <SectionHeader icon="chart" title="Aggregate Count Bulanan" subtitle="Jumlah kejadian bulan ini — bisa di-auto-aggregate" />
+        <SectionHeader icon="chart" title="Aggregate Count Bulanan" subtitle="Jumlah kejadian bulan ini" />
         <div style={{ marginBottom: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <button type="button" onClick={handleAutoAggregate} disabled={aggregating}
             className="admin-form-btn-secondary compact-btn">
-            {aggregating ? 'Meng-aggregate...' : 'Auto-Aggregate dari Halaman Lain'}
+            {aggregating ? 'Meng-aggregate...' : 'Auto-Aggregate'}
           </button>
           {aggregateInfo && (
             <span style={{ fontSize: 10, color: 'var(--success)', fontWeight: 500 }}>
@@ -339,11 +339,11 @@ function StatistikKesehatanForm() {
         <div style={{ height: 1, background: 'var(--border)', margin: '12px 0' }} />
 
         {/* Section: Lagging Indicators */}
-        <SectionHeader icon="pulse" title="Lagging Indicators" subtitle="7 indikator turunan — bisa input manual atau auto-hitung" />
+        <SectionHeader icon="pulse" title="Lagging Indicators" subtitle="7 Indikator - Kepdirjen no. 185" />
         <div style={{ marginBottom: 10 }}>
           <button type="button" onClick={autoCalcLagging}
             className="admin-form-btn-secondary compact-btn">
-            Auto-Hitung dari Aggregate
+            Auto-Hitung
           </button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>

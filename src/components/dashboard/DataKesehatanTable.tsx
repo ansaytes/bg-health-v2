@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+import DownloadButton from '@/components/ui/download-button';
 /* Column definitions matching Excel: Data Karyawan Sakit */
 const COLUMNS = [
   { key: 'nik', label: 'NIK' },
@@ -238,7 +239,7 @@ export default function DataKesehatanTable({ canEdit = false }: DataKesehatanTab
           <span style={{ margin: '0 6px', opacity: 0.3 }}>|</span>
           {totalSpell} spell
         </span>
-      </div>
+       <DownloadButton getData={() => rows} filename="kesehatan" title="DataKesehatan" variant="compact" /></div>
 
       {/* Filters */}
       <div className="raw-table-filter-bar">

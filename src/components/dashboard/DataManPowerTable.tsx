@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+import DownloadButton from '@/components/ui/download-button';
 const JOBSITES = [
   'All Site','Aceh','Angsana','Balikpapan','Banjarmasin','Banyuwangi',
   'Batu Kajang','Bengalon','Binuang','Binungan','Bontang','Bukit Pinang',
@@ -171,7 +172,7 @@ export default function DataManPowerTable({ canEdit = false }: DataManPowerTable
       <div className="raw-table-header-bar">
         <span>Data Σ Man Power per Site per Bulan</span>
         <span style={{ color: 'var(--fg-dim)' }}>{rows.length} records</span>
-      </div>
+       <DownloadButton getData={() => rows} filename="man-power" title="DataManPower" variant="compact" /></div>
       <div className="raw-table-filter-bar">
         <div className="filter-tag">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>

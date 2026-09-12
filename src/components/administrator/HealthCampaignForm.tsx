@@ -185,9 +185,9 @@ export default function HealthCampaignForm() {
                 <label className="admin-label">URL Gambar (Google Drive / link langsung)</label>
                 <input type="text" className="admin-input" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://drive.google.com/... atau https://..." />
                 {imageUrl && (
-                  <div style={{ marginTop: 8, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)', maxWidth: 300 }}>
+                  <div style={{ marginTop: 8, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--muted)', maxWidth: 400, aspectRatio: '4 / 3', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={imageUrl} alt="Preview" style={{ width: '100%', height: 'auto', display: 'block' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    <img src={imageUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={(e) => { const img = e.target as HTMLImageElement; img.style.display = 'none'; const parent = img.parentElement; if (parent) parent.innerHTML = '<div style=\"text-align:center;color:var(--muted-foreground);font-size:11px;padding:20px\">Gambar gagal dimuat. Periksa URL atau pastikan akses publik.</div>'; }} />
                   </div>
                 )}
               </div>

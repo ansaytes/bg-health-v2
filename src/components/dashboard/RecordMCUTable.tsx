@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 
+import DownloadButton from '@/components/ui/download-button';
 const JOBSITES = [
   'All Site','Aceh','Angsana','Balikpapan','Banjarmasin','Banyuwangi',
   'Batu Kajang','Bengalon','Binuang','Binungan','Bontang','Bukit Pinang',
@@ -66,7 +67,7 @@ export default function RecordMCUTable() {
           <span style={{ margin: '0 6px', opacity: 0.3 }}>|</span>
           {selesaiCount} selesai
         </span>
-      </div>
+       <DownloadButton getData={() => rows} filename="mcu" title="RecordMCU" variant="compact" /></div>
 
       {/* Filters */}
       <div className="raw-table-filter-bar">
