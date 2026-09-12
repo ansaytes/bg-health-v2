@@ -8,7 +8,13 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Server-side admin client (service role) — for creating users
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : supabase;
+
+// Preview mode handling: if access token is the preview mock token,
+// treat caller as the role specified in NEXT_PUBLIC_PREVIEW_ROLE.
+const PREVIEW_TOKEN = 'preview-access-token';
+const PREVIEW_ROLE = process.env.NEXT_PUBLIC_PREVIEW_ROLE as string | undefined;
+
 
 // Helper: verify session and get user profile role
 async function getSessionRole(req: NextRequest) {
@@ -22,6 +28,11 @@ async function getSessionRole(req: NextRequest) {
   }
 
   if (!accessToken) return null;
+  // Preview mode bypass — preview mode is set in .env.local via NEXT_PUBLIC_PREVIEW_ROLE
+  if (accessToken === 'preview-access-token' && PREVIEW_ROLE) {
+    return { userId: 'preview-0000-0000-0000-000000000001', role: PREVIEW_ROLE };
+  }
+
 
   const { data: { user }, error } = await supabase.auth.getUser(accessToken);
   if (error || !user) return null;
@@ -89,6 +100,16 @@ export async function POST(req: NextRequest) {
       const authInfo = await getSessionRole(req);
       if (!authInfo || !['superuser', 'administrator'].includes(authInfo.role)) {
         return NextResponse.json({ error: 'Akses ditolak. Hanya administrator yang dapat mendaftarkan pengguna.' }, { status: 403 });
+      }
+
+      // PREVIEW_REGISTER_MOCK: short-circuit in preview mode (no real Supabase)
+      const _reqAuthToken = req.headers.get('authorization')?.replace('Bearer ', '');
+      if (_reqAuthToken === 'preview-access-token' && process.env.NEXT_PUBLIC_PREVIEW_ROLE) {
+        return NextResponse.json({
+          success: true,
+          message: 'Pengguna berhasil didaftarkan (preview mode — tidak disimpan ke database)',
+          userId: 'preview-' + Date.now(),
+        });
       }
 
       if (!username || !password || !role) {

@@ -293,7 +293,7 @@ export default function InputLaggingIndicator() {
                 Jobsite <span style={{ color: 'var(--brand-primary)' }}>*</span>
               </label>
               <select value={form.jobsite === '__custom__' ? '__custom__' : (form.jobsite || '')} onChange={(e) => { handleChange('jobsite', e.target.value); if (e.target.value !== '__custom__') setCustomSite(''); }} className="admin-input">
-                <option value="">Pilih Jobsite...</option>
+                <option value="">- Pilih Jobsite -</option>
                 {JOBSITES.filter(s => s !== 'All Site').map(s => (
                   <option key={s} value={s}>{s}</option>
                 ))}
@@ -312,7 +312,7 @@ export default function InputLaggingIndicator() {
                 Bulan <span style={{ color: 'var(--brand-primary)' }}>*</span>
               </label>
               <select value={form.bulan || ''} onChange={(e) => handleChange('bulan', e.target.value)} className="admin-input">
-                <option value="">Pilih Bulan...</option>
+                <option value="">- Pilih Bulan -</option>
                 {MONTHS.map((m, i) => (
                   <option key={m} value={String(i + 1)}>{m}</option>
                 ))}

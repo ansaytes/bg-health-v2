@@ -52,20 +52,53 @@ function fmtDuration(secs: number): string {
   return `${m}:${String(s).padStart(2,'0')}`;
 }
 
+/* ── Normalize image URLs ──
+   Google Drive share links cannot be used directly as <img src>.
+   Convert to a direct image URL. Returns null if input is empty/invalid. */
+function normalizeImageUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const url = raw.trim();
+  if (!url) return null;
+
+  // Google Drive: /file/d/FILE_ID/...
+  let m = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w1000-h600-p-k-no-nu`;
+
+  // Google Drive: open?id=FILE_ID
+  m = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w1000-h600-p-k-no-nu`;
+
+  // Google Drive: uc?export=view&id=FILE_ID
+  m = url.match(/drive\.google\.com\/uc\?.*id=([a-zA-Z0-9_-]+)/);
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w1000-h600-p-k-no-nu`;
+
+  return url;
+}
+
+/* Caption considered "long" if >120 chars or >2 lines — needs toggle */
+const LONG_CAPTION_THRESHOLD = 120;
+
 /* ── Feed Card Component ── */
 function FeedCard({ item, index }: { item: FeedItem; index: number }) {
   const placeholder = PLACEHOLDER_BG[index % PLACEHOLDER_BG.length];
   const isVideo = item.type === 'talk' || (item.type === 'news' && (!!item.video_url || !!item.media_url));
   const isCampaign = item.type === 'campaign';
   const isYouTube = item.source === 'youtube' || item.type === 'talk';
-  const thumbnail = item.media_url || item.thumbnail_url || item.image_url;
+  // Normalize the thumbnail URL (auto-converts Google Drive share links to direct image URLs)
+  const thumbnail = normalizeImageUrl(item.media_url || item.thumbnail_url || item.image_url);
   const clickUrl = item.video_url || item.external_url || '';
+  const [imgError, setImgError] = useState(false);
+  const [captionExpanded, setCaptionExpanded] = useState(false);
+  const captionText = item.caption || '';
+  const isCaptionLong = captionText.length > LONG_CAPTION_THRESHOLD || captionText.split('\n').length > 2;
 
   const handleClick = useCallback(() => {
     if (clickUrl) {
       window.open(clickUrl, '_blank', 'noopener,noreferrer');
     }
   }, [clickUrl]);
+
+  const showImage = !!thumbnail && !imgError;
 
   return (
     <div
@@ -79,20 +112,17 @@ function FeedCard({ item, index }: { item: FeedItem; index: number }) {
       <div
         className="home-feed-card-media"
         style={{
-          background: thumbnail ? '#0a0b0e' : placeholder.bg,
-          aspectRatio: isYouTube ? '16 / 9' : undefined,
+          background: showImage ? '#0a0b0e' : placeholder.bg,
+          aspectRatio: isYouTube ? '16 / 9' : '4 / 3',
         }}
       >
-        {thumbnail ? (
+        {showImage ? (
           <img
             src={thumbnail}
             alt={item.title || ''}
             loading="lazy"
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-            onError={(e) => {
-              const img = e.target as HTMLImageElement;
-              img.style.opacity = '0';
-            }}
+            onError={() => setImgError(true)}
           />
         ) : (
           <div style={{ padding: 16, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
@@ -106,7 +136,7 @@ function FeedCard({ item, index }: { item: FeedItem; index: number }) {
             </span>
           </div>
         )}
-        {(isVideo || clickUrl) && thumbnail && (
+        {(isVideo || clickUrl) && showImage && (
           <div className="home-feed-play-btn">
             <svg viewBox="0 0 24 24" fill="white" width="22" height="22">
               <polygon points="6,3 20,12 6,21" />
@@ -126,7 +156,22 @@ function FeedCard({ item, index }: { item: FeedItem; index: number }) {
         {item.title && (
           <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--foreground)', marginBottom: 4, lineHeight: 1.3 }}>{item.title}</p>
         )}
-        <p className="home-feed-card-caption">{item.caption}</p>
+        <p
+          className="home-feed-card-caption"
+          style={captionExpanded ? { WebkitLineClamp: 'unset', overflow: 'visible' } : undefined}
+        >
+          {captionText}
+        </p>
+        {isCaptionLong && (
+          <button
+            type="button"
+            className="caption-toggle-btn"
+            onClick={(e) => { e.stopPropagation(); setCaptionExpanded(v => !v); }}
+            aria-expanded={captionExpanded}
+          >
+            {captionExpanded ? 'Tutup' : 'Baca selengkapnya'}
+          </button>
+        )}
         <p className="home-feed-card-meta">
           {isCampaign ? 'Admin' : (isVideo || item.source === 'youtube') ? '@BagongNewsYoutube' : '@BagongNews'}
           {item.views ? ` · ${item.views.toLocaleString('id-ID')} views` : ''}

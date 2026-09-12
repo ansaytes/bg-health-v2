@@ -6,7 +6,13 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : supabase;
+
+// Preview mode handling: if access token is the preview mock token,
+// treat caller as the role specified in NEXT_PUBLIC_PREVIEW_ROLE.
+const PREVIEW_TOKEN = 'preview-access-token';
+const PREVIEW_ROLE = process.env.NEXT_PUBLIC_PREVIEW_ROLE as string | undefined;
+
 
 async function getCallerRole(req: NextRequest): Promise<{ userId: string; role: string } | null> {
   const authHeader = req.headers.get('authorization');
@@ -16,6 +22,11 @@ async function getCallerRole(req: NextRequest): Promise<{ userId: string; role: 
     if (cookie) accessToken = cookie;
   }
   if (!accessToken) return null;
+  // Preview mode bypass — preview mode is set in .env.local via NEXT_PUBLIC_PREVIEW_ROLE
+  if (accessToken === 'preview-access-token' && PREVIEW_ROLE) {
+    return { userId: 'preview-0000-0000-0000-000000000001', role: PREVIEW_ROLE };
+  }
+
 
   // Pakai admin client (service role) untuk getUser — bypass RLS
   const client = supabaseServiceKey ? supabaseAdmin : supabase;
@@ -44,6 +55,18 @@ export async function GET(req: NextRequest) {
         caller_found: !!caller,
         caller_role: caller?.role || null,
       }, { status: 403 });
+    }
+
+    // Preview mode: return mock user list so admin UI works without real Supabase
+    const PREVIEW_TOKEN_VAL = 'preview-access-token';
+    const reqAuthToken = req.headers.get('authorization')?.replace('Bearer ', '');
+    if (reqAuthToken === PREVIEW_TOKEN_VAL && PREVIEW_ROLE) {
+      const PREVIEW_MOCK_USERS = [
+        { id: 'preview-1', user_id: 'preview-0000-0000-0000-000000000001', username: 'superuser.preview', full_name: 'Preview Superuser', role: 'superuser', national_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 'preview-2', user_id: 'preview-0000-0000-0000-000000000002', username: 'admin.preview', full_name: 'Preview Administrator', role: 'administrator', national_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 'preview-3', user_id: 'preview-0000-0000-0000-000000000003', username: 'viewer.preview', full_name: 'Preview Viewer', role: 'viewer', national_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      ];
+      return NextResponse.json({ users: PREVIEW_MOCK_USERS });
     }
 
     // Pakai admin client untuk bypass RLS

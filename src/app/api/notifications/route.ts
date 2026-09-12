@@ -3,8 +3,12 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseAnonKey || 'placeholder-anon-key');
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : supabase;
+
+// Preview mode handling
+const PREVIEW_ROLE = process.env.NEXT_PUBLIC_PREVIEW_ROLE as string | undefined;
 
 async function getCallerRole(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
@@ -14,6 +18,10 @@ async function getCallerRole(req: NextRequest) {
     if (cookie) accessToken = cookie;
   }
   if (!accessToken) return null;
+  // Preview mode bypass
+  if (accessToken === 'preview-access-token' && PREVIEW_ROLE) {
+    return { userId: 'preview-0000-0000-0000-000000000001', role: PREVIEW_ROLE };
+  }
 
   const client = supabaseServiceKey ? supabaseAdmin : createClient(supabaseUrl, supabaseAnonKey);
   const { data: { user }, error } = await client.auth.getUser(accessToken);
