@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { decryptEmployee, encrypt } from '@/lib/encryption';
+import { decryptEmployee, hashField } from '@/lib/encryption';
 
 // Server-side client with SERVICE ROLE KEY — bypasses RLS so employee lookup works
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -10,15 +10,16 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey || 'placeholder-anon-
 // Use admin client only when service key is available (skip during build)
 const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : supabase;
 
-/* ═══════════════════════════════════
-   POST — Search employee by NIK, National ID, or Nama
-   Body: { query: "3505181309900001" | "230802778" | "Budi" }
-   Returns array of raw employee records from DB
-   ═══════════════════════════════════ */
+type SearchBy = 'nik' | 'national_id' | 'nama';
+
+/* POST — Search employee by NIK, National ID, or Nama
+   Body: { query: "230802778" | "3505..." | "Budi", searchBy?: "nik" | "national_id" | "nama" }
+   Returns array of raw employee records from DB (decrypted) */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const searchKey = body.nikKtp || body.query || '';
+    const searchBy: SearchBy = (body.searchBy as SearchBy) || 'nik';
 
     if (!searchKey || typeof searchKey !== 'string' || searchKey.trim().length < 2) {
       return NextResponse.json(
@@ -28,37 +29,51 @@ export async function POST(request: NextRequest) {
     }
 
     const q = searchKey.trim();
-
     // Sanitize: remove characters that could break the filter
     const safe = q.replace(/["'%\\]/g, '');
 
-    // NIK & national_id are now encrypted in DB.
-    // For exact match (NIK/national_id), encrypt query first, then filter by encrypted value.
-    // For text search (name, department, site_name), use ilike as before.
-    const encryptedNik = encrypt(safe); // null if ENCRYPTION_KEY not set, so it falls back to plain
+    // Build OR filter based on searchBy parameter
+    // - nik: hash query, filter by national_id_hash (covers both nik and national_id lookups)
+    // - national_id: hash query, filter by national_id_hash
+    // - nama: plain-text ilike search (nama column is NOT encrypted)
+    const filters: string[] = [];
 
-    let query = supabaseAdmin
+    if (searchBy === 'nik' || searchBy === 'national_id') {
+      // Hash the query for deterministic lookup
+      const queryHash = hashField(safe);
+      if (queryHash) {
+        filters.push(`national_id_hash.eq."${queryHash}"`);
+      }
+      // Fallback for preview mode (no ENCRYPTION_KEY)
+      if (!queryHash) {
+        filters.push(`national_id.eq."${safe}"`);
+        filters.push(`nik.eq."${safe}"`);
+      }
+    } else if (searchBy === 'nama') {
+      // Name search: plain-text ilike (nama column NOT encrypted)
+      filters.push(`nama.ilike."%${safe}%"`);
+      // Also search department & site_name as bonus
+      filters.push(`department.ilike."%${safe}%"`);
+      filters.push(`site_name.ilike."%${safe}%"`);
+    } else {
+      // Default fallback: try hash + ilike (covers all cases)
+      const queryHash = hashField(safe);
+      if (queryHash) {
+        filters.push(`national_id_hash.eq."${queryHash}"`);
+      } else {
+        filters.push(`national_id.eq."${safe}"`);
+        filters.push(`nik.eq."${safe}"`);
+      }
+      filters.push(`nama.ilike."%${safe}%"`);
+      filters.push(`department.ilike."%${safe}%"`);
+      filters.push(`site_name.ilike."%${safe}%"`);
+    }
+
+    const { data, error } = await supabaseAdmin
       .from('employees')
       .select('nik, nama, gender, department, division, job_position, site_name, national_id, phone_number, level_golongan, age, place_of_birth, birth_date, last_education, place_of_hire, address, religion, masa_kerja, employee_status, employment_status, tanggal_pkwt, tanggal_resign, grading, marital_status, child, specification_job, area, spesification')
+      .or(filters.join(','))
       .limit(20);
-
-    // Build or-filter: encrypted NIK exact match, encrypted national_id exact match,
-    // + plain-text ilike search for name/department/site_name
-    const filters = [];
-    if (encryptedNik) {
-      filters.push(`nik.eq.\"${encryptedNik}\"`);
-      filters.push(`national_id.eq.\"${encryptedNik}\"`);
-    } else {
-      // Fallback: plain-text NIK match (when ENCRYPTION_KEY not set, e.g. preview mode)
-      filters.push(`nik.eq.\"${safe}\"`);
-      filters.push(`national_id.eq.\"${safe}\"`);
-    }
-    filters.push(`nama.ilike.\"%${safe}%\"`);
-    filters.push(`phone_number.ilike.\"%${safe}%\"`);
-    filters.push(`department.ilike.\"%${safe}%\"`);
-    filters.push(`site_name.ilike.\"%${safe}%\"`);
-
-    const { data, error } = await query.or(filters.join(','));
 
     if (error) {
       console.error('Employee search error:', error);

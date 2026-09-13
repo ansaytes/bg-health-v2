@@ -6,6 +6,12 @@ on:
     - cron: '23 23 * * *'
   workflow_dispatch:
     # Bisa juga trigger manual dari GitHub Actions tab
+    inputs:
+      force_fresh:
+        description: 'Force fresh sync (truncate table first)'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   sync:
@@ -26,4 +32,5 @@ jobs:
           SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+          FORCE_FRESH: ${{ inputs.force_fresh == true && '1' || '0' }}
         run: node scripts/sync-employees.mjs

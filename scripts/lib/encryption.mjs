@@ -1,10 +1,5 @@
 // lib/encryption.mjs — ESM version for sync-employees.mjs (GitHub Actions)
-// Copy of lib/encryption.ts, but in plain JS (ESM) for Node.js scripts
-//
-// Usage:
-//   import { encrypt, decrypt, encryptEmployee } from './lib/encryption.mjs';
-//   const enc = encrypt('230802778');   // hex string
-//   const plain = decrypt(enc);         // '230802778'
+// Mirror of src/lib/encryption.ts but in plain JS for Node.js scripts
 
 import crypto from 'crypto';
 
@@ -56,13 +51,35 @@ export function decrypt(hex) {
   }
 }
 
+/**
+ * Deterministic HMAC-SHA256 hash — same input always produces same output
+ * Use for DB lookup columns (cannot be reversed)
+ */
+export function hashField(plain) {
+  if (plain == null || plain === '') return null;
+  try {
+    const key = getKey();
+    return crypto.createHmac('sha256', key).update(String(plain), 'utf8').digest('hex');
+  } catch (err) {
+    console.error('Hash error:', err);
+    return null;
+  }
+}
+
 const SENSITIVE_FIELDS = ['nik', 'national_id', 'phone_number', 'place_of_birth', 'address'];
+const LOOKUP_FIELDS = ['national_id'];
 
 export function encryptEmployee(emp) {
   const result = { ...emp };
   for (const field of SENSITIVE_FIELDS) {
     if (result[field] != null) {
       result[field] = encrypt(String(result[field]));
+    }
+  }
+  for (const field of LOOKUP_FIELDS) {
+    const hashKey = `${field}_hash`;
+    if (emp[field] != null) {
+      result[hashKey] = hashField(String(emp[field]));
     }
   }
   return result;
@@ -75,5 +92,8 @@ export function decryptEmployee(emp) {
       result[field] = decrypt(result[field]) || result[field];
     }
   }
+  delete result.national_id_hash;
+  delete result.nik_hash;
+  delete result.phone_number_hash;
   return result;
 }

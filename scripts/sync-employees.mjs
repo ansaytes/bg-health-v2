@@ -18,6 +18,13 @@ if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 64) {
   process.exit(1);
 }
 
+// FORCE_FRESH=1 akan truncate tabel employees sebelum insert
+// Berguna kalau ada data duplicate / plain-text yang perlu dihapus total
+const FORCE_FRESH = process.env.FORCE_FRESH === '1' || process.env.FORCE_FRESH === 'true';
+if (FORCE_FRESH) {
+  console.log('⚠️  FORCE_FRESH mode: akan TRUNCATE tabel employees sebelum insert!');
+}
+
 const COLUMN_MAP = {
   0: 'nik', 1: 'nama', 2: 'gender', 3: 'department', 4: 'division',
   // 5: USER (skipped)
@@ -176,6 +183,26 @@ async function main() {
 
   const BATCH = 500;
   const failedNiks = [];
+
+  // Kalau FORCE_FRESH, hapus semua data dulu
+  if (FORCE_FRESH) {
+    console.log('Truncating employees table...');
+    const delRes = await fetch(`${SUPABASE_URL}/rest/v1/employees?id=neq.00000000-0000-0000-0000-000000000000`, {
+      method: 'DELETE',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Prefer': 'return=minimal',
+      },
+    });
+    if (!delRes.ok) {
+      const err = await delRes.text();
+      console.error(`Truncate failed: ${delRes.status} ${err}`);
+      // Continue anyway, mungkin tabel sudah kosong
+    } else {
+      console.log('Truncate OK, tabel kosong. Siap insert data fresh.');
+    }
+  }
 
   for (let i = 0; i < employees.length; i += BATCH) {
     const batch = employees.slice(i, i + BATCH);

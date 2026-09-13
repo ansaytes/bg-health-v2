@@ -15,6 +15,8 @@ export interface EmployeeData {
   [key: string]: string | undefined;
 }
 
+export type SearchBy = 'nik' | 'national_id' | 'nama';
+
 interface EmployeeLookupInputProps {
   value: string;
   onChange: (value: string) => void;
@@ -28,6 +30,10 @@ interface EmployeeLookupInputProps {
   minLength?: number;
   debounceMs?: number;
   inputStyle?: React.CSSProperties;
+  /** Show the "search by" dropdown selector. Default: true */
+  showSearchBySelector?: boolean;
+  /** Default search field. Default: 'nik' */
+  defaultSearchBy?: SearchBy;
 }
 
 type LookupStatus = 'idle' | 'searching' | 'found' | 'not_found';
@@ -36,23 +42,37 @@ const SPINNER_COLOR = '#ff4d00';
 const FOUND_COLOR = '#00B894';
 const NOT_FOUND_COLOR = '#FF4444';
 
+const SEARCH_BY_OPTIONS: { value: SearchBy; label: string; placeholder: string; minLength: number }[] = [
+  { value: 'nik', label: 'NIK', placeholder: 'Masukkan NIK karyawan (mis. 230802778)', minLength: 4 },
+  { value: 'national_id', label: 'National ID', placeholder: 'Masukkan National ID / NIK KTP', minLength: 6 },
+  { value: 'nama', label: 'Nama', placeholder: 'Ketik nama karyawan (mis. Budi)', minLength: 3 },
+];
+
 export default function EmployeeLookupInput({
   value,
   onChange,
   onEmployeeFound,
-  placeholder = 'Masukkan NIK karyawan',
+  placeholder: placeholderProp,
   label,
   required,
   className = 'admin-input',
   autoFill,
   onAutoFill,
-  minLength = 6,
+  minLength: minLengthProp,
   debounceMs = 500,
   inputStyle,
+  showSearchBySelector = true,
+  defaultSearchBy = 'nik',
 }: EmployeeLookupInputProps) {
   const [status, setStatus] = useState<LookupStatus>('idle');
+  const [searchBy, setSearchBy] = useState<SearchBy>(defaultSearchBy);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSearchedValue = useRef<string>('');
+
+  // Dynamic placeholder based on searchBy
+  const currentOption = SEARCH_BY_OPTIONS.find(o => o.value === searchBy) || SEARCH_BY_OPTIONS[0];
+  const placeholder = placeholderProp || currentOption.placeholder;
+  const minLength = minLengthProp || currentOption.minLength;
 
   useEffect(() => {
     return () => {
@@ -61,16 +81,16 @@ export default function EmployeeLookupInput({
   }, []);
 
   const doLookup = useCallback(
-    async (nikValue: string) => {
-      if (nikValue.length < minLength || nikValue === lastSearchedValue.current) return;
-      lastSearchedValue.current = nikValue;
+    async (searchValue: string) => {
+      if (searchValue.length < minLength || searchValue === lastSearchedValue.current) return;
+      lastSearchedValue.current = searchValue;
 
       setStatus('searching');
       try {
         const res = await fetch('/api/employee', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: nikValue }),
+          body: JSON.stringify({ query: searchValue, searchBy }),
         });
         const json = await res.json();
         if (json.success && json.data && json.data.length > 0) {
@@ -91,7 +111,7 @@ export default function EmployeeLookupInput({
         setStatus('not_found');
       }
     },
-    [autoFill, onAutoFill, onEmployeeFound, minLength]
+    [autoFill, onAutoFill, onEmployeeFound, minLength, searchBy]
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,6 +131,14 @@ export default function EmployeeLookupInput({
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
       doLookup(value);
     }
+  };
+
+  const handleSearchByChange = (newSearchBy: SearchBy) => {
+    setSearchBy(newSearchBy);
+    setStatus('idle');
+    lastSearchedValue.current = '';
+    // Clear current value when switching search type (different fields have different formats)
+    onChange('');
   };
 
   const borderOverride: React.CSSProperties = {
@@ -156,6 +184,30 @@ export default function EmployeeLookupInput({
           {label}
           {required && <span style={{ color: '#ff4d00', marginLeft: 2 }}>*</span>}
         </label>
+      )}
+      {showSearchBySelector && (
+        <div style={{ display: 'flex', gap: 4, marginBottom: 6, flexWrap: 'wrap' }}>
+          {SEARCH_BY_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => handleSearchByChange(opt.value)}
+              style={{
+                padding: '3px 10px',
+                fontSize: 10,
+                fontWeight: 600,
+                borderRadius: 6,
+                border: '1px solid var(--border)',
+                background: searchBy === opt.value ? 'var(--brand-primary, #ff4d00)' : 'transparent',
+                color: searchBy === opt.value ? '#fff' : 'var(--muted-foreground)',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       )}
       <div style={{ position: 'relative' }}>
         <input
