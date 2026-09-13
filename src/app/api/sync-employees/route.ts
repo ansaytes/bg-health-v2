@@ -134,7 +134,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Supabase credentials not configured' }, { status: 500 });
   }
 
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const supabase = createClient(supabaseUrl, supabaseServiceKey || 'placeholder-service-key');
   const { count, error } = await supabase
     .from('employees')
     .select('*', { count: 'exact', head: true });
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
     const skipped = allEmployees.length - employees.length;
 
     // 3. Upsert to Supabase: batch 500 → fallback 50 → fallback 1
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(supabaseUrl, supabaseServiceKey || 'placeholder-service-key');
     let totalUpserted = 0;
     let batchErrors = 0;
     const failedNiks: string[] = [];

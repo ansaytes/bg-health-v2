@@ -4,8 +4,11 @@ import { decryptEmployee, encrypt } from '@/lib/encryption';
 
 // Server-side client with SERVICE ROLE KEY — bypasses RLS so employee lookup works
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+const supabase = createClient(supabaseUrl, supabaseAnonKey || 'placeholder-anon-key');
+// Use admin client only when service key is available (skip during build)
+const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : supabase;
 
 /* ═══════════════════════════════════
    POST — Search employee by NIK, National ID, or Nama
