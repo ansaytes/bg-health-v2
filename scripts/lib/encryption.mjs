@@ -56,7 +56,7 @@ export function decrypt(hex) {
   }
 }
 
-const SENSITIVE_FIELDS = ['nik', 'national_id', 'phone_number', 'place_of_birth', 'birth_date', 'address'];
+const SENSITIVE_FIELDS = ['nik', 'national_id', 'phone_number', 'place_of_birth', 'address'];
 
 export function encryptEmployee(emp) {
   const result = { ...emp };

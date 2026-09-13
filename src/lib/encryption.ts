@@ -69,7 +69,7 @@ export function decrypt(hex: string | null | undefined): string | null {
  * Encrypt object of employee fields — returns object ready for DB insert
  */
 export function encryptEmployee(emp: Record<string, any>): Record<string, any> {
-  const SENSITIVE_FIELDS = ['nik', 'national_id', 'phone_number', 'place_of_birth', 'birth_date', 'address'];
+  const SENSITIVE_FIELDS = ['nik', 'national_id', 'phone_number', 'place_of_birth', 'address'];
   const result: Record<string, any> = { ...emp };
   for (const field of SENSITIVE_FIELDS) {
     if (result[field] != null) {
@@ -83,7 +83,7 @@ export function encryptEmployee(emp: Record<string, any>): Record<string, any> {
  * Decrypt object of employee fields — returns object with plain-text data
  */
 export function decryptEmployee(emp: Record<string, any>): Record<string, any> {
-  const SENSITIVE_FIELDS = ['nik', 'national_id', 'phone_number', 'place_of_birth', 'birth_date', 'address'];
+  const SENSITIVE_FIELDS = ['nik', 'national_id', 'phone_number', 'place_of_birth', 'address'];
   const result: Record<string, any> = { ...emp };
   for (const field of SENSITIVE_FIELDS) {
     if (result[field] != null && typeof result[field] === 'string') {

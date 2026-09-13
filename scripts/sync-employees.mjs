@@ -151,7 +151,8 @@ async function upsertSingle(emp) {
   });
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`${res.status}: ${err}`);
+    // Include NIK in error message so we know which row failed
+    throw new Error(`NIK ${emp.nik}: ${res.status}: ${err}`);
   }
   return 1;
 }
