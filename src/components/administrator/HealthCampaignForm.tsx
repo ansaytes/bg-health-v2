@@ -12,12 +12,71 @@ interface Campaign {
   created_at: string;
 }
 
+// Auto-convert Google Drive share links to direct image URLs
+function normalizeImageUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const url = raw.trim();
+  if (!url) return null;
+  let m = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w1000-h600-p-k-no-nu`;
+  m = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w1000-h600-p-k-no-nu`;
+  m = url.match(/drive\.google\.com\/uc\?.*id=([a-zA-Z0-9_-]+)/);
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w1000-h600-p-k-no-nu`;
+  return url;
+}
+
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const { data: { session } } = await supabase.auth.getSession();
   return {
     'Content-Type': 'application/json',
     ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
   };
+}
+
+// Preview Image with proper error fallback
+function PreviewImage({ url }: { url: string }) {
+  const [error, setError] = useState(false);
+  const normalized = normalizeImageUrl(url);
+  if (error || !normalized) {
+    return (
+      <div style={{
+        marginTop: 8, borderRadius: 10, border: '1px dashed var(--border)',
+        background: 'var(--muted)', maxWidth: 500, aspectRatio: '4 / 3',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 6, padding: 20,
+      }}>
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--muted-foreground)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <p style={{ fontSize: 11, color: 'var(--muted-foreground)', textAlign: 'center', margin: 0, lineHeight: 1.4 }}>
+          Gambar gagal dimuat.<br />Periksa URL atau pastikan akses publik.
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div style={{
+      marginTop: 8, borderRadius: 10, overflow: 'hidden',
+      border: '1px solid var(--border)', background: 'var(--muted)',
+      maxWidth: 500, aspectRatio: '4 / 3', position: 'relative',
+    }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={normalized}
+        alt="Preview"
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        onError={() => setError(true)}
+      />
+      <span style={{
+        position: 'absolute', top: 6, left: 6,
+        background: 'rgba(0,0,0,0.65)', color: '#fff',
+        fontSize: 9, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
+        backdropFilter: 'blur(4px)',
+      }}>
+        Preview
+      </span>
+    </div>
+  );
 }
 
 export default function HealthCampaignForm() {
@@ -217,9 +276,9 @@ export default function HealthCampaignForm() {
             <div key={c.id} className="admin-form-card" style={{ marginBottom: 10, padding: '14px 16px' }}>
               <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                 {c.image_url && (
-                  <div style={{ width: 60, height: 60, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)' }}>
+                  <div style={{ width: 80, height: 80, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)', background: 'var(--muted)' }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={c.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }} />
+                    <img src={normalizeImageUrl(c.image_url) || c.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { const img = e.target as HTMLImageElement; const parent = img.parentElement; if (parent) { parent.style.background = 'var(--muted)'; parent.innerHTML = '<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"var(--muted-foreground)\" strokeWidth=\"1.5\" style=\"margin:28px auto\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\" /><circle cx=\"8.5\" cy=\"8.5\" r=\"1.5\" /><polyline points=\"21 15 16 10 5 21\" /></svg>'; } }} />
                   </div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>

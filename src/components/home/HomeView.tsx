@@ -88,6 +88,7 @@ function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOp
   // Normalize the thumbnail URL (auto-converts Google Drive share links to direct image URLs)
   const thumbnail = normalizeImageUrl(item.media_url || item.thumbnail_url || item.image_url);
   const [imgError, setImgError] = useState(false);
+  const [captionExpanded, setCaptionExpanded] = useState(false);
   const captionText = item.caption || '';
   const isCaptionLong = captionText.length > LONG_CAPTION_THRESHOLD || captionText.split('\n').length > 2;
 
@@ -156,10 +157,20 @@ function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOp
         )}
         <p
           className="home-feed-card-caption"
-          style={{ WebkitLineClamp: 'unset', overflow: 'visible' }}
+          style={captionExpanded ? { WebkitLineClamp: 'unset', overflow: 'visible' } : undefined}
         >
           {captionText}
         </p>
+        {isCaptionLong && (
+          <button
+            type="button"
+            className="caption-toggle-btn"
+            onClick={(e) => { e.stopPropagation(); setCaptionExpanded(v => !v); }}
+            aria-expanded={captionExpanded}
+          >
+            {captionExpanded ? 'Tutup' : 'Baca Selengkapnya'}
+          </button>
+        )}
         <p className="home-feed-card-meta">
           {isCampaign ? 'Admin' : (isVideo || item.source === 'youtube') ? '@BagongNewsYoutube' : '@BagongNews'}
           {item.views ? ` · ${item.views.toLocaleString('id-ID')} views` : ''}
