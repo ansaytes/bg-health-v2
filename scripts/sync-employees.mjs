@@ -149,6 +149,8 @@ async function upsertSingle(emp) {
 
 async function main() {
   const start = Date.now();
+  let upserted = 0;
+  let errors = 0;
   console.log('Fetching CSV from Google Sheets...');
 
   const csvRes = await fetch(CSV_URL, { cache: 'no-store' });
