@@ -1,5 +1,7 @@
 // Standalone employee sync script — runs in GitHub Actions (no Vercel timeout limit)
-// Usage: GOOGLE_SHEETS_CSV_URL=... SUPABASE_URL=... SUPABASE_SERVICE_KEY=... node sync-employees.mjs
+// Usage: GOOGLE_SHEETS_CSV_URL=... SUPABASE_URL=... SUPABASE_SERVICE_KEY=... ENCRYPTION_KEY=... node sync-employees.mjs
+
+import { encryptEmployee } from './lib/encryption.mjs';
 
 const CSV_URL = process.env.GOOGLE_SHEETS_CSV_URL;
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -7,6 +9,12 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!CSV_URL || !SUPABASE_URL || !SUPABASE_KEY) {
   console.error('Missing env vars: GOOGLE_SHEETS_CSV_URL, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY');
+  process.exit(1);
+}
+
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 64) {
+  console.error('Missing or invalid ENCRYPTION_KEY (must be 32-byte hex = 64 chars). Generate with: openssl rand -hex 32');
   process.exit(1);
 }
 
@@ -108,7 +116,8 @@ function mapRow(row) {
       emp[dbCol] = sanitizeValue(val);
     }
   }
-  return emp;
+  // Encrypt sensitive fields (NIK, national_id, phone, etc.) before insert
+  return encryptEmployee(emp);
 }
 
 async function upsertBatch(batch) {
