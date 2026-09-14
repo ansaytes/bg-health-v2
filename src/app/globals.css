@@ -1451,14 +1451,14 @@ select.admin-input.compact-input {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
   width: 100%;
 }
 .admin-form-inner {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 12px 14px 16px;
+  padding: 12px 14px 8px;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -1756,7 +1756,7 @@ select.admin-input.compact-input {
   .sidebar { width: 260px; }
   .hamburger { width: 40px; height: 52px; top: 10px; left: 10px; border-radius: 10px; }
   /* Admin forms mobile */
-  .admin-form-inner { padding: 10px 10px 16px; }
+  .admin-form-inner { padding: 10px 10px 8px; }
   .admin-form-card { padding: 14px; }
   .admin-form-title { font-size: 14px; }
   /* Raw table mobile */
@@ -1875,15 +1875,12 @@ select.admin-input.compact-input {
 .content-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.92);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: #000000;
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  animation: contentModalOverlayIn 0.25s ease;
 }
 @keyframes contentModalOverlayIn {
   from { opacity: 0; }
@@ -2559,44 +2556,13 @@ select.admin-input.compact-input {
   height: 100%;
   max-height: 88vh;
 }
-.ig-modal-image-section {
-  flex: 2;
-  background: #000;
-  display: block;
-  min-height: 300px;
-  max-height: 88vh;
-  overflow-y: auto !important;
-  overflow-x: hidden;
-  position: relative;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.4) transparent;
-  -webkit-overflow-scrolling: touch;
-}
-.ig-modal-image-section img {
-  display: block;
-  width: 100%;
-  height: auto !important;
-  max-height: none !important;
-  object-fit: contain !important;
-  min-height: 300px;
-}
-.ig-modal-image-section::-webkit-scrollbar {
-  width: 8px;
-}
-.ig-modal-image-section::-webkit-scrollbar-track {
-  background: rgba(0,0,0,0.3);
-}
-.ig-modal-image-section::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.3);
-  border-radius: 4px;
-}
 
-.ig-modal-image-section img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain !important;
-  display: block;
-}
+
+
+
+
+
+
 .ig-modal-caption-section {
   flex: 1;
   min-width: 320px;
@@ -2702,10 +2668,7 @@ select.admin-input.compact-input {
   .ig-modal-inner {
     flex-direction: column;
   }
-  .ig-modal-image-section {
-    min-height: 300px;
-    max-height: 50vh;
-  }
+  
   .ig-modal-caption-section {
     min-width: 100%;
     max-width: 100%;
@@ -2798,15 +2761,21 @@ select.admin-input.compact-input {
   position: absolute;
   bottom: calc(100% + 6px);
   right: 0;
-  min-width: 220px;
+  min-width: 280px;
+  max-width: 320px;
+  max-height: 380px;
+  overflow-y: auto;
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 12px;
+  border-radius: 10px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.1);
   padding: 6px;
   z-index: 1000;
   animation: shareMenuIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
 }
 .dark .share-btn-menu {
   background: #1f2329;
@@ -2868,4 +2837,38 @@ select.admin-input.compact-input {
   position: fixed;
   inset: 0;
   z-index: 99;
+}
+
+
+/* IG Modal Image Section — scrollable for long images (IG post style) */
+.ig-modal-image-section {
+  flex: 2;
+  background: #000;
+  display: block;
+  min-height: 300px;
+  max-height: 88vh;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.4) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+.ig-modal-image-section img {
+  display: block;
+  width: 100%;
+  height: auto !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  min-height: 300px;
+}
+.ig-modal-image-section::-webkit-scrollbar {
+  width: 8px;
+}
+.ig-modal-image-section::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.3);
+}
+.ig-modal-image-section::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.4);
+  border-radius: 4px;
 }
