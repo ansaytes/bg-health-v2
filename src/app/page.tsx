@@ -1,7 +1,7 @@
 'use client';
 import NotificationBell from '@/components/header/NotificationBell';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect , useCallback} from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { useMCUStore, type PageTab, type DashSidebar, type AdminSidebar, type HomeSidebar } from '@/lib/store';
@@ -613,12 +613,16 @@ export default function Home() {
   }, [activePage, isAdmin, authLoading, store]);
 
   // Reset sub-sidebar to topmost when main page changes
-  // User wanted: each main page defaults to first sub-page, not last opened
+  // Use ref to avoid infinite loop (don't depend on store object)
+  const resetSidebar = useCallback((page: string) => {
+    if (page === 'home') store.setActiveHomeSidebar('semua-feed');
+    else if (page === 'dashboard') store.setActiveDashSidebar('statistik');
+    else if (page === 'administrator') store.setActiveAdminSidebar('lagging-indicator');
+  }, [store.setActiveHomeSidebar, store.setActiveDashSidebar, store.setActiveAdminSidebar]);
+
   useEffect(() => {
-    if (activePage === 'home') store.setActiveHomeSidebar('semua-feed');
-    else if (activePage === 'dashboard') store.setActiveDashSidebar('statistik');
-    else if (activePage === 'administrator') store.setActiveAdminSidebar('lagging-indicator');
-  }, [activePage, store]);
+    resetSidebar(activePage);
+  }, [activePage, resetSidebar]);
 
   useEffect(() => {
     const t = setTimeout(() => setLoading(true), 0);

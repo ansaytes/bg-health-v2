@@ -172,11 +172,12 @@ export default function DataManPowerTable({ canEdit = false }: DataManPowerTable
       <div className="raw-table-header-bar">
         <span>Data Σ Man Power per Site per Bulan</span>
         <span style={{ color: 'var(--fg-dim)' }}>{rows.length} records</span>
-       <DownloadButton getData={() => rows} filename="man-power" title="DataManPower" variant="compact" /></div>
+</div>
       <div className="raw-table-filter-bar">
         <div className="filter-tag">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
           Filter
+                  <DownloadButton getData={() => rows} filename="man-power" title="DataManPower" variant="compact" style={{ marginLeft: "auto" }} />
         </div>
         <select value={siteFilter} onChange={(e) => setSiteFilter(e.target.value)}>
           {JOBSITES.map(s => (<option key={s} value={s}>{s}</option>))}

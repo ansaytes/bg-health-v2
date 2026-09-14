@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import ShareButton from '@/components/ui/share-button';
 
 type FeedCategory = 'semua-feed' | 'health-campaign' | 'health-talk' | 'news';
 
@@ -171,11 +172,21 @@ function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOp
             {captionExpanded ? 'Tutup' : 'Baca Selengkapnya'}
           </button>
         )}
-        <p className="home-feed-card-meta">
-          {isCampaign ? 'Admin' : (isVideo || item.source === 'youtube') ? '@BagongNewsYoutube' : '@BagongNews'}
-          {item.views ? ` · ${item.views.toLocaleString('id-ID')} views` : ''}
-          {' · '}{item.date}
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+          <p className="home-feed-card-meta" style={{ margin: 0 }}>
+            {isCampaign ? 'Admin' : (isVideo || item.source === 'youtube') ? '@BagongNewsYoutube' : '@BagongNews'}
+            {item.views ? ` · ${item.views.toLocaleString('id-ID')} views` : ''}
+            {' · '}{item.date}
+          </p>
+          <ShareButton
+            url={item.video_url || item.external_url || (typeof window !== 'undefined' ? window.location.href : '')}
+            title={item.title || ''}
+            text={item.caption || ''}
+            imageUrl={thumbnail || undefined}
+            variant="icon"
+            menuPosition="top"
+          />
+        </div>
       </div>
     </div>
   );
@@ -269,6 +280,16 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
               <div className="ig-modal-caption-body">
                 {item.title && <h3 className="ig-modal-title">{item.title}</h3>}
                 <p className="ig-modal-caption">{item.caption}</p>
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border, rgba(255,255,255,0.08))' }}>
+                  <ShareButton
+                    url={typeof window !== 'undefined' ? window.location.href : ''}
+                    title={item.title || ''}
+                    text={item.caption || ''}
+                    imageUrl={thumbnail || undefined}
+                    variant="full"
+                    menuPosition="top"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -305,11 +326,21 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
         <div className="video-modal-body">
           {item.title && <h3 className="content-modal-title">{item.title}</h3>}
           <p className="content-modal-caption">{item.caption}</p>
-          <p className="content-modal-meta">
-            {(isVideo || item.source === 'youtube') ? '@BagongNewsYoutube' : '@BagongNews'}
-            {item.views ? ` · ${item.views.toLocaleString('id-ID')} views` : ''}
-            {' · '}{item.date}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
+            <p className="content-modal-meta" style={{ margin: 0 }}>
+              {(isVideo || item.source === 'youtube') ? '@BagongNewsYoutube' : '@BagongNews'}
+              {item.views ? ` · ${item.views.toLocaleString('id-ID')} views` : ''}
+              {' · '}{item.date}
+            </p>
+            <ShareButton
+              url={item.video_url || item.external_url || (typeof window !== 'undefined' ? window.location.href : '')}
+              title={item.title || ''}
+              text={item.caption || ''}
+              imageUrl={thumbnail || undefined}
+              variant="full"
+              menuPosition="top"
+            />
+          </div>
         </div>
       </div>
     </div>
