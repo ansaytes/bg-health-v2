@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import EmployeeLookupInput, { SearchBy } from '@/components/administrator/EmployeeLookupInput';
 import {
   Search, ClipboardPaste, Sparkles, ArrowRight, ArrowLeft,
   User, Activity, Eye, HeartPulse, Droplets, FlaskConical,
@@ -108,6 +109,7 @@ function getNormalRangeText(field: MCUFieldDef, gender?: string): string {
 export default function ReviewMCU() {
   const store = useMCUStore();
   const [nikInput, setNikInput] = useState('');
+  const [searchBy, setSearchBy] = useState<SearchBy>('national_id'); // default: NIK KTP
   const [ocrText, setOcrText] = useState('');
   const [direction, setDirection] = useState(1);
   const [ocrProgress, setOcrProgress] = useState(0);
@@ -135,7 +137,7 @@ export default function ReviewMCU() {
       const res = await fetch('/api/employee', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nikKtp: nikInput.trim() }),
+        body: JSON.stringify({ query: nikInput.trim(), searchBy }),
       });
       const json = await res.json();
       if (json.success && json.data) {
@@ -169,7 +171,7 @@ export default function ReviewMCU() {
     } finally {
       store.setSearchingEmployee(false);
     }
-  }, [nikInput, store]);
+  }, [nikInput, searchBy, store]);
 
   // Recall MCU data
   const handleRecall = useCallback(async () => {
@@ -304,22 +306,43 @@ export default function ReviewMCU() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="Masukkan 16 digit NIK KTP"
-                  value={nikInput}
-                  onChange={(e) => setNikInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  style={{
-                    flex: 1, height: 40, borderRadius: 10,
-                    border: '1px solid var(--border)', background: 'var(--background)',
-                    padding: '0 12px', fontSize: 13, color: 'var(--foreground)', outline: 'none',
-                    fontFamily: 'inherit',
-                  }}
-                />
-                <motion.div {...buttonTap}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <div style={{ flex: 1 }}>
+                  <EmployeeLookupInput
+                    value={nikInput}
+                    onChange={setNikInput}
+                    onEmployeeFound={(emp) => {
+                      // Auto-fill form when employee is found via debounced search
+                      const mapped = {
+                        nikKaryawan: emp.nik || '',
+                        nama: emp.nama || '',
+                        gender: emp.gender || '',
+                        jabatan: emp.job_position || '',
+                        site: emp.site_name || '',
+                        usia: '',
+                      };
+                      store.setEmployee(mapped);
+                      const updates: Record<string, string> = {};
+                      if (mapped.nikKaryawan) updates.nikKaryawan = mapped.nikKaryawan;
+                      if (mapped.nama) updates.nama = mapped.nama;
+                      if (mapped.gender) updates.jenisKelamin = mapped.gender;
+                      if (mapped.jabatan) updates.jabatan = mapped.jabatan;
+                      if (mapped.site) updates.site = mapped.site;
+                      updates.nikKtp = emp.national_id || nikInput.trim();
+                      store.setFormBatch(updates);
+                      store.showToast('Data karyawan ditemukan', 'success');
+                    }}
+                    showSearchBySelector={true}
+                    defaultSearchBy="national_id"
+                    inputStyle={{
+                      height: 40, borderRadius: 10,
+                      border: '1px solid var(--border)', background: 'var(--background)',
+                      padding: '0 12px', fontSize: 13, color: 'var(--foreground)',
+                      fontFamily: 'inherit',
+                    }}
+                  />
+                </div>
+                <motion.div {...buttonTap} style={{ marginTop: 24 }}>
                   <button
                     onClick={handleSearch}
                     disabled={store.searchingEmployee || !nikInput.trim()}

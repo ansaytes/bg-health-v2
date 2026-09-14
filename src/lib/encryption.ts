@@ -1,16 +1,14 @@
 // lib/encryption.ts — AES-256-GCM encryption + deterministic HMAC-SHA256 for lookup
 //
-// Why two approaches?
-//   - AES-GCM with random IV: secure encryption, but each call produces different output
-//     → cannot be used as lookup key in DB (every search would fail)
-//   - HMAC-SHA256 with same key: deterministic (same input → same output)
-//     → safe to use as lookup key in DB (indexed, unique)
-//
 // Strategy:
-//   - Store encrypted value in original column (e.g., national_id) — looks like random hex
-//   - Store hash value in separate column (e.g., national_id_hash) — deterministic, indexed
-//   - To search: compute hash of query, then WHERE national_id_hash = '<hash>'
-//   - To read: fetch encrypted value, decrypt with AES-GCM
+//   - AES-256-GCM (random IV, non-deterministic) for storing sensitive data
+//     → looks like random hex string in DB, cannot be used for lookup
+//   - HMAC-SHA256 (deterministic, one-way) for lookup keys
+//     → same input always produces same output, can be used for WHERE clause
+//
+// Two hash columns:
+//   - nik_hash → hash of NIK Karyawan (internal employee number, e.g. "230802778")
+//   - national_id_hash → hash of NIK KTP / National ID (16-digit national ID)
 
 import crypto from 'crypto';
 
@@ -28,10 +26,7 @@ function getKey(): Buffer {
   return Buffer.from(raw, 'hex');
 }
 
-/**
- * Encrypt plain text using AES-256-GCM (random IV — non-deterministic)
- * Returns hex string: iv(24hex) + tag(32hex) + ciphertext
- */
+/** Encrypt plain text using AES-256-GCM (random IV — non-deterministic) */
 export function encrypt(plain: string | null | undefined): string | null {
   if (plain == null || plain === '') return null;
   try {
@@ -47,9 +42,7 @@ export function encrypt(plain: string | null | undefined): string | null {
   }
 }
 
-/**
- * Decrypt AES-256-GCM hex string back to plain text
- */
+/** Decrypt AES-256-GCM hex string back to plain text */
 export function decrypt(hex: string | null | undefined): string | null {
   if (!hex) return null;
   try {
@@ -69,10 +62,7 @@ export function decrypt(hex: string | null | undefined): string | null {
   }
 }
 
-/**
- * Hash value using HMAC-SHA256 (deterministic — same input always produces same output)
- * Use this for DB lookup columns. Cannot be reversed (one-way hash).
- */
+/** Hash value using HMAC-SHA256 (deterministic — same input always produces same output) */
 export function hashField(plain: string | null | undefined): string | null {
   if (plain == null || plain === '') return null;
   try {
@@ -84,43 +74,51 @@ export function hashField(plain: string | null | undefined): string | null {
   }
 }
 
-/**
- * Encrypt object of employee fields — returns object ready for DB insert
- * Adds *_hash columns for fields that need lookup
- */
+// Sensitive fields that need encryption
+// birth_date NOT included — it's a DATE column, PostgreSQL rejects hex string as date
+const SENSITIVE_FIELDS = ['nik', 'national_id', 'phone_number', 'place_of_birth', 'address'];
+
+// Hash columns for lookup — supports both NIK Karyawan and NIK KTP search
+const LOOKUP_HASH_MAP: Record<string, string> = {
+  'nik': 'nik_hash',                    // NIK Karyawan → nik_hash column
+  'national_id': 'national_id_hash',    // NIK KTP / National ID → national_id_hash column
+};
+
+/** Encrypt + compute hashes for employee fields */
 export function encryptEmployee(emp: Record<string, any>): Record<string, any> {
-  const SENSITIVE_FIELDS = ['nik', 'national_id', 'phone_number', 'place_of_birth', 'address'];
-  const LOOKUP_FIELDS = ['national_id']; // fields that need hash for DB lookup
   const result: Record<string, any> = { ...emp };
+
+  // Encrypt sensitive fields
   for (const field of SENSITIVE_FIELDS) {
     if (result[field] != null) {
       result[field] = encrypt(String(result[field]));
     }
   }
-  // Add hash columns for lookup fields (deterministic)
-  for (const field of LOOKUP_FIELDS) {
-    const hashKey = `${field}_hash`;
+
+  // Compute deterministic hashes for lookup fields
+  for (const [field, hashCol] of Object.entries(LOOKUP_HASH_MAP)) {
     if (emp[field] != null) {
-      result[hashKey] = hashField(String(emp[field]));
+      result[hashCol] = hashField(String(emp[field]));
     }
   }
+
   return result;
 }
 
-/**
- * Decrypt object of employee fields — returns object with plain-text data
- */
+/** Decrypt sensitive fields, strip hash columns from response */
 export function decryptEmployee(emp: Record<string, any>): Record<string, any> {
-  const SENSITIVE_FIELDS = ['nik', 'national_id', 'phone_number', 'place_of_birth', 'address'];
   const result: Record<string, any> = { ...emp };
+
   for (const field of SENSITIVE_FIELDS) {
     if (result[field] != null && typeof result[field] === 'string') {
       result[field] = decrypt(result[field]) || result[field];
     }
   }
+
   // Remove hash columns from response (internal use only)
-  delete result.national_id_hash;
-  delete result.nik_hash;
-  delete result.phone_number_hash;
+  for (const hashCol of Object.values(LOOKUP_HASH_MAP)) {
+    delete result[hashCol];
+  }
+
   return result;
 }

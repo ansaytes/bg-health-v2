@@ -1,6 +1,3 @@
-// lib/encryption.mjs — ESM version for sync-employees.mjs (GitHub Actions)
-// Mirror of src/lib/encryption.ts but in plain JS for Node.js scripts
-
 import crypto from 'crypto';
 
 const ALGO = 'aes-256-gcm';
@@ -51,10 +48,6 @@ export function decrypt(hex) {
   }
 }
 
-/**
- * Deterministic HMAC-SHA256 hash — same input always produces same output
- * Use for DB lookup columns (cannot be reversed)
- */
 export function hashField(plain) {
   if (plain == null || plain === '') return null;
   try {
@@ -67,7 +60,10 @@ export function hashField(plain) {
 }
 
 const SENSITIVE_FIELDS = ['nik', 'national_id', 'phone_number', 'place_of_birth', 'address'];
-const LOOKUP_FIELDS = ['national_id'];
+const LOOKUP_HASH_MAP = {
+  'nik': 'nik_hash',
+  'national_id': 'national_id_hash',
+};
 
 export function encryptEmployee(emp) {
   const result = { ...emp };
@@ -76,10 +72,9 @@ export function encryptEmployee(emp) {
       result[field] = encrypt(String(result[field]));
     }
   }
-  for (const field of LOOKUP_FIELDS) {
-    const hashKey = `${field}_hash`;
+  for (const [field, hashCol] of Object.entries(LOOKUP_HASH_MAP)) {
     if (emp[field] != null) {
-      result[hashKey] = hashField(String(emp[field]));
+      result[hashCol] = hashField(String(emp[field]));
     }
   }
   return result;
@@ -92,8 +87,8 @@ export function decryptEmployee(emp) {
       result[field] = decrypt(result[field]) || result[field];
     }
   }
-  delete result.national_id_hash;
-  delete result.nik_hash;
-  delete result.phone_number_hash;
+  for (const hashCol of Object.values(LOOKUP_HASH_MAP)) {
+    delete result[hashCol];
+  }
   return result;
 }

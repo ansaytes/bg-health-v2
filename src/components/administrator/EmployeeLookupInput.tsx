@@ -42,9 +42,10 @@ const SPINNER_COLOR = '#ff4d00';
 const FOUND_COLOR = '#00B894';
 const NOT_FOUND_COLOR = '#FF4444';
 
+// Clarified labels: NIK = NIK Karyawan, National ID = NIK KTP
 const SEARCH_BY_OPTIONS: { value: SearchBy; label: string; placeholder: string; minLength: number }[] = [
-  { value: 'nik', label: 'NIK', placeholder: 'Masukkan NIK karyawan (mis. 230802778)', minLength: 4 },
-  { value: 'national_id', label: 'National ID', placeholder: 'Masukkan National ID / NIK KTP', minLength: 6 },
+  { value: 'nik', label: 'NIK Karyawan', placeholder: 'Masukkan NIK Karyawan (mis. 230802778)', minLength: 4 },
+  { value: 'national_id', label: 'NIK KTP', placeholder: 'Masukkan 16 digit NIK KTP', minLength: 6 },
   { value: 'nama', label: 'Nama', placeholder: 'Ketik nama karyawan (mis. Budi)', minLength: 3 },
 ];
 
@@ -69,7 +70,6 @@ export default function EmployeeLookupInput({
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSearchedValue = useRef<string>('');
 
-  // Dynamic placeholder based on searchBy
   const currentOption = SEARCH_BY_OPTIONS.find(o => o.value === searchBy) || SEARCH_BY_OPTIONS[0];
   const placeholder = placeholderProp || currentOption.placeholder;
   const minLength = minLengthProp || currentOption.minLength;
@@ -137,7 +137,6 @@ export default function EmployeeLookupInput({
     setSearchBy(newSearchBy);
     setStatus('idle');
     lastSearchedValue.current = '';
-    // Clear current value when switching search type (different fields have different formats)
     onChange('');
   };
 
