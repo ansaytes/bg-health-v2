@@ -17,7 +17,7 @@ const JOBSITES = [
 ];
 
 const FORM_FIELDS = [
-  { id: 'nik', label: 'NIK Karyawan', type: 'text', placeholder: 'Masukkan NIK karyawan', required: true },
+  { id: 'nik', label: 'Cari Data Karyawan', type: 'text', placeholder: 'Masukkan NIK KTP, NIK Karyawan, atau Nama Karyawan', required: true },
   { id: 'nama', label: 'Nama Karyawan', type: 'text', placeholder: 'Nama lengkap karyawan', required: true },
   { id: 'departemen', label: 'Departemen', type: 'text', placeholder: 'Nama departemen', required: true },
   { id: 'site', label: 'Jobsite', type: 'jobsite', placeholder: 'Pilih lokasi site', required: true },

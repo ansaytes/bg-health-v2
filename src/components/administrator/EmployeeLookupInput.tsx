@@ -82,12 +82,8 @@ export default function EmployeeLookupInput({
   const searchBy = autoDetectSearchBy(value);
   const minLength = minLengthProp || (searchBy === 'nama' ? 3 : 4);
 
-  // Placeholder based on detected type
-  const dynamicPlaceholder = searchBy === 'nik'
-    ? 'Cari: NIK Karyawan (mis. 230802778)'
-    : searchBy === 'national_id'
-      ? 'Cari: NIK KTP (16 digit)'
-      : 'Cari: Nama karyawan (mis. Budi)';
+  // Single unified placeholder (auto-detect handles type)
+  const dynamicPlaceholder = 'Masukkan NIK KTP, NIK Karyawan, atau Nama Karyawan';
   const placeholder = placeholderProp || dynamicPlaceholder;
 
   useEffect(() => {
@@ -259,14 +255,13 @@ export default function EmployeeLookupInput({
     ? (searchBy === 'nik' ? 'NIK Karyawan' : searchBy === 'national_id' ? 'NIK KTP' : 'Nama')
     : null;
 
+  const displayLabel = label || <>Cari Data Karyawan {required !== false && <span style={{ color: '#ff4d00', marginLeft: 2 }}>*</span>}</>;
+
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
-      {label && (
-        <label className="admin-label">
-          {label}
-          {required && <span style={{ color: '#ff4d00', marginLeft: 2 }}>*</span>}
-        </label>
-      )}
+      <label className="admin-label">
+        {displayLabel}
+      </label>
       <div style={{ position: 'relative' }}>
         <input
           type="text"
@@ -304,18 +299,18 @@ export default function EmployeeLookupInput({
 
       {/* Suggestions dropdown */}
       {showSuggestions && suggestions.length > 0 && (
-        <div style={{
+        <div className="emp-suggestions-dropdown" style={{
           position: 'absolute',
           top: '100%',
           left: 0,
           right: 0,
           marginTop: 4,
-          background: 'var(--card, #1a1d24)',
-          border: '1px solid var(--border, rgba(255,255,255,0.08))',
-          borderRadius: 8,
-          boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
+          background: '#ffffff',
+          border: '1px solid rgba(0,0,0,0.12)',
+          borderRadius: 10,
+          boxShadow: '0 12px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1)',
           zIndex: 1000,
-          maxHeight: 280,
+          maxHeight: 320,
           overflowY: 'auto',
         }}>
           {suggestions.map((emp, idx) => (

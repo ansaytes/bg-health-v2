@@ -256,7 +256,7 @@ export default function InputLaggingIndicator() {
   };
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto', width: '100%', paddingBottom: 60 }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto', width: '100%', paddingBottom: 16, gap: 12 }}>
       <form onSubmit={handleSickSubmit}>
         <div className="admin-form-card">
           {/* Section: Identitas Karyawan */}
@@ -277,8 +277,6 @@ export default function InputLaggingIndicator() {
                   nama: 'nama',
                   job_position: 'jabatan',
                 }}
-                placeholder="Contoh: 230802778"
-                label={<>NIK Karyawan <span style={{ color: 'var(--brand-primary)' }}>*</span></>}
                 required
               />
             </div>
