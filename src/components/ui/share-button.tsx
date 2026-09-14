@@ -109,7 +109,8 @@ export default function ShareButton({
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const handleShare = (target: ShareTarget) => {
+  const handleShare = (target: ShareTarget, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     const shareUrl = encodeURIComponent(url);
     const shareTitle = encodeURIComponent(title);
     const shareText = encodeURIComponent(text);
@@ -149,11 +150,11 @@ export default function ShareButton({
   };
 
   return (
-    <div className="share-btn-wrapper">
+    <div className="share-btn-wrapper" onClick={(e) => e.stopPropagation()}>
       <button
         type="button"
         className="share-btn-trigger"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
         aria-label="Bagikan"
         aria-expanded={isOpen}
       >
@@ -168,7 +169,7 @@ export default function ShareButton({
       </button>
       {isOpen && (
         <>
-          <div className="share-btn-backdrop" onClick={() => setIsOpen(false)} />
+          <div className="share-btn-backdrop" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
           <div className="share-btn-menu" style={menuPosition === 'bottom' ? { top: 'calc(100% + 6px)', bottom: 'auto' } : {}}>
             <div style={{ padding: '6px 10px', fontSize: 10, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(0,0,0,0.06)', marginBottom: 4 }}>
               Bagikan ke
@@ -178,7 +179,7 @@ export default function ShareButton({
                 key={opt.target}
                 type="button"
                 className="share-btn-option"
-                onClick={() => handleShare(opt.target)}
+                onClick={(e) => handleShare(opt.target, e)}
               >
                 <span style={{ color: opt.color, display: 'flex', alignItems: 'center' }}>{opt.icon}</span>
                 <div>

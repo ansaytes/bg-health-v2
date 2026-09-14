@@ -87,6 +87,7 @@ export default function RecordMCUTable() {
         <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
           {YEARS.map(y => (<option key={y} value={y}>{y}</option>))}
         </select>
+        <DownloadButton getData={() => rows} filename="mcu" title="RecordMCU" variant="compact" style={{ marginLeft: "auto", flexShrink: 0 }} />
       </div>
 
       {/* Table - fills remaining height */}

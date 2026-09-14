@@ -242,6 +242,7 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
         <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
           {YEARS.map(y => (<option key={y} value={y}>{y}</option>))}
         </select>
+        <DownloadButton getData={() => rows} filename="kunjungan" title="DataKunjungan" variant="compact" style={{ marginLeft: "auto", flexShrink: 0 }} />
       </div>
 
       {/* Table - fills remaining height */}

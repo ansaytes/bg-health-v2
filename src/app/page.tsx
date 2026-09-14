@@ -726,7 +726,12 @@ export default function Home() {
         <div className="sidebar-footer">
           {isLoggedIn ? (
             <div className="sidebar-account">
-              <div className="sidebar-avatar">{initials}</div>
+              <div className="sidebar-avatar">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>
               <div className="sidebar-account-info">
                 <div className="sidebar-account-name">{displayName}</div>
                 <div className="sidebar-account-role">{roleLabel}</div>

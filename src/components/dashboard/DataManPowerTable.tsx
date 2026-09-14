@@ -177,7 +177,6 @@ export default function DataManPowerTable({ canEdit = false }: DataManPowerTable
         <div className="filter-tag">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
           Filter
-                  <DownloadButton getData={() => rows} filename="man-power" title="DataManPower" variant="compact" style={{ marginLeft: "auto" }} />
         </div>
         <select value={siteFilter} onChange={(e) => setSiteFilter(e.target.value)}>
           {JOBSITES.map(s => (<option key={s} value={s}>{s}</option>))}
@@ -188,6 +187,7 @@ export default function DataManPowerTable({ canEdit = false }: DataManPowerTable
         <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
             <option value="2026">2026</option><option value="2025">2025</option><option value="2024">2024</option>
         </select>
+        <DownloadButton getData={() => rows} filename="man-power" title="DataManPower" variant="compact" style={{ marginLeft: 'auto', flexShrink: 0 }} />
       </div>
       <div className="raw-table-scroll">
         <table>
@@ -258,7 +258,7 @@ export default function DataManPowerTable({ canEdit = false }: DataManPowerTable
       </div>
       <div className="raw-table-notes">
         <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
-        <span>Man Hours = Σ Man Power x Hari Kerja (dihitung otomatis oleh Supabase). Data ini menjadi denominator perhitungan RKK, CMR, MFR, SSR, ASR, FR PAK, KAPTK.</span>
+        <span>Man Hours = Σ Man Power x Hari Kerja (Otomatis). Denominator perhitungan RKK, CMR, MFR, SSR, ASR, FR PAK, KAPTK.</span>
       </div>
 
       {/* Edit Dialog */}

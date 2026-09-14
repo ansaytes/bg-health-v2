@@ -271,7 +271,10 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
             {/* Caption section — scrollable, IG-style */}
             <div className="ig-modal-caption-section">
               <div className="ig-modal-header">
-                <div className="ig-modal-avatar">A</div>
+                <div className="ig-modal-avatar">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/BM.png" alt="Admin" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }} />
+                </div>
                 <div>
                   <div className="ig-modal-username">Admin</div>
                   <div className="ig-modal-date">{item.date}</div>
