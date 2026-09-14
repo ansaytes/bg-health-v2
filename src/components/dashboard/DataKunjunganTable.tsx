@@ -231,7 +231,6 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
           </svg>
           Filter
-                  <DownloadButton getData={() => rows} filename="kunjungan" title="DataKunjungan" variant="compact" style={{ marginLeft: "auto" }} />
         </div>
         <select value={siteFilter} onChange={(e) => setSiteFilter(e.target.value)}>
           {JOBSITES.map(s => (<option key={s} value={s}>{s}</option>))}
@@ -242,7 +241,6 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
         <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
           {YEARS.map(y => (<option key={y} value={y}>{y}</option>))}
         </select>
-        <DownloadButton getData={() => rows} filename="kunjungan" title="DataKunjungan" variant="compact" style={{ marginLeft: "auto", flexShrink: 0 }} />
       </div>
 
       {/* Table - fills remaining height */}
@@ -354,7 +352,8 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
                     style={{ width: '100%', height: 32, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)', padding: '0 8px', fontSize: 12, color: 'var(--foreground)', outline: 'none', boxSizing: 'border-box' }}
                   />
                 )}
-              </div>
+              
+        <DownloadButton getData={() => rows} filename="kunjungan" title="DataKunjungan" variant="compact" style={{ marginLeft: "auto", flexShrink: 0 }} /></div>
             ))}
           </div>
           <DialogFooter>

@@ -89,7 +89,7 @@ export default function LaggingIndicatorPage() {
   const [tab, setTab] = useState<TabKey>('statistik');
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', width: '100%', height: '100%', margin: '0 auto', paddingBottom: 16 }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', width: '100%', height: '100%', margin: '0 auto', paddingBottom: 0 }}>
       <div className="admin-form-inner">
         {/* Header */}
         <div style={{ marginBottom: 18 }}>

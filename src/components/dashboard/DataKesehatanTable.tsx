@@ -248,7 +248,6 @@ export default function DataKesehatanTable({ canEdit = false }: DataKesehatanTab
             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
           </svg>
           Filter
-                  <DownloadButton getData={() => rows} filename="kesehatan" title="DataKesehatan" variant="compact" style={{ marginLeft: "auto" }} />
         </div>
         <select value={siteFilter} onChange={(e) => setSiteFilter(e.target.value)}>
           {JOBSITES.map(s => (<option key={s} value={s}>{s}</option>))}
@@ -259,9 +258,8 @@ export default function DataKesehatanTable({ canEdit = false }: DataKesehatanTab
         <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
           {YEARS.map(y => (<option key={y} value={y}>{y}</option>))}
         </select>
-        <DownloadButton getData={() => rows} filename="kesehatan" title="DataKesehatan" variant="compact" style={{ marginLeft: "auto", flexShrink: 0 }} />
+      <DownloadButton getData={() => rows} filename="kesehatan" title="DataKesehatan" variant="compact" style={{ marginLeft: "auto", flexShrink: 0 }} />
       </div>
-
       {/* Table */}
       <div className="raw-table-scroll">
         <table>

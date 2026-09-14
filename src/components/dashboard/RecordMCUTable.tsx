@@ -67,7 +67,7 @@ export default function RecordMCUTable() {
           <span style={{ margin: '0 6px', opacity: 0.3 }}>|</span>
           {selesaiCount} selesai
         </span>
-       <DownloadButton getData={() => rows} filename="mcu" title="RecordMCU" variant="compact" /></div>
+      </div>
 
       {/* Filters */}
       <div className="raw-table-filter-bar">
@@ -76,7 +76,6 @@ export default function RecordMCUTable() {
             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
           </svg>
           Filter
-                  <DownloadButton getData={() => rows} filename="mcu-record" title="RecordMCU" variant="compact" style={{ marginLeft: "auto" }} />
         </div>
         <select value={siteFilter} onChange={(e) => setSiteFilter(e.target.value)}>
           {JOBSITES.map(s => (<option key={s} value={s}>{s}</option>))}
