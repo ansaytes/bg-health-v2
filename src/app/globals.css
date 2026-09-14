@@ -1618,10 +1618,15 @@ select.admin-input.compact-input {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 4px 6px 10px;
+  padding: 0 4px 6px 8px;
   flex-wrap: nowrap;
   flex-shrink: 0;
   overflow-x: auto;
+  justify-content: flex-start;
+}
+.raw-table-filter-bar > .download-btn-wrapper {
+  margin-left: auto;
+  margin-right: 0;
 }
 .raw-table-filter-bar select {
   height: 26px;
@@ -2027,20 +2032,23 @@ select.admin-input.compact-input {
 .download-btn-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  height: 26px;
-  padding: 0 8px;
+  gap: 3px;
+  height: 22px;
+  padding: 0 6px;
   border: none;
-  border-radius: 7px;
+  border-radius: 6px;
   background: linear-gradient(135deg, #ff4d00 0%, #ff6b2b 100%);
   color: #fff;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
-  box-shadow: 0 3px 8px rgba(255, 77, 0, 0.22);
-  letter-spacing: 0.1px;
+  box-shadow: 0 2px 6px rgba(255, 77, 0, 0.2);
   flex-shrink: 0;
+}
+.download-btn-trigger svg {
+  width: 12px;
+  height: 12px;
 }
 .download-btn-trigger:hover {
   transform: translateY(-1px) scale(1.03);
@@ -2558,8 +2566,7 @@ select.admin-input.compact-input {
   display: flex;
   flex-direction: row;
   width: 100%;
-  height: 100%;
-  max-height: 92vh;
+  height: 88vh;
   overflow: hidden;
 }
 
@@ -2851,8 +2858,7 @@ select.admin-input.compact-input {
   flex: 2;
   background: #000;
   display: block;
-  min-height: 100%;
-  max-height: 100%;
+  height: 100%;
   overflow-y: auto !important;
   overflow-x: hidden;
   position: relative;
@@ -2866,7 +2872,7 @@ select.admin-input.compact-input {
   height: auto !important;
   max-height: none !important;
   object-fit: contain !important;
-  min-height: 300px;
+  min-height: auto !important;
 }
 .ig-modal-image-section::-webkit-scrollbar {
   width: 8px;
@@ -2939,4 +2945,75 @@ select.admin-input.compact-input {
 .raw-table-scroll thead th:nth-child(3),
 .raw-table-scroll tbody td:nth-child(3) {
   border-right: 2px solid var(--border, rgba(255,255,255,0.15));
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Raw Table — Freeze First 4 Columns (No, Jobsite, Bulan, Tahun)
+   ═══════════════════════════════════════════════════════════════ */
+.raw-table-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--card, #1a1d24);
+}
+/* Kolom 1-4 freeze horizontal */
+.raw-table-scroll thead th:nth-child(1),
+.raw-table-scroll tbody td:nth-child(1) {
+  position: sticky;
+  left: 0;
+  z-index: 6;
+  min-width: 36px;
+  max-width: 36px;
+  background: var(--card, #1a1d24);
+}
+.raw-table-scroll thead th:nth-child(2),
+.raw-table-scroll tbody td:nth-child(2) {
+  position: sticky;
+  left: 36px;
+  z-index: 6;
+  min-width: 90px;
+  max-width: 90px;
+  background: var(--card, #1a1d24);
+}
+.raw-table-scroll thead th:nth-child(3),
+.raw-table-scroll tbody td:nth-child(3) {
+  position: sticky;
+  left: 126px;
+  z-index: 6;
+  min-width: 70px;
+  max-width: 70px;
+  background: var(--card, #1a1d24);
+}
+.raw-table-scroll thead th:nth-child(4),
+.raw-table-scroll tbody td:nth-child(4) {
+  position: sticky;
+  left: 196px;
+  z-index: 6;
+  min-width: 55px;
+  max-width: 55px;
+  background: var(--card, #1a1d24);
+}
+/* Header corner cells — z-index lebih tinggi */
+.raw-table-scroll thead th:nth-child(1),
+.raw-table-scroll thead th:nth-child(2),
+.raw-table-scroll thead th:nth-child(3),
+.raw-table-scroll thead th:nth-child(4) {
+  z-index: 7;
+}
+/* Dark mode background */
+.dark .raw-table-scroll thead th:nth-child(1),
+.dark .raw-table-scroll thead th:nth-child(2),
+.dark .raw-table-scroll thead th:nth-child(3),
+.dark .raw-table-scroll thead th:nth-child(4),
+.dark .raw-table-scroll tbody td:nth-child(1),
+.dark .raw-table-scroll tbody td:nth-child(2),
+.dark .raw-table-scroll tbody td:nth-child(3),
+.dark .raw-table-scroll tbody td:nth-child(4) {
+  background: #1f2329;
+}
+/* Border pemisah untuk kolom freeze terakhir (kolom 4) */
+.raw-table-scroll thead th:nth-child(4),
+.raw-table-scroll tbody td:nth-child(4) {
+  border-right: 2px solid var(--border, rgba(255,255,255,0.15));
+  box-shadow: 2px 0 4px rgba(0,0,0,0.05);
 }
