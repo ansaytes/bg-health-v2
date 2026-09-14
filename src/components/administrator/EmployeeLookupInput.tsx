@@ -297,26 +297,138 @@ export default function EmployeeLookupInput({
         </span>
       </div>
 
-      {/* Suggestions dropdown */}
+      {/* Suggestions dropdown — modern design */}
       {showSuggestions && suggestions.length > 0 && (
-        <div className="emp-suggestions-dropdown" style={{
+        <div className="emp-suggestions" style={{
           position: 'absolute',
-          top: '100%',
+          top: 'calc(100% + 6px)',
           left: 0,
           right: 0,
-          marginTop: 4,
           background: '#ffffff',
-          border: '1px solid rgba(0,0,0,0.12)',
-          borderRadius: 10,
-          boxShadow: '0 12px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1)',
+          border: '1px solid rgba(0, 0, 0, 0.08)',
+          borderRadius: 12,
+          boxShadow: '0 12px 28px rgba(0,0,0,0.12), 0 4px 10px rgba(0,0,0,0.06)',
           zIndex: 1000,
-          maxHeight: 320,
+          maxHeight: 360,
           overflowY: 'auto',
+          padding: 6,
+          fontFamily: 'inherit',
         }}>
+          {/* Header label */}
+          <div style={{
+            padding: '6px 10px 8px',
+            fontSize: 10,
+            fontWeight: 700,
+            color: '#888',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            borderBottom: '1px solid rgba(0,0,0,0.06)',
+            marginBottom: 4,
+          }}>
+            {suggestions.length} karyawan ditemukan
+          </div>
           {suggestions.map((emp, idx) => (
             <div
               key={`${emp.nik}-${idx}`}
               onClick={() => handleSelectSuggestion(emp)}
+              onMouseEnter={() => setActiveSuggestion(idx)}
+              style={{
+                padding: '10px 12px',
+                cursor: 'pointer',
+                background: idx === activeSuggestion ? 'rgba(255,77,0,0.08)' : 'transparent',
+                borderRadius: 8,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                transition: 'background 0.12s, transform 0.12s',
+                transform: idx === activeSuggestion ? 'translateX(2px)' : 'none',
+              }}
+            >
+              {/* Avatar with gradient */}
+              <div style={{
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #ff4d00 0%, #ff6b2b 50%, #ff8c42 100%)',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 13,
+                fontWeight: 700,
+                flexShrink: 0,
+                boxShadow: '0 2px 6px rgba(255,77,0,0.25)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.3px',
+              }}>
+                {(emp.nama || '?').charAt(0).toUpperCase()}
+              </div>
+              {/* Main info */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: '#1a1a1a',
+                  lineHeight: 1.3,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  fontFamily: 'inherit',
+                }}>
+                  {emp.nama || '(Tanpa nama)'}
+                </div>
+                <div style={{
+                  fontSize: 11,
+                  color: '#666',
+                  marginTop: 3,
+                  display: 'flex',
+                  gap: 10,
+                  alignItems: 'center',
+                  fontFamily: 'inherit',
+                }}>
+                  {emp.national_id && (
+                    <span style={{
+                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                      fontSize: 10.5,
+                      color: '#555',
+                      background: 'rgba(0,0,0,0.04)',
+                      padding: '2px 6px',
+                      borderRadius: 4,
+                    }}>
+                      {emp.national_id}
+                    </span>
+                  )}
+                  {emp.site_name && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                        <circle cx="12" cy="10" r="3" />
+                      </svg>
+                      {emp.site_name}
+                    </span>
+                  )}
+                </div>
+              </div>
+              {/* NIK Karyawan badge */}
+              {emp.nik && (
+                <div style={{
+                  fontSize: 11,
+                  color: '#ff4d00',
+                  fontWeight: 700,
+                  background: 'rgba(255,77,0,0.1)',
+                  padding: '4px 8px',
+                  borderRadius: 6,
+                  flexShrink: 0,
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                  border: '1px solid rgba(255,77,0,0.15)',
+                }}>
+                  {emp.nik}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
               onMouseEnter={() => setActiveSuggestion(idx)}
               style={{
                 padding: '8px 12px',
