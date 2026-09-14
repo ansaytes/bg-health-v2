@@ -161,6 +161,7 @@ export default function ReviewMCU() {
         if (mapped.site) updates.site = mapped.site;
         if (mapped.usia) updates.usia = mapped.usia;
         updates.nikKtp = nikInput.trim();
+        updates.nationalId = nikInput.trim();
         store.setFormBatch(updates);
         store.showToast('Data karyawan ditemukan', 'success');
       } else {
@@ -329,6 +330,7 @@ export default function ReviewMCU() {
                       if (mapped.jabatan) updates.jabatan = mapped.jabatan;
                       if (mapped.site) updates.site = mapped.site;
                       updates.nikKtp = emp.national_id || nikInput.trim();
+                      updates.nationalId = emp.national_id || nikInput.trim();
                       store.setFormBatch(updates);
                       store.showToast('Data karyawan ditemukan', 'success');
                     }}
@@ -647,7 +649,7 @@ export default function ReviewMCU() {
                   ) : (
                     <Save className="size-5" />
                   )}
-                  Simpan ke Spreadsheet
+                  Simpan Data
                 </Button>
               </motion.div>
             </div>

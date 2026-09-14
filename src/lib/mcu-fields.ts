@@ -55,7 +55,7 @@ export const MCU_SECTIONS = [
 
 export const MCU_FIELDS: MCUFieldDef[] = [
   // ════════ IDENTITAS (A-J) ════════
-  { id: 'no',             col: 'A',  colIndex: 0,  label: 'No',               section: 'identity', sectionOrder: 0, type: 'number', autoCalc: true },
+  { id: 'nationalId',      col: 'A',  colIndex: 0,  label: 'National ID',       section: 'identity', sectionOrder: 0, type: 'text', placeholder: 'Auto dari pencarian karyawan' },
   { id: 'nikKaryawan',    col: 'B',  colIndex: 1,  label: 'NIK Karyawan',     section: 'identity', sectionOrder: 1, type: 'text', placeholder: 'NIK Karyawan' },
   { id: 'nama',           col: 'C',  colIndex: 2,  label: 'Nama',             section: 'identity', sectionOrder: 2, type: 'text', placeholder: 'Auto dari NIK KTP' },
   { id: 'usia',           col: 'D',  colIndex: 3,  label: 'Usia',             section: 'identity', sectionOrder: 3, type: 'number', unit: 'th', placeholder: 'Auto', autoCalc: true },
@@ -210,7 +210,7 @@ export const MCU_FIELDS: MCUFieldDef[] = [
   { id: 'fu3',            col: 'DV', colIndex: 124,label: 'FU III',           section: 'calculated', sectionOrder: 9, type: 'textarea' },
   { id: 'fu4',            col: 'DW', colIndex: 125,label: 'FU IV',            section: 'calculated', sectionOrder: 10, type: 'textarea' },
   { id: 'catatanFU',      col: 'DX', colIndex: 126,label: 'Catatan FU',       section: 'calculated', sectionOrder: 11, type: 'textarea' },
-  { id: 'nikKtp',         col: 'DY', colIndex: 127,label: 'NIK KTP',          section: 'identity', sectionOrder: 10, type: 'text', placeholder: 'NIK KTP (16 digit)' },
+  // NIK KTP field moved to top as 'National ID' (col A)
 ];
 
 // Helper: get fields by section
