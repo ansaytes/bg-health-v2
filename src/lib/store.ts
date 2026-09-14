@@ -94,7 +94,7 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
   setActivePage: (tab) => set({ activePage: tab }),
   activeDashSidebar: 'statistik',
   setActiveDashSidebar: (tab) => set({ activeDashSidebar: tab }),
-  activeAdminSidebar: 'review-mcu',
+  activeAdminSidebar: 'lagging-indicator',
   setActiveAdminSidebar: (tab) => set({ activeAdminSidebar: tab }),
   activeHomeSidebar: 'semua-feed',
   setActiveHomeSidebar: (tab) => set({ activeHomeSidebar: tab }),

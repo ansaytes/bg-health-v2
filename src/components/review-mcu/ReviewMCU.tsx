@@ -273,7 +273,7 @@ export default function ReviewMCU() {
   const pengendalian = store.formData.pengendalian || '';
 
   return (
-    <div className="relative overflow-hidden">
+    <div className="relative" style={{ overflowY: "auto", maxHeight: "100%" }}>
       <AnimatePresence mode="wait" custom={direction}>
         {/* ─── STEP 1: SEARCH ─── */}
         {store.reviewStep === 'search' && (
@@ -579,7 +579,7 @@ export default function ReviewMCU() {
                     variants={cardVariants}
                     initial="hidden"
                     animate="visible"
-                    className="bg-card rounded-2xl overflow-hidden"
+                    className="bg-card rounded-2xl overflow-visible"
                   >
                     <AccordionItem value={section.id} className="border-none">
                       <AccordionTrigger className="px-4 py-3.5 hover:no-underline hover:bg-accent/50 transition-colors rounded-t-2xl">

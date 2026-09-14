@@ -612,6 +612,14 @@ export default function Home() {
     }
   }, [activePage, isAdmin, authLoading, store]);
 
+  // Reset sub-sidebar to topmost when main page changes
+  // User wanted: each main page defaults to first sub-page, not last opened
+  useEffect(() => {
+    if (activePage === 'home') store.setActiveHomeSidebar('semua-feed');
+    else if (activePage === 'dashboard') store.setActiveDashSidebar('statistik');
+    else if (activePage === 'administrator') store.setActiveAdminSidebar('lagging-indicator');
+  }, [activePage, store]);
+
   useEffect(() => {
     const t = setTimeout(() => setLoading(true), 0);
     const t2 = setTimeout(() => setLoading(false), 50);
