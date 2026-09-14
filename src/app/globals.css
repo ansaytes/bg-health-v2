@@ -1456,12 +1456,13 @@ select.admin-input.compact-input {
 }
 .admin-form-inner {
   flex: 1;
-  overflow-y: scroll;
+  overflow-y: auto;
   overflow-x: hidden;
-  padding: 12px 14px 60px;
+  padding: 12px 14px 16px;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  gap: 12px;
 }
 .admin-form-card {
   background: var(--card);
@@ -1755,7 +1756,7 @@ select.admin-input.compact-input {
   .sidebar { width: 260px; }
   .hamburger { width: 40px; height: 52px; top: 10px; left: 10px; border-radius: 10px; }
   /* Admin forms mobile */
-  .admin-form-inner { padding: 10px 10px 40px; }
+  .admin-form-inner { padding: 10px 10px 16px; }
   .admin-form-card { padding: 14px; }
   .admin-form-title { font-size: 14px; }
   /* Raw table mobile */
@@ -2562,13 +2563,22 @@ select.admin-input.compact-input {
   flex: 2;
   background: #000;
   display: block;
-  min-height: 400px;
+  min-height: 300px;
   max-height: 88vh;
-  overflow-y: auto;
+  overflow-y: auto !important;
   overflow-x: hidden;
   position: relative;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.3) transparent;
+  scrollbar-color: rgba(255,255,255,0.4) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+.ig-modal-image-section img {
+  display: block;
+  width: 100%;
+  height: auto !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  min-height: 300px;
 }
 .ig-modal-image-section::-webkit-scrollbar {
   width: 8px;
@@ -2580,14 +2590,7 @@ select.admin-input.compact-input {
   background: rgba(255,255,255,0.3);
   border-radius: 4px;
 }
-.ig-modal-image-section img {
-  width: 100%;
-  height: auto !important;
-  max-height: none !important;
-  object-fit: contain !important;
-  display: block;
-  min-height: 100%;
-}
+
 .ig-modal-image-section img {
   width: 100%;
   height: 100%;
@@ -2830,8 +2833,8 @@ select.admin-input.compact-input {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 8px;
+  padding: 8px 10px;
   background: transparent;
   border: none;
   border-radius: 8px;
