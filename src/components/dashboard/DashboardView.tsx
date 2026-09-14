@@ -77,8 +77,9 @@ function getSickPeriodRange(bulan: number, tahun: number) {
 
 export default function DashboardView() {
   const [selectedSite, setSelectedSite] = useState<string>('All Site');
-  const [selectedYear, setSelectedYear] = useState<number>(2026);
-  const [selectedMonth, setSelectedMonth] = useState<number | 'all'>(1);
+  // Default: current year + current month (Statistik Kesehatan)
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number | 'all'>(new Date().getMonth() + 1);
 
   const [kpiData, setKpiData] = useState<KpiRow[]>([]);
   const [asrRanking, setAsrRanking] = useState<AsrRankRow[]>([]);

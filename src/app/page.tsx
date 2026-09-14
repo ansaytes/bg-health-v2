@@ -166,7 +166,7 @@ const HOME_SIDEBAR: SidebarItem[] = [
 const DASH_SIDEBAR: SidebarItem[] = [
   { key: 'statistik', label: 'Statistik Kesehatan', icon: <IconStatistik /> },
   { key: 'monitoring', label: 'Monitoring MCU', icon: <IconMonitoring /> },
-  { key: 'tindak-lanjut', label: 'Hasil & Tindak Lanjut', icon: <IconTindakLanjut /> },
+  { key: 'tindak-lanjut', label: 'Analisa & Tindak Lanjut MCU', icon: <IconTindakLanjut /> },
   { key: 'kunjungan', label: 'Kunjungan Berobat', icon: <IconKunjunganDash /> },
 ];
 
