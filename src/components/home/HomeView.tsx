@@ -226,26 +226,65 @@ function FeedSection({
   );
 }
 
-/* ── Content Modal (zoom popup for video/image) ── */
+/* ── Content Modal — Instagram-style for campaigns, full video for others ── */
 function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () => void }) {
   if (!item) return null;
   const isVideo = item.type === 'talk' || (item.type === 'news' && (!!item.video_url || !!item.media_url));
+  const isCampaign = item.type === 'campaign';
   const thumbnail = normalizeImageUrl(item.media_url || item.thumbnail_url || item.image_url);
   const videoUrl = item.video_url || item.external_url || '';
-  // Convert YouTube URL to embed URL
   const getYouTubeEmbed = (url: string): string | null => {
     const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     return m ? `https://www.youtube.com/embed/${m[1]}?autoplay=1&rel=0` : null;
   };
   const embedUrl = isVideo ? getYouTubeEmbed(videoUrl) : null;
 
+  // For campaigns: IG-style layout (image full + scrollable caption side/below)
+  if (isCampaign) {
+    return (
+      <div className="content-modal-overlay" onClick={onClose}>
+        <div className="content-modal ig-style" onClick={(e) => e.stopPropagation()}>
+          <button className="content-modal-close" onClick={onClose} aria-label="Tutup">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
+          </button>
+          <div className="ig-modal-inner">
+            {/* Image section — full size, scrollable to view entire image */}
+            <div className="ig-modal-image-section">
+              {thumbnail ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={thumbnail} alt={item.title || ''} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', background: '#000' }} />
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#fff' }}>Tidak ada gambar</div>
+              )}
+            </div>
+            {/* Caption section — scrollable, IG-style */}
+            <div className="ig-modal-caption-section">
+              <div className="ig-modal-header">
+                <div className="ig-modal-avatar">A</div>
+                <div>
+                  <div className="ig-modal-username">Admin</div>
+                  <div className="ig-modal-date">{item.date}</div>
+                </div>
+              </div>
+              <div className="ig-modal-caption-body">
+                {item.title && <h3 className="ig-modal-title">{item.title}</h3>}
+                <p className="ig-modal-caption">{item.caption}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // For videos (News + Health Talk): full-screen video player
   return (
     <div className="content-modal-overlay" onClick={onClose}>
-      <div className="content-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="content-modal video-style" onClick={(e) => e.stopPropagation()}>
         <button className="content-modal-close" onClick={onClose} aria-label="Tutup">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
         </button>
-        <div className="content-modal-media">
+        <div className="video-modal-media">
           {isVideo && embedUrl ? (
             <iframe
               src={embedUrl}
@@ -263,11 +302,11 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted-foreground)' }}>Tidak ada media</div>
           )}
         </div>
-        <div className="content-modal-body">
+        <div className="video-modal-body">
           {item.title && <h3 className="content-modal-title">{item.title}</h3>}
           <p className="content-modal-caption">{item.caption}</p>
           <p className="content-modal-meta">
-            {item.type === 'campaign' ? 'Admin' : (isVideo || item.source === 'youtube') ? '@BagongNewsYoutube' : '@BagongNews'}
+            {(isVideo || item.source === 'youtube') ? '@BagongNewsYoutube' : '@BagongNews'}
             {item.views ? ` · ${item.views.toLocaleString('id-ID')} views` : ''}
             {' · '}{item.date}
           </p>

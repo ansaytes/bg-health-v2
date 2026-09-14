@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
       .from('employees')
       .select('nik, nama, gender, department, division, job_position, site_name, national_id, phone_number, level_golongan, age, place_of_birth, birth_date, last_education, place_of_hire, address, religion, masa_kerja, employee_status, employment_status, tanggal_pkwt, tanggal_resign, grading, marital_status, child, specification_job, area, spesification')
       .or(filters.join(','))
+      .ilike('employment_status', 'Aktif')
       .limit(20);
 
     if (error) {
