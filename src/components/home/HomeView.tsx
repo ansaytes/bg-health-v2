@@ -439,9 +439,9 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
   if (activeTab === 'semua-feed') {
     return (
       <div className="home-feed">
-        <FeedSection title="News" data={newsData} onOpen={handleOpenItem} />
         <FeedSection title="Health Campaign" data={campaignData} onOpen={handleOpenItem} />
         <FeedSection title="Health Talk" data={talkData} onOpen={handleOpenItem} />
+        <FeedSection title="News" data={newsData} onOpen={handleOpenItem} />
         <ContentModal item={selectedItem} onClose={handleCloseItem} />
       </div>
     );

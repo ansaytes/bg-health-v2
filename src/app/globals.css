@@ -489,7 +489,8 @@
    ═══════════════════════════════════ */
 .chart-box {
   position: relative;
-  height: 180px;
+  flex: 1;
+  min-height: 0;
   overflow: visible;
 }
 
@@ -1769,8 +1770,8 @@ select.admin-input.compact-input {
   .mcu-total-num { font-size: 16px; }
   .kunjungan-filter-bar { gap: 4px; }
   .kunjungan-filter-bar select { height: 28px; font-size: 10px; flex: 1 1 auto; min-width: 0; }
-  .kunjungan-trend-row .chart-box { height: 200px; }
-  .kunjungan-row-charts .chart-box { height: 200px; }
+  .kunjungan-trend-row .chart-box { flex: 1; min-height: 0; }
+  .kunjungan-row-charts .chart-box { flex: 1; min-height: 0; }
   .sick-list { overflow-x: auto; min-height: 120px; }
   .sidebar { width: 260px; }
   .hamburger { width: 40px; height: 52px; top: 10px; left: 10px; border-radius: 10px; }
