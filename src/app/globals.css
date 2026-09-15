@@ -1938,6 +1938,7 @@ select.admin-input.compact-input {
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.55);
   border: none;
+  z-index: 100002;
   color: #fff;
   cursor: pointer;
   display: flex;
