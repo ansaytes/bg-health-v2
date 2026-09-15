@@ -52,7 +52,7 @@ export default function KunjunganBerobat() {
       {/* Main Content — scrollable, like reference */}
       <div className="kunjungan-scroll-content">
         {/* Trend Row — 2 charts */}
-        <div className="kunjungan-trend-row" style={{ flex: 1, minHeight: 0, display: 'flex', gap: 6 }}>
+        <div className="kunjungan-trend-row" style={{ flex: 1, minHeight: 0 }}>
           <div className="card glow-orange" style={{ padding: '10px 12px', flex: '1', display: 'flex', flexDirection: 'column', minHeight: '0' }}>
             <div className="card-head" style={{ marginBottom: 3 }}>
               <div className="card-icon" style={{ background: 'rgba(255,77,0,.1)', width: 20, height: 20, borderRadius: 5 }}>
@@ -75,7 +75,7 @@ export default function KunjunganBerobat() {
         </div>
 
         {/* 3 Charts Row */}
-        <div className="kunjungan-row-charts" style={{ flex: 1, minHeight: 0, display: 'flex', gap: 6 }}>
+        <div className="kunjungan-row-charts" style={{ flex: 1, minHeight: 0 }}>
           <div className="card glow-coral" style={{ padding: '10px 12px', flex: '1', display: 'flex', flexDirection: 'column', minHeight: '0' }}>
             <div className="card-head" style={{ marginBottom: 3 }}>
               <div className="card-icon" style={{ background: 'rgba(255,99,71,.1)', width: 20, height: 20, borderRadius: 5 }}>
