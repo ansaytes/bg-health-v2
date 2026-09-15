@@ -436,6 +436,8 @@
   flex-direction: column;
   gap: 8px;
   min-height: 0;
+
+  height: 100%;
 }
 .dashboard.scrollable {
   overflow-y: auto;
@@ -452,6 +454,8 @@
   box-shadow: var(--shadow);
   transition: background 0.3s, border 0.3s, box-shadow 0.3s;
   overflow: visible;
+
+  flex-direction: column;
 }
 .card-head {
   display: flex;
@@ -745,12 +749,10 @@ select:focus { border-color: #ff4d00; }
 }
 .kunjungan-trend-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  flex-shrink: 0;
-
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
   flex: 1;
-  min-height: 200px;
+  min-height: 0;
 }
 .kunjungan-trend-row .card {
   display: flex;
@@ -761,10 +763,8 @@ select:focus { border-color: #ff4d00; }
 }
 .kunjungan-row-charts {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-  flex-shrink: 0;
-
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
   flex: 1;
   min-height: 0;
 }
@@ -2957,153 +2957,16 @@ select.admin-input.compact-input {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Raw Table — Freeze First 4 Columns (No, Jobsite, Bulan, Tahun)
+   Raw Table — Freeze Header Row + First 4 Columns (No Borders)
    ═══════════════════════════════════════════════════════════════ */
+/* Header row sticky vertikal */
 .raw-table-scroll thead th {
   position: sticky;
   top: 0;
   z-index: 5;
   background: var(--card, #1a1d24);
 }
-/* Kolom 1-4 freeze horizontal */
-.raw-table-scroll thead th:nth-child(1),
-.raw-table-scroll tbody td:nth-child(1) {
-  position: sticky;
-  left: 0;
-  z-index: 6;
-  min-width: 36px;
-  max-width: 36px;
-  background: var(--card, #1a1d24);
-}
-.raw-table-scroll thead th:nth-child(2),
-.raw-table-scroll tbody td:nth-child(2) {
-  position: sticky;
-  left: 36px;
-  z-index: 6;
-  min-width: 90px;
-  max-width: 90px;
-  background: var(--card, #1a1d24);
-}
-.raw-table-scroll thead th:nth-child(3),
-.raw-table-scroll tbody td:nth-child(3) {
-  position: sticky;
-  left: 126px;
-  z-index: 6;
-  min-width: 70px;
-  max-width: 70px;
-  background: var(--card, #1a1d24);
-}
-.raw-table-scroll thead th:nth-child(4),
-.raw-table-scroll tbody td:nth-child(4) {
-  position: sticky;
-  left: 196px;
-  z-index: 6;
-  min-width: 55px;
-  max-width: 55px;
-  background: var(--card, #1a1d24);
-}
-/* Header corner cells — z-index lebih tinggi */
-.raw-table-scroll thead th:nth-child(1),
-.raw-table-scroll thead th:nth-child(2),
-.raw-table-scroll thead th:nth-child(3),
-.raw-table-scroll thead th:nth-child(4) {
-  z-index: 7;
-}
-/* Dark mode background */
-.dark .raw-table-scroll thead th:nth-child(1),
-.dark .raw-table-scroll thead th:nth-child(2),
-.dark .raw-table-scroll thead th:nth-child(3),
-.dark .raw-table-scroll thead th:nth-child(4),
-.dark .raw-table-scroll tbody td:nth-child(1),
-.dark .raw-table-scroll tbody td:nth-child(2),
-.dark .raw-table-scroll tbody td:nth-child(3),
-.dark .raw-table-scroll tbody td:nth-child(4) {
-  background: #1f2329;
-}
-/* Border pemisah untuk kolom freeze terakhir (kolom 4) */
-.raw-table-scroll thead th:nth-child(4),
-.raw-table-scroll tbody td:nth-child(4) {
-  border-right: 2px solid var(--border, rgba(255,255,255,0.15));
-  box-shadow: 2px 0 4px rgba(0,0,0,0.05);
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   Raw Table — Freeze First 4 Columns (clean, no borders)
-   ═══════════════════════════════════════════════════════════════ */
-.raw-table-scroll thead th {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: var(--card, #1a1d24);
-}
-.raw-table-scroll thead th:nth-child(1),
-.raw-table-scroll tbody td:nth-child(1) {
-  position: sticky;
-  left: 0;
-  z-index: 6;
-  min-width: 30px;
-  max-width: 50px;
-  white-space: nowrap;
-  background: var(--card, #1a1d24);
-}
-.raw-table-scroll thead th:nth-child(2),
-.raw-table-scroll tbody td:nth-child(2) {
-  position: sticky;
-  left: 40px;
-  z-index: 6;
-  min-width: 80px;
-  max-width: 120px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  background: var(--card, #1a1d24);
-}
-.raw-table-scroll thead th:nth-child(3),
-.raw-table-scroll tbody td:nth-child(3) {
-  position: sticky;
-  left: 160px;
-  z-index: 6;
-  min-width: 60px;
-  max-width: 80px;
-  white-space: nowrap;
-  background: var(--card, #1a1d24);
-}
-.raw-table-scroll thead th:nth-child(4),
-.raw-table-scroll tbody td:nth-child(4) {
-  position: sticky;
-  left: 240px;
-  z-index: 6;
-  min-width: 50px;
-  max-width: 70px;
-  white-space: nowrap;
-  background: var(--card, #1a1d24);
-}
-.raw-table-scroll thead th:nth-child(1),
-.raw-table-scroll thead th:nth-child(2),
-.raw-table-scroll thead th:nth-child(3),
-.raw-table-scroll thead th:nth-child(4) {
-  z-index: 7;
-}
-.dark .raw-table-scroll thead th:nth-child(1),
-.dark .raw-table-scroll thead th:nth-child(2),
-.dark .raw-table-scroll thead th:nth-child(3),
-.dark .raw-table-scroll thead th:nth-child(4),
-.dark .raw-table-scroll tbody td:nth-child(1),
-.dark .raw-table-scroll tbody td:nth-child(2),
-.dark .raw-table-scroll tbody td:nth-child(3),
-.dark .raw-table-scroll tbody td:nth-child(4) {
-  background: #1f2329;
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   Raw Table — Freeze First 4 Columns (auto width, no borders)
-   ═══════════════════════════════════════════════════════════════ */
-.raw-table-scroll thead th {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: var(--card, #1a1d24);
-}
+/* Kolom 1-4 sticky horizontal */
 .raw-table-scroll thead th:nth-child(1),
 .raw-table-scroll tbody td:nth-child(1),
 .raw-table-scroll thead th:nth-child(2),
@@ -3115,15 +2978,17 @@ select.admin-input.compact-input {
   position: sticky;
   left: 0;
   z-index: 6;
-  white-space: nowrap;
   background: var(--card, #1a1d24);
 }
+/* Corner cells (header + frozen columns) */
 .raw-table-scroll thead th:nth-child(1),
 .raw-table-scroll thead th:nth-child(2),
 .raw-table-scroll thead th:nth-child(3),
 .raw-table-scroll thead th:nth-child(4) {
   z-index: 7;
 }
+/* Dark mode backgrounds */
+.dark .raw-table-scroll thead th,
 .dark .raw-table-scroll thead th:nth-child(1),
 .dark .raw-table-scroll thead th:nth-child(2),
 .dark .raw-table-scroll thead th:nth-child(3),

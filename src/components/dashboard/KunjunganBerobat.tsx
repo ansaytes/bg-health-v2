@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 const ChartPlaceholder = ({ id }: { id: string }) => (
-  <div className="chart-box" style={{ flex: 1, minHeight: 0 }}><canvas id={id} /></div>
+  <div className="chart-box" style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><canvas id={id} /></div>
 );
 
 export default function KunjunganBerobat() {
@@ -52,8 +52,8 @@ export default function KunjunganBerobat() {
       {/* Main Content — scrollable, like reference */}
       <div className="kunjungan-scroll-content">
         {/* Trend Row — 2 charts */}
-        <div className="kunjungan-trend-row">
-          <div className="card glow-orange" style={{ padding: '10px 12px', minHeight: '140px', display: 'flex', flexDirection: 'column' }}>
+        <div className="kunjungan-trend-row" style={{ flex: 1, minHeight: 0, display: 'flex', gap: 6 }}>
+          <div className="card glow-orange" style={{ padding: '10px 12px', flex: '1', display: 'flex', flexDirection: 'column', minHeight: '0' }}>
             <div className="card-head" style={{ marginBottom: 3 }}>
               <div className="card-icon" style={{ background: 'rgba(255,77,0,.1)', width: 20, height: 20, borderRadius: 5 }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="#ff4d00" strokeWidth="2" strokeLinecap="round" style={{ width: 10, height: 10 }}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
@@ -63,7 +63,7 @@ export default function KunjunganBerobat() {
             <ChartPlaceholder id="kunjunganTrendChart" />
           </div>
 
-          <div className="card glow-amber" style={{ padding: '10px 12px', minHeight: '140px', display: 'flex', flexDirection: 'column' }}>
+          <div className="card glow-amber" style={{ padding: '10px 12px', flex: '1', display: 'flex', flexDirection: 'column', minHeight: '0' }}>
             <div className="card-head" style={{ marginBottom: 3 }}>
               <div className="card-icon" style={{ background: 'rgba(255,140,66,.1)', width: 20, height: 20, borderRadius: 5 }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="#ff8c42" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 10, height: 10 }}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>
@@ -75,8 +75,8 @@ export default function KunjunganBerobat() {
         </div>
 
         {/* 3 Charts Row */}
-        <div className="kunjungan-row-charts" style={{ flex: 1, minHeight: 0 }}>
-          <div className="card glow-coral" style={{ padding: '10px 12px', minHeight: '140px', display: 'flex', flexDirection: 'column' }}>
+        <div className="kunjungan-row-charts" style={{ flex: 1, minHeight: 0, display: 'flex', gap: 6 }}>
+          <div className="card glow-coral" style={{ padding: '10px 12px', flex: '1', display: 'flex', flexDirection: 'column', minHeight: '0' }}>
             <div className="card-head" style={{ marginBottom: 3 }}>
               <div className="card-icon" style={{ background: 'rgba(255,99,71,.1)', width: 20, height: 20, borderRadius: 5 }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="#ff6347" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 10, height: 10 }}><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" /></svg>
@@ -86,7 +86,7 @@ export default function KunjunganBerobat() {
             <ChartPlaceholder id="kunjunganDiagnosaChart" />
           </div>
 
-          <div className="card glow-teal" style={{ padding: '10px 12px', minHeight: '140px', display: 'flex', flexDirection: 'column' }}>
+          <div className="card glow-teal" style={{ padding: '10px 12px', flex: '1', display: 'flex', flexDirection: 'column', minHeight: '0' }}>
             <div className="card-head" style={{ marginBottom: 3 }}>
               <div className="card-icon" style={{ background: 'rgba(0,184,148,.1)', width: 20, height: 20, borderRadius: 5 }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="#00B894" strokeWidth="2" strokeLinecap="round" style={{ width: 10, height: 10 }}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
@@ -96,7 +96,7 @@ export default function KunjunganBerobat() {
             <ChartPlaceholder id="kunjunganObatChart" />
           </div>
 
-          <div className="card glow-steel" style={{ padding: '10px 12px', minHeight: '140px', display: 'flex', flexDirection: 'column' }}>
+          <div className="card glow-steel" style={{ padding: '10px 12px', flex: '1', display: 'flex', flexDirection: 'column', minHeight: '0' }}>
             <div className="card-head" style={{ marginBottom: 3 }}>
               <div className="card-icon" style={{ background: 'rgba(119,136,153,.1)', width: 20, height: 20, borderRadius: 5 }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="#778899" strokeWidth="2" strokeLinecap="round" style={{ width: 10, height: 10 }}><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /></svg>
