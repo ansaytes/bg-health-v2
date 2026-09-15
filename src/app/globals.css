@@ -741,11 +741,11 @@ select:focus { border-color: #ff4d00; }
   padding: 0 22px 0 6px;
 }
 .kunjungan-scroll-content {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-bottom: 20px;
-  flex-shrink: 0;
+  gap: 6px;
+  min-height: 0;
 }
 .kunjungan-trend-row {
   display: grid;
@@ -759,7 +759,8 @@ select:focus { border-color: #ff4d00; }
   flex-direction: column;
 }
 .kunjungan-trend-row .chart-box {
-  height: 190px;
+  flex: 1;
+  min-height: 0;
 }
 .kunjungan-row-charts {
   display: grid;
@@ -774,6 +775,7 @@ select:focus { border-color: #ff4d00; }
 }
 .kunjungan-row-charts .chart-box {
   flex: 1;
+  min-height: 0;
   min-height: 0;
   height: 185px;
 }
