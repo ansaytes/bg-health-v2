@@ -1855,21 +1855,11 @@ select.admin-input.compact-input {
    Dark mode — solid background untuk semua tabel header
    ═══════════════════════════════════ */
 .dark .sick-table thead tr,
-.dark .raw-table-scroll thead tr,
-.dark table thead tr {
-  background: #1a1a1a !important;
-}
+
 .dark .sick-table th,
-.dark .raw-table-scroll th,
-.dark table th {
-  background: #1a1a1a !important;
-  color: #aaaaaa !important;
-}
+
 .dark .sick-table tbody tr:hover,
-.dark .raw-table-scroll tbody tr:hover,
-.dark table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.04) !important;
-}
+
 
 /* Solid background untuk dropdown select di dark mode */
 .dark select option,
@@ -2101,22 +2091,6 @@ select.admin-input.compact-input {
   padding: 6px;
   z-index: 10000;
   animation: downloadMenuIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.download-btn-menu::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 60%;
-  height: 100%;
-  background: linear-gradient(
-    115deg,
-    transparent 0%,
-    rgba(255, 140, 66, 0.12) 50%,
-    transparent 100%
-  );
-  animation: empShine 4s ease-in-out infinite;
-  pointer-events: none;
 }
 .download-btn-menu > * { position: relative; z-index: 2; }
 .dark .download-btn-menu {
@@ -2910,53 +2884,18 @@ select.admin-input.compact-input {
   background: var(--card, #1a1d24);
 }
 /* Kolom 1, 2, 3 freeze horizontal */
-.raw-table-scroll thead th:nth-child(1),
-.raw-table-scroll tbody td:nth-child(1) {
-  position: sticky;
-  left: 0;
-  z-index: 6;
-  min-width: 40px;
-}
-.raw-table-scroll thead th:nth-child(2),
-.raw-table-scroll tbody td:nth-child(2) {
-  position: sticky;
-  left: 40px;
-  z-index: 6;
-  min-width: 80px;
-}
-.raw-table-scroll thead th:nth-child(3),
-.raw-table-scroll tbody td:nth-child(3) {
-  position: sticky;
-  left: 120px;
-  z-index: 6;
-  min-width: 60px;
-}
+
+
+
 /* Header corner cell — kolom 1-3 + header row */
-.raw-table-scroll thead th:nth-child(1) { z-index: 7; }
-.raw-table-scroll thead th:nth-child(2) { z-index: 7; }
-.raw-table-scroll thead th:nth-child(3) { z-index: 7; }
+
+
+
 /* Background agar tidak tembus saat scroll */
-.raw-table-scroll thead th:nth-child(1),
-.raw-table-scroll thead th:nth-child(2),
-.raw-table-scroll thead th:nth-child(3),
-.raw-table-scroll tbody td:nth-child(1),
-.raw-table-scroll tbody td:nth-child(2),
-.raw-table-scroll tbody td:nth-child(3) {
-  background: var(--card, #1a1d24);
-}
-.dark .raw-table-scroll thead th:nth-child(1),
-.dark .raw-table-scroll thead th:nth-child(2),
-.dark .raw-table-scroll thead th:nth-child(3),
-.dark .raw-table-scroll tbody td:nth-child(1),
-.dark .raw-table-scroll tbody td:nth-child(2),
-.dark .raw-table-scroll tbody td:nth-child(3) {
-  background: #1f2329;
-}
+
+.dark 
 /* Border pemisah untuk kolom freeze */
-.raw-table-scroll thead th:nth-child(3),
-.raw-table-scroll tbody td:nth-child(3) {
-  border-right: 2px solid var(--border, rgba(255,255,255,0.15));
-}
+
 
 /* ═══════════════════════════════════════════════════════════════
    Raw Table — Freeze Header Row + First 4 Columns
@@ -2968,35 +2907,19 @@ select.admin-input.compact-input {
   z-index: 5;
   background: #FFFFFF;
 }
-.dark .raw-table-scroll thead th {
-  background: #1f2329;
-}
-.raw-table-scroll thead th:nth-child(1),
-.raw-table-scroll tbody td:nth-child(1),
-.raw-table-scroll thead th:nth-child(2),
-.raw-table-scroll tbody td:nth-child(2),
-.raw-table-scroll thead th:nth-child(3),
-.raw-table-scroll tbody td:nth-child(3),
-.raw-table-scroll thead th:nth-child(4),
-.raw-table-scroll tbody td:nth-child(4) {
+
+
+.dark
+
+/* ═══════════════════════════════════════════════════════════════
+   Raw Table — Header sticky (NO column freeze)
+   ═══════════════════════════════════════════════════════════════ */
+.raw-table-scroll thead th {
   position: sticky;
-  left: 0;
-  z-index: 6;
+  top: 0;
+  z-index: 5;
   background: #FFFFFF;
 }
-.dark .raw-table-scroll thead th:nth-child(1),
-.dark .raw-table-scroll tbody td:nth-child(1),
-.dark .raw-table-scroll thead th:nth-child(2),
-.dark .raw-table-scroll tbody td:nth-child(2),
-.dark .raw-table-scroll thead th:nth-child(3),
-.dark .raw-table-scroll tbody td:nth-child(3),
-.dark .raw-table-scroll thead th:nth-child(4),
-.dark .raw-table-scroll tbody td:nth-child(4) {
+.dark .raw-table-scroll thead th {
   background: #1f2329;
-}
-.raw-table-scroll thead th:nth-child(1),
-.raw-table-scroll thead th:nth-child(2),
-.raw-table-scroll thead th:nth-child(3),
-.raw-table-scroll thead th:nth-child(4) {
-  z-index: 7;
 }

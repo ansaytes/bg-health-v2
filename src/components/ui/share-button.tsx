@@ -109,44 +109,18 @@ export default function ShareButton({
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const handleShare = async (target: ShareTarget, e?: React.MouseEvent) => {
+  const handleShare = (target: ShareTarget, e?: React.MouseEvent) => {
     e?.stopPropagation();
     
-    // For WhatsApp with image: try Web Share API first (mobile only)
-    if (target === 'whatsapp' && imageUrl) {
-      try {
-        if (navigator.share) {
-          // Fetch image as blob
-          const res = await fetch(imageUrl);
-          const blob = await res.blob();
-          const file = new File([blob], 'health-campaign.jpg', { type: blob.type });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            // Combine title + caption for full text sharing
-            const fullCaption = (title ? title + '\n\n' : '') + (text || '');
-            await navigator.share({
-              title: title || 'BG-Health Campaign',
-              text: fullCaption,
-              files: [file],
-            });
-            setIsOpen(false);
-            return;
-          }
-        }
-      } catch (err) {
-        console.log('Web Share API failed, falling back to URL share');
-      }
-    }
+
     const shareUrl = encodeURIComponent(url);
     const shareTitle = encodeURIComponent(title);
     const shareText = encodeURIComponent(text);
-    const shareImage = imageUrl ? encodeURIComponent(imageUrl) : '';
-
+  
     let targetUrl = '';
     switch (target) {
       case 'whatsapp':
-        // For WA: include caption + image URL if available
-        const waText = imageUrl ? `${shareText}%0A%0A${imageUrl}` : shareText;
-        targetUrl = `https://wa.me/?text=${waText}%0A${shareUrl}`;
+        targetUrl = `https://wa.me/?text=${shareText}%0A${shareUrl}`;
         break;
       case 'telegram':
         targetUrl = `https://t.me/share/url?url=${shareUrl}&text=${shareTitle}`;
