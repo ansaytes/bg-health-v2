@@ -107,7 +107,7 @@ function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOp
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={(e) => { if (e.key === 'Enter') handleClick(); }}
-      style={{ cursor: 'pointer' }}
+      style={{ cursor: 'pointer', height: '100%', display: 'flex', flexDirection: 'column' }}
     >
       <div
         className="home-feed-card-media"
@@ -152,7 +152,7 @@ function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOp
           </span>
         )}
       </div>
-      <div className="home-feed-card-body">
+      <div className="home-feed-card-body" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {item.title && (
           <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--foreground)', marginBottom: 4, lineHeight: 1.3 }}>{item.title}</p>
         )}
@@ -179,7 +179,7 @@ function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOp
             {' · '}{item.date}
           </p>
           <ShareButton
-            url={item.video_url || item.external_url || (typeof window !== 'undefined' ? window.location.href : '')}
+            url={thumbnail || item.video_url || item.external_url || (typeof window !== 'undefined' ? window.location.href : '')}
             title={item.title || ''}
             text={item.caption || ''}
             imageUrl={thumbnail || undefined}
@@ -285,12 +285,12 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
                 <p className="ig-modal-caption">{item.caption}</p>
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border, rgba(255,255,255,0.08))' }}>
                   <ShareButton
-                    url={typeof window !== 'undefined' ? window.location.href : ''}
+                    url={thumbnail || (typeof window !== 'undefined' ? window.location.href : '')}
                     title={item.title || ''}
                     text={item.caption || ''}
                     imageUrl={thumbnail || undefined}
-                    variant="full"
-                    menuPosition="top"
+                    variant="icon"
+                    menuPosition="bottom"
                   />
                 </div>
               </div>

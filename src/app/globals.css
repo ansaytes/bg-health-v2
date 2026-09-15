@@ -826,6 +826,8 @@ select:focus { border-color: #ff4d00; }
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
+
+  align-items: stretch;
 }
 .home-feed-card {
   background: var(--card);
@@ -2569,6 +2571,9 @@ select.admin-input.compact-input {
   flex-direction: column;
   background: var(--card, #1a1d24);
   border-left: 1px solid var(--border, rgba(255,255,255,0.08));
+  position: relative;
+  z-index: 10;
+  overflow: visible;
 }
 .ig-modal-header {
   display: flex;
