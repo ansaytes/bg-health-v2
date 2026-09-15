@@ -121,9 +121,11 @@ export default function ShareButton({
           const blob = await res.blob();
           const file = new File([blob], 'health-campaign.jpg', { type: blob.type });
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            // Combine title + caption for full text sharing
+            const fullCaption = (title ? title + '\n\n' : '') + (text || '');
             await navigator.share({
-              title: title,
-              text: text,
+              title: title || 'BG-Health Campaign',
+              text: fullCaption,
               files: [file],
             });
             setIsOpen(false);
@@ -142,7 +144,9 @@ export default function ShareButton({
     let targetUrl = '';
     switch (target) {
       case 'whatsapp':
-        targetUrl = `https://wa.me/?text=${shareText}%0A${shareUrl}`;
+        // For WA: include caption + image URL if available
+        const waText = imageUrl ? `${shareText}%0A%0A${imageUrl}` : shareText;
+        targetUrl = `https://wa.me/?text=${waText}%0A${shareUrl}`;
         break;
       case 'telegram':
         targetUrl = `https://t.me/share/url?url=${shareUrl}&text=${shareTitle}`;

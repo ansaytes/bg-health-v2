@@ -748,6 +748,9 @@ select:focus { border-color: #ff4d00; }
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   flex-shrink: 0;
+
+  flex: 1;
+  min-height: 200px;
 }
 .kunjungan-trend-row .card {
   display: flex;
@@ -1624,8 +1627,10 @@ select.admin-input.compact-input {
   padding: 0 4px 6px 8px;
   flex-wrap: nowrap;
   flex-shrink: 0;
-  overflow-x: auto;
   justify-content: flex-start;
+}
+.raw-table-filter-bar > .download-btn-wrapper {
+  margin-left: auto;
 }
 .raw-table-filter-bar > .download-btn-wrapper {
   margin-left: auto;
@@ -2092,9 +2097,8 @@ select.admin-input.compact-input {
   border-radius: 10px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.1);
   padding: 6px;
-  z-index: 1000;
+  z-index: 10000;
   animation: downloadMenuIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  overflow: hidden;
 }
 .download-btn-menu::before {
   content: '';
@@ -2862,7 +2866,7 @@ select.admin-input.compact-input {
   flex: 2;
   background: #000;
   display: block;
-  height: 100%;
+  max-height: 88vh;
   min-width: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -3071,6 +3075,46 @@ select.admin-input.compact-input {
   z-index: 6;
   min-width: 50px;
   max-width: 70px;
+  white-space: nowrap;
+  background: var(--card, #1a1d24);
+}
+.raw-table-scroll thead th:nth-child(1),
+.raw-table-scroll thead th:nth-child(2),
+.raw-table-scroll thead th:nth-child(3),
+.raw-table-scroll thead th:nth-child(4) {
+  z-index: 7;
+}
+.dark .raw-table-scroll thead th:nth-child(1),
+.dark .raw-table-scroll thead th:nth-child(2),
+.dark .raw-table-scroll thead th:nth-child(3),
+.dark .raw-table-scroll thead th:nth-child(4),
+.dark .raw-table-scroll tbody td:nth-child(1),
+.dark .raw-table-scroll tbody td:nth-child(2),
+.dark .raw-table-scroll tbody td:nth-child(3),
+.dark .raw-table-scroll tbody td:nth-child(4) {
+  background: #1f2329;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Raw Table — Freeze First 4 Columns (auto width, no borders)
+   ═══════════════════════════════════════════════════════════════ */
+.raw-table-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--card, #1a1d24);
+}
+.raw-table-scroll thead th:nth-child(1),
+.raw-table-scroll tbody td:nth-child(1),
+.raw-table-scroll thead th:nth-child(2),
+.raw-table-scroll tbody td:nth-child(2),
+.raw-table-scroll thead th:nth-child(3),
+.raw-table-scroll tbody td:nth-child(3),
+.raw-table-scroll thead th:nth-child(4),
+.raw-table-scroll tbody td:nth-child(4) {
+  position: sticky;
+  left: 0;
+  z-index: 6;
   white-space: nowrap;
   background: var(--card, #1a1d24);
 }
