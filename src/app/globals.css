@@ -2957,16 +2957,18 @@ select.admin-input.compact-input {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Raw Table — Freeze Header Row + First 4 Columns (No Borders)
+   Raw Table — Freeze Header Row + First 4 Columns
+   SOLID background (no transparency)
    ═══════════════════════════════════════════════════════════════ */
-/* Header row sticky vertikal */
 .raw-table-scroll thead th {
   position: sticky;
   top: 0;
   z-index: 5;
-  background: var(--card, #1a1d24);
+  background: #FFFFFF;
 }
-/* Kolom 1-4 sticky horizontal */
+.dark .raw-table-scroll thead th {
+  background: #1f2329;
+}
 .raw-table-scroll thead th:nth-child(1),
 .raw-table-scroll tbody td:nth-child(1),
 .raw-table-scroll thead th:nth-child(2),
@@ -2978,87 +2980,21 @@ select.admin-input.compact-input {
   position: sticky;
   left: 0;
   z-index: 6;
-  background: var(--card, #1a1d24);
+  background: #FFFFFF;
 }
-/* Corner cells (header + frozen columns) */
+.dark .raw-table-scroll thead th:nth-child(1),
+.dark .raw-table-scroll tbody td:nth-child(1),
+.dark .raw-table-scroll thead th:nth-child(2),
+.dark .raw-table-scroll tbody td:nth-child(2),
+.dark .raw-table-scroll thead th:nth-child(3),
+.dark .raw-table-scroll tbody td:nth-child(3),
+.dark .raw-table-scroll thead th:nth-child(4),
+.dark .raw-table-scroll tbody td:nth-child(4) {
+  background: #1f2329;
+}
 .raw-table-scroll thead th:nth-child(1),
 .raw-table-scroll thead th:nth-child(2),
 .raw-table-scroll thead th:nth-child(3),
 .raw-table-scroll thead th:nth-child(4) {
   z-index: 7;
-}
-/* Dark mode backgrounds */
-.dark .raw-table-scroll thead th,
-.dark .raw-table-scroll thead th:nth-child(1),
-.dark .raw-table-scroll thead th:nth-child(2),
-.dark .raw-table-scroll thead th:nth-child(3),
-.dark .raw-table-scroll thead th:nth-child(4),
-.dark .raw-table-scroll tbody td:nth-child(1),
-.dark .raw-table-scroll tbody td:nth-child(2),
-.dark .raw-table-scroll tbody td:nth-child(3),
-.dark .raw-table-scroll tbody td:nth-child(4) {
-  background: #1f2329;
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   Raw Table — Freeze Header Row + First 4 Columns
-   Each column has different left offset (no overlapping)
-   ═══════════════════════════════════════════════════════════════ */
-/* Header sticky vertikal */
-.raw-table-scroll thead th {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: var(--card, #1a1d24);
-}
-/* Kolom 1 — left: 0 */
-.raw-table-scroll thead th:nth-child(1),
-.raw-table-scroll tbody td:nth-child(1) {
-  position: sticky;
-  left: 0;
-  z-index: 6;
-  background: var(--card, #1a1d24);
-}
-/* Kolom 2 — left: 40px (setelah kolom 1) */
-.raw-table-scroll thead th:nth-child(2),
-.raw-table-scroll tbody td:nth-child(2) {
-  position: sticky;
-  left: 40px;
-  z-index: 6;
-  background: var(--card, #1a1d24);
-}
-/* Kolom 3 — left: 140px (setelah kolom 1+2) */
-.raw-table-scroll thead th:nth-child(3),
-.raw-table-scroll tbody td:nth-child(3) {
-  position: sticky;
-  left: 140px;
-  z-index: 6;
-  background: var(--card, #1a1d24);
-}
-/* Kolom 4 — left: 260px (setelah kolom 1+2+3) */
-.raw-table-scroll thead th:nth-child(4),
-.raw-table-scroll tbody td:nth-child(4) {
-  position: sticky;
-  left: 260px;
-  z-index: 6;
-  background: var(--card, #1a1d24);
-}
-/* Corner cells (header + frozen) — z-index lebih tinggi */
-.raw-table-scroll thead th:nth-child(1),
-.raw-table-scroll thead th:nth-child(2),
-.raw-table-scroll thead th:nth-child(3),
-.raw-table-scroll thead th:nth-child(4) {
-  z-index: 7;
-}
-/* Dark mode backgrounds */
-.dark .raw-table-scroll thead th,
-.dark .raw-table-scroll thead th:nth-child(1),
-.dark .raw-table-scroll thead th:nth-child(2),
-.dark .raw-table-scroll thead th:nth-child(3),
-.dark .raw-table-scroll thead th:nth-child(4),
-.dark .raw-table-scroll tbody td:nth-child(1),
-.dark .raw-table-scroll tbody td:nth-child(2),
-.dark .raw-table-scroll tbody td:nth-child(3),
-.dark .raw-table-scroll tbody td:nth-child(4) {
-  background: #1f2329;
 }
