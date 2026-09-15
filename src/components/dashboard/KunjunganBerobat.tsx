@@ -28,7 +28,7 @@ export default function KunjunganBerobat() {
   }, []);
 
   return (
-    <div className="dashboard scrollable" ref={containerRef} style={{ position: 'relative' }}>
+    <div className="dashboard scrollable" ref={containerRef} style={{ position: 'relative', height: '100%' }}>
       {/* Top Bar — filter kiri, total kanan, satu baris */}
       <div className="kunjungan-top-bar">
         <div className="kunjungan-filter-bar">
@@ -75,7 +75,7 @@ export default function KunjunganBerobat() {
         </div>
 
         {/* 3 Charts Row */}
-        <div className="kunjungan-row-charts">
+        <div className="kunjungan-row-charts" style={{ flex: 1, minHeight: 0 }}>
           <div className="card glow-coral" style={{ padding: '6px 8px' }}>
             <div className="card-head" style={{ marginBottom: 3 }}>
               <div className="card-icon" style={{ background: 'rgba(255,99,71,.1)', width: 20, height: 20, borderRadius: 5 }}>

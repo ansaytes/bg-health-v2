@@ -109,8 +109,31 @@ export default function ShareButton({
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const handleShare = (target: ShareTarget, e?: React.MouseEvent) => {
+  const handleShare = async (target: ShareTarget, e?: React.MouseEvent) => {
     e?.stopPropagation();
+    
+    // For WhatsApp with image: try Web Share API first (mobile only)
+    if (target === 'whatsapp' && imageUrl) {
+      try {
+        if (navigator.share) {
+          // Fetch image as blob
+          const res = await fetch(imageUrl);
+          const blob = await res.blob();
+          const file = new File([blob], 'health-campaign.jpg', { type: blob.type });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: title,
+              text: text,
+              files: [file],
+            });
+            setIsOpen(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.log('Web Share API failed, falling back to URL share');
+      }
+    }
     const shareUrl = encodeURIComponent(url);
     const shareTitle = encodeURIComponent(title);
     const shareText = encodeURIComponent(text);
