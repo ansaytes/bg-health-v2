@@ -205,10 +205,10 @@ function FeedSection({
   defaultCount?: number;
   onOpen: (item: FeedItem) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? data : data.slice(0, defaultCount);
-  const hasMore = data.length > defaultCount;
-  const remainingCount = data.length - defaultCount;
+  const [visibleCount, setVisibleCount] = useState(defaultCount);
+  const visible = data.slice(0, visibleCount);
+  const hasMore = data.length > visibleCount;
+  const remainingCount = data.length - visibleCount;
 
   return (
     <div className="home-feed-section">
@@ -229,9 +229,17 @@ function FeedSection({
       {hasMore && (
         <button
           className="lihat-selengkapnya"
-          onClick={() => setExpanded(!expanded)}
+          onClick={() => setVisibleCount(v => v + 3)}
         >
-          {expanded ? 'Tutup' : `Lihat Selengkapnya (${remainingCount} lagi)`}
+          Lihat Selengkapnya ({remainingCount} lagi)
+        </button>
+      )}
+      {!hasMore && data.length > defaultCount && (
+        <button
+          className="lihat-selengkapnya"
+          onClick={() => setVisibleCount(defaultCount)}
+        >
+          Tutup
         </button>
       )}
     </div>
