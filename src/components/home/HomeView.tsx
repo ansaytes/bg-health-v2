@@ -113,7 +113,7 @@ function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOp
         className="home-feed-card-media"
         style={{
           background: showImage ? '#0a0b0e' : placeholder.bg,
-          aspectRatio: isCampaign ? 'auto' : '4 / 3',
+          aspectRatio: '4 / 3',
         }}
       >
         {showImage ? (
@@ -121,7 +121,7 @@ function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOp
             src={thumbnail}
             alt={item.title || ''}
             loading="lazy"
-            style={{ width: '100%', height: isCampaign ? 'auto' : '100%', objectFit: isCampaign ? 'contain' : 'cover', display: 'block' }}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             onError={() => setImgError(true)}
           />
         ) : (
