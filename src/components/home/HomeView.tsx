@@ -349,7 +349,7 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
               imageUrl={thumbnail || undefined}
               variant="full"
               menuPosition="top"
-              isYouTube={isYouTube || item.source === 'youtube'}
+              isYouTube={isVideo || item.source === 'youtube'}
             />
           </div>
           {item.external_url && (

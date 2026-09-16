@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ShareButtonProps {
   url: string;
@@ -128,7 +129,7 @@ export default function ShareButton({ url, title = '', text = '', variant = 'ico
         </svg>
         {variant === 'full' && <span style={{ fontSize: 12, fontWeight: 600 }}>Bagikan</span>}
       </button>
-      {isOpen && (
+      {isOpen && typeof document !== 'undefined' && createPortal(
         <div ref={menuRef} className="share-btn-menu" style={{
           ...menuStyle,
           background: '#ffffff',
@@ -148,7 +149,8 @@ export default function ShareButton({ url, title = '', text = '', variant = 'ico
             </button>
           ))}
           {copied && <div style={{ padding: '6px 10px', fontSize: 11, color: '#00B894', fontWeight: 600, textAlign: 'center' }}>✓ Link tersalin!</div>}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
