@@ -13,9 +13,7 @@ export default function KunjunganBerobat() {
     const el = containerRef.current;
     if (!el) return;
     const onScroll = () => {
-      // Scroll UP (scrollTop > 0) = show Rujuk RS
-      // Scroll DOWN (scrollTop = 0) = hide Rujuk RS
-      if (el.scrollTop > 0) {
+      if (el.scrollTop > 10) {
         setRujukVisible(true);
       } else {
         setRujukVisible(false);
@@ -47,7 +45,7 @@ export default function KunjunganBerobat() {
         </div>
       </div>
 
-      {/* 5 Cards — FILL 1 PAGE PENUH (no scroll needed) */}
+      {/* 5 Cards — FILL 1 PAGE PENUH */}
       <div className="kunjungan-grid-2">
         <div className="card glow-orange">
           <div className="card-head">
@@ -98,13 +96,16 @@ export default function KunjunganBerobat() {
         </div>
       </div>
 
-      {/* Rujuk RS — HIDDEN by default, show on scroll UP, hide on scroll DOWN */}
+      {/* Rujuk RS — selalu ADA di DOM (bisa discroll), tapi visually hidden saat unscroll */}
       <div
         style={{
           flexShrink: 0,
           minHeight: 200,
           marginTop: 8,
-          display: rujukVisible ? 'block' : 'none',
+          opacity: rujukVisible ? 1 : 0,
+          transform: rujukVisible ? 'translateY(0)' : 'translateY(-20px)',
+          transition: 'opacity 0.3s ease, transform 0.3s ease',
+          pointerEvents: rujukVisible ? 'auto' : 'none',
         }}
       >
         <div className="card glow-coral">
