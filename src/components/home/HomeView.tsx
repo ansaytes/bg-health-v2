@@ -380,6 +380,7 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
             type: 'news' as const,
             views: p.views || 0,
           }));
+          news.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
           setNewsData(news);
 
           const talks: FeedItem[] = (socialJson.healthTalks || []).map((v: any) => ({
@@ -395,6 +396,7 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
             views: v.views || 0,
             lengthSeconds: v.lengthSeconds || 0,
           }));
+          talks.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
           setTalkData(talks);
         }
 
@@ -412,6 +414,7 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
             date: fmtDate(c.start_date || c.created_at),
             type: 'campaign' as const,
           }));
+          campaigns.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
           setCampaignData(campaigns);
         }
       } catch {
