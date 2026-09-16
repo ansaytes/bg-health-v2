@@ -30,7 +30,7 @@ async function fetchYouTubeRSSData(): Promise<Record<string, { published_at: str
   try {
     // Try RSS feed first — gives accurate publish dates
     // Hardcoded channel ID for @BagongNewsYoutube
-    const channelId = 'UCNAgSuYPXbF3bwfr0b4oXiK';
+    const channelId = 'UCmwnNhvM3VomoVkAkjR5AoQ';
     const rssRes = await fetch(
       `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`,
       {
