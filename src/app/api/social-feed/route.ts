@@ -135,31 +135,55 @@ async function fetchYouTubeVideos(): Promise<FeedItem[]> {
 }
 
 async function fetchInstagramPosts(): Promise<FeedItem[]> {
-  const token = process.env.INSTAGRAM_ACCESS_TOKEN;
-  const userId = process.env.INSTAGRAM_USER_ID;
-  if (!token || !userId) return [];
   try {
-    const url = `https://graph.instagram.com/v21.0/${userId}/media?fields=id,caption,media_type,media_url,permalink,thumbnail_url,timestamp&limit=12&access_token=${token}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    const rssUrl = process.env.INSTAGRAM_RSS_URL || 'https://rss.app/feeds/OiXO4pjBV8QvcXke.xml';
+    const res = await fetch(rssUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      signal: AbortSignal.timeout(10000),
+      next: { revalidate: 3600 }
+    });
     if (!res.ok) return [];
-    const json = await res.json();
+    
+    const xml = await res.text();
     const posts: FeedItem[] = [];
-    for (const p of json.data || []) {
-      const isVideo = p.media_type === 'VIDEO' || p.media_type === 'CAROUSEL_ALBUM';
-      const caption = (p.caption || '').replace(/\n/g, ' ').slice(0, 300);
-      posts.push({
-        id: `ig-${p.id}`, title: caption.slice(0, 80) || 'Postingan @Bagongnews',
-        caption, media_url: isVideo ? (p.thumbnail_url || '') : (p.media_url || ''),
-        source: 'instagram' as const,
-        published_at: p.timestamp || new Date().toISOString(),
-        video_url: isVideo ? (p.media_url || '') : undefined,
-        external_url: p.permalink || 'https://www.instagram.com/bagongnews/',
-      });
-      if (posts.length >= 12) break;
+    const items = xml.split('<item>').slice(1);
+    
+    for (const item of items) {
+      const linkMatch = item.match(/<link>([^<]+)<\/link>/);
+      const pubDateMatch = item.match(/<pubDate>([^<]+)<\/pubDate>/);
+      const mediaMatch = item.match(/<media:content[^>]+url="([^"]+)"/);
+      const descMatch = item.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/);
+      
+      if (linkMatch && pubDateMatch) {
+        const link = linkMatch[1];
+        const publishedAt = new Date(pubDateMatch[1]).toISOString();
+        const mediaUrl = mediaMatch ? mediaMatch[1] : '';
+        
+        let caption = '';
+        if (descMatch) {
+          caption = descMatch[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
+        }
+        
+        const title = caption.slice(0, 80) || 'Postingan @Bagongnews';
+        const idMatch = link.match(/\/p\/([^/]+)/);
+        const id = idMatch ? `ig-${idMatch[1]}` : `ig-${Math.random().toString(36).slice(2)}`;
+        
+        posts.push({
+          id,
+          title,
+          caption,
+          media_url: mediaUrl,
+          source: 'instagram',
+          published_at: publishedAt,
+          external_url: link,
+        });
+        
+        if (posts.length >= 12) break;
+      }
     }
     return posts;
   } catch (err) {
-    console.error('Instagram fetch failed:', err);
+    console.error('Instagram RSS fetch failed:', err);
     return [];
   }
 }
