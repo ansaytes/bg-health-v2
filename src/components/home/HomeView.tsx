@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import ShareButton from '@/components/ui/share-button';
 
-type FeedCategory = 'semua-feed' | 'health-campaign' | 'health-talk' | 'news';
+type FeedCategory = 'semua-feed' | 'health-campaign' | 'health-talk' | 'podcast' | 'news';
 
 /* ── Types ── */
 interface FeedItem {
@@ -18,7 +18,7 @@ interface FeedItem {
   external_url?: string;
   source: string;
   date: string;
-  type: 'campaign' | 'talk' | 'news';
+  type: 'campaign' | 'talk' | 'podcast' | 'news';
   views?: number;
   lengthSeconds?: number;
   publishedAt?: number; // unix timestamp for sorting
@@ -174,7 +174,7 @@ function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOp
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
           <p className="home-feed-card-meta" style={{ margin: 0 }}>
-            {isCampaign ? 'Admin' : (isVideo || item.source === 'youtube') ? '@BagongNewsYoutube' : '@BagongNews'}
+            {isCampaign ? 'Admin' : (item.type === 'podcast' || item.type === 'talk') ? '@BagongNewsYoutube' : '@BagongNews'}
             {item.views ? ` · ${item.views.toLocaleString('id-ID')} views` : ''}
             {' · '}{item.date}
           </p>
@@ -294,6 +294,11 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
                     menuPosition="bottom"
                     isYouTube={false}
                   />
+                  {item.external_url && (
+                    <a href={item.external_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: 'var(--brand-primary)', textDecoration: 'none', marginLeft: 'auto' }}>
+                      Akses Postingan Asli ↗
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
@@ -347,6 +352,13 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
               isYouTube={isYouTube || item.source === 'youtube'}
             />
           </div>
+          {item.external_url && (
+            <div style={{ marginTop: 12 }}>
+              <a href={item.external_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: 'var(--brand-primary)', textDecoration: 'none' }}>
+                Akses Postingan Asli ↗
+              </a>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -357,6 +369,7 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
 export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
   const [newsData, setNewsData] = useState<FeedItem[]>([]);
   const [talkData, setTalkData] = useState<FeedItem[]>([]);
+  const [podcastData, setPodcastData] = useState<FeedItem[]>([]);
   const [campaignData, setCampaignData] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<FeedItem | null>(null);
@@ -403,6 +416,23 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
           }));
           talks.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
           setTalkData(talks);
+
+          const podcasts: FeedItem[] = (socialJson.podcasts || []).map((v: any) => ({
+            id: v.id,
+            caption: v.caption,
+            title: v.title,
+            media_url: v.media_url,
+            video_url: v.video_url,
+            external_url: v.external_url,
+            source: 'youtube',
+            date: fmtDate(v.published_at),
+            type: 'podcast' as const,
+            views: v.views || 0,
+            lengthSeconds: v.lengthSeconds || 0,
+            publishedAt: v.published_at ? new Date(v.published_at).getTime() : 0,
+          }));
+          podcasts.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
+          setPodcastData(podcasts);
         }
 
         // Fetch health campaigns
@@ -450,6 +480,7 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
       <div className="home-feed">
         <FeedSection title="Health Campaign" data={campaignData} onOpen={handleOpenItem} />
         <FeedSection title="Health Talk" data={talkData} onOpen={handleOpenItem} />
+        <FeedSection title="Podcast" data={podcastData} onOpen={handleOpenItem} />
         <FeedSection title="News" data={newsData} onOpen={handleOpenItem} />
         <ContentModal item={selectedItem} onClose={handleCloseItem} />
       </div>
@@ -459,6 +490,7 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
   const config = {
     'health-campaign': { title: 'Health Campaign', data: campaignData },
     'health-talk': { title: 'Health Talk', data: talkData },
+    'podcast': { title: 'Podcast', data: podcastData },
     'news': { title: 'News', data: newsData },
   }[activeTab];
 

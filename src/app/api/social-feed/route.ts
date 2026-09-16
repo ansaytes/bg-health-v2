@@ -14,11 +14,12 @@ interface FeedItem {
 
 let cachedNews: FeedItem[] | null = null;
 let cachedTalks: FeedItem[] | null = null;
+let cachedPodcasts: FeedItem[] | null = null;
 let cacheTime = 0;
-const CACHE_DURATION = 3600_000;
+const CACHE_DURATION = 15 * 60 * 1000;
 
 function isCacheValid(): boolean {
-  return cachedNews !== null && cachedTalks !== null && Date.now() - cacheTime < CACHE_DURATION;
+  return cachedNews !== null && cachedTalks !== null && cachedPodcasts !== null && Date.now() - cacheTime < CACHE_DURATION;
 }
 
 /**
@@ -155,14 +156,18 @@ async function fetchInstagramPosts(): Promise<FeedItem[]> {
       const descMatch = item.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/);
       
       if (linkMatch && pubDateMatch) {
-        const link = linkMatch[1];
-        const publishedAt = new Date(pubDateMatch[1]).toISOString();
-        const mediaUrl = mediaMatch ? mediaMatch[1] : '';
-        
         let caption = '';
         if (descMatch) {
-          caption = descMatch[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
+          caption = descMatch[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
         }
+
+        // Filter out Health Campaign from IG
+        if (/health\s*campaign/i.test(caption)) continue;
+
+        const link = linkMatch[1];
+        const publishedAt = new Date(pubDateMatch[1]).toISOString();
+        let mediaUrl = mediaMatch ? mediaMatch[1] : '';
+        if (mediaUrl) mediaUrl = mediaUrl.replace(/&amp;/g, '&');
         
         const title = caption.slice(0, 80) || 'Postingan @Bagongnews';
         const idMatch = link.match(/\/p\/([^/]+)/);
@@ -171,7 +176,7 @@ async function fetchInstagramPosts(): Promise<FeedItem[]> {
         posts.push({
           id,
           title,
-          caption,
+          caption: caption.slice(0, 300),
           media_url: mediaUrl,
           source: 'instagram',
           published_at: publishedAt,
@@ -190,25 +195,32 @@ async function fetchInstagramPosts(): Promise<FeedItem[]> {
 
 export async function GET() {
   if (isCacheValid() && cachedNews!.length > 0) {
-    return NextResponse.json({ news: cachedNews, healthTalks: cachedTalks });
+    return NextResponse.json({ news: cachedNews, healthTalks: cachedTalks, podcasts: cachedPodcasts });
   }
 
   const allVideos = await fetchYouTubeVideos();
   const talks: FeedItem[] = [];
+  const podcasts: FeedItem[] = [];
+  
   for (const v of allVideos) {
-    if (/HEALTH\s*TALK/i.test(v.title)) talks.push(v);
+    if (/HEALTH\s*TALK/i.test(v.title)) {
+      talks.push({ ...v, type: 'talk' as const });
+    } else {
+      podcasts.push({ ...v, type: 'podcast' as const });
+    }
   }
 
   const igPosts = await fetchInstagramPosts();
-  const ytNews = allVideos.filter(v => !/HEALTH\s*TALK/i.test(v.title));
-  const news: FeedItem[] = igPosts.length > 0 ? igPosts : ytNews;
+  const news: FeedItem[] = igPosts.map(p => ({ ...p, type: 'news' as const }));
 
   if (news.length > 0) cachedNews = news;
   if (talks.length > 0) cachedTalks = talks;
+  if (podcasts.length > 0) cachedPodcasts = podcasts;
   if (news.length > 0 && talks.length > 0) cacheTime = Date.now();
 
   return NextResponse.json({
     news: cachedNews || [],
     healthTalks: cachedTalks || [],
+    podcasts: cachedPodcasts || [],
   });
 }
