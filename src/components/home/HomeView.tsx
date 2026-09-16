@@ -263,7 +263,7 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
             <div className="ig-modal-image-section">
               {thumbnail ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={thumbnail} alt={item.title || ''} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                <img src={thumbnail} alt={item.title || ''} />
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#fff' }}>Tidak ada gambar</div>
               )}

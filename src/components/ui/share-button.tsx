@@ -46,7 +46,7 @@ export default function ShareButton({ url, title = '', text = '', variant = 'ico
     const shareText = encodeURIComponent(text);
     let targetUrl = '';
     switch (target) {
-      case 'whatsapp': targetUrl = `https://wa.me/?text=${shareText}%0A${shareUrl}`; break;
+      case 'whatsapp': targetUrl = `https://wa.me/?text=${shareText}%0A%0AGambar: ${shareUrl}`; break;
       case 'telegram': targetUrl = `https://t.me/share/url?url=${shareUrl}&text=${shareTitle}`; break;
       case 'facebook': targetUrl = `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`; break;
       case 'twitter': targetUrl = `https://twitter.com/intent/tweet?url=${shareUrl}&text=${shareTitle}`; break;
