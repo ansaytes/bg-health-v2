@@ -9,6 +9,7 @@ interface ShareButtonProps {
   imageUrl?: string;
   variant?: 'icon' | 'full';
   menuPosition?: 'top' | 'bottom';
+  isYouTube?: boolean;
 }
 
 type ShareTarget = 'whatsapp' | 'telegram' | 'facebook' | 'twitter' | 'linkedin' | 'email' | 'copy';
@@ -23,7 +24,7 @@ const SHARE_OPTIONS: { target: ShareTarget; label: string; color: string; icon: 
   { target: 'copy', label: 'Salin Link', color: '#6b7280', icon: <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg> },
 ];
 
-export default function ShareButton({ url, title = '', text = '', variant = 'icon', menuPosition = 'top' }: ShareButtonProps) {
+export default function ShareButton({ url, title = '', text = '', variant = 'icon', menuPosition = 'top', isYouTube = false }: ShareButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -44,16 +45,26 @@ export default function ShareButton({ url, title = '', text = '', variant = 'ico
     const shareUrl = encodeURIComponent(url);
     const shareTitle = encodeURIComponent(title);
     const shareText = encodeURIComponent(text);
+    
+    const formattedWaText = isYouTube 
+      ? `${shareTitle}%0A${shareUrl}`
+      : `*${shareTitle}*%0A%0A${shareText}%0A%0ALink Gambar: ${shareUrl}`;
+      
+    const formattedTgText = isYouTube
+      ? `${shareTitle}`
+      : `${shareTitle}%0A%0A${shareText}`;
+
     let targetUrl = '';
     switch (target) {
-      case 'whatsapp': targetUrl = `https://wa.me/?text=${shareText}%0A%0AGambar: ${shareUrl}`; break;
-      case 'telegram': targetUrl = `https://t.me/share/url?url=${shareUrl}&text=${shareTitle}`; break;
+      case 'whatsapp': targetUrl = `https://wa.me/?text=${formattedWaText}`; break;
+      case 'telegram': targetUrl = `https://t.me/share/url?url=${shareUrl}&text=${formattedTgText}`; break;
       case 'facebook': targetUrl = `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`; break;
       case 'twitter': targetUrl = `https://twitter.com/intent/tweet?url=${shareUrl}&text=${shareTitle}`; break;
       case 'linkedin': targetUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}`; break;
-      case 'email': targetUrl = `mailto:?subject=${shareTitle}&body=${shareText}%0A%0A${shareUrl}`; break;
+      case 'email': targetUrl = `mailto:?subject=${shareTitle}&body=${isYouTube ? shareUrl : `${shareText}%0A%0A${shareUrl}`}`; break;
       case 'copy':
-        navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+        const copyContent = isYouTube ? url : `${title}\n\n${text}\n\nLink Gambar: ${url}`;
+        navigator.clipboard.writeText(copyContent).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
         return;
     }
     if (targetUrl) window.open(targetUrl, '_blank', 'noopener,noreferrer,width=600,height=500');

@@ -113,7 +113,7 @@ function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOp
         className="home-feed-card-media"
         style={{
           background: showImage ? '#0a0b0e' : placeholder.bg,
-          aspectRatio: '4 / 3',
+          aspectRatio: isCampaign ? 'auto' : '4 / 3',
         }}
       >
         {showImage ? (
@@ -121,7 +121,7 @@ function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOp
             src={thumbnail}
             alt={item.title || ''}
             loading="lazy"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            style={{ width: '100%', height: isCampaign ? 'auto' : '100%', objectFit: isCampaign ? 'contain' : 'cover', display: 'block' }}
             onError={() => setImgError(true)}
           />
         ) : (
@@ -179,12 +179,13 @@ function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOp
             {' · '}{item.date}
           </p>
           <ShareButton
-            url={thumbnail || item.video_url || item.external_url || (typeof window !== 'undefined' ? window.location.href : '')}
+            url={isYouTube ? (item.video_url || item.external_url || (typeof window !== 'undefined' ? window.location.href : '')) : (item.image_url || item.media_url || item.thumbnail_url || (typeof window !== 'undefined' ? window.location.href : ''))}
             title={item.title || ''}
             text={item.caption || ''}
             imageUrl={thumbnail || undefined}
             variant="icon"
             menuPosition="top"
+            isYouTube={isYouTube}
           />
         </div>
       </div>
@@ -285,12 +286,13 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
                 <p className="ig-modal-caption">{item.caption}</p>
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border, rgba(255,255,255,0.08))' }}>
                   <ShareButton
-                    url={thumbnail || (typeof window !== 'undefined' ? window.location.href : '')}
+                    url={item.image_url || item.media_url || item.thumbnail_url || (typeof window !== 'undefined' ? window.location.href : '')}
                     title={item.title || ''}
                     text={item.caption || ''}
                     imageUrl={thumbnail || undefined}
                     variant="icon"
                     menuPosition="bottom"
+                    isYouTube={false}
                   />
                 </div>
               </div>
@@ -342,6 +344,7 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
               imageUrl={thumbnail || undefined}
               variant="full"
               menuPosition="top"
+              isYouTube={isYouTube || item.source === 'youtube'}
             />
           </div>
         </div>

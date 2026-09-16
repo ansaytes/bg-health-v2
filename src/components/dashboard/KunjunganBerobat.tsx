@@ -47,55 +47,58 @@ export default function KunjunganBerobat() {
 
       {/* Scroll Content — flex-shrink: 0, jadi lebih tinggi dari container → bisa scroll */}
       <div className="kunjungan-scroll-content">
-        {/* Row 1 — 2 cards, fixed height 190px */}
-        <div className="kunjungan-trend-row">
-          <div className="card glow-orange">
-            <div className="card-head">
-              <div className="card-icon" style={{ background: 'rgba(255,77,0,.1)' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#ff4d00" strokeWidth="2" strokeLinecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
+        {/* Viewport fill wrapper */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: 'calc(100vh - 120px)', flexShrink: 0 }}>
+          {/* Row 1 — 2 cards */}
+          <div className="kunjungan-trend-row">
+            <div className="card glow-orange">
+              <div className="card-head">
+                <div className="card-icon" style={{ background: 'rgba(255,77,0,.1)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#ff4d00" strokeWidth="2" strokeLinecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
+                </div>
+                <div><h2>Tren Kunjungan per Bulan</h2><p>Jumlah kunjungan klinik per bulan</p></div>
               </div>
-              <div><h2>Tren Kunjungan per Bulan</h2><p>Jumlah kunjungan klinik per bulan</p></div>
+              <ChartPlaceholder id="kunjunganTrendChart" />
             </div>
-            <ChartPlaceholder id="kunjunganTrendChart" />
+            <div className="card glow-amber">
+              <div className="card-head">
+                <div className="card-icon" style={{ background: 'rgba(255,140,66,.1)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#ff8c42" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>
+                </div>
+                <div><h2>Pasien Kunjungan Berulang</h2><p>Karyawan yang berkunjungan lebih dari sekali</p></div>
+              </div>
+              <ChartPlaceholder id="kunjunganUlangChart" />
+            </div>
           </div>
-          <div className="card glow-amber">
-            <div className="card-head">
-              <div className="card-icon" style={{ background: 'rgba(255,140,66,.1)' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#ff8c42" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>
+          {/* Row 2 — 3 cards */}
+          <div className="kunjungan-row-charts">
+            <div className="card glow-coral">
+              <div className="card-head">
+                <div className="card-icon" style={{ background: 'rgba(255,99,71,.1)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#ff6347" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" /></svg>
+                </div>
+                <div><h2>Top 10 Diagnosa</h2><p>Diagnosa terbanyak dari kunjungan</p></div>
               </div>
-              <div><h2>Pasien Kunjungan Berulang</h2><p>Karyawan yang berkunjungan lebih dari sekali</p></div>
+              <ChartPlaceholder id="kunjunganDiagnosaChart" />
             </div>
-            <ChartPlaceholder id="kunjunganUlangChart" />
-          </div>
-        </div>
-        {/* Row 2 — 3 cards, fixed height 185px */}
-        <div className="kunjungan-row-charts">
-          <div className="card glow-coral">
-            <div className="card-head">
-              <div className="card-icon" style={{ background: 'rgba(255,99,71,.1)' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#ff6347" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" /></svg>
+            <div className="card glow-teal">
+              <div className="card-head">
+                <div className="card-icon" style={{ background: 'rgba(0,184,148,.1)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#00B894" strokeWidth="2" strokeLinecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
+                </div>
+                <div><h2>Top 10 Jenis Obat Keluar</h2><p>Agregasi jumlah obat per jenis terapi</p></div>
               </div>
-              <div><h2>Top 10 Diagnosa</h2><p>Diagnosa terbanyak dari kunjungan</p></div>
+              <ChartPlaceholder id="kunjunganObatChart" />
             </div>
-            <ChartPlaceholder id="kunjunganDiagnosaChart" />
-          </div>
-          <div className="card glow-teal">
-            <div className="card-head">
-              <div className="card-icon" style={{ background: 'rgba(0,184,148,.1)' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#00B894" strokeWidth="2" strokeLinecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
+            <div className="card glow-steel">
+              <div className="card-head">
+                <div className="card-icon" style={{ background: 'rgba(119,136,153,.1)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#778899" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /></svg>
+                </div>
+                <div><h2>Distribusi Department</h2><p>Kunjungan berdasarkan departemen</p></div>
               </div>
-              <div><h2>Top 10 Jenis Obat Keluar</h2><p>Agregasi jumlah obat per jenis terapi</p></div>
+              <ChartPlaceholder id="kunjunganDeptChart" />
             </div>
-            <ChartPlaceholder id="kunjunganObatChart" />
-          </div>
-          <div className="card glow-steel">
-            <div className="card-head">
-              <div className="card-icon" style={{ background: 'rgba(119,136,153,.1)' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#778899" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /></svg>
-              </div>
-              <div><h2>Distribusi Department</h2><p>Kunjungan berdasarkan departemen</p></div>
-            </div>
-            <ChartPlaceholder id="kunjunganDeptChart" />
           </div>
         </div>
         {/* Rujuk RS — hidden by default, show on scroll */}
