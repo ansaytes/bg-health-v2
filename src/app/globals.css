@@ -2929,7 +2929,7 @@ select.admin-input.compact-input {
   flex-direction: column;
 }
 .kunjungan-trend-row .chart-box {
-  height: 190px;
+  height: 240px;
 }
 .kunjungan-row-charts {
   display: grid;
@@ -2944,7 +2944,7 @@ select.admin-input.compact-input {
 .kunjungan-row-charts .chart-box {
   flex: 1;
   min-height: 0;
-  height: 185px;
+  height: 220px;
 }
 .kunjungan-rujuk-section {
   opacity: 0;
