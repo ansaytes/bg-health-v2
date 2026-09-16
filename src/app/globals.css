@@ -739,65 +739,18 @@ select:focus { border-color: #ff4d00; }
   font-size: 9px;
   padding: 0 22px 0 6px;
 }
-.kunjungan-scroll-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-height: 0;
-}
-.kunjungan-trend-row {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
-  flex: 1;
-  min-height: 0;
-}
-.kunjungan-trend-row .card {
-  display: flex;
-  flex-direction: column;
-}
-.kunjungan-trend-row .chart-box {
-  flex: 1;
-  min-height: 0;
-}
-.kunjungan-row-charts {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  flex: 1;
-  min-height: 0;
-}
-.kunjungan-row-charts .card {
-  display: flex;
-  flex-direction: column;
-}
-.kunjungan-row-charts .chart-box {
-  flex: 1;
-  min-height: 0;
-  min-height: 0;
-  height: 185px;
-}
+
+
+
+
+
+
+
 
 /* Rujuk RS Section — scroll-up to show */
-.kunjungan-rujuk-section {
-  opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.4s ease, transform 0.4s ease;
-  min-height: 200px;
-  display: flex;
-  flex-direction: column;
-}
-.kunjungan-rujuk-section.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-.rujuk-table-wrap {
-  overflow-y: auto;
-  overflow-x: auto;
-  flex: 1;
-  min-height: 0;
-}
+
+
+
 
 /* ═══════════════════════════════════
    Home Feed
@@ -1722,8 +1675,8 @@ select.admin-input.compact-input {
   .mcu-grid-3 { grid-template-columns: 1fr; }
   .mcu-row1 { grid-template-columns: 1fr; }
   .mcu-row2 { grid-template-columns: 1fr; }
-  .kunjungan-row-charts { grid-template-columns: 1fr; }
-  .kunjungan-trend-row { grid-template-columns: 1fr; }
+  
+  
 }
 
 /* ═══════════════════════════════════
@@ -1770,8 +1723,8 @@ select.admin-input.compact-input {
   .mcu-total-num { font-size: 16px; }
   .kunjungan-filter-bar { gap: 4px; }
   .kunjungan-filter-bar select { height: 28px; font-size: 10px; flex: 1 1 auto; min-width: 0; }
-  .kunjungan-trend-row .chart-box { flex: 1; min-height: 0; }
-  .kunjungan-row-charts .chart-box { flex: 1; min-height: 0; }
+  
+  
   .sick-list { overflow-x: auto; min-height: 120px; }
   .sidebar { width: 260px; }
   .hamburger { width: 40px; height: 52px; top: 10px; left: 10px; border-radius: 10px; }
@@ -2947,6 +2900,11 @@ select.admin-input.compact-input {
 
 /* ═══════════════════════════════════════════════════════════════
    Kunjungan Berobat — Grid (same pattern as mcu-grid-3)
+   ═══════════════════════════════════════════════════════════════ */
+
+
+/* ═══════════════════════════════════════════════════════════════
+   Kunjungan Berobat — Layout (dari referensi GAS)
    ═══════════════════════════════════════════════════════════════ */
 
 
