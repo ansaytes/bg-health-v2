@@ -64,15 +64,15 @@ function normalizeImageUrl(raw: string | null | undefined): string | null {
 
   // Google Drive: /file/d/FILE_ID/...
   let m = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w1000-h600-p-k-no-nu`;
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=s1200`;
 
   // Google Drive: open?id=FILE_ID
   m = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
-  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w1000-h600-p-k-no-nu`;
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=s1200`;
 
   // Google Drive: uc?export=view&id=FILE_ID
   m = url.match(/drive\.google\.com\/uc\?.*id=([a-zA-Z0-9_-]+)/);
-  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w1000-h600-p-k-no-nu`;
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=s1200`;
 
   return url;
 }
@@ -291,7 +291,7 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
                     text={item.caption || ''}
                     imageUrl={thumbnail || undefined}
                     variant="icon"
-                    menuPosition="bottom"
+                    menuPosition="top"
                     isYouTube={false}
                   />
                 </div>
@@ -446,11 +446,11 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
   }
 
   if (activeTab === 'semua-feed') {
+    const allData = [...campaignData, ...talkData, ...newsData];
+    allData.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
     return (
       <div className="home-feed">
-        <FeedSection title="Health Campaign" data={campaignData} onOpen={handleOpenItem} />
-        <FeedSection title="Health Talk" data={talkData} onOpen={handleOpenItem} />
-        <FeedSection title="News" data={newsData} onOpen={handleOpenItem} />
+        <FeedSection title="Semua Feed" data={allData} defaultCount={12} onOpen={handleOpenItem} />
         <ContentModal item={selectedItem} onClose={handleCloseItem} />
       </div>
     );

@@ -1889,15 +1889,12 @@ select.admin-input.compact-input {
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.55);
   border: none;
-  z-index: 100002;
-  cursor: pointer;
-  z-index: 100002;
+  z-index: 100002 !important;
   color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10;
   transition: background 0.18s, transform 0.18s;
   backdrop-filter: blur(8px);
 }
