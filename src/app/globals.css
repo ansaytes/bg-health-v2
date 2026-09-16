@@ -2948,29 +2948,67 @@ select.admin-input.compact-input {
 /* ═══════════════════════════════════════════════════════════════
    Kunjungan Berobat — Grid (same pattern as mcu-grid-3)
    ═══════════════════════════════════════════════════════════════ */
-.kunjungan-grid-2 {
+
+
+/* ═══════════════════════════════════════════════════════════════
+   Kunjungan Berobat — Layout (dari referensi GAS)
+   ═══════════════════════════════════════════════════════════════ */
+.kunjungan-scroll-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 20px;
+  flex-shrink: 0;
+}
+.kunjungan-trend-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  flex: 1;
-  min-height: 0;
+  flex-shrink: 0;
 }
-.kunjungan-grid-3 {
+.kunjungan-trend-row .card {
+  display: flex;
+  flex-direction: column;
+}
+.kunjungan-trend-row .chart-box {
+  height: 190px;
+}
+.kunjungan-row-charts {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 8px;
-  flex: 1;
-  min-height: 0;
+  flex-shrink: 0;
 }
-.kunjungan-grid-2 > .card,
-.kunjungan-grid-3 > .card {
+.kunjungan-row-charts .card {
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
 }
-.kunjungan-grid-2 > .card > .chart-box,
-.kunjungan-grid-3 > .card > .chart-box {
+.kunjungan-row-charts .chart-box {
   flex: 1;
   min-height: 0;
+  height: 185px;
+}
+.kunjungan-rujuk-section {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+}
+.kunjungan-rujuk-section.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.rujuk-table-wrap {
+  overflow-y: auto;
+  overflow-x: auto;
+  flex: 1;
+  min-height: 0;
+}
+.rujuk-empty {
+  text-align: center;
+  padding: 20px;
+  color: var(--fg-dim);
+  font-size: 9px;
 }
