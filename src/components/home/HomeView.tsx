@@ -83,8 +83,8 @@ const LONG_CAPTION_THRESHOLD = 120;
 /* ── Feed Card Component ── */
 function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOpen: (item: FeedItem) => void }) {
   const placeholder = PLACEHOLDER_BG[index % PLACEHOLDER_BG.length];
-  const isVideo = item.type === 'talk' || (item.type === 'news' && (!!item.video_url || !!item.media_url));
-  const isCampaign = item.type === 'campaign';
+  const isVideo = item.source === 'youtube' || item.type === 'talk' || item.type === 'podcast';
+  const isIgStyle = item.type === 'campaign' || item.type === 'news';
   const isYouTube = item.source === 'youtube' || item.type === 'talk';
   // Normalize the thumbnail URL (auto-converts Google Drive share links to direct image URLs)
   const thumbnail = normalizeImageUrl(item.media_url || item.thumbnail_url || item.image_url);
@@ -174,7 +174,7 @@ function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOp
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
           <p className="home-feed-card-meta" style={{ margin: 0 }}>
-            {isCampaign ? 'Admin' : (item.type === 'podcast' || item.type === 'talk') ? '@BagongNewsYoutube' : '@BagongNews'}
+            {isIgStyle ? (item.type === 'news' ? '@BagongNews' : 'Admin') : '@BagongNewsYoutube'}
             {item.views ? ` · ${item.views.toLocaleString('id-ID')} views` : ''}
             {' · '}{item.date}
           </p>
@@ -241,8 +241,8 @@ function FeedSection({
 /* ── Content Modal — Instagram-style for campaigns, full video for others ── */
 function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () => void }) {
   if (!item) return null;
-  const isVideo = item.type === 'talk' || (item.type === 'news' && (!!item.video_url || !!item.media_url));
-  const isCampaign = item.type === 'campaign';
+  const isVideo = item.source === 'youtube' || item.type === 'talk' || item.type === 'podcast';
+  const isIgStyle = item.type === 'campaign' || item.type === 'news';
   const thumbnail = normalizeImageUrl(item.media_url || item.thumbnail_url || item.image_url);
   const videoUrl = item.video_url || item.external_url || '';
   const getYouTubeEmbed = (url: string): string | null => {
@@ -251,8 +251,8 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
   };
   const embedUrl = isVideo ? getYouTubeEmbed(videoUrl) : null;
 
-  // For campaigns: IG-style layout (image full + scrollable caption side/below)
-  if (isCampaign) {
+  // For campaigns and news (IG): IG-style layout (image full + scrollable caption side/below)
+  if (isIgStyle) {
     return (
       <div className="content-modal-overlay" onClick={onClose}>
         <div className="content-modal ig-style" onClick={(e) => e.stopPropagation()}>
@@ -277,7 +277,7 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
                   <img src="/BM.png" alt="Admin" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }} />
                 </div>
                 <div>
-                  <div className="ig-modal-username">Admin</div>
+                  <div className="ig-modal-username">{item.type === 'news' ? '@BagongNews' : 'Admin'}</div>
                   <div className="ig-modal-date">{item.date}</div>
                 </div>
               </div>
