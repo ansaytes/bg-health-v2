@@ -2945,3 +2945,34 @@ select.admin-input.compact-input {
 .dark .raw-table-scroll thead th {
   background: #1f2329;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   Kunjungan Berobat — Grid (same pattern as mcu-grid-3)
+   ═══════════════════════════════════════════════════════════════ */
+.kunjungan-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+}
+.kunjungan-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+}
+.kunjungan-grid-2 > .card,
+.kunjungan-grid-3 > .card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.kunjungan-grid-2 > .card > .chart-box,
+.kunjungan-grid-3 > .card > .chart-box {
+  flex: 1;
+  min-height: 0;
+}
