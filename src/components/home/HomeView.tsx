@@ -296,7 +296,7 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
                   />
                   {item.external_url && (
                     <a href={item.external_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: 'var(--brand-primary)', textDecoration: 'none', marginLeft: 'auto' }}>
-                      Akses Postingan Asli ↗
+                      Sumber ↗
                     </a>
                   )}
                 </div>
@@ -355,7 +355,7 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
           {item.external_url && (
             <div style={{ marginTop: 12 }}>
               <a href={item.external_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: 'var(--brand-primary)', textDecoration: 'none' }}>
-                Akses Postingan Asli ↗
+                Sumber ↗
               </a>
             </div>
           )}
