@@ -436,8 +436,6 @@
   flex-direction: column;
   gap: 8px;
   min-height: 0;
-
-  height: 100%;
 }
 .dashboard.scrollable {
   overflow-y: auto;
