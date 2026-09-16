@@ -1,12 +1,32 @@
 'use client';
+import { useEffect, useRef, useState } from 'react';
 
 const ChartPlaceholder = ({ id }: { id: string }) => (
   <div className="chart-box"><canvas id={id} /></div>
 );
 
 export default function KunjunganBerobat() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [rujukVisible, setRujukVisible] = useState(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      // Scroll UP (scrollTop > 0) = show Rujuk RS
+      // Scroll DOWN (scrollTop = 0) = hide Rujuk RS
+      if (el.scrollTop > 0) {
+        setRujukVisible(true);
+      } else {
+        setRujukVisible(false);
+      }
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
-    <div className="dashboard scrollable">
+    <div className="dashboard scrollable" ref={containerRef}>
       {/* Top Bar */}
       <div className="kunjungan-top-bar" style={{ flexShrink: 0 }}>
         <div className="kunjungan-filter-bar">
@@ -27,7 +47,7 @@ export default function KunjunganBerobat() {
         </div>
       </div>
 
-      {/* Row 1 — 2 cards */}
+      {/* 5 Cards — FILL 1 PAGE PENUH (no scroll needed) */}
       <div className="kunjungan-grid-2">
         <div className="card glow-orange">
           <div className="card-head">
@@ -48,8 +68,6 @@ export default function KunjunganBerobat() {
           <ChartPlaceholder id="kunjunganUlangChart" />
         </div>
       </div>
-
-      {/* Row 2 — 3 cards */}
       <div className="kunjungan-grid-3">
         <div className="card glow-coral">
           <div className="card-head">
@@ -80,8 +98,15 @@ export default function KunjunganBerobat() {
         </div>
       </div>
 
-      {/* Rujuk RS — scroll down to see */}
-      <div style={{ flexShrink: 0, minHeight: 200, marginTop: 8 }}>
+      {/* Rujuk RS — HIDDEN by default, show on scroll UP, hide on scroll DOWN */}
+      <div
+        style={{
+          flexShrink: 0,
+          minHeight: 200,
+          marginTop: 8,
+          display: rujukVisible ? 'block' : 'none',
+        }}
+      >
         <div className="card glow-coral">
           <div className="card-head" style={{ flexShrink: 0 }}>
             <div className="card-icon" style={{ background: 'rgba(255,68,68,.1)' }}>
