@@ -379,6 +379,7 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
             date: fmtDate(p.published_at),
             type: 'news' as const,
             views: p.views || 0,
+            publishedAt: p.published_at ? new Date(p.published_at).getTime() : 0,
           }));
           news.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
           setNewsData(news);
@@ -395,6 +396,7 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
             type: 'talk' as const,
             views: v.views || 0,
             lengthSeconds: v.lengthSeconds || 0,
+            publishedAt: v.published_at ? new Date(v.published_at).getTime() : 0,
           }));
           talks.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
           setTalkData(talks);
@@ -413,6 +415,7 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
             source: 'Admin',
             date: fmtDate(c.start_date || c.created_at),
             type: 'campaign' as const,
+            publishedAt: c.start_date ? new Date(c.start_date).getTime() : (c.created_at ? new Date(c.created_at).getTime() : 0),
           }));
           campaigns.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
           setCampaignData(campaigns);
