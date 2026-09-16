@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 interface ShareButtonProps {
   url: string;
@@ -27,18 +27,58 @@ const SHARE_OPTIONS: { target: ShareTarget; label: string; color: string; icon: 
 export default function ShareButton({ url, title = '', text = '', variant = 'icon', menuPosition = 'top', isYouTube = false }: ShareButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+
+  // Calculate fixed position for menu based on button's screen position
+  const updateMenuPosition = useCallback(() => {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    const menuHeight = 320; // approximate height of share menu
+    const viewportH = window.innerHeight;
+
+    // Decide if menu should go above or below
+    const spaceBelow = viewportH - rect.bottom;
+    const spaceAbove = rect.top;
+    const preferBottom = menuPosition === 'bottom';
+    const goBelow = preferBottom ? (spaceBelow >= menuHeight || spaceBelow >= spaceAbove) : (spaceAbove < menuHeight && spaceBelow >= menuHeight);
+
+    if (goBelow) {
+      setMenuStyle({
+        position: 'fixed' as const,
+        top: rect.bottom + 6,
+        right: Math.max(8, window.innerWidth - rect.right),
+        minWidth: 200,
+        zIndex: 200000,
+      });
+    } else {
+      setMenuStyle({
+        position: 'fixed' as const,
+        bottom: viewportH - rect.top + 6,
+        right: Math.max(8, window.innerWidth - rect.right),
+        minWidth: 200,
+        zIndex: 200000,
+      });
+    }
+  }, [menuPosition]);
 
   useEffect(() => {
     if (!isOpen) return;
+    updateMenuPosition();
     const handleClickOutside = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node) && btnRef.current && !btnRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
     };
+    const handleScroll = () => { setIsOpen(false); };
     setTimeout(() => document.addEventListener('mousedown', handleClickOutside), 0);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [isOpen, updateMenuPosition]);
 
   const handleShare = (target: ShareTarget, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -72,36 +112,34 @@ export default function ShareButton({ url, title = '', text = '', variant = 'ico
   };
 
   return (
-    <div ref={wrapperRef} className="share-btn-wrapper" onClick={(e) => e.stopPropagation()} style={{ position: 'relative', display: 'inline-block' }}>
+    <div className="share-btn-wrapper" onClick={(e) => e.stopPropagation()} style={{ position: 'relative', display: 'inline-block' }}>
       <button
+        ref={btnRef}
         type="button"
         onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, border: 'none', borderRadius: '50%', background: 'transparent', color: 'var(--muted-foreground)', cursor: 'pointer', transition: 'background 0.15s, color 0.15s, transform 0.15s' }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,77,0,0.1)'; e.currentTarget.style.color = '#ff4d00'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted-foreground)'; e.currentTarget.style.transform = 'scale(1)'; }}
+        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: variant === 'full' ? 'auto' : 28, height: 28, border: 'none', borderRadius: variant === 'full' ? 8 : '50%', background: variant === 'full' ? 'rgba(255,77,0,0.1)' : 'transparent', color: variant === 'full' ? '#ff4d00' : 'var(--muted-foreground)', cursor: 'pointer', transition: 'background 0.15s, color 0.15s, transform 0.15s', padding: variant === 'full' ? '0 12px' : 0, gap: 6 }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,77,0,0.15)'; e.currentTarget.style.color = '#ff4d00'; e.currentTarget.style.transform = 'scale(1.05)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = variant === 'full' ? 'rgba(255,77,0,0.1)' : 'transparent'; e.currentTarget.style.color = variant === 'full' ? '#ff4d00' : 'var(--muted-foreground)'; e.currentTarget.style.transform = 'scale(1)'; }}
         aria-label="Bagikan"
       >
         <svg viewBox="0 0 24 24" width={variant === 'full' ? 16 : 18} height={variant === 'full' ? 16 : 18} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
           <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
         </svg>
-        {variant === 'full' && <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 600 }}>Bagikan</span>}
+        {variant === 'full' && <span style={{ fontSize: 12, fontWeight: 600 }}>Bagikan</span>}
       </button>
       {isOpen && (
-        <div className="share-btn-menu" style={{
-          position: 'absolute',
-          [menuPosition === 'bottom' ? 'top' : 'bottom']: 'calc(100% + 6px)',
-          right: 0,
-          minWidth: 200,
+        <div ref={menuRef} className="share-btn-menu" style={{
+          ...menuStyle,
           background: '#ffffff',
           border: '1px solid rgba(0,0,0,0.08)',
           borderRadius: 10,
           boxShadow: '0 12px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1)',
           padding: 6,
-          zIndex: 100000,
           display: 'flex',
           flexDirection: 'column',
           gap: 2,
+          animation: 'downloadMenuIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         }}>
           {SHARE_OPTIONS.map((opt) => (
             <button key={opt.target} onClick={(e) => handleShare(opt.target, e)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'transparent', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#1a1a1a', fontSize: 12, textAlign: 'left', transition: 'background 0.12s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,77,0,0.08)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>

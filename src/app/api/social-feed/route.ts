@@ -29,23 +29,8 @@ function isCacheValid(): boolean {
 async function fetchYouTubeRSSData(): Promise<Record<string, { published_at: string }>> {
   try {
     // Try RSS feed first — gives accurate publish dates
-    // Channel ID for @BagongNewsYoutube — find via the channel page first
-    const channelRes = await fetch(
-      'https://www.youtube.com/@BagongNewsYoutube',
-      {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        },
-        signal: AbortSignal.timeout(10000),
-      }
-    );
-    if (!channelRes.ok) return {};
-    const channelHtml = await channelRes.text();
-    const channelIdMatch = channelHtml.match(/"channelId":"([a-zA-Z0-9_-]+)"/)
-      || channelHtml.match(/"externalId":"([a-zA-Z0-9_-]+)"/);
-    if (!channelIdMatch) return {};
-
-    const channelId = channelIdMatch[1];
+    // Hardcoded channel ID for @BagongNewsYoutube
+    const channelId = 'UCNAgSuYPXbF3bwfr0b4oXiK';
     const rssRes = await fetch(
       `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`,
       {

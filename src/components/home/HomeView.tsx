@@ -284,14 +284,14 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
               <div className="ig-modal-caption-body">
                 {item.title && <h3 className="ig-modal-title">{item.title}</h3>}
                 <p className="ig-modal-caption">{item.caption}</p>
-                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border, rgba(255,255,255,0.08))' }}>
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border, rgba(255,255,255,0.08))', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <ShareButton
                     url={item.image_url || item.media_url || item.thumbnail_url || (typeof window !== 'undefined' ? window.location.href : '')}
                     title={item.title || ''}
                     text={item.caption || ''}
                     imageUrl={thumbnail || undefined}
-                    variant="icon"
-                    menuPosition="top"
+                    variant="full"
+                    menuPosition="bottom"
                     isYouTube={false}
                   />
                 </div>
@@ -446,11 +446,11 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
   }
 
   if (activeTab === 'semua-feed') {
-    const allData = [...campaignData, ...talkData, ...newsData];
-    allData.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
     return (
       <div className="home-feed">
-        <FeedSection title="Semua Feed" data={allData} defaultCount={12} onOpen={handleOpenItem} />
+        <FeedSection title="Health Campaign" data={campaignData} onOpen={handleOpenItem} />
+        <FeedSection title="Health Talk" data={talkData} onOpen={handleOpenItem} />
+        <FeedSection title="News" data={newsData} onOpen={handleOpenItem} />
         <ContentModal item={selectedItem} onClose={handleCloseItem} />
       </div>
     );

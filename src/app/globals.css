@@ -1887,8 +1887,8 @@ select.admin-input.compact-input {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.55);
-  border: none;
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   z-index: 100002 !important;
   color: #fff;
   cursor: pointer;
@@ -1897,9 +1897,10 @@ select.admin-input.compact-input {
   justify-content: center;
   transition: background 0.18s, transform 0.18s;
   backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
 .content-modal-close:hover {
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.9);
   transform: rotate(90deg);
 }
 
@@ -1942,9 +1943,7 @@ select.admin-input.compact-input {
 /* ═══════════════════════════════════════════════════════════
    Uniform card aspect-ratio for feed cards
    ═══════════════════════════════════════════════════════════ */
-.home-feed-card-media {
-  aspect-ratio: 4 / 3 !important;
-}
+/* Campaign cards use auto aspect-ratio to show full image, others use 4/3 */
 
 
 /* ═══════════════════════════════════════════════════════════
@@ -2528,6 +2527,13 @@ select.admin-input.compact-input {
   z-index: 100;
   overflow: visible;
 }
+.ig-modal-caption-body .share-btn-wrapper {
+  position: relative;
+  z-index: 100010;
+}
+.ig-modal-caption-body .share-btn-menu {
+  z-index: 100020 !important;
+}
 .ig-modal-header {
   display: flex;
   align-items: center;
@@ -2913,18 +2919,18 @@ select.admin-input.compact-input {
   flex-direction: column;
   gap: 8px;
   padding-bottom: 20px;
-  flex-shrink: 0;
 }
 .kunjungan-trend-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  flex-shrink: 0;
   flex: 1;
+  min-height: 0;
 }
 .kunjungan-trend-row .card {
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 .kunjungan-trend-row .chart-box {
   flex: 1;
@@ -2934,12 +2940,13 @@ select.admin-input.compact-input {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 8px;
-  flex-shrink: 0;
   flex: 1;
+  min-height: 0;
 }
 .kunjungan-row-charts .card {
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 .kunjungan-row-charts .chart-box {
   flex: 1;

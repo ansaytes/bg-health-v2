@@ -47,8 +47,8 @@ export default function KunjunganBerobat() {
 
       {/* Scroll Content — flex-shrink: 0, jadi lebih tinggi dari container → bisa scroll */}
       <div className="kunjungan-scroll-content">
-        {/* Viewport fill wrapper */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: 'calc(100vh - 120px)', flexShrink: 0 }}>
+        {/* Viewport fill wrapper — 2 rows of cards fill the screen */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', height: 'calc(100vh - 120px)', flexShrink: 0 }}>
           {/* Row 1 — 2 cards */}
           <div className="kunjungan-trend-row">
             <div className="card glow-orange">
