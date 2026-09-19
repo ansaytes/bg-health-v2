@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { toast } from 'sonner';
 import { MCU_FIELDS, TOTAL_COLS, TEXT_NA_INDICES } from './mcu-fields';
 import { assessZonasi, calcBMI, calcMCHC, calcPct, calcDiabetes, calcPerluFU, calcFramingham } from './zonasi-engine';
 
@@ -139,6 +140,9 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
   toast: null,
   showToast: (message, type) => {
     set({ toast: { message, type } });
+    if (type === 'success') toast.success(message);
+    else if (type === 'error') toast.error(message);
+    else toast.info(message);
     setTimeout(() => set({ toast: null }), 3000);
   },
   clearToast: () => set({ toast: null }),
@@ -183,7 +187,7 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
 
     // Diabetes
     updates.diabetes = calcDiabetes(
-      isNaN(gdp) ? null : (fd.gdp ? parseFloat(fd.gdp) : null),
+      isNaN(parseFloat(fd.gdp)) ? null : parseFloat(fd.gdp),
       isNaN(parseFloat(fd.gd2pp)) ? null : parseFloat(fd.gd2pp),
       isNaN(parseFloat(fd.hba1c)) ? null : parseFloat(fd.hba1c),
     );

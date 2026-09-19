@@ -10,6 +10,7 @@ const inter = Inter({
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/lib/auth-context";
 import Script from "next/script";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -66,6 +67,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <AuthProvider>
             {children}
+            <Toaster position="top-center" richColors />
           </AuthProvider>
         </ThemeProvider>
         <Script id="devtools-deterrent" strategy="afterInteractive">
