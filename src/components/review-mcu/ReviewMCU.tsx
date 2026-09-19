@@ -416,23 +416,24 @@ export default function ReviewMCU() {
                   ))}
                 </div>
 
-                {store.employee && (
-                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                    <motion.div {...buttonTap} style={{ flex: 1 }}>
-                      <button
-                        onClick={() => goStep('ocr')}
-                        style={{
-                          width: '100%', height: 38, borderRadius: 10, border: 'none',
-                          background: 'linear-gradient(135deg, #ff4d00, #ff6b2b)',
-                          color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                          fontFamily: 'inherit',
-                        }}
-                      >
-                        Lanjut
-                        <ArrowRight style={{ width: 14, height: 14 }} />
-                      </button>
-                    </motion.div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                  <motion.div {...buttonTap} style={{ flex: 1 }}>
+                    <button
+                      onClick={() => goStep('ocr')}
+                      style={{
+                        width: '100%', height: 38, borderRadius: 10, border: 'none',
+                        background: store.employee ? 'linear-gradient(135deg, #ff4d00, #ff6b2b)' : 'var(--muted)',
+                        color: store.employee ? '#fff' : 'var(--foreground)', 
+                        fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      {store.employee ? 'Lanjut' : 'Lanjut Input Manual'}
+                      <ArrowRight style={{ width: 14, height: 14 }} />
+                    </button>
+                  </motion.div>
+                  {store.employee && (
                     <motion.div {...buttonTap}>
                       <button
                         onClick={handleRecall}
@@ -447,8 +448,8 @@ export default function ReviewMCU() {
                         Recall MCU
                       </button>
                     </motion.div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
           </motion.div>
