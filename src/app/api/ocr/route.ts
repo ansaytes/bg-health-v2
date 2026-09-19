@@ -73,18 +73,38 @@ export async function POST(req: Request) {
       parts.push({ text: text });
     }
 
-    // Gunakan Gemini 3.6 Flash yang terbaru
-    const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
-        contents: [
-            { role: 'user', parts: parts }
-        ],
-        config: {
-            systemInstruction: generatePromptSchema(),
-            responseMimeType: "application/json",
-            temperature: 0.1, // Low temp for more deterministic extraction
-        }
-    });
+    // Gunakan Gemini 3.6 Flash dengan mekanisme Auto-Retry (Max 3x)
+    let response;
+    let retries = 3;
+    let lastError;
+
+    for (let i = 0; i < retries; i++) {
+      try {
+        response = await ai.models.generateContent({
+            model: 'gemini-3.6-flash',
+            contents: [
+                { role: 'user', parts: parts }
+            ],
+            config: {
+                systemInstruction: generatePromptSchema(),
+                responseMimeType: "application/json",
+                temperature: 0.1, // Low temp for more deterministic extraction
+            }
+        });
+        break; // Berhasil, keluar dari loop
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`[OCR] Gemini API error (Attempt ${i + 1}/${retries}):`, err.message);
+        if (i === retries - 1) break; // Jangan tunggu di percobaan terakhir
+        
+        // Jeda 2 detik sebelum mencoba ulang
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+
+    if (!response) {
+      throw lastError || new Error("Gagal menghubungi server AI setelah beberapa kali percobaan.");
+    }
 
     const outputText = response.text || "{}";
     
