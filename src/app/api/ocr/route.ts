@@ -73,9 +73,9 @@ export async function POST(req: Request) {
       parts.push({ text: text });
     }
 
-    // Gunakan Gemini 2.5 Flash yang gratis dan cepat
+    // Gunakan Gemini 3.6 Flash yang terbaru
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.6-flash',
         contents: [
             { role: 'user', parts: parts }
         ],
