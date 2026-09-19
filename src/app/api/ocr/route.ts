@@ -37,11 +37,47 @@ export async function POST(req: Request) {
 
     const ai = new GoogleGenAI({ apiKey });
 
+    // Cek apakah input adalah link Google Drive
+    const gDriveMatch = text.match(/(?:drive\.google\.com\/.*[?&]id=|drive\.google\.com\/file\/d\/)([-\w]{25,})/);
+    let parts: any[] = [];
+
+    if (gDriveMatch && gDriveMatch[1]) {
+      const fileId = gDriveMatch[1];
+      const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+      
+      try {
+        const fileRes = await fetch(downloadUrl);
+        if (!fileRes.ok) {
+            throw new Error(`HTTP ${fileRes.status}`);
+        }
+        
+        // Cek contentType jika memungkinkan, tapi default ke pdf
+        const contentType = fileRes.headers.get('content-type') || 'application/pdf';
+        const arrayBuffer = await fileRes.arrayBuffer();
+        const base64Data = Buffer.from(arrayBuffer).toString('base64');
+        
+        parts.push({
+          inlineData: {
+            data: base64Data,
+            mimeType: contentType.includes('text/html') ? 'application/pdf' : contentType
+          }
+        });
+        parts.push({ text: "Tolong ekstrak data MCU dari dokumen ini." });
+      } catch (err) {
+        return NextResponse.json({ 
+            success: false, 
+            error: 'Gagal mengunduh dokumen dari Google Drive. Pastikan akses link diset ke "Anyone with the link".' 
+        }, { status: 400 });
+      }
+    } else {
+      parts.push({ text: text });
+    }
+
     // Gunakan Gemini 2.5 Flash yang gratis dan cepat
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: [
-            { role: 'user', parts: [{ text: text }] }
+            { role: 'user', parts: parts }
         ],
         config: {
             systemInstruction: generatePromptSchema(),

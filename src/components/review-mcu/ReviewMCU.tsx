@@ -478,12 +478,12 @@ export default function ReviewMCU() {
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold">Ekstrak Data OCR</h2>
-                  <p className="text-sm text-muted-foreground">Tempel teks hasil scan MCU</p>
+                  <p className="text-sm text-muted-foreground">Tempel teks scan MCU atau Link Google Drive (PDF)</p>
                 </div>
               </div>
 
               <Textarea
-                placeholder="Tempel teks hasil OCR di sini..."
+                placeholder="Tempel teks hasil OCR atau Link Google Drive (PDF) di sini..."
                 value={ocrText}
                 onChange={(e) => setOcrText(e.target.value)}
                 className="min-h-[200px] text-sm rounded-xl bg-background resize-none"
