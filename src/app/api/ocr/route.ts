@@ -1,102 +1,79 @@
 import { NextResponse } from 'next/server';
+import { GoogleGenAI } from '@google/genai';
+import { MCU_FIELDS } from '@/lib/mcu-fields';
 
-export async function POST(request: Request) {
+// Create a schema mapping dynamically from MCU_FIELDS
+function generatePromptSchema() {
+  const fieldsInfo = MCU_FIELDS.map(f => {
+    return `- ${f.id} (${f.label}): Type ${f.type}, Section ${f.section}`;
+  }).join('\n');
+
+  return `
+Kamu adalah asisten medis ahli dalam membaca data Medical Check Up (MCU).
+Ekstrak teks MCU berikut ke dalam format JSON dengan key (kunci) yang sesuai dengan daftar ID field berikut:
+${fieldsInfo}
+
+Aturan:
+1. Hanya kembalikan data yang ada/terdeteksi di dalam teks (tidak perlu mengembalikan semua key jika tidak ada nilainya).
+2. Format angka sebagai string angka biasa (misal "120" bukan "120 mmHg").
+3. Pastikan key JSON yang dikembalikan menggunakan ID yang persis sama.
+4. Output HARUS valid JSON, tanpa awalan markdown seperti \`\`\`json.
+`;
+}
+
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
+    const body = await req.json();
     const { text } = body;
 
-    if (!text || typeof text !== 'string') {
-      return NextResponse.json(
-        { success: false, error: 'Teks OCR wajib diisi' },
-        { status: 400 }
-      );
+    if (!text || text.trim().length === 0) {
+      return NextResponse.json({ success: false, error: 'Teks OCR kosong' }, { status: 400 });
     }
 
-    // Simulate AI processing delay
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ success: false, error: 'GEMINI_API_KEY tidak dikonfigurasi' }, { status: 500 });
+    }
 
-    // Mock extracted MCU data - real Gemini integration later
-    const mockExtracted = {
-      tdS: '130',
-      tdD: '85',
-      nadi: '78',
-      bb: '72',
-      tb: '170',
-      lp: '88',
-      hb: '14.5',
-      leukosit: '7.2',
-      eritrosit: '5.1',
-      hematokrit: '42',
-      trombosit: '250',
-      mcv: '88',
-      mch: '28.5',
-      led: '5',
-      chol: '195',
-      tg: '120',
-      hdl: '55',
-      ldl: '110',
-      gdp: '95',
-      gd2pp: '110',
-      hba1c: '5.4',
-      au: '5.8',
-      ureum: '28',
-      kreatinin: '0.9',
-      egfr: '95',
-      sgot: '25',
-      sgpt: '30',
-      ggt: '35',
-      alp: '80',
-      billirubin: '0.8',
-      hbsag: 'Non - Reaktif',
-      antiHbs: 'Reaktif',
-      vdrl: 'Non - Reaktif',
-      tpha: 'Non - Reaktif',
-      hiv: 'Non - Reaktif',
-      drugAmp: 'Negatif',
-      drugMeth: 'Negatif',
-      drugMorph: 'Negatif',
-      drugCanna: 'Negatif',
-      drugCoc: 'Negatif',
-      drugBenz: 'Negatif',
-      drugCaris: 'Negatif',
-      alkohol: 'Negatif',
-      merokok: 'Tidak',
-      golDarah: 'O+',
-      gigiMulut: 'DBN',
-      fisikHeadToToe: 'DBN',
-      hemoroid: 'Negatif',
-      visusJauh: 'VOD 6/6 VOS 6/6',
-      visusDekat: 'J1',
-      defWarna: 'Normal',
-      lapangPandang: 'DBN',
-      fisikMata: 'DBN',
-      chestXR: 'Cor dan Pulmo DBN',
-      lumboXR: 'Lumbosacral DBN',
-      ecgHasil: 'Normal Sinus Rhythm',
-      tmHasil: 'N/A',
-      usg: 'DBN',
-      spiInterp: 'Normal Spirometry',
-      audInterp: 'Normal Audiometry',
-      balance: 'DBN',
-      romberg: 'Negatif',
-      phalen: 'Negatif',
-      thinel: 'Negatif',
-      patrick: 'Negatif',
-      kontraPatrick: 'Negatif',
-      laseque: 'Negatif',
-      kernig: 'Negatif',
-      kesVendor: 'Fit To Work',
-      ul: 'DBN',
-    };
+    const ai = new GoogleGenAI({ apiKey });
 
-    return NextResponse.json({
-      success: true,
-      data: mockExtracted,
+    // Gunakan Gemini 2.5 Flash yang gratis dan cepat
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [
+            { role: 'user', parts: [{ text: text }] }
+        ],
+        config: {
+            systemInstruction: generatePromptSchema(),
+            responseMimeType: "application/json",
+            temperature: 0.1, // Low temp for more deterministic extraction
+        }
     });
-  } catch {
-    return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan saat ekstraksi' },
-      { status: 500 }
-    );
+
+    const outputText = response.text || "{}";
+    
+    let parsedData = {};
+    try {
+        parsedData = JSON.parse(outputText);
+    } catch (e) {
+        console.error("Failed to parse Gemini output:", outputText);
+        return NextResponse.json({ success: false, error: 'Gagal memformat hasil AI ke JSON' }, { status: 500 });
+    }
+
+    // Hanya ambil field yang valid sesuai mcu-fields.ts
+    const validData: Record<string, string> = {};
+    const validKeys = new Set(MCU_FIELDS.map(f => f.id));
+    
+    for (const [k, v] of Object.entries(parsedData)) {
+        if (validKeys.has(k) && v !== null && v !== undefined) {
+            validData[k] = String(v);
+        }
+    }
+
+    return NextResponse.json({ success: true, data: validData });
+
+  } catch (err: any) {
+    console.error('Error in OCR API:', err);
+    return NextResponse.json({ success: false, error: err.message || 'Internal Server Error' }, { status: 500 });
   }
 }

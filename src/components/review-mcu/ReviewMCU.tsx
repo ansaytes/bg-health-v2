@@ -215,24 +215,24 @@ export default function ReviewMCU() {
     }
   }, [ocrText, store, goStep]);
 
-  // Save to spreadsheet
+  // Save to Supabase
   const handleSave = useCallback(async () => {
-    const config = store.sheetConfigs.find((c) => c.id === store.activeSheetId);
-    if (!config) {
-      store.showToast('Pilih konfigurasi spreadsheet terlebih dahulu', 'error');
-      return;
-    }
     store.setSaving(true);
     try {
-      const rowData = store.buildRowData();
-      const res = await fetch('/api/save', {
+      const formData = store.formData;
+      if (!formData.nikKaryawan) {
+        store.showToast('Data NIK Karyawan tidak boleh kosong', 'error');
+        store.setSaving(false);
+        return;
+      }
+      const res = await fetch('/api/mcu/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowData, config }),
+        body: JSON.stringify({ formData }),
       });
       const json = await res.json();
       if (json.success) {
-        store.showToast(`Data tersimpan di baris ${json.row}`, 'success');
+        store.showToast(`Data MCU berhasil disimpan ke database (${json.action})`, 'success');
       } else {
         store.showToast(json.error || 'Gagal menyimpan', 'error');
       }
