@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EmployeeLookupInput, { SearchBy } from '@/components/administrator/EmployeeLookupInput';
 import {
@@ -220,8 +220,8 @@ export default function ReviewMCU() {
     store.setSaving(true);
     try {
       const formData = store.formData;
-      if (!formData.nikKaryawan) {
-        store.showToast('Data NIK Karyawan tidak boleh kosong', 'error');
+      if (!formData.nationalId) {
+        store.showToast('Data NIK KTP tidak boleh kosong', 'error');
         store.setSaving(false);
         return;
       }
@@ -626,23 +626,13 @@ export default function ReviewMCU() {
 
             {/* Zonasi card - sticky */}
             <div className="sticky bottom-0 z-10 pt-2 pb-2">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <ZonasiCard
-                  zona={zonasi}
-                  triggers={triggers}
-                  pengendalian={pengendalian}
-                />
-              </motion.div>
+              <ZonasiCard zona={zonasi} triggers={triggers} pengendalian={pengendalian} />
 
               <motion.div {...buttonTap} className="mt-3">
                 <Button
                   onClick={handleSave}
                   disabled={store.saving}
-                  className="w-full h-12 rounded-xl text-base font-semibold"
+                  className="w-full h-12 rounded-xl border-2 border-primary text-base font-semibold shadow-md transition-shadow hover:shadow-lg"
                   size="lg"
                 >
                   {store.saving ? (
@@ -759,6 +749,15 @@ function ZonasiCard({
   triggers: string[];
   pengendalian: string;
 }) {
+  const [visible, setVisible] = useState(true);
+  const triggerKey = triggers.join('|');
+
+  useEffect(() => {
+    setVisible(true);
+    const timer = window.setTimeout(() => setVisible(false), 5000);
+    return () => window.clearTimeout(timer);
+  }, [zona, triggerKey, pengendalian]);
+
   const bgColor =
     zona === 'Hijau'
       ? 'bg-zona-hijau'
@@ -785,7 +784,14 @@ function ZonasiCard({
         : AlertCircle;
 
   return (
-    <div className={`${bgColor} rounded-2xl p-4 shadow-lg backdrop-blur-sm`}>
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 8, transition: { duration: 0.8, ease: 'easeOut' } }}
+          className={`${bgColor} rounded-2xl p-4 shadow-lg backdrop-blur-sm`}
+        >
       <div className="flex items-center gap-2 mb-2">
         <ZonaIcon className={`size-5 ${textColor}`} />
         <span className={`text-base font-bold ${textColor}`}>
@@ -815,6 +821,8 @@ function ZonasiCard({
           </p>
         </div>
       )}
-    </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

@@ -1,232 +1,271 @@
 // ============================================================
-// MCU Field Definitions — 142 Columns (A–EL) Record MCU 2026
-// Based on: Record MCU 2026 (4).xlsx, RAW_DATA sheet
-// 3 header rows, data starts row 4
+// MCU Field Definitions — B–EM (142 data columns)
+// Column A is the generated row number and is not form data.
+// The order here is the Excel/Supabase contract for Record MCU.
 // ============================================================
 
 export type FieldType = 'number' | 'text' | 'select' | 'date' | 'textarea';
 
 export interface MCUFieldDef {
-  id: string;           // camelCase field ID
-  col: string;          // Column letter (A-EL)
-  colIndex: number;     // 0-based column index
-  label: string;        // Display label
-  section: string;      // Section name
-  sectionOrder: number; // Section display order
+  id: string;
+  col: string;
+  colIndex: number;
+  label: string;
+  section: string;
+  sectionOrder: number;
   type: FieldType;
-  unit?: string;        // Unit display
+  unit?: string;
   placeholder?: string;
-  normalRange?: string; // Normal range text
-  // For number fields: validation
+  normalRange?: string;
   min?: number;
   max?: number;
-  // For select fields
   options?: string[];
-  // Auto-calculation
-  autoCalc?: boolean;   // If true, auto-calculated (but still editable)
-  autoCalcFrom?: string[]; // Source field IDs for auto-calc
-  // N/A handling
-  textNA?: boolean;     // If empty, should default to "N/A"
-  // Gender-specific normal ranges
+  autoCalc?: boolean;
+  autoCalcFrom?: string[];
+  textNA?: boolean;
   normalMale?: string;
   normalFemale?: string;
-  lowMale?: number; highMale?: number;
-  lowFemale?: number; highFemale?: number;
-  low?: number; high?: number;
+  lowMale?: number;
+  highMale?: number;
+  lowFemale?: number;
+  highFemale?: number;
+  low?: number;
+  high?: number;
+}
+
+function shiftedColumn(col: string): string {
+  if (col === 'B') return col;
+  let carry = 1;
+  const chars = col.split('');
+  for (let i = chars.length - 1; i >= 0 && carry; i -= 1) {
+    const next = chars[i].charCodeAt(0) - 64 + carry;
+    if (next > 26) {
+      chars[i] = 'A';
+      carry = 1;
+    } else {
+      chars[i] = String.fromCharCode(64 + next);
+      carry = 0;
+    }
+  }
+  return carry ? `A${chars.join('')}` : chars.join('');
 }
 
 export const MCU_SECTIONS = [
-  { id: 'identity',   label: 'Identitas',      icon: 'User',           order: 0 },
-  { id: 'physical',   label: 'Fisik',          icon: 'Activity',        order: 1 },
-  { id: 'vision',     label: 'Mata',           icon: 'Eye',             order: 2 },
-  { id: 'vital',      label: 'Tanda Vital',    icon: 'HeartPulse',      order: 3 },
-  { id: 'hematology', label: 'Hematologi',     icon: 'Droplets',        order: 4 },
-  { id: 'chemistry',  label: 'Kimia Darah',    icon: 'FlaskConical',    order: 5 },
-  { id: 'serology',   label: 'Serologi',       icon: 'Shield',          order: 6 },
-  { id: 'drug',       label: 'NAPZA',          icon: 'Pill',            order: 7 },
-  { id: 'imaging',    label: 'Radiologi & USG',icon: 'Scan',            order: 8 },
-  { id: 'spirometry', label: 'Spirometri',     icon: 'Wind',            order: 9 },
-  { id: 'audiometry', label: 'Audiometri',     icon: 'Ear',             order: 10 },
-  { id: 'neuro',      label: 'Neurologi',      icon: 'Brain',           order: 11 },
-  { id: 'fitness',    label: 'Kebugaran',      icon: 'Dumbbell',        order: 12 },
-  { id: 'assessment', label: 'Penilaian',      icon: 'ClipboardCheck',  order: 13 },
-  { id: 'calculated', label: 'Hasil Kalkulasi', icon: 'Calculator',      order: 14 },
+  { id: 'identity', label: 'Identitas', icon: 'User', order: 0 },
+  { id: 'physical', label: 'Fisik', icon: 'Activity', order: 1 },
+  { id: 'vision', label: 'Mata', icon: 'Eye', order: 2 },
+  { id: 'vital', label: 'Tanda Vital', icon: 'HeartPulse', order: 3 },
+  { id: 'hematology', label: 'Hematologi', icon: 'Droplets', order: 4 },
+  { id: 'chemistry', label: 'Kimia Darah', icon: 'FlaskConical', order: 5 },
+  { id: 'serology', label: 'Serologi', icon: 'Shield', order: 6 },
+  { id: 'drug', label: 'NAPZA', icon: 'Pill', order: 7 },
+  { id: 'imaging', label: 'Radiologi & USG', icon: 'Scan', order: 8 },
+  { id: 'spirometry', label: 'Spirometri', icon: 'Wind', order: 9 },
+  { id: 'audiometry', label: 'Audiometri', icon: 'Ear', order: 10 },
+  { id: 'neuro', label: 'Neurologi', icon: 'Brain', order: 11 },
+  { id: 'fitness', label: 'Kebugaran', icon: 'Dumbbell', order: 12 },
+  { id: 'assessment', label: 'Penilaian', icon: 'ClipboardCheck', order: 13 },
+  { id: 'calculated', label: 'Hasil Kalkulasi', icon: 'Calculator', order: 14 },
 ] as const;
 
+type FieldOptions = Omit<MCUFieldDef, 'id' | 'col' | 'colIndex' | 'label' | 'section' | 'sectionOrder'>;
+const f = (
+  id: string,
+  col: string,
+  label: string,
+  section: string,
+  type: FieldType = 'text',
+  options: FieldOptions = {},
+  preserveColumn = false,
+): MCUFieldDef => ({
+  id,
+  col: preserveColumn ? col : shiftedColumn(col),
+  colIndex: columnIndex(preserveColumn ? col : shiftedColumn(col)),
+  label,
+  section,
+  sectionOrder: 0,
+  type,
+  ...(type === 'text' || type === 'textarea' ? { textNA: true } : {}),
+  ...options,
+});
+
+function columnIndex(col: string): number {
+  let result = 0;
+  for (const char of col) result = result * 26 + char.charCodeAt(0) - 64;
+  return result - 1;
+}
+
+const normal = (normalRange: string, unit?: string): FieldOptions => ({ normalRange, unit });
+const select = (options: string[]): FieldOptions => ({ options, textNA: true });
+
 export const MCU_FIELDS: MCUFieldDef[] = [
-  // ════════ IDENTITAS (A-J) ════════
-  { id: 'nationalId',      col: 'A',  colIndex: 0,  label: 'National ID',       section: 'identity', sectionOrder: 0, type: 'text', placeholder: 'Auto dari pencarian karyawan' },
-  { id: 'nikKaryawan',    col: 'B',  colIndex: 1,  label: 'NIK Karyawan',     section: 'identity', sectionOrder: 1, type: 'text', placeholder: 'NIK Karyawan' },
-  { id: 'nama',           col: 'C',  colIndex: 2,  label: 'Nama',             section: 'identity', sectionOrder: 2, type: 'text', placeholder: 'Auto dari NIK KTP' },
-  { id: 'usia',           col: 'D',  colIndex: 3,  label: 'Usia',             section: 'identity', sectionOrder: 3, type: 'number', unit: 'th', placeholder: 'Auto', autoCalc: true },
-  { id: 'jenisKelamin',   col: 'E',  colIndex: 4,  label: 'Jenis Kelamin',    section: 'identity', sectionOrder: 4, type: 'select', options: ['Laki - Laki', 'Perempuan'], placeholder: 'Auto dari NIK KTP' },
-  { id: 'jabatan',        col: 'F',  colIndex: 5,  label: 'Jabatan',          section: 'identity', sectionOrder: 5, type: 'text', placeholder: 'Auto dari NIK KTP' },
-  { id: 'site',           col: 'G',  colIndex: 6,  label: 'Site',             section: 'identity', sectionOrder: 6, type: 'text', placeholder: 'Auto dari NIK KTP' },
-  { id: 'statusMCU',      col: 'H',  colIndex: 7,  label: 'Status MCU',       section: 'identity', sectionOrder: 7, type: 'select', options: ['Rutin', 'Resmi', 'Khusus', 'Lainnya'] },
-  { id: 'tglMCU',         col: 'I',  colIndex: 8,  label: 'Tanggal MCU',      section: 'identity', sectionOrder: 8, type: 'date' },
-  { id: 'tempatMCU',      col: 'J',  colIndex: 9,  label: 'Tempat MCU',       section: 'identity', sectionOrder: 9, type: 'text', textNA: true, placeholder: 'Nama klinik/rumah sakit' },
+  // B–J Identitas
+  f('nationalId', 'B', 'NIK KTP', 'identity', 'text', { textNA: false }),
+  f('nikKaryawan', 'C', 'NIK Karyawan', 'identity', 'text', { textNA: false }, true),
+  f('nama', 'C', 'Nama', 'identity'),
+  f('usia', 'D', 'Usia', 'identity', 'number', { unit: 'tahun', autoCalc: true }),
+  f('jenisKelamin', 'E', 'Jenis Kelamin', 'identity', 'select', { options: ['Laki - Laki', 'Perempuan'] }),
+  f('jabatan', 'F', 'Jabatan', 'identity'),
+  f('site', 'G', 'Site', 'identity'),
+  f('statusMCU', 'H', 'Status MCU', 'identity', 'select', { options: ['Rutin', 'Resmi', 'Khusus', 'Lainnya'] }),
+  f('tglMCU', 'I', 'Tanggal MCU', 'identity', 'date', { textNA: false }),
+  f('tempatMCU', 'J', 'Tempat MCU', 'identity'),
 
-  // ════════ FISIK (K-N) ════════
-  { id: 'golDarah',       col: 'K',  colIndex: 10, label: 'Golongan Darah',   section: 'physical', sectionOrder: 0, type: 'select', options: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'N/A'], textNA: true },
-  { id: 'gigiMulut',      col: 'L',  colIndex: 11, label: 'Gigi & Mulut',     section: 'physical', sectionOrder: 1, type: 'textarea', textNA: true, placeholder: 'DBN jika normal' },
-  { id: 'fisikHeadToToe',col: 'M',  colIndex: 12, label: 'Fisik Head to Toe', section: 'physical', sectionOrder: 2, type: 'textarea', textNA: true, placeholder: 'DBN jika normal' },
-  { id: 'hemoroid',       col: 'N',  colIndex: 13, label: 'Hemoroid',         section: 'physical', sectionOrder: 3, type: 'select', options: ['Negatif', 'Positif', 'Menolak RT', 'N/A'], textNA: true },
+  // K–N Fisik
+  f('golDarah', 'K', 'Golongan Darah & Rhesus', 'physical', 'select', select(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'N/A'])),
+  f('gigiMulut', 'L', 'Gigi & Mulut', 'physical', 'textarea'),
+  f('fisikHeadToToe', 'M', 'Fisik Head To Toe', 'physical', 'textarea'),
+  f('hemoroid', 'N', 'Hemoroid', 'physical', 'select', select(['Negatif', 'Positif', 'Menolak RT', 'N/A'])),
 
-  // ════════ MATA (O-S) ════════
-  { id: 'visusJauh',      col: 'O',  colIndex: 14, label: 'Visus Jauh',       section: 'vision', sectionOrder: 0, type: 'text', textNA: true, placeholder: 'VOD 6/6 VOS 6/6' },
-  { id: 'visusDekat',     col: 'P',  colIndex: 15, label: 'Visus Dekat',      section: 'vision', sectionOrder: 1, type: 'text', textNA: true, placeholder: 'J1 / DBN' },
-  { id: 'defWarna',       col: 'Q',  colIndex: 16, label: 'Defisiensi Warna', section: 'vision', sectionOrder: 2, type: 'select', options: ['Normal', 'Protan', 'Deutan', 'Tritan', 'Total', 'N/A'], textNA: true },
-  { id: 'lapangPandang',  col: 'R',  colIndex: 17, label: 'Lapang Pandang',   section: 'vision', sectionOrder: 3, type: 'text', textNA: true, placeholder: 'DBN jika normal' },
-  { id: 'fisikMata',      col: 'S',  colIndex: 18, label: 'Fisik Mata',       section: 'vision', sectionOrder: 4, type: 'textarea', textNA: true, placeholder: 'DBN jika normal' },
+  // O–S Mata
+  f('visusJauh', 'O', 'Visus Jauh', 'vision'),
+  f('visusDekat', 'P', 'Visus Dekat', 'vision'),
+  f('defWarna', 'Q', 'Defisiensi Persepsi Warna', 'vision', 'select', select(['Normal', 'Protan', 'Deutan', 'Tritan', 'Total', 'N/A'])),
+  f('lapangPandang', 'R', 'Lapang Pandang', 'vision'),
+  f('fisikMata', 'S', 'Fisik Mata', 'vision', 'textarea'),
 
-  // ════════ TANDA VITAL (T-Z) ════════
-  { id: 'merokok',        col: 'T',  colIndex: 19, label: 'Merokok',          section: 'vital', sectionOrder: 0, type: 'select', options: ['Ya', 'Tidak', 'Sudah Berhenti', 'N/A'], textNA: true },
-  { id: 'tdS',            col: 'U',  colIndex: 20, label: 'TD Sistolik',      section: 'vital', sectionOrder: 1, type: 'number', unit: 'mmHg', normalRange: '<120', placeholder: 'mmHg' },
-  { id: 'tdD',            col: 'V',  colIndex: 21, label: 'TD Diastolik',     section: 'vital', sectionOrder: 2, type: 'number', unit: 'mmHg', normalRange: '<80', placeholder: 'mmHg' },
-  { id: 'nadi',           col: 'W',  colIndex: 22, label: 'Nadi',             section: 'vital', sectionOrder: 3, type: 'number', unit: '/mnt', normalRange: '60-100', low: 60, high: 100 },
-  { id: 'bb',             col: 'X',  colIndex: 23, label: 'Berat Badan',      section: 'vital', sectionOrder: 4, type: 'number', unit: 'kg', placeholder: 'kg' },
-  { id: 'tb',             col: 'Y',  colIndex: 24, label: 'Tinggi Badan',     section: 'vital', sectionOrder: 5, type: 'number', unit: 'cm', placeholder: 'cm' },
-  { id: 'bmi',            col: 'Z',  colIndex: 25, label: 'BMI',              section: 'vital', sectionOrder: 6, type: 'number', unit: 'kg/m²', normalRange: '<23', autoCalc: true, autoCalcFrom: ['bb', 'tb'] },
-  { id: 'lp',             col: 'AA', colIndex: 26, label: 'Lingkar Pinggang',  section: 'vital', sectionOrder: 7, type: 'number', unit: 'cm', normalMale: '<90', normalFemale: '<80' },
+  // T–AA Tanda vital
+  f('merokok', 'T', 'Merokok', 'vital', 'select', select(['Ya', 'Tidak', 'Sudah Berhenti', 'N/A'])),
+  f('tdS', 'U', 'Tekanan Darah Sistole (90-119)', 'vital', 'number', normal('90-119', 'mmHg')),
+  f('tdD', 'V', 'Tekanan Darah Diastole (60-79)', 'vital', 'number', normal('60-79', 'mmHg')),
+  f('nadi', 'W', 'Nadi < 100 bpm', 'vital', 'number', { unit: 'bpm', high: 100 }),
+  f('bb', 'X', 'BB (kg)', 'vital', 'number', { unit: 'kg' }),
+  f('tb', 'Y', 'TB (cm)', 'vital', 'number', { unit: 'cm' }),
+  f('bmi', 'Z', 'BMI < 30', 'vital', 'number', { unit: 'kg/m²', high: 30, autoCalc: true, autoCalcFrom: ['bb', 'tb'] }),
+  f('lp', 'AA', 'LP (L < 90, P < 80)', 'vital', 'number', { unit: 'cm', normalMale: '<90', normalFemale: '<80' }),
 
-  // ════════ HEMATOLOGI (AB-AJ) ════════
-  { id: 'hb',             col: 'AB', colIndex: 27, label: 'Hemoglobin',       section: 'hematology', sectionOrder: 0, type: 'number', unit: 'g/dL', normalMale: '13-16.5', normalFemale: '12-15', lowMale: 13, highMale: 16.5, lowFemale: 12, highFemale: 15 },
-  { id: 'leukosit',       col: 'AC', colIndex: 28, label: 'Leukosit',         section: 'hematology', sectionOrder: 1, type: 'number', unit: '10³/µL', normalRange: '4-11', low: 4, high: 11 },
-  { id: 'eritrosit',      col: 'AD', colIndex: 29, label: 'Eritrosit',        section: 'hematology', sectionOrder: 2, type: 'number', unit: '10⁶/µL', normalRange: '4.5-6.2', low: 4.5, high: 6.2 },
-  { id: 'hematokrit',     col: 'AE', colIndex: 30, label: 'Hematokrit',       section: 'hematology', sectionOrder: 3, type: 'number', unit: '%', normalRange: '40-54%', low: 40, high: 54 },
-  { id: 'trombosit',      col: 'AF', colIndex: 31, label: 'Trombosit',        section: 'hematology', sectionOrder: 4, type: 'number', unit: '10³/µL', normalRange: '150-400', low: 150, high: 400 },
-  { id: 'mcv',            col: 'AG', colIndex: 32, label: 'MCV',              section: 'hematology', sectionOrder: 5, type: 'number', unit: 'fL', normalRange: '80-100', low: 80, high: 100 },
-  { id: 'mch',            col: 'AH', colIndex: 33, label: 'MCH',              section: 'hematology', sectionOrder: 6, type: 'number', unit: 'pg', normalRange: '27-33', low: 27, high: 33 },
-  { id: 'mchc',           col: 'AI', colIndex: 34, label: 'MCHC',             section: 'hematology', sectionOrder: 7, type: 'number', unit: 'g/dL', normalRange: '31-37', autoCalc: true, autoCalcFrom: ['hb', 'hematokrit'], low: 31, high: 37 },
-  { id: 'led',            col: 'AJ', colIndex: 35, label: 'LED',              section: 'hematology', sectionOrder: 8, type: 'number', unit: 'mm/jam', normalMale: '0-15', normalFemale: '0-20', lowMale: 0, highMale: 15, lowFemale: 0, highFemale: 20 },
+  // AB–AJ Hematologi
+  f('hb', 'AB', 'Hb (L 13-16,5 g/dL, P 12-15 g/dL)', 'hematology', 'number', { unit: 'g/dL', normalMale: '13-16,5', normalFemale: '12-15', lowMale: 13, highMale: 16.5, lowFemale: 12, highFemale: 15 }),
+  f('leukosit', 'AC', 'Leukosit 4-11 10³/µL', 'hematology', 'number', normal('4-11', '10³/µL')),
+  f('eritrosit', 'AD', 'Eritrosit 4,5-6,2 10⁶/µL', 'hematology', 'number', normal('4,5-6,2', '10⁶/µL')),
+  f('hematokrit', 'AE', 'Hematokrit 40-54%', 'hematology', 'number', normal('40-54', '%')),
+  f('trombosit', 'AF', 'Trombosit 150-400 10³/µL', 'hematology', 'number', normal('150-400', '10³/µL')),
+  f('mcv', 'AG', 'MCV 80-100 fL', 'hematology', 'number', normal('80-100', 'fL')),
+  f('mch', 'AH', 'MCH 26-34 pg', 'hematology', 'number', normal('26-34', 'pg')),
+  f('mchc', 'AI', 'MCHC 31-37 g/dL', 'hematology', 'number', { ...normal('31-37', 'g/dL'), autoCalc: true, autoCalcFrom: ['hb', 'hematokrit'] }),
+  f('led', 'AJ', 'LED (L 0-15 mm/j, P 0-20 mm/j)', 'hematology', 'number', { unit: 'mm/j', normalMale: '0-15', normalFemale: '0-20' }),
 
-  // ════════ KIMIA DARAH (AK-AZ) ════════
-  { id: 'chol',           col: 'AK', colIndex: 36, label: 'Cholesterol Total',section: 'chemistry', sectionOrder: 0, type: 'number', unit: 'mg/dL', normalRange: '<200', high: 200 },
-  { id: 'tg',             col: 'AL', colIndex: 37, label: 'Trigliserida',     section: 'chemistry', sectionOrder: 1, type: 'number', unit: 'mg/dL', normalRange: '<150', high: 150 },
-  { id: 'hdl',            col: 'AM', colIndex: 38, label: 'HDL',              section: 'chemistry', sectionOrder: 2, type: 'number', unit: 'mg/dL', normalMale: '≥40', normalFemale: '≥50', lowMale: 40, lowFemale: 50 },
-  { id: 'ldl',            col: 'AN', colIndex: 39, label: 'LDL',              section: 'chemistry', sectionOrder: 3, type: 'number', unit: 'mg/dL', normalRange: '<100', high: 100 },
-  { id: 'gdp',            col: 'AO', colIndex: 40, label: 'GDP',              section: 'chemistry', sectionOrder: 4, type: 'number', unit: 'mg/dL', normalRange: '70-100', low: 70, high: 100 },
-  { id: 'gd2pp',          col: 'AP', colIndex: 41, label: 'GD2PP',            section: 'chemistry', sectionOrder: 5, type: 'number', unit: 'mg/dL', normalRange: '<140', high: 140 },
-  { id: 'hba1c',          col: 'AQ', colIndex: 42, label: 'HbA1c',            section: 'chemistry', sectionOrder: 6, type: 'number', unit: '%', normalRange: '<6.5%', high: 6.5 },
-  { id: 'diabetes',       col: 'AR', colIndex: 43, label: 'Diabetes',         section: 'chemistry', sectionOrder: 7, type: 'select', options: ['Ya', 'Tidak'], autoCalc: true, autoCalcFrom: ['gdp', 'gd2pp', 'hba1c'] },
-  { id: 'au',             col: 'AS', colIndex: 44, label: 'Asam Urat',        section: 'chemistry', sectionOrder: 8, type: 'number', unit: 'mg/dL', normalMale: '3.4-7', normalFemale: '2.4-6', lowMale: 3.4, highMale: 7, lowFemale: 2.4, highFemale: 6 },
-  { id: 'ureum',          col: 'AT', colIndex: 45, label: 'Ureum',            section: 'chemistry', sectionOrder: 9, type: 'number', unit: 'mg/dL', normalRange: '16.6-48.5', low: 16.6, high: 48.5 },
-  { id: 'kreatinin',      col: 'AU_col', colIndex: 46, label: 'Kreatinin',        section: 'chemistry', sectionOrder: 10, type: 'number', unit: 'mg/dL', normalRange: '0.6-1.2', low: 0.6, high: 1.2 },
-  { id: 'egfr',           col: 'AV', colIndex: 47, label: 'eGFR',             section: 'chemistry', sectionOrder: 11, type: 'number', unit: 'mL/min/1.73m²', normalRange: '≥60', low: 60 },
-  { id: 'sgot',           col: 'AW', colIndex: 48, label: 'SGOT (AST)',       section: 'chemistry', sectionOrder: 12, type: 'number', unit: 'U/L', normalRange: '<40', high: 40 },
-  { id: 'sgpt',           col: 'AX', colIndex: 49, label: 'SGPT (ALT)',       section: 'chemistry', sectionOrder: 13, type: 'number', unit: 'U/L', normalRange: '<41', high: 41 },
-  { id: 'ggt',            col: 'AY', colIndex: 50, label: 'GGT',              section: 'chemistry', sectionOrder: 14, type: 'number', unit: 'U/L', normalRange: '8-61', low: 8, high: 61 },
-  { id: 'alp',            col: 'AZ', colIndex: 51, label: 'ALP',              section: 'chemistry', sectionOrder: 15, type: 'number', unit: 'IU/L', normalRange: '44-147', low: 44, high: 147 },
-  { id: 'billirubin',     col: 'BA', colIndex: 52, label: 'Bilirubin Total', section: 'chemistry', sectionOrder: 16, type: 'number', unit: 'mg/dL', normalRange: '0.2-1.2', low: 0.2, high: 1.2 },
-  { id: 'ul',             col: 'BB', colIndex: 53, label: 'Urinalisis',       section: 'chemistry', sectionOrder: 17, type: 'textarea', textNA: true, placeholder: 'DBN jika normal' },
+  // AK–BB Kimia darah
+  f('chol', 'AK', 'Chol <200 mg/dL', 'chemistry', 'number', normal('<200', 'mg/dL')),
+  f('tg', 'AL', 'TG <150 mg/dL', 'chemistry', 'number', normal('<150', 'mg/dL')),
+  f('hdl', 'AM', 'HDL ≥50 mg/dL', 'chemistry', 'number', normal('≥50', 'mg/dL')),
+  f('ldl', 'AN', 'LDL <100 mg/dL', 'chemistry', 'number', normal('<100', 'mg/dL')),
+  f('gdp', 'AO', 'GDP 70-100 mg/dL', 'chemistry', 'number', normal('70-100', 'mg/dL')),
+  f('gd2pp', 'AP', 'GD2PP <140 mg/dL', 'chemistry', 'number', normal('<140', 'mg/dL')),
+  f('hba1c', 'AQ', 'HbA1c <6,5%', 'chemistry', 'number', normal('<6,5', '%')),
+  f('diabetes', 'AR', 'Diabetes', 'chemistry', 'select', { options: ['Ya', 'Tidak'], autoCalc: true, autoCalcFrom: ['gdp', 'gd2pp', 'hba1c'] }),
+  f('au', 'AS', 'AU (L 3,4-7,0 mg/dL, P 2,4-6,0 mg/dL)', 'chemistry', 'number', { unit: 'mg/dL', normalMale: '3,4-7,0', normalFemale: '2,4-6,0' }),
+  f('ureum', 'AT', 'Ureum 16,6-48,5 mg/dL', 'chemistry', 'number', normal('16,6-48,5', 'mg/dL')),
+  f('kreatinin', 'AU', 'Kreatinin 0.6-1.2 mg/dL', 'chemistry', 'number', normal('0.6-1.2', 'mg/dL')),
+  f('egfr', 'AV', 'eGFR ≥90 mL/menit/1,73 m²', 'chemistry', 'number', normal('≥90', 'mL/menit/1,73 m²')),
+  f('sgot', 'AW', 'SGOT <40 U/L', 'chemistry', 'number', normal('<40', 'U/L')),
+  f('sgpt', 'AX', 'SGPT <41 U/L', 'chemistry', 'number', normal('<41', 'U/L')),
+  f('ggt', 'AY', 'GGT 8-61 U/L', 'chemistry', 'number', normal('8-61', 'U/L')),
+  f('alp', 'AZ', 'ALP 44-147 IU/L', 'chemistry', 'number', normal('44-147', 'IU/L')),
+  f('billirubin', 'BA', 'Bilirubin 0,2-1,2 mg/dL', 'chemistry', 'number', normal('0,2-1,2', 'mg/dL')),
+  f('ul', 'BB', 'UL', 'chemistry', 'textarea'),
 
-  // ════════ SEROLOGI (BC-BG) ════════
-  { id: 'hbsag',          col: 'BC', colIndex: 54, label: 'HBsAg',            section: 'serology', sectionOrder: 0, type: 'select', options: ['Non - Reaktif', 'Reaktif', 'N/A'], textNA: true },
-  { id: 'antiHbs',        col: 'BD', colIndex: 55, label: 'Anti-HBs',         section: 'serology', sectionOrder: 1, type: 'select', options: ['Non - Reaktif', 'Reaktif', 'N/A'], textNA: true },
-  { id: 'vdrl',           col: 'BE', colIndex: 56, label: 'VDRL',             section: 'serology', sectionOrder: 2, type: 'select', options: ['Non - Reaktif', 'Reaktif', 'N/A'], textNA: true },
-  { id: 'tpha',           col: 'BF', colIndex: 57, label: 'TPHA',             section: 'serology', sectionOrder: 3, type: 'select', options: ['Non - Reaktif', 'Reaktif', 'N/A'], textNA: true },
-  { id: 'hiv',            col: 'BG', colIndex: 58, label: 'HIV',              section: 'serology', sectionOrder: 4, type: 'select', options: ['Non - Reaktif', 'Reaktif', 'N/A'], textNA: true },
+  // BC–BG Serologi
+  ...([
+    ['hbsag', 'BC', 'HbsAg'], ['antiHbs', 'BD', 'Anti Hbs'], ['vdrl', 'BE', 'VDRL'],
+    ['tpha', 'BF', 'TPHA'], ['hiv', 'BG', 'HIV'],
+  ] as const).map(([id, col, label]) => f(id, col, label, 'serology', 'select', select(['Non - Reaktif', 'Reaktif', 'N/A']))),
 
-  // ════════ NAPZA (BH-BL) ════════
-  { id: 'drugAmp',        col: 'BH', colIndex: 59, label: 'Amphetamine',      section: 'drug', sectionOrder: 0, type: 'select', options: ['Negatif', 'Positif', 'N/A'], textNA: true },
-  { id: 'drugMeth',       col: 'BI', colIndex: 60, label: 'Methamphetamine',   section: 'drug', sectionOrder: 1, type: 'select', options: ['Negatif', 'Positif', 'N/A'], textNA: true },
-  { id: 'drugMorph',      col: 'BJ', colIndex: 61, label: 'Morphine',         section: 'drug', sectionOrder: 2, type: 'select', options: ['Negatif', 'Positif', 'N/A'], textNA: true },
-  { id: 'drugCanna',      col: 'BK', colIndex: 62, label: 'Cannabinoid',      section: 'drug', sectionOrder: 3, type: 'select', options: ['Negatif', 'Positif', 'N/A'], textNA: true },
-  { id: 'drugCoc',        col: 'BL', colIndex: 63, label: 'Cocaine',          section: 'drug', sectionOrder: 4, type: 'select', options: ['Negatif', 'Positif', 'N/A'], textNA: true },
-  { id: 'drugBenz',       col: 'BM', colIndex: 64, label: 'Benzodiazepine',   section: 'drug', sectionOrder: 5, type: 'select', options: ['Negatif', 'Positif', 'N/A'], textNA: true },
-  { id: 'drugCaris',      col: 'BN', colIndex: 65, label: 'Carisoprodol',    section: 'drug', sectionOrder: 6, type: 'select', options: ['Negatif', 'Positif', 'N/A'], textNA: true },
-  { id: 'alkohol',        col: 'BO', colIndex: 66, label: 'Alkohol',          section: 'drug', sectionOrder: 7, type: 'select', options: ['Negatif', 'Positif', 'N/A'], textNA: true },
-  { id: 'psa',            col: 'BP', colIndex: 67, label: 'PSA',              section: 'drug', sectionOrder: 8, type: 'number', unit: 'ng/mL', normalRange: '<4', high: 4, textNA: true },
+  // BH–BP NAPZA
+  ...([
+    ['drugAmp', 'BH', 'Drug Test Amphetamine'], ['drugMeth', 'BI', 'Drug Test Methamphetamine'],
+    ['drugMorph', 'BJ', 'Drug Test Morphine'], ['drugCanna', 'BK', 'Drug Test Cannabinoid'],
+    ['drugCoc', 'BL', 'Drug Test Coccain'], ['drugBenz', 'BM', 'Drug Test Benzodiazepine'],
+    ['drugCaris', 'BN', 'Drug Test Carisoprodol'], ['alkohol', 'BO', 'Alkohol Test'],
+  ] as const).map(([id, col, label]) => f(id, col, label, 'drug', 'select', select(['Negatif', 'Positif', 'N/A']))),
+  f('psa', 'BP', 'PSA', 'drug', 'number', { unit: 'ng/mL', normalRange: '<4' }),
 
-  // ════════ RADIOLOGI & USG (BQ-BU) ════════
-  { id: 'chestXR',        col: 'BQ', colIndex: 68, label: 'Foto Thorax',      section: 'imaging', sectionOrder: 0, type: 'textarea', textNA: true, placeholder: 'Cor dan Pulmo DBN' },
-  { id: 'lumboXR',        col: 'BR', colIndex: 69, label: 'Foto Lumbosacral',section: 'imaging', sectionOrder: 1, type: 'textarea', textNA: true, placeholder: 'Lumbosacral DBN' },
-  { id: 'ecgHasil',       col: 'BS', colIndex: 70, label: 'ECG',              section: 'imaging', sectionOrder: 2, type: 'textarea', textNA: true, placeholder: 'Normal Resting ECG' },
-  { id: 'tmHasil',        col: 'BT', colIndex: 71, label: 'Treadmill',        section: 'imaging', sectionOrder: 3, type: 'textarea', textNA: true, placeholder: 'Negative Ischemic Response' },
-  { id: 'usg',            col: 'BU', colIndex: 72, label: 'USG',              section: 'imaging', sectionOrder: 4, type: 'textarea', textNA: true, placeholder: 'DBN' },
+  // BQ–BU Imaging
+  f('chestXR', 'BQ', 'Chest X-Ray', 'imaging', 'textarea'),
+  f('lumboXR', 'BR', 'Lumbosacral X-Ray', 'imaging', 'textarea'),
+  f('ecgHasil', 'BS', 'ECG', 'imaging', 'textarea'),
+  f('tmHasil', 'BT', 'Treadmill', 'imaging', 'textarea'),
+  f('usg', 'BU', 'USG', 'imaging', 'textarea'),
 
-  // ════════ SPIROMETRI (BV-CF) ════════
-  { id: 'fvcPred',        col: 'BV', colIndex: 73, label: 'FVC Pred',         section: 'spirometry', sectionOrder: 0, type: 'number', unit: 'L' },
-  { id: 'fvcAct',         col: 'BW', colIndex: 74, label: 'FVC Act',          section: 'spirometry', sectionOrder: 1, type: 'number', unit: 'L' },
-  { id: 'fvcPct',         col: 'BX', colIndex: 75, label: 'FVC %',            section: 'spirometry', sectionOrder: 2, type: 'number', unit: '%', autoCalc: true, autoCalcFrom: ['fvcAct', 'fvcPred'] },
-  { id: 'fev1Pred',       col: 'BY', colIndex: 76, label: 'FEV1 Pred',        section: 'spirometry', sectionOrder: 3, type: 'number', unit: 'L' },
-  { id: 'fev1Act',        col: 'BZ', colIndex: 77, label: 'FEV1 Act',         section: 'spirometry', sectionOrder: 4, type: 'number', unit: 'L' },
-  { id: 'fev1Pct',        col: 'CA', colIndex: 78, label: 'FEV1 %',           section: 'spirometry', sectionOrder: 5, type: 'number', unit: '%', autoCalc: true, autoCalcFrom: ['fev1Act', 'fev1Pred'] },
-  { id: 'fev1FvcPred',    col: 'CB', colIndex: 79, label: 'FEV1/FVC Pred',    section: 'spirometry', sectionOrder: 6, type: 'number', unit: '%' },
-  { id: 'fev1FvcAct',     col: 'CC', colIndex: 80, label: 'FEV1/FVC Act',     section: 'spirometry', sectionOrder: 7, type: 'number', unit: '%', autoCalc: true, autoCalcFrom: ['fev1Act', 'fvcAct'] },
-  { id: 'fev1FvcPct',     col: 'CD', colIndex: 81, label: 'FEV1/FVC %',      section: 'spirometry', sectionOrder: 8, type: 'number', unit: '%', autoCalc: true, autoCalcFrom: ['fev1FvcAct', 'fev1FvcPred'] },
-  { id: 'spiInterp',      col: 'CE', colIndex: 82, label: 'Interpretasi',      section: 'spirometry', sectionOrder: 9, type: 'text', textNA: true, placeholder: 'Normal Spirometry' },
+  // BV–CE Spirometry
+  f('fvcPred', 'BV', 'Spirometry FVC PRED', 'spirometry', 'number', { unit: 'L' }),
+  f('fvcAct', 'BW', 'Spirometry FVC ACT', 'spirometry', 'number', { unit: 'L' }),
+  f('fvcPct', 'BX', 'Spirometry FVC %', 'spirometry', 'number', { unit: '%', autoCalc: true, autoCalcFrom: ['fvcAct', 'fvcPred'] }),
+  f('fev1Pred', 'BY', 'Spirometry FEV1 PRED', 'spirometry', 'number', { unit: 'L' }),
+  f('fev1Act', 'BZ', 'Spirometry FEV1 ACT', 'spirometry', 'number', { unit: 'L' }),
+  f('fev1Pct', 'CA', 'Spirometry FEV1 %', 'spirometry', 'number', { unit: '%', autoCalc: true, autoCalcFrom: ['fev1Act', 'fev1Pred'] }),
+  f('fev1FvcPred', 'CB', 'Spirometry FEV1%G PRED', 'spirometry', 'number', { unit: '%' }),
+  f('fev1FvcAct', 'CC', 'Spirometry FEV1%G ACT', 'spirometry', 'number', { unit: '%', autoCalc: true, autoCalcFrom: ['fev1Act', 'fvcAct'] }),
+  f('fev1FvcPct', 'CD', 'Spirometry FEV1%G %', 'spirometry', 'number', { unit: '%', autoCalc: true, autoCalcFrom: ['fev1FvcAct', 'fev1FvcPred'] }),
+  f('spiInterp', 'CE', 'Spirometry Interpretasi', 'spirometry'),
 
-  // ════════ AUDIOMETRI (CG-CQ) ════════
-  { id: 'acl_500',        col: 'CG', colIndex: 83, label: 'ACL 500 Hz',       section: 'audiometry', sectionOrder: 0, type: 'number', unit: 'dB' },
-  { id: 'acl_1k',         col: 'CH', colIndex: 84, label: 'ACL 1k Hz',        section: 'audiometry', sectionOrder: 1, type: 'number', unit: 'dB' },
-  { id: 'acl_2k',         col: 'CI', colIndex: 85, label: 'ACL 2k Hz',        section: 'audiometry', sectionOrder: 2, type: 'number', unit: 'dB' },
-  { id: 'acl_3k',         col: 'CJ', colIndex: 86, label: 'ACL 3k Hz',        section: 'audiometry', sectionOrder: 3, type: 'number', unit: 'dB' },
-  { id: 'acl_4k',         col: 'CK', colIndex: 87, label: 'ACL 4k Hz',        section: 'audiometry', sectionOrder: 4, type: 'number', unit: 'dB' },
-  { id: 'acl_6k',         col: 'CL', colIndex: 88, label: 'ACL 6k Hz',        section: 'audiometry', sectionOrder: 5, type: 'number', unit: 'dB' },
-  { id: 'acl_8k',         col: 'CM', colIndex: 89, label: 'ACL 8k Hz',        section: 'audiometry', sectionOrder: 6, type: 'number', unit: 'dB' },
-  { id: 'acr_500',        col: 'CN', colIndex: 90, label: 'ACR 500 Hz',       section: 'audiometry', sectionOrder: 7, type: 'number', unit: 'dB' },
-  { id: 'acr_1k',         col: 'CO', colIndex: 91, label: 'ACR 1k Hz',        section: 'audiometry', sectionOrder: 8, type: 'number', unit: 'dB' },
-  { id: 'acr_2k',         col: 'CP', colIndex: 92, label: 'ACR 2k Hz',        section: 'audiometry', sectionOrder: 9, type: 'number', unit: 'dB' },
-  { id: 'acr_3k',         col: 'CQ', colIndex: 93, label: 'ACR 3k Hz',        section: 'audiometry', sectionOrder: 10, type: 'number', unit: 'dB' },
-  { id: 'acr_4k',         col: 'CR', colIndex: 94, label: 'ACR 4k Hz',        section: 'audiometry', sectionOrder: 11, type: 'number', unit: 'dB' },
-  { id: 'acr_6k',         col: 'CS', colIndex: 95, label: 'ACR 6k Hz',        section: 'audiometry', sectionOrder: 12, type: 'number', unit: 'dB' },
-  { id: 'acr_8k',         col: 'CT', colIndex: 96, label: 'ACR 8k Hz',        section: 'audiometry', sectionOrder: 13, type: 'number', unit: 'dB' },
-  { id: 'audInterp',      col: 'CU', colIndex: 97, label: 'Interpretasi',      section: 'audiometry', sectionOrder: 14, type: 'text', textNA: true, placeholder: 'Normal Audiometry' },
+  // CF–CT Audiometry (ACR first, as specified)
+  ...([
+    ['acr_500', 'CF', 'Audiometry ACR 500'], ['acr_1k', 'CG', 'Audiometry ACR 1K'],
+    ['acr_2k', 'CH', 'Audiometry ACR 2K'], ['acr_3k', 'CI', 'Audiometry ACR 3K'],
+    ['acr_4k', 'CJ', 'Audiometry ACR 4K'], ['acr_6k', 'CK', 'Audiometry ACR 6K'],
+    ['acr_8k', 'CL', 'Audiometry ACR 8K'], ['acl_500', 'CM', 'Audiometry ACL 500'],
+    ['acl_1k', 'CN', 'Audiometry ACL 1K'], ['acl_2k', 'CO', 'Audiometry ACL 2K'],
+    ['acl_3k', 'CP', 'Audiometry ACL 3K'], ['acl_4k', 'CQ', 'Audiometry ACL 4K'],
+    ['acl_6k', 'CR', 'Audiometry ACL 6K'], ['acl_8k', 'CS', 'Audiometry ACL 8K'],
+  ] as const).map(([id, col, label]) => f(id, col, label, 'audiometry', 'number', { unit: 'dB' })),
+  f('audInterp', 'CT', 'Audiometry Interpretasi', 'audiometry'),
 
-  // ════════ NEUROLOGI (CV-DA) ════════
-  { id: 'balance',        col: 'CV', colIndex: 98, label: 'Balance',          section: 'neuro', sectionOrder: 0, type: 'text', textNA: true },
-  { id: 'romberg',        col: 'CW', colIndex: 99, label: 'Romberg',          section: 'neuro', sectionOrder: 1, type: 'text', textNA: true },
-  { id: 'phalen',         col: 'CX', colIndex: 100,label: 'Phalen',           section: 'neuro', sectionOrder: 2, type: 'text', textNA: true },
-  { id: 'thinel',         col: 'CY', colIndex: 101,label: 'Tinel',            section: 'neuro', sectionOrder: 3, type: 'text', textNA: true },
-  { id: 'patrick',        col: 'CZ', colIndex: 102,label: 'Patrick',          section: 'neuro', sectionOrder: 4, type: 'text', textNA: true },
-  { id: 'kontraPatrick',  col: 'DA', colIndex: 103,label: 'Kontra Patrick',   section: 'neuro', sectionOrder: 5, type: 'text', textNA: true },
-  { id: 'laseque',        col: 'DB', colIndex: 104,label: 'Lasègue',          section: 'neuro', sectionOrder: 6, type: 'text', textNA: true },
-  { id: 'kernig',         col: 'DC', colIndex: 105,label: 'Kernig',           section: 'neuro', sectionOrder: 7, type: 'text', textNA: true },
+  // CU–DB Neurologi
+  ...([
+    ['balance', 'CU', 'Balance Test'], ['romberg', 'CV', 'Romberg Test'], ['phalen', 'CW', 'Phalen Test'],
+    ['thinel', 'CX', 'Thinel Test'], ['patrick', 'CY', 'Patrick Test'], ['kontraPatrick', 'CZ', 'Kontra Patrick Test'],
+    ['laseque', 'DA', 'Laseque Test'], ['kernig', 'DB', 'Kernig Test'],
+  ] as const).map(([id, col, label]) => f(id, col, label, 'neuro')),
+  f('tesKebugaran', 'DC', 'Tes Kebugaran (6 Minutes Walk Test, Harvard Step Test)', 'fitness', 'textarea'),
+  f('pemeriksaanLain', 'DD', 'Pemeriksaan Lain', 'fitness', 'textarea'),
+  f('dugaanPAK', 'DE', 'Dugaan PAK', 'fitness', 'textarea'),
 
-  // ════════ KEBUGARAN (DD-DF) ════════
-  { id: 'tesKebugaran',   col: 'DD', colIndex: 106,label: 'Tes Kebugaran',    section: 'fitness', sectionOrder: 0, type: 'text', textNA: true },
-  { id: 'pemeriksaanLain',col: 'DE', colIndex: 107,label: 'Pemeriksaan Lain', section: 'fitness', sectionOrder: 1, type: 'textarea', textNA: true },
-  { id: 'dugaanPAK',      col: 'DF', colIndex: 108,label: 'Dugaan PAK',       section: 'fitness', sectionOrder: 2, type: 'textarea', textNA: true },
+  // DF–DS Penilaian dan kalkulasi
+  f('kesVendor', 'DF', 'Kesimpulan Vendor', 'assessment', 'select', { options: ['Fit To Work', 'Fit With Note', 'Fit With Restriction', 'Currently Unfit', 'Temporary Unfit', 'Unfit'] }),
+  f('rekQSHE', 'DG', 'Rekomendasi QSHE Medic', 'assessment', 'textarea'),
+  f('diagnosaMedis', 'DH', 'Diagnosa Medis', 'assessment', 'textarea', { autoCalc: true }),
+  f('perluFU', 'DI', 'Perlu Follow Up?', 'assessment', 'select', { options: ['Ya', 'Tidak'], autoCalc: true }),
+  f('rekFU', 'DJ', 'Rekomendasi Follow Up', 'assessment', 'textarea'),
+  f('itemFU', 'DK', 'Item Follow Up', 'assessment', 'textarea', { autoCalc: true }),
+  f('linkMCU', 'DL', 'Link File MCU', 'assessment'),
+  f('tglExpired', 'DM', 'Tanggal Expired MCU', 'calculated', 'date', { autoCalc: true, autoCalcFrom: ['tglMCU'], textNA: false }),
+  f('framScore', 'DN', 'Framingham Score Lipid Based – Score', 'calculated', 'number', { autoCalc: true }),
+  f('framProb', 'DO', 'Framingham Score Lipid Based – Probabilitas', 'calculated', 'text', { autoCalc: true }),
+  f('framKat', 'DP', 'Framingham Score Lipid Based – Kategori', 'calculated', 'text', { autoCalc: true }),
+  f('zonasi', 'DQ', 'Zonasi', 'calculated', 'text', { autoCalc: true }),
+  f('triggerZona', 'DR', 'Trigger Zona Resiko Kesehatan', 'calculated', 'textarea', { autoCalc: true }),
+  f('pengendalian', 'DS', 'Pengendalian', 'calculated', 'textarea', { autoCalc: true }),
 
-  // ════════ PENILAIAN (DG-DI) ════════
-  { id: 'kesVendor',      col: 'DG', colIndex: 109,label: 'Kes. Vendor',      section: 'assessment', sectionOrder: 0, type: 'select', options: ['Fit To Work', 'Fit With Note', 'Fit With Restriction', 'Currently Unfit', 'Temporary Unfit', 'Unfit'] },
-  { id: 'rekQSHE',        col: 'DH', colIndex: 110,label: 'Rekomendasi QSHE', section: 'assessment', sectionOrder: 1, type: 'textarea', placeholder: 'Auto: Diagnosa Medis' },
-  { id: 'perluFU',        col: 'DI', colIndex: 111,label: 'Perlu Follow Up?', section: 'assessment', sectionOrder: 2, type: 'select', options: ['Ya', 'Tidak'], autoCalc: true },
-  { id: 'rekFU',          col: 'DJ', colIndex: 112,label: 'Rekomendasi FU',   section: 'assessment', sectionOrder: 3, type: 'textarea', placeholder: 'Auto: Item Follow Up' },
-  { id: 'itemFU',         col: 'DK', colIndex: 113,label: 'Item Follow Up',   section: 'assessment', sectionOrder: 4, type: 'textarea', placeholder: 'Auto-generated' },
-  { id: 'linkMCU',        col: 'DL', colIndex: 114,label: 'Link MCU (GDrive)',section: 'assessment', sectionOrder: 5, type: 'text', placeholder: 'https://drive.google.com/...' },
-
-  // ════════ HASIL KALKULASI (DM-EL) ════════
-  { id: 'tglExpired',     col: 'DM', colIndex: 115,label: 'Tgl Expired MCU',  section: 'calculated', sectionOrder: 0, type: 'date', autoCalc: true, autoCalcFrom: ['tglMCU'] },
-  { id: 'diagnosaMedis',  col: 'DN', colIndex: 116,label: 'Diagnosa Medis',   section: 'calculated', sectionOrder: 1, type: 'textarea', autoCalc: true, placeholder: 'Auto-generated' },
-  { id: 'framScore',      col: 'DO', colIndex: 117,label: 'Framingham Score',  section: 'calculated', sectionOrder: 2, type: 'number', autoCalc: true },
-  { id: 'framProb',       col: 'DP', colIndex: 118,label: 'Probabilitas CVD',  section: 'calculated', sectionOrder: 3, type: 'text', autoCalc: true },
-  { id: 'framKat',        col: 'DQ', colIndex: 119,label: 'Kategori CVD Risk', section: 'calculated', sectionOrder: 4, type: 'text', autoCalc: true },
-  { id: 'zonasi',         col: 'DR', colIndex: 120,label: 'Zonasi',           section: 'calculated', sectionOrder: 5, type: 'text', autoCalc: true },
-  { id: 'triggerZona',    col: 'DS', colIndex: 121,label: 'Trigger Zona',      section: 'calculated', sectionOrder: 6, type: 'textarea', autoCalc: true },
-  { id: 'pengendalian',   col: 'DT', colIndex: 122,label: 'Pengendalian',     section: 'calculated', sectionOrder: 7, type: 'textarea', autoCalc: true },
-  { id: 'catatan',        col: 'DU', colIndex: 123,label: 'Catatan',          section: 'calculated', sectionOrder: 8, type: 'textarea' },
-  { id: 'fu3',            col: 'DV', colIndex: 124,label: 'FU III',           section: 'calculated', sectionOrder: 9, type: 'textarea' },
-  { id: 'fu4',            col: 'DW', colIndex: 125,label: 'FU IV',            section: 'calculated', sectionOrder: 10, type: 'textarea' },
-  { id: 'catatanFU',      col: 'DX', colIndex: 126,label: 'Catatan FU',       section: 'calculated', sectionOrder: 11, type: 'textarea' },
-  // NIK KTP field moved to top as 'National ID' (col A)
+  // DT–EL Follow-up
+  f('tglFU1', 'DT', 'Tanggal Follow Up I', 'assessment', 'date', { textNA: false }),
+  f('lokasiFU1', 'DU', 'Lokasi Follow Up I', 'assessment'),
+  f('hasilFU1', 'DV', 'Hasil Follow Up I', 'assessment', 'textarea'),
+  f('kesimpulanFU1', 'DW', 'Kesimpulan Setelah Follow Up I', 'assessment', 'textarea'),
+  f('linkFU1', 'DX', 'Link File Hasil Follow Up I', 'assessment'),
+  f('rekFU2', 'DY', 'Rekomendasi FU II', 'assessment', 'textarea'),
+  f('tglFU2', 'DZ', 'Tanggal Follow Up II', 'assessment', 'date', { textNA: false }),
+  f('lokasiFU2', 'EA', 'Lokasi Follow Up II', 'assessment'),
+  f('hasilFU2', 'EB', 'Hasil Follow Up II', 'assessment', 'textarea'),
+  f('kesimpulanFU2', 'EC', 'Kesimpulan Setelah Follow Up II', 'assessment', 'textarea'),
+  f('linkFU2', 'ED', 'Link File Hasil Follow Up II', 'assessment'),
+  f('rekFU3', 'EE', 'Rekomendasi FU III', 'assessment', 'textarea'),
+  f('tglFU3', 'EF', 'Tanggal Follow Up III', 'assessment', 'date', { textNA: false }),
+  f('lokasiFU3', 'EG', 'Lokasi Follow Up III', 'assessment'),
+  f('hasilFU3', 'EH', 'Hasil Follow Up III', 'assessment', 'textarea'),
+  f('kesimpulanFU3', 'EI', 'Kesimpulan Setelah Follow Up III', 'assessment', 'textarea'),
+  f('linkFU3', 'EJ', 'Link File Hasil Follow Up III', 'assessment'),
+  f('rekFU4', 'EK', 'Rekomendasi FU IV', 'assessment', 'textarea'),
+  f('catatan', 'EL', 'Catatan & Rekomendasi', 'assessment', 'textarea', { textNA: false }),
 ];
 
-// Helper: get fields by section
+export const TEXT_NA_INDICES = MCU_FIELDS.filter(field => field.textNA).map(field => field.colIndex);
+export const TOTAL_COLS = 143; // A–EM, including generated No. in A
+
 export function getFieldsBySection(sectionId: string): MCUFieldDef[] {
-  return MCU_FIELDS.filter(f => f.section === sectionId).sort((a, b) => a.sectionOrder - b.sectionOrder);
+  return MCU_FIELDS.filter(field => field.section === sectionId);
 }
 
-// Helper: get field by ID
 export function getFieldById(id: string): MCUFieldDef | undefined {
-  return MCU_FIELDS.find(f => f.id === id);
+  return MCU_FIELDS.find(field => field.id === id);
 }
-
-// Text-NA columns: indices where empty should become "N/A"
-export const TEXT_NA_INDICES = MCU_FIELDS
-  .filter(f => f.textNA)
-  .map(f => f.colIndex);
-
-// Total columns in RAW_DATA sheet
-export const TOTAL_COLS = 142; // A through EL (columns 0-141)

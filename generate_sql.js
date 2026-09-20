@@ -1,8 +1,16 @@
-const { readFileSync, writeFileSync } = require('fs');
+const { readFileSync, writeFileSync, mkdirSync } = require('fs');
+const ts = require('typescript');
+const vm = require('vm');
 
-// Simple regex to extract field ids and types from mcu-fields.ts
-const content = readFileSync('src/lib/mcu-fields.ts', 'utf-8');
-const regex = /{ id:\s*'([^']+)',.*?type:\s*'([^']+)'/gs;
+// Load the same field contract used by the form, rather than maintaining a
+// second hand-written list of Supabase columns.
+const source = readFileSync('src/lib/mcu-fields.ts', 'utf-8');
+const transpiled = ts.transpileModule(source, {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+}).outputText;
+const moduleValue = { exports: {} };
+vm.runInNewContext(transpiled, { exports: moduleValue.exports, module: moduleValue, require });
+const fields = moduleValue.exports.MCU_FIELDS;
 
 let sql = `-- Supabase Migration: MCU Tables
 -- Generated automatically
@@ -13,9 +21,8 @@ CREATE TABLE public.mcu_records (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
 `;
 
-let match;
-while ((match = regex.exec(content)) !== null) {
-  const [_, id, type] = match;
+for (const field of fields) {
+  const { id, type } = field;
   // Map type to SQL type
   let sqlType = 'TEXT';
   if (type === 'number') sqlType = 'NUMERIC';
@@ -27,11 +34,20 @@ while ((match = regex.exec(content)) !== null) {
   sql += `    ${snakeId} ${sqlType},\n`;
 }
 
-// Remove last comma and add closing parenthesis
-sql = sql.replace(/,\n$/, '\n');
-sql += `);
+sql += `    national_id_hash TEXT,\n    nik_karyawan_hash TEXT\n`;
+sql += `);`;
 
--- Add triggers for updated_at
+const viewColumns = fields
+  .map(field => field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase())
+  .join(',\n  ');
+
+sql += `
+CREATE INDEX mcu_records_national_id_hash_idx
+  ON public.mcu_records (national_id_hash);
+
+CREATE INDEX mcu_records_nik_karyawan_hash_idx
+  ON public.mcu_records (nik_karyawan_hash);
+
 CREATE OR REPLACE FUNCTION update_modified_column()   
 RETURNS TRIGGER AS $$
 BEGIN
@@ -40,21 +56,27 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-CREATE TRIGGER update_mcu_records_modtime 
+DROP TRIGGER IF EXISTS update_mcu_records_modtime ON public.mcu_records;
+CREATE TRIGGER update_mcu_records_modtime
 BEFORE UPDATE ON public.mcu_records 
 FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
 
--- Create View for MCU Monitor All Site
--- This view selects the latest MCU for each NIK Karyawan
-CREATE OR REPLACE VIEW public.mcu_monitor_all_site AS
+DROP VIEW IF EXISTS public.mcu_monitor_all_site;
+CREATE OR REPLACE VIEW public.monitor_mcu AS
 WITH ranked_mcu AS (
-  SELECT 
-    *,
-    ROW_NUMBER() OVER(PARTITION BY nik_karyawan ORDER BY tgl_mcu DESC) as rn
+  SELECT *,
+    ROW_NUMBER() OVER(
+      PARTITION BY COALESCE(nik_karyawan_hash, national_id_hash)
+      ORDER BY tgl_mcu DESC NULLS LAST, created_at DESC
+    ) AS rn
   FROM public.mcu_records
 )
-SELECT * FROM ranked_mcu WHERE rn = 1;
+SELECT
+  ${viewColumns}
+FROM ranked_mcu
+WHERE rn = 1;
 `;
 
+mkdirSync('supabase/migrations', { recursive: true });
 writeFileSync('supabase/migrations/001_mcu_tables.sql', sql);
 console.log("SQL generated at supabase/migrations/001_mcu_tables.sql");

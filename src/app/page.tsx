@@ -17,6 +17,7 @@ import LaggingIndicatorPage from '@/components/administrator/LaggingIndicatorPag
 import KunjunganBerobatForm from '@/components/administrator/KunjunganBerobatForm';
 import HealthCampaignForm from '@/components/administrator/HealthCampaignForm';
 import UserManagement from '@/components/administrator/UserManagement';
+import InputJadwalMCU from '@/components/administrator/InputJadwalMCU';
 import HomeView from '@/components/home/HomeView';
 import DataKesehatanTable from '@/components/dashboard/DataKesehatanTable';
 import DataKunjunganTable from '@/components/dashboard/DataKunjunganTable';
@@ -182,6 +183,7 @@ const DASH_SIDEBAR: SidebarItem[] = [
 ];
 
 const ADMIN_SIDEBAR: SidebarItem[] = [
+  { key: 'input-jadwal-mcu', label: 'Input Jadwal MCU', icon: <IconReviewMCU /> },
   { key: 'lagging-indicator', label: 'Lagging Indicator', icon: <IconInputLagging /> },
   { key: 'review-mcu', label: 'Review MCU', icon: <IconReviewMCU /> },
   { key: 'health-campaign', label: 'Health Campaign', icon: <IconCampaignAdmin /> },
@@ -299,7 +301,11 @@ function AdminTogglePanel({ formContent, tableContents, hasTable, stepLabels }: 
 
 function AdminContent() {
   const activeAdminSidebar = useMCUStore((s) => s.activeAdminSidebar);
-  const { isAdmin } = useAuth();
+  const { isAdmin, role } = useAuth();
+
+  if (role === 'pic') {
+    return <div className="admin-form-container"><InputJadwalMCU /></div>;
+  }
 
   // Kelola Pengguna is standalone (no toggle)
   if (activeAdminSidebar === 'kelola-pengguna') {
@@ -325,6 +331,11 @@ function AdminContent() {
         </div>
       ),
       tables: [<div className="admin-form-container" key="mcu"><RecordMCUTable /></div>],
+    },
+    'input-jadwal-mcu': {
+      hasTable: false,
+      form: <InputJadwalMCU />,
+      tables: [],
     },
     'health-campaign': {
       hasTable: false,
@@ -607,7 +618,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
 export default function Home() {
   const store = useMCUStore();
   const { theme, setTheme } = useTheme();
-  const { user, profile, loading: authLoading, isAdmin, isSuperuser } = useAuth();
+  const { user, profile, loading: authLoading, isAdmin, isSuperuser, role } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -653,6 +664,7 @@ export default function Home() {
     if (activePage === 'dashboard') return DASH_SIDEBAR;
     // Administrator sidebar — filter by role
     return ADMIN_SIDEBAR.filter((item) => {
+      if (role === 'pic') return item.key === 'input-jadwal-mcu';
       if (item.superuserOnly && !isSuperuser) return false;
       return true;
     });
@@ -691,7 +703,7 @@ export default function Home() {
   // Get user display name and initials
   const displayName = profile?.full_name || profile?.username || 'User';
   const initials = displayName.charAt(0).toUpperCase();
-  const roleLabel = profile?.role === 'superuser' ? 'Superuser' : profile?.role === 'administrator' ? 'Administrator' : 'Viewer';
+  const roleLabel = profile?.role === 'superuser' ? 'Superuser' : profile?.role === 'administrator' ? 'Administrator' : profile?.role === 'pic' ? 'PIC' : 'Viewer';
 
   return (
     <div className="app-shell">

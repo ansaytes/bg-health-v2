@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { supabase } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
-export type UserRole = 'superuser' | 'administrator' | 'viewer';
+export type UserRole = 'superuser' | 'administrator' | 'pic' | 'viewer';
 
 export interface UserProfile {
   id: string;
@@ -13,6 +13,7 @@ export interface UserProfile {
   full_name: string | null;
   role: UserRole;
   national_id: string | null;
+  site?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -84,6 +85,7 @@ function buildMockProfile(role: UserRole): UserProfile {
   const labelMap: Record<UserRole, { username: string; fullName: string }> = {
     superuser: { username: 'superuser.preview', fullName: 'Preview Superuser' },
     administrator: { username: 'admin.preview', fullName: 'Preview Administrator' },
+    pic: { username: 'pic.preview', fullName: 'Preview PIC' },
     viewer: { username: 'viewer.preview', fullName: 'Preview Viewer' },
   };
   const label = labelMap[role];
@@ -94,6 +96,7 @@ function buildMockProfile(role: UserRole): UserProfile {
     full_name: label.fullName,
     role,
     national_id: null,
+    site: role === 'pic' ? 'Head Office' : null,
     created_at: now,
     updated_at: now,
   };
@@ -131,7 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const role = profile?.role ?? null;
-  const isAdmin = role === 'superuser' || role === 'administrator';
+  const isAdmin = role === 'superuser' || role === 'administrator' || role === 'pic';
   const isSuperuser = role === 'superuser';
 
   const refreshProfile = useCallback(async () => {

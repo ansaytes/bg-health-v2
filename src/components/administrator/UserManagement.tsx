@@ -27,6 +27,7 @@ const ROLE_STYLES: Record<string, { bg: string; color: string }> = {
   superuser: { bg: 'rgba(239,68,68,0.12)', color: '#ef4444' },
   administrator: { bg: 'rgba(255,77,0,0.12)', color: '#ff4d00' },
   viewer: { bg: 'var(--muted)', color: 'var(--muted-foreground)' },
+  pic: { bg: 'rgba(0,184,148,0.12)', color: '#00a884' },
 };
 
 export default function UserManagement() {
@@ -38,7 +39,7 @@ export default function UserManagement() {
   // Register form state
   const [showRegister, setShowRegister] = useState(false);
   const [regForm, setRegForm] = useState({
-    username: '', password: '', full_name: '', role: 'viewer' as string, national_id: '',
+    username: '', password: '', full_name: '', role: 'viewer' as string, national_id: '', site: '',
   });
   const [regLoading, setRegLoading] = useState(false);
   const [regError, setRegError] = useState('');
@@ -107,7 +108,7 @@ export default function UserManagement() {
       const data = await res.json();
       if (!res.ok) { setRegError(data.error || 'Gagal mendaftarkan pengguna'); return; }
       setRegSuccess('Pengguna berhasil didaftarkan!');
-      setRegForm({ username: '', password: '', full_name: '', role: 'viewer', national_id: '' });
+      setRegForm({ username: '', password: '', full_name: '', role: 'viewer', national_id: '', site: '' });
       fetchUsers();
     } catch { setRegError('Gagal terhubung ke server'); } finally { setRegLoading(false); }
   };
@@ -201,6 +202,7 @@ export default function UserManagement() {
               >
                 <option value="viewer">Viewer</option>
                 <option value="administrator">Administrator</option>
+                <option value="pic">PIC</option>
                 <option value="superuser">Superuser</option>
               </select>
             </div>
@@ -234,6 +236,16 @@ export default function UserManagement() {
                 placeholder="Ketik NIK untuk auto-fill" className="admin-input"
               />
             </div>
+            {regForm.role === 'pic' && (
+              <div>
+                <label className="admin-label">Site PIC</label>
+                <input
+                  type="text" value={regForm.site}
+                  onChange={(e) => setRegForm({ ...regForm, site: e.target.value })}
+                  placeholder="Contoh: Aceh atau Head Office" className="admin-input"
+                />
+              </div>
+            )}
             <div className="user-register-btn-cell">
               <button type="submit" disabled={regLoading} className="admin-form-btn-primary" style={{ width: '100%' }}>
                 {regLoading ? 'Menyimpan...' : 'Daftarkan'}
@@ -340,4 +352,3 @@ export default function UserManagement() {
     </div>
   );
 }
-

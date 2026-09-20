@@ -40,7 +40,7 @@ async function getSessionRole(req: NextRequest) {
   // Get profile
   const { data: profile } = await supabase
     .from('user_profiles')
-    .select('role, full_name, username')
+    .select('role, full_name, username, site')
     .eq('user_id', user.id)
     .single();
 
@@ -94,11 +94,11 @@ export async function POST(req: NextRequest) {
 
     // --- REGISTER (admin only) ---
     if (action === 'register') {
-      const { username, password, role, full_name, national_id } = body;
+      const { username, password, role, full_name, national_id, site } = body;
 
       // Verify caller is admin/superuser
       const authInfo = await getSessionRole(req);
-      if (!authInfo || !['superuser', 'administrator'].includes(authInfo.role)) {
+      if (!authInfo || authInfo.role !== 'superuser') {
         return NextResponse.json({ error: 'Akses ditolak. Hanya administrator yang dapat mendaftarkan pengguna.' }, { status: 403 });
       }
 
@@ -116,14 +116,9 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Username, password, dan role wajib diisi' }, { status: 400 });
       }
 
-      const validRoles = ['superuser', 'administrator', 'viewer'];
+      const validRoles = ['superuser', 'administrator', 'pic', 'viewer'];
       if (!validRoles.includes(role)) {
         return NextResponse.json({ error: 'Role tidak valid' }, { status: 400 });
-      }
-
-      // Only superuser can create superuser or administrator
-      if (authInfo.role === 'administrator' && role !== 'viewer') {
-        return NextResponse.json({ error: 'Administrator hanya dapat membuat akun viewer' }, { status: 403 });
       }
 
       // Check if username already exists in profiles
@@ -157,6 +152,7 @@ export async function POST(req: NextRequest) {
           full_name: full_name || null,
           role,
           national_id: national_id || null,
+          site: role === 'pic' ? (site || null) : null,
         });
 
       if (profileError) {

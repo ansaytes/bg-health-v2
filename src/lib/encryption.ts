@@ -84,6 +84,43 @@ const LOOKUP_HASH_MAP: Record<string, string> = {
   'national_id': 'national_id_hash',    // NIK KTP / National ID → national_id_hash column
 };
 
+const MCU_SENSITIVE_FIELDS = ['national_id', 'nik_karyawan', 'nama', 'link_mcu'];
+
+/** Encrypt only the MCU identity/document fields approved for protection. */
+export function encryptMCURecord(record: Record<string, any>): Record<string, any> {
+  const result: Record<string, any> = { ...record };
+
+  for (const field of MCU_SENSITIVE_FIELDS) {
+    if (result[field] != null && result[field] !== '') {
+      result[field] = encrypt(String(result[field]));
+    }
+  }
+
+  if (record.national_id != null && record.national_id !== '') {
+    result.national_id_hash = hashField(String(record.national_id));
+  }
+  if (record.nik_karyawan != null && record.nik_karyawan !== '') {
+    result.nik_karyawan_hash = hashField(String(record.nik_karyawan));
+  }
+
+  return result;
+}
+
+/** Decrypt the MCU fields returned by a trusted server-side query. */
+export function decryptMCURecord(record: Record<string, any>): Record<string, any> {
+  const result: Record<string, any> = { ...record };
+
+  for (const field of MCU_SENSITIVE_FIELDS) {
+    if (result[field] != null && typeof result[field] === 'string') {
+      result[field] = decrypt(result[field]) || result[field];
+    }
+  }
+
+  delete result.national_id_hash;
+  delete result.nik_karyawan_hash;
+  return result;
+}
+
 /** Encrypt + compute hashes for employee fields */
 export function encryptEmployee(emp: Record<string, any>): Record<string, any> {
   const result: Record<string, any> = { ...emp };

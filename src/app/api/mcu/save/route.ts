@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 import { MCU_FIELDS } from '@/lib/mcu-fields';
+import { encryptMCURecord } from '@/lib/encryption';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
@@ -13,8 +14,9 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { formData } = body;
 
-    if (!formData || !formData.nikKaryawan) {
-      return NextResponse.json({ success: false, error: 'NIK Karyawan is required' }, { status: 400 });
+    const nikKaryawan = formData?.nikKaryawan || formData?.nationalId;
+    if (!formData || !nikKaryawan) {
+      return NextResponse.json({ success: false, error: 'NIK KTP is required' }, { status: 400 });
     }
 
     // Convert formData camelCase keys to snake_case for Supabase, strictly using MCU_FIELDS
@@ -26,21 +28,23 @@ export async function POST(req: Request) {
         dbData[snakeKey] = value;
       }
     }
-
+    // Allow NIK KTP to be used as the fallback key when NIK Karyawan is unavailable.
+    dbData.nik_karyawan = dbData.nik_karyawan || nikKaryawan;
+    const encryptedData = encryptMCURecord(dbData);
     // Upsert logic: if there is already a record for this NIK and Date, update it, otherwise insert
     // Since we don't have a composite unique key by default, we'll just check if one exists for the same tgl_mcu
     const { data: existing, error: searchError } = await supabase
       .from('mcu_records')
       .select('id')
-      .eq('nik_karyawan', dbData.nik_karyawan)
-      .eq('tgl_mcu', dbData.tgl_mcu)
+      .eq('nik_karyawan_hash', encryptedData.nik_karyawan_hash)
+      .eq('tgl_mcu', encryptedData.tgl_mcu)
       .single();
 
     if (existing && existing.id) {
       // Update
       const { error } = await supabase
         .from('mcu_records')
-        .update(dbData)
+        .update(encryptedData)
         .eq('id', existing.id);
 
       if (error) throw error;
@@ -49,7 +53,7 @@ export async function POST(req: Request) {
       // Insert
       const { error } = await supabase
         .from('mcu_records')
-        .insert(dbData);
+        .insert(encryptedData);
 
       if (error) throw error;
       return NextResponse.json({ success: true, action: 'inserted' });
