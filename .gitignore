@@ -37,9 +37,9 @@ yarn-error.log*
 # supabase migrations
 supabase-migrations/
 *.sql
-!supabase/
-!supabase/migrations/
-!supabase/migrations/*.sql
+supabase/
+supabase/migrations/
+supabase/migrations/*.sql
 
 # database
 dev.db
