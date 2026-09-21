@@ -4,7 +4,7 @@ import NotificationBell from '@/components/header/NotificationBell';
 import { useState, useEffect , useCallback} from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
-import { useMCUStore, type PageTab, type DashSidebar, type AdminSidebar, type HomeSidebar } from '@/lib/store';
+import { useMCUStore, type PageTab, type DashSidebar, type AdminSidebar, type DataEntrySidebar, type HomeSidebar } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import DashboardView from '@/components/dashboard/DashboardView';
@@ -147,6 +147,7 @@ function IconUsers() {
 const ALL_HEADER_NAV: { key: PageTab; label: string; adminOnly: boolean }[] = [
   { key: 'home', label: 'Home', adminOnly: false },
   { key: 'dashboard', label: 'Dashboard', adminOnly: false },
+  { key: 'data-entry', label: 'Data Entry', adminOnly: true },
   { key: 'administrator', label: 'Administrator', adminOnly: true },
 ];
 
@@ -183,12 +184,14 @@ const DASH_SIDEBAR: SidebarItem[] = [
 ];
 
 const ADMIN_SIDEBAR: SidebarItem[] = [
-  { key: 'input-jadwal-mcu', label: 'Input Jadwal MCU', icon: <IconReviewMCU /> },
   { key: 'lagging-indicator', label: 'Lagging Indicator', icon: <IconInputLagging /> },
   { key: 'review-mcu', label: 'Review MCU', icon: <IconReviewMCU /> },
   { key: 'health-campaign', label: 'Health Campaign', icon: <IconCampaignAdmin /> },
   { key: 'kunjungan-admin', label: 'Kunjungan Berobat', icon: <IconKunjunganAdmin /> },
   { key: 'kelola-pengguna', label: 'Kelola Pengguna', icon: <IconUsers />, superuserOnly: true },
+];
+const DATA_ENTRY_SIDEBAR: SidebarItem[] = [
+  { key: 'input-jadwal-mcu', label: 'Input Jadwal MCU', icon: <IconReviewMCU /> },
 ];
 
 /*   Content Routers */
@@ -196,6 +199,13 @@ const ADMIN_SIDEBAR: SidebarItem[] = [
 function HomeContent() {
   const activeHomeSidebar = useMCUStore((s) => s.activeHomeSidebar);
   return <HomeView activeTab={activeHomeSidebar} />;
+}
+
+function DataEntryContent() {
+  const activeDataEntrySidebar = useMCUStore((s) => s.activeDataEntrySidebar);
+  return activeDataEntrySidebar === 'input-jadwal-mcu'
+    ? <div className="admin-form-container"><InputJadwalMCU /></div>
+    : null;
 }
 
 function DashContent() {
@@ -303,10 +313,6 @@ function AdminContent() {
   const activeAdminSidebar = useMCUStore((s) => s.activeAdminSidebar);
   const { isAdmin, role } = useAuth();
 
-  if (role === 'pic') {
-    return <div className="admin-form-container"><InputJadwalMCU /></div>;
-  }
-
   // Kelola Pengguna is standalone (no toggle)
   if (activeAdminSidebar === 'kelola-pengguna') {
     return <div className="admin-form-container"><UserManagement /></div>;
@@ -331,11 +337,6 @@ function AdminContent() {
         </div>
       ),
       tables: [<div className="admin-form-container" key="mcu"><RecordMCUTable /></div>],
-    },
-    'input-jadwal-mcu': {
-      hasTable: false,
-      form: <InputJadwalMCU />,
-      tables: [],
     },
     'health-campaign': {
       hasTable: false,
@@ -629,18 +630,22 @@ export default function Home() {
   // Redirect non-admin away from administrator page
   useEffect(() => {
     if (authLoading) return;
-    if (activePage === 'administrator' && !isAdmin) {
+    if (activePage === 'administrator' && !['administrator', 'superuser'].includes(role || '')) {
       store.setActivePage('home');
     }
-  }, [activePage, isAdmin, authLoading, store]);
+    if (activePage === 'data-entry' && !['pic', 'administrator', 'superuser'].includes(role || '')) {
+      store.setActivePage('home');
+    }
+  }, [activePage, authLoading, role, store]);
 
   // Reset sub-sidebar to topmost when main page changes
   // Use ref to avoid infinite loop (don't depend on store object)
   const resetSidebar = useCallback((page: string) => {
     if (page === 'home') store.setActiveHomeSidebar('semua-feed');
     else if (page === 'dashboard') store.setActiveDashSidebar('statistik');
+    else if (page === 'data-entry') store.setActiveDataEntrySidebar('input-jadwal-mcu');
     else if (page === 'administrator') store.setActiveAdminSidebar('lagging-indicator');
-  }, [store.setActiveHomeSidebar, store.setActiveDashSidebar, store.setActiveAdminSidebar]);
+  }, [store.setActiveHomeSidebar, store.setActiveDashSidebar, store.setActiveDataEntrySidebar, store.setActiveAdminSidebar]);
 
   useEffect(() => {
     resetSidebar(activePage);
@@ -650,11 +655,12 @@ export default function Home() {
     const t = setTimeout(() => setLoading(true), 0);
     const t2 = setTimeout(() => setLoading(false), 50);
     return () => { clearTimeout(t); clearTimeout(t2); };
-  }, [activePage, store.activeDashSidebar, store.activeAdminSidebar, store.activeHomeSidebar]);
+  }, [activePage, store.activeDashSidebar, store.activeDataEntrySidebar, store.activeAdminSidebar, store.activeHomeSidebar]);
 
   // Role-based header nav
   const headerNav = ALL_HEADER_NAV.filter((item) => {
-    if (item.adminOnly && !isAdmin) return false;
+    if (item.key === 'administrator') return ['administrator', 'superuser'].includes(role || '');
+    if (item.key === 'data-entry') return ['pic', 'administrator', 'superuser'].includes(role || '');
     return true;
   });
 
@@ -662,9 +668,9 @@ export default function Home() {
   const getSidebarItems = (): SidebarItem[] => {
     if (activePage === 'home') return HOME_SIDEBAR;
     if (activePage === 'dashboard') return DASH_SIDEBAR;
+    if (activePage === 'data-entry') return DATA_ENTRY_SIDEBAR;
     // Administrator sidebar — filter by role
     return ADMIN_SIDEBAR.filter((item) => {
-      if (role === 'pic') return item.key === 'input-jadwal-mcu';
       if (item.superuserOnly && !isSuperuser) return false;
       return true;
     });
@@ -675,11 +681,13 @@ export default function Home() {
   const activeSidebarKey =
     activePage === 'home' ? store.activeHomeSidebar :
     activePage === 'dashboard' ? store.activeDashSidebar :
+    activePage === 'data-entry' ? store.activeDataEntrySidebar :
     store.activeAdminSidebar;
 
   const handleNav = (tab: PageTab) => {
     // Prevent non-admins from going to administrator
-    if (tab === 'administrator' && !isAdmin) return;
+    if (tab === 'administrator' && !['administrator', 'superuser'].includes(role || '')) return;
+    if (tab === 'data-entry' && !['pic', 'administrator', 'superuser'].includes(role || '')) return;
     store.setActivePage(tab);
     setMobileOpen(false);
   };
@@ -687,6 +695,7 @@ export default function Home() {
   const handleSidebarClick = (key: string) => {
     if (activePage === 'home') store.setActiveHomeSidebar(key as HomeSidebar);
     else if (activePage === 'dashboard') store.setActiveDashSidebar(key as DashSidebar);
+    else if (activePage === 'data-entry') store.setActiveDataEntrySidebar(key as DataEntrySidebar);
     else store.setActiveAdminSidebar(key as AdminSidebar);
     setMobileOpen(false);
   };
@@ -695,7 +704,7 @@ export default function Home() {
     await supabase.auth.signOut();
     setShowLogin(false);
     // If on admin page, redirect to home
-    if (activePage === 'administrator') {
+    if (activePage === 'administrator' || activePage === 'data-entry') {
       store.setActivePage('home');
     }
   };
@@ -838,6 +847,17 @@ export default function Home() {
                 style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100%' }}
               >
                 <DashContent />
+              </motion.div>
+            ) : activePage === 'data-entry' ? (
+              <motion.div
+                key={store.activeDataEntrySidebar}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.2 }}
+                style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100%' }}
+              >
+                <DataEntryContent />
               </motion.div>
             ) : activePage === 'administrator' ? (
               <motion.div

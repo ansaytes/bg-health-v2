@@ -3,9 +3,10 @@ import { toast } from 'sonner';
 import { MCU_FIELDS, TOTAL_COLS, TEXT_NA_INDICES } from './mcu-fields';
 import { assessZonasi, calcBMI, calcMCHC, calcPct, calcDiabetes, calcPerluFU, calcFramingham } from './zonasi-engine';
 
-export type PageTab = 'home' | 'dashboard' | 'administrator';
+export type PageTab = 'home' | 'dashboard' | 'data-entry' | 'administrator';
 export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan';
 export type AdminSidebar = 'lagging-indicator' | 'review-mcu' | 'input-jadwal-mcu' | 'kunjungan-admin' | 'health-campaign' | 'kelola-pengguna';
+export type DataEntrySidebar = 'input-jadwal-mcu';
 export type HomeSidebar = 'semua-feed' | 'health-campaign' | 'health-talk' | 'podcast' | 'news';
 export type ReviewStep = 'search' | 'ocr' | 'form';
 
@@ -38,6 +39,8 @@ interface MCUStore {
   setActiveDashSidebar: (tab: DashSidebar) => void;
   activeAdminSidebar: AdminSidebar;
   setActiveAdminSidebar: (tab: AdminSidebar) => void;
+  activeDataEntrySidebar: DataEntrySidebar;
+  setActiveDataEntrySidebar: (tab: DataEntrySidebar) => void;
   activeHomeSidebar: HomeSidebar;
   setActiveHomeSidebar: (tab: HomeSidebar) => void;
   // Keep backward compat alias
@@ -97,6 +100,8 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
   setActiveDashSidebar: (tab) => set({ activeDashSidebar: tab }),
   activeAdminSidebar: 'lagging-indicator',
   setActiveAdminSidebar: (tab) => set({ activeAdminSidebar: tab }),
+  activeDataEntrySidebar: 'input-jadwal-mcu',
+  setActiveDataEntrySidebar: (tab) => set({ activeDataEntrySidebar: tab }),
   activeHomeSidebar: 'semua-feed',
   setActiveHomeSidebar: (tab) => set({ activeHomeSidebar: tab }),
   // backward compat
