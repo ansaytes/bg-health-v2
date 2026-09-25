@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, CalendarDays, Search, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth-context';
 
 type Schedule = {
   id: string | null;
@@ -28,6 +30,7 @@ function formatDate(value?: string | null) {
 }
 
 export default function InputJadwalMCU() {
+  const { session } = useAuth();
   const [rows, setRows] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -35,10 +38,17 @@ export default function InputJadwalMCU() {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({ key: 'nama', direction: 'asc' });
 
+  const getAuthHeaders = async (): Promise<HeadersInit> => {
+    const accessToken = session?.access_token || (await supabase.auth.getSession()).data.session?.access_token;
+    return accessToken
+      ? { Authorization: `Bearer ${accessToken}` }
+      : {};
+  };
+
   const load = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/mcu/schedule');
+      const response = await fetch('/api/mcu/schedule', { headers: await getAuthHeaders() });
       const json = await response.json();
       if (!response.ok) throw new Error(json.error || 'Gagal memuat data karyawan');
       setRows(json.schedules || []);
@@ -65,7 +75,7 @@ export default function InputJadwalMCU() {
     try {
       const response = await fetch('/api/mcu/schedule', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
         body: JSON.stringify({
           id: row.id,
           nikKaryawan: row.nik_karyawan,
