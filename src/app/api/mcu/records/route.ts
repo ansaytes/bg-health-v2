@@ -7,14 +7,6 @@ const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const client = createClient(url, serviceKey || anonKey);
 
-function toCamelCase(value: string) {
-  return value.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
-}
-
-function toFormRecord(record: Record<string, unknown>) {
-  return Object.fromEntries(Object.entries(record).map(([key, value]) => [toCamelCase(key), value]));
-}
-
 async function getCaller(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '') || req.cookies.get('sb-access-token')?.value;
   if (!token) return null;
@@ -50,7 +42,11 @@ export async function GET(req: NextRequest) {
     const { data: records, count, error: listError } = await listQuery;
     if (listError) return NextResponse.json({ error: listError.message }, { status: 500 });
     return NextResponse.json({
-      records: (records || []).map(record => toFormRecord(decryptMCURecord(record))),
+      records: (records || []).map(record => ({
+        ...decryptMCURecord(record),
+        national_id_hash: record.national_id_hash,
+        nik_karyawan_hash: record.nik_karyawan_hash,
+      })),
       page,
       pageSize,
       total: count || 0,

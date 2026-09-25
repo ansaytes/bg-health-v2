@@ -2002,6 +2002,9 @@ select.admin-input.compact-input {
 .mcu-records-table th:nth-child(7),
 .mcu-records-table td:nth-child(7) { width: 150px; }
 .mcu-records-table .mcu-records-index {
+  position: sticky;
+  left: 0;
+  z-index: 7;
   width: 48px;
   min-width: 48px;
   background: var(--card);

@@ -22,7 +22,7 @@ export default function RecordMCUTableModern() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [frozenColumns, setFrozenColumns] = useState<string[]>(['nikKaryawan', 'nama']);
+  const [frozenColumns, setFrozenColumns] = useState<string[]>(['nik_karyawan', 'nama']);
   const [showFrozenPicker, setShowFrozenPicker] = useState(false);
 
   const load = async () => {
@@ -53,15 +53,18 @@ export default function RecordMCUTableModern() {
   }, [page, search]);
 
   const columns = useMemo(() => [
-    { key: 'nikKaryawan', label: 'NIK Karyawan' },
-    { key: 'nama', label: 'Nama' },
-    { key: 'site', label: 'Site' },
-    { key: 'jabatan', label: 'Jabatan' },
-    { key: 'tglMCU', label: 'Tanggal MCU' },
-    { key: 'statusMCU', label: 'Status MCU' },
+    { key: 'id', label: 'id' },
+    { key: 'created_at', label: 'created_at' },
+    { key: 'updated_at', label: 'updated_at' },
+    ...MCU_FIELDS.map(field => ({
+      key: field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase(),
+      label: field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase(),
+    })),
+    { key: 'national_id_hash', label: 'national_id_hash' },
+    { key: 'nik_karyawan_hash', label: 'nik_karyawan_hash' },
   ], []);
   const frozenOffsets = useMemo(() => {
-    const widths: Record<string, number> = { nikKaryawan: 150, nama: 210, site: 150, jabatan: 190, tglMCU: 150, statusMCU: 150 };
+    const widths: Record<string, number> = { id: 180, created_at: 170, updated_at: 170, nik_karyawan: 150, nama: 210, site: 150, jabatan: 190, tgl_mcu: 150, status_mcu: 150, national_id_hash: 270, nik_karyawan_hash: 270 };
     let offset = 48;
     return Object.fromEntries(columns.filter(column => frozenColumns.includes(column.key)).map(({ key }) => {
       const value = [key, offset];
@@ -82,7 +85,6 @@ export default function RecordMCUTableModern() {
           <div>
             <div className="mcu-records-kicker">DATABASE MCU</div>
             <h3>Record MCU</h3>
-            <div className="mcu-records-subtitle">Data mentah dari tabel <code>mcu_records</code></div>
           </div>
           <div className="mcu-records-actions">
             <div className="mcu-records-search">

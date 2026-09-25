@@ -59,7 +59,6 @@ export default function RecordMCUTable() {
       <div className="mcu-records-header">
         <div>
           <h2>Record MCU</h2>
-          <p>Data mentah dari tabel <code>mcu_records</code></p>
         </div>
         <span>{total} record</span>
       </div>
