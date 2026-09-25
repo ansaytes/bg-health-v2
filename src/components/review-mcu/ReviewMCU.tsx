@@ -247,11 +247,19 @@ export default function ReviewMCU() {
         store.showToast('Data berhasil diekstrak', 'success');
         setTimeout(() => goStep('form', 1), 500);
       } else {
-        store.showToast(json.error || 'Gagal mengekstrak data', 'error');
+        const retryText = json.retryAfterSeconds
+          ? ` Coba lagi setelah ${json.retryAfterSeconds} detik.`
+          : '';
+        store.showToast(`${json.error || 'Gagal mengekstrak data'}${retryText}`, 'error');
       }
-    } catch {
+    } catch (error) {
       clearInterval(interval);
-      store.showToast('Gagal menghubungi server', 'error');
+      store.showToast(
+        error instanceof Error
+          ? `Koneksi ke layanan ekstraksi gagal: ${error.message}`
+          : 'Koneksi ke layanan ekstraksi gagal. Periksa koneksi internet dan server.',
+        'error',
+      );
     } finally {
       store.setExtractingOCR(false);
       setTimeout(() => setOcrProgress(0), 600);
@@ -669,7 +677,7 @@ export default function ReviewMCU() {
             </Accordion>
 
             {/* Zonasi card - sticky */}
-            <div className="sticky bottom-0 z-10 pt-2 pb-2">
+            <div className="review-mcu-bottom-panel pt-4 pb-2">
               <ZonasiCard zona={zonasi} triggers={triggers} pengendalian={pengendalian} />
 
               <motion.div {...buttonTap} className="mt-3">

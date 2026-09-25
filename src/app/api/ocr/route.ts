@@ -59,7 +59,7 @@ export async function POST(req: Request) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ success: false, error: 'GEMINI_API_KEY tidak dikonfigurasi' }, { status: 500 });
+      return NextResponse.json({ success: false, error: 'Konfigurasi layanan ekstraksi belum tersedia di server.' }, { status: 500 });
     }
 
     const ai = new GoogleGenAI({ apiKey });
@@ -100,19 +100,24 @@ export async function POST(req: Request) {
       parts.push({ text: text });
     }
 
-    // One extraction must consume one quota request. Retrying a 429 here
-    // would multiply usage and make the quota error worse.
+    const primaryModel = process.env.GEMINI_OCR_MODEL || 'gemini-3.6-flash';
+    const fallbackModel = process.env.GEMINI_OCR_FALLBACK_MODEL || 'gemini-2.5-flash';
+    const requestConfig = {
+      contents: [{ role: 'user' as const, parts }],
+      config: {
+        systemInstruction: generatePromptSchema(),
+        responseMimeType: 'application/json',
+        temperature: 0.1,
+      },
+    };
+
+    async function generate(model: string) {
+      return ai.models.generateContent({ model, ...requestConfig });
+    }
+
     let response;
     try {
-      response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
-        contents: [{ role: 'user', parts }],
-        config: {
-          systemInstruction: generatePromptSchema(),
-          responseMimeType: 'application/json',
-          temperature: 0.1,
-        },
-      });
+      response = await generate(primaryModel);
     } catch (err: unknown) {
       const apiError = err as { code?: number; status?: string; message?: string };
       const message = apiError.message || '';
@@ -126,7 +131,7 @@ export async function POST(req: Request) {
         return NextResponse.json(
           {
             success: false,
-            error: `Quota AI sedang penuh. Tunggu sekitar ${retrySeconds} detik sebelum mencoba lagi, atau gunakan API key/plan Gemini dengan quota lebih tinggi.`,
+            error: `Batas penggunaan layanan ekstraksi sedang tercapai. Tunggu sekitar ${retrySeconds} detik sebelum mencoba lagi.`,
             retryAfterSeconds: retrySeconds,
           },
           {
@@ -136,11 +141,33 @@ export async function POST(req: Request) {
         );
       }
 
+      const isModelUnavailable = apiError.code === 400 || apiError.code === 404
+        || /model(\042|')?.*(not found|not supported|invalid)|not found/i.test(message);
+      if (isModelUnavailable && fallbackModel !== primaryModel) {
+        try {
+          response = await generate(fallbackModel);
+        } catch (fallbackError: unknown) {
+          const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : '';
+          console.error('[OCR] Gemini fallback model failed:', fallbackMessage || fallbackError);
+          return NextResponse.json({
+            success: false,
+            errorCode: 'MODEL_UNAVAILABLE',
+            error: `Layanan ekstraksi utama dan cadangan tidak tersedia. Periksa konfigurasi layanan.`,
+          }, { status: 502 });
+        }
+      } else {
       console.error('[OCR] Gemini request failed:', message || err);
       return NextResponse.json(
-        { success: false, error: 'Gagal memproses dokumen dengan AI. Silakan coba lagi.' },
+        {
+          success: false,
+          errorCode: apiError.code === 401 || apiError.code === 403 ? 'API_KEY' : 'PROVIDER',
+          error: apiError.code === 401 || apiError.code === 403
+            ? 'Konfigurasi akses layanan ekstraksi ditolak atau tidak memiliki izin. Periksa pengaturan server.'
+            : `Layanan ekstraksi gagal memproses dokumen${message ? `: ${message.slice(0, 240)}` : '. Silakan coba lagi.'}`,
+        },
         { status: 502 },
       );
+      }
     }
 
     const outputText = response.text || "{}";
@@ -150,7 +177,7 @@ export async function POST(req: Request) {
         parsedData = JSON.parse(outputText);
     } catch (e) {
         console.error("Failed to parse Gemini output:", outputText);
-        return NextResponse.json({ success: false, error: 'Gagal memformat hasil AI ke JSON' }, { status: 500 });
+        return NextResponse.json({ success: false, error: 'Hasil ekstraksi tidak dapat dibaca. Coba ulangi dokumen tersebut.' }, { status: 500 });
     }
 
     // Hanya ambil field yang valid sesuai mcu-fields.ts
@@ -190,8 +217,13 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, data: validData });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error in OCR API:', err);
-    return NextResponse.json({ success: false, error: err.message || 'Internal Server Error' }, { status: 500 });
+    const message = err instanceof Error ? err.message : '';
+    return NextResponse.json({
+      success: false,
+      errorCode: 'SERVER',
+      error: message ? `Server OCR gagal: ${message}` : 'Server OCR mengalami kesalahan tak terduga.',
+    }, { status: 500 });
   }
 }
