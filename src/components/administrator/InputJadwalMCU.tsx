@@ -42,6 +42,8 @@ export default function InputJadwalMCU() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [siteOptions, setSiteOptions] = useState<string[]>([]);
+  const [departmentOptions, setDepartmentOptions] = useState<string[]>([]);
   const [sort, setSort] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({ key: 'nama', direction: 'asc' });
 
   const getAuthHeaders = async (): Promise<HeadersInit> => {
@@ -64,6 +66,8 @@ export default function InputJadwalMCU() {
       setRows(json.schedules || []);
       setTotal(json.total || 0);
       setTotalPages(json.totalPages || 0);
+      setSiteOptions(json.sites || []);
+      setDepartmentOptions(json.departments || []);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Gagal memuat data karyawan');
     } finally {
@@ -129,9 +133,6 @@ export default function InputJadwalMCU() {
         return left.localeCompare(right, 'id', { numeric: true }) * (sort.direction === 'asc' ? 1 : -1);
       });
   }, [rows, scheduleFilter, sort]);
-
-  const siteOptions = Array.from(new Set(rows.map(row => row.site).filter(Boolean))).sort();
-  const departmentOptions = Array.from(new Set(rows.map(row => row.department).filter(Boolean) as string[])).sort();
 
   const resetFilters = () => {
     setQuery('');

@@ -88,6 +88,20 @@ export async function GET(req: NextRequest) {
     user.role !== 'pic' || !user.site || user.site.toLowerCase() === 'head office' || row.site === user.site
   );
   const employees = (employeeData || []).map(decryptEmployee);
+  const { data: filterEmployees, error: filterError } = await fetchAllRows(from => {
+    let query = client.from('employees')
+      .select('site_name,department')
+      .ilike('employment_status', 'Aktif')
+      .eq('division', 'Mining')
+      .range(from, from + 999);
+    if (user.role === 'pic' && user.site && user.site.toLowerCase() !== 'head office') {
+      query = query.eq('site_name', user.site);
+    }
+    return query;
+  });
+  if (filterError) return NextResponse.json({ error: filterError.message }, { status: 500 });
+  const sites = [...new Set((filterEmployees || []).map(row => row.site_name).filter(Boolean))].sort();
+  const departments = [...new Set((filterEmployees || []).map(row => row.department).filter(Boolean))].sort();
   const monitors = (monitorData || []).map(decryptMCURecord);
   const monitorByNik = new Map(monitors.map(record => [String(record.nik_karyawan || ''), record]));
   const scheduleByNik = new Map(data.map(row => [String(decrypt(row.nik_karyawan) || row.nik_karyawan), row]));
@@ -127,6 +141,8 @@ export async function GET(req: NextRequest) {
     pageSize,
     total: employeeCount || 0,
     totalPages: Math.ceil((employeeCount || 0) / pageSize),
+    sites,
+    departments,
   });
 }
 
