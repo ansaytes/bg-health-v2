@@ -51,7 +51,7 @@ DETAIL WAJIB:
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { text } = body;
+    const { text, modelMode } = body;
 
     if (!text || text.trim().length === 0) {
       return NextResponse.json({ success: false, error: 'Teks OCR kosong' }, { status: 400 });
@@ -100,8 +100,11 @@ export async function POST(req: Request) {
       parts.push({ text: text });
     }
 
-    const primaryModel = process.env.GEMINI_OCR_MODEL || 'gemini-3.6-flash';
-    const fallbackModel = process.env.GEMINI_OCR_FALLBACK_MODEL || 'gemini-2.5-flash';
+    const primaryModel = process.env.GEMINI_OCR_MODEL || 'gemini-3.8-flash';
+    const fallbackModel = process.env.GEMINI_OCR_FALLBACK_MODEL
+      || process.env.GEMINI_OCR_ALTERNATIVE_MODEL
+      || 'gemini-3.5-flash-lite';
+    const selectedModel = modelMode === 'alternative' ? fallbackModel : primaryModel;
     const requestConfig = {
       contents: [{ role: 'user' as const, parts }],
       config: {
@@ -117,7 +120,7 @@ export async function POST(req: Request) {
 
     let response;
     try {
-      response = await generate(primaryModel);
+      response = await generate(selectedModel);
     } catch (err: unknown) {
       const apiError = err as { code?: number; status?: string; message?: string };
       const message = apiError.message || '';
@@ -128,7 +131,10 @@ export async function POST(req: Request) {
       if (isQuotaError) {
         const retryMatch = message.match(/retry(?:Delay| after)[^0-9]*(\d+(?:\.\d+)?)\s*(?:s|sec|seconds)?/i)
           || message.match(/(\d+(?:\.\d+)?)\s*(?:s|sec|seconds)\b/i);
-        const retrySeconds = retryMatch ? Math.max(1, Math.ceil(Number(retryMatch[1]))) : 60;
+        // The provider's retry value can land exactly on the rolling-window
+        // boundary. Add a small buffer so the next request is not sent too early.
+        const providerRetrySeconds = retryMatch ? Math.max(1, Math.ceil(Number(retryMatch[1]))) : 60;
+        const retrySeconds = providerRetrySeconds + 15;
         return NextResponse.json(
           {
             success: false,
@@ -144,7 +150,7 @@ export async function POST(req: Request) {
 
       const isModelUnavailable = apiError.code === 400 || apiError.code === 404
         || /model(\042|')?.*(not found|not supported|invalid)|not found/i.test(message);
-      if (isModelUnavailable && fallbackModel !== primaryModel) {
+      if (isModelUnavailable && selectedModel === primaryModel && fallbackModel !== primaryModel) {
         try {
           response = await generate(fallbackModel);
         } catch (fallbackError: unknown) {

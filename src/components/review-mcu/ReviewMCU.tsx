@@ -134,6 +134,7 @@ export default function ReviewMCU() {
   const [direction, setDirection] = useState(1);
   const [ocrProgress, setOcrProgress] = useState(0);
   const [extractionCooldown, setExtractionCooldown] = useState(0);
+  const [ocrModelMode, setOcrModelMode] = useState<'primary' | 'alternative'>('primary');
   useEffect(() => {
     if (extractionCooldown <= 0) return;
     const timer = window.setInterval(() => {
@@ -244,7 +245,7 @@ export default function ReviewMCU() {
       const res = await fetch('/api/ocr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: ocrText.trim() }),
+        body: JSON.stringify({ text: ocrText.trim(), modelMode: ocrModelMode }),
       });
       clearInterval(interval);
       setOcrProgress(100);
@@ -257,7 +258,7 @@ export default function ReviewMCU() {
         const retrySeconds = Number(json.retryAfterSeconds || res.headers.get('Retry-After') || 0);
         if (retrySeconds > 0) setExtractionCooldown(retrySeconds);
         const message = retrySeconds > 0
-          ? `${json.error || 'Batas penggunaan sementara tercapai.'} Setelah penghitung selesai, Anda dapat mencoba lagi. Jika masih muncul, berarti quota proyek masih penuh dan perlu menunggu window berikutnya.`
+          ? `${json.error || 'Batas penggunaan sementara tercapai.'} Jangan menekan tombol selama penghitung berjalan. Setelah selesai, coba satu kali. Jika masih ditolak, quota proyek masih penuh dan perlu menunggu window berikutnya.`
           : (json.error || 'Gagal mengekstrak data');
         store.showToast(message, 'error');
       }
@@ -273,7 +274,7 @@ export default function ReviewMCU() {
       store.setExtractingOCR(false);
       setTimeout(() => setOcrProgress(0), 600);
     }
-  }, [ocrText, store, goStep]);
+  }, [ocrText, ocrModelMode, store, goStep]);
 
   // Save to Supabase
   const handleSave = useCallback(async () => {
@@ -549,6 +550,22 @@ export default function ReviewMCU() {
                 onChange={(e) => setOcrText(e.target.value)}
                 className="min-h-[200px] text-sm rounded-xl bg-background resize-none"
               />
+
+              <div className="mt-3 flex flex-col gap-1.5">
+                <label htmlFor="ocr-model-mode" className="text-xs font-medium text-muted-foreground">
+                  Mode ekstraksi
+                </label>
+                <select
+                  id="ocr-model-mode"
+                  value={ocrModelMode}
+                  onChange={(e) => setOcrModelMode(e.target.value as 'primary' | 'alternative')}
+                  disabled={store.extractingOCR || extractionCooldown > 0}
+                  className="h-10 rounded-xl border border-input bg-background px-3 text-sm text-foreground"
+                >
+                  <option value="primary">Utama (kualitas maksimal)</option>
+                  <option value="alternative">Alternatif (quota lebih longgar)</option>
+                </select>
+              </div>
 
               {store.extractingOCR && (
                 <div className="mt-3 space-y-2">
