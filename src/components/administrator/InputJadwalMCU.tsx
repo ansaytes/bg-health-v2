@@ -1,56 +1,150 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { CalendarDays, Edit3, Plus, Save, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowDown, ArrowUp, CalendarDays, Search, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 type Schedule = {
-  id: string; nik_karyawan: string; national_id?: string; nama: string; jenis_kelamin?: string;
-  usia?: number; jabatan?: string; site: string; tanggal_jadwal: string; history?: string[];
+  id: string | null;
+  nik_karyawan: string;
+  nama: string;
+  site: string;
+  department?: string | null;
+  jabatan?: string | null;
+  tanggal_mcu_terakhir?: string | null;
+  tanggal_jadwal: string;
+  history?: string[];
+  jenis_kelamin?: string | null;
+  usia?: number | null;
+  national_id?: string | null;
 };
 
-const empty = { nikKaryawan: '', nationalId: '', nama: '', jenisKelamin: '', usia: '', jabatan: '', site: '', tanggalJadwal: '', note: '' };
-type ScheduleForm = typeof empty;
+type SortKey = 'nik_karyawan' | 'nama' | 'site' | 'department' | 'jabatan' | 'tanggal_mcu_terakhir' | 'tanggal_jadwal';
+
+function formatDate(value?: string | null) {
+  if (!value) return '-';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('id-ID');
+}
 
 export default function InputJadwalMCU() {
   const [rows, setRows] = useState<Schedule[]>([]);
-  const [sites, setSites] = useState<string[]>([]);
-  const [form, setForm] = useState<ScheduleForm>(empty);
-  const [editing, setEditing] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState('');
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({ key: 'nama', direction: 'asc' });
 
   const load = async () => {
     setLoading(true);
-    const response = await fetch('/api/mcu/schedule');
-    const json = await response.json();
-    if (response.ok) { setRows(json.schedules || []); if (json.site) setForm(prev => ({ ...prev, site: json.site })); }
-    else setMessage(json.error || 'Gagal memuat jadwal');
-    setLoading(false);
+    try {
+      const response = await fetch('/api/mcu/schedule');
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.error || 'Gagal memuat data karyawan');
+      setRows(json.schedules || []);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Gagal memuat data karyawan');
+    } finally {
+      setLoading(false);
+    }
   };
+
   useEffect(() => { void load(); }, []);
 
-  const update = (key: keyof ScheduleForm, value: string) => setForm(prev => ({ ...prev, [key]: value }));
-  const submit = async () => {
-    const response = await fetch('/api/mcu/schedule', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editing, ...form }) });
-    const json = await response.json();
-    setMessage(response.ok ? 'Jadwal berhasil disimpan' : (json.error || 'Gagal menyimpan jadwal'));
-    if (response.ok) { setForm(empty); setEditing(null); await load(); }
-  };
-  const edit = (row: Schedule) => {
-    setEditing(row.id);
-    setForm({ nikKaryawan: row.nik_karyawan, nationalId: '', nama: row.nama, jenisKelamin: row.jenis_kelamin || '', usia: String(row.usia || ''), jabatan: row.jabatan || '', site: row.site, tanggalJadwal: row.tanggal_jadwal, note: '' });
+  const updateDate = (nik: string, value: string) => {
+    setRows(current => current.map(row => row.nik_karyawan === nik ? { ...row, tanggal_jadwal: value } : row));
   };
 
-  return <div className="admin-form-container" style={{ overflow: 'auto', padding: 20 }}>
-    <div className="admin-form-header"><div><h2><CalendarDays size={20} /> Input Jadwal MCU</h2><p>Kelola satu jadwal aktif per karyawan sesuai site.</p></div><Button variant="outline" onClick={() => { setEditing(null); setForm(empty); }}><Plus size={16} /> Karyawan Baru</Button></div>
-    {message && <div className="admin-alert">{message}</div>}
-    <div className="raw-table-container" style={{ marginBottom: 18, padding: 16 }}>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {([['nikKaryawan','NIK Karyawan',true],['nationalId','NIK KTP (wajib karyawan baru)',!editing],['nama','Nama',true],['jenisKelamin','Jenis Kelamin',false],['usia','Usia',false],['jabatan','Jabatan',false],['site','Site',true],['tanggalJadwal','Tanggal Jadwal MCU',true],['note','Catatan perubahan',false]] as const).map(([key, label, required]) => <label key={key} className="admin-field-label">{label}{required && ' *'}<input className="admin-input" type={key === 'tanggalJadwal' ? 'date' : key === 'usia' ? 'number' : 'text'} value={form[key]} required={required} onChange={e => update(key, e.target.value)} readOnly={key === 'site' && !!form.site && !editing} /></label>)}
+  const save = async (row: Schedule) => {
+    if (!row.tanggal_jadwal) {
+      setMessage(`Tanggal jadwal untuk ${row.nama} wajib diisi`);
+      return;
+    }
+    setSaving(row.nik_karyawan);
+    setMessage('');
+    try {
+      const response = await fetch('/api/mcu/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: row.id,
+          nikKaryawan: row.nik_karyawan,
+          nationalId: row.national_id,
+          nama: row.nama,
+          jenisKelamin: row.jenis_kelamin,
+          usia: row.usia,
+          jabatan: row.jabatan,
+          site: row.site,
+          tanggalJadwal: row.tanggal_jadwal,
+        }),
+      });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.error || 'Gagal menyimpan jadwal');
+      setMessage(`Jadwal ${row.nama} berhasil disimpan`);
+      await load();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Gagal menyimpan jadwal');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const changeSort = (key: SortKey) => {
+    setSort(current => current.key === key
+      ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+      : { key, direction: 'asc' });
+  };
+
+  const visibleRows = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return rows
+      .filter(row => !needle || [row.nik_karyawan, row.nama, row.site, row.department, row.jabatan]
+        .some(value => String(value || '').toLowerCase().includes(needle)))
+      .sort((a, b) => {
+        const left = String(a[sort.key] || '');
+        const right = String(b[sort.key] || '');
+        return left.localeCompare(right, 'id', { numeric: true }) * (sort.direction === 'asc' ? 1 : -1);
+      });
+  }, [rows, query, sort]);
+
+  const header = (key: SortKey, label: string) => (
+    <th>
+      <button type="button" className="mcu-sort-button" onClick={() => changeSort(key)}>
+        {label}
+        {sort.key === key && (sort.direction === 'asc' ? <ArrowUp size={13} /> : <ArrowDown size={13} />)}
+      </button>
+    </th>
+  );
+
+  return (
+    <div className="admin-form-container mcu-entry-page">
+      <div className="admin-form-header">
+        <div>
+          <h2><CalendarDays size={20} /> Input Jadwal MCU</h2>
+          <p>Atur jadwal MCU berikutnya untuk karyawan sesuai kewenangan site Anda.</p>
+        </div>
       </div>
-      <div className="flex gap-2 mt-4"><Button onClick={submit}><Save size={16} /> Simpan Jadwal</Button>{editing && <Button variant="outline" onClick={() => { setEditing(null); setForm(empty); }}><X size={16} /> Batal</Button>}</div>
+      {message && <div className="admin-alert">{message}</div>}
+      <div className="mcu-entry-toolbar">
+        <div className="mcu-entry-search"><Search size={16} /><input aria-label="Cari karyawan" placeholder="Cari NIK, nama, site, departemen..." value={query} onChange={event => setQuery(event.target.value)} /></div>
+        <span className="mcu-entry-count">{visibleRows.length} dari {rows.length} karyawan</span>
+      </div>
+      <div className="raw-table-scroll mcu-entry-table">
+        <table>
+          <thead><tr>
+            <th>No</th>{header('nik_karyawan', 'NIK Karyawan')}{header('nama', 'Nama')}{header('site', 'Site')}{header('department', 'Departemen')}{header('jabatan', 'Jabatan')}{header('tanggal_mcu_terakhir', 'MCU Terakhir')}{header('tanggal_jadwal', 'Jadwal MCU Berikutnya')}<th>Aksi</th>
+          </tr></thead>
+          <tbody>
+            {loading ? <tr><td colSpan={9} className="mcu-empty-state">Memuat data karyawan...</td></tr>
+              : visibleRows.length === 0 ? <tr><td colSpan={9} className="mcu-empty-state">Tidak ada data karyawan.</td></tr>
+              : visibleRows.map((row, index) => <tr key={row.nik_karyawan}>
+                <td>{index + 1}</td><td className="mcu-nik">{row.nik_karyawan}</td><td className="mcu-name">{row.nama}</td><td>{row.site}</td><td>{row.department || '-'}</td><td>{row.jabatan || '-'}</td><td>{formatDate(row.tanggal_mcu_terakhir)}</td>
+                <td><input className="admin-input mcu-date-input" type="date" value={row.tanggal_jadwal || ''} onChange={event => updateDate(row.nik_karyawan, event.target.value)} /></td>
+                <td><Button size="sm" onClick={() => void save(row)} disabled={saving === row.nik_karyawan}><Save size={14} /> {saving === row.nik_karyawan ? '...' : 'Simpan'}</Button></td>
+              </tr>)}
+          </tbody>
+        </table>
+      </div>
     </div>
-    <div className="raw-table-scroll"><table><thead><tr><th>No</th><th>NIK Karyawan</th><th>Nama</th><th>Jenis Kelamin</th><th>Usia</th><th>Jabatan</th><th>Site</th><th>Jadwal MCU</th><th>Riwayat</th><th>Aksi</th></tr></thead><tbody>{loading ? <tr><td colSpan={10}>Memuat...</td></tr> : rows.map((row, index) => <tr key={row.id}><td>{index + 1}</td><td>{row.nik_karyawan}</td><td>{row.nama}</td><td>{row.jenis_kelamin || '-'}</td><td>{row.usia || '-'}</td><td>{row.jabatan || '-'}</td><td>{row.site}</td><td>{row.tanggal_jadwal}</td><td title={(row.history || []).join('\n')}>{row.history?.length ? 'Arahkan kursor untuk melihat riwayat' : '-'}</td><td><button className="icon-btn" onClick={() => edit(row)} title="Ubah jadwal"><Edit3 size={15} /></button></td></tr>)}</tbody></table></div>
-  </div>;
+  );
 }

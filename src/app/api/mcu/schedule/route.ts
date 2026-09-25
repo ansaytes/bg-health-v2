@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { decrypt, encrypt, hashField } from '@/lib/encryption';
+import { decrypt, decryptEmployee, decryptMCURecord, encrypt, hashField } from '@/lib/encryption';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
@@ -28,11 +28,31 @@ export async function GET(req: NextRequest) {
   if (!user || !['pic', 'superuser', 'administrator'].includes(user.role)) {
     return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
   }
-  let query = client.from('mcu_schedules').select('*').order('site').order('nama');
-  if (user.role === 'pic' && user.site && user.site.toLowerCase() !== 'head office') query = query.eq('site', user.site);
-  const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  const ids = (data || []).map(row => row.id);
+  let employeeQuery = client.from('employees')
+    .select('nik,nama,gender,age,department,job_position,site_name,national_id')
+    .ilike('employment_status', 'Aktif')
+    .order('site_name')
+    .order('nama');
+  if (user.role === 'pic' && user.site && user.site.toLowerCase() !== 'head office') {
+    employeeQuery = employeeQuery.eq('site_name', user.site);
+  }
+  const [{ data: employeeData, error: employeeError }, { data: scheduleData, error: scheduleError }, { data: monitorData, error: monitorError }] = await Promise.all([
+    employeeQuery,
+    client.from('mcu_schedules').select('*'),
+    client.from('monitor_mcu').select('*'),
+  ]);
+  if (employeeError || scheduleError || monitorError) {
+    const error = employeeError || scheduleError || monitorError;
+    return NextResponse.json({ error: error?.message || 'Gagal memuat data MCU' }, { status: 500 });
+  }
+  const data = (scheduleData || []).filter(row =>
+    user.role !== 'pic' || !user.site || user.site.toLowerCase() === 'head office' || row.site === user.site
+  );
+  const employees = (employeeData || []).map(decryptEmployee);
+  const monitors = (monitorData || []).map(decryptMCURecord);
+  const monitorByNik = new Map(monitors.map(record => [String(record.nik_karyawan || ''), record]));
+  const scheduleByNik = new Map(data.map(row => [String(decrypt(row.nik_karyawan) || row.nik_karyawan), row]));
+  const ids = data.map(row => row.id);
   const { data: history } = ids.length
     ? await client.from('mcu_schedule_history').select('schedule_id,old_date,new_date,note,changed_at').in('schedule_id', ids).order('changed_at', { ascending: false })
     : { data: [] };
@@ -42,13 +62,25 @@ export async function GET(req: NextRequest) {
     values.push(`${item.changed_at}: ${item.old_date || '-'} → ${item.new_date}${item.note ? ` (${item.note})` : ''}`);
     historyById.set(item.schedule_id, values);
   }
-  const safeRows = (data || []).map(row => ({
-    ...row,
-    national_id: decrypt(row.national_id) || row.national_id,
-    nik_karyawan: decrypt(row.nik_karyawan) || row.nik_karyawan,
-    nama: decrypt(row.nama) || row.nama,
-    history: historyById.get(row.id) || [],
-  }));
+  const safeRows = employees.map(employee => {
+    const nik = String(employee.nik || '');
+    const schedule = scheduleByNik.get(nik);
+    const monitor = monitorByNik.get(nik);
+    return {
+      id: schedule?.id || null,
+      nik_karyawan: nik,
+      national_id: employee.national_id || null,
+      nama: employee.nama || '-',
+      jenis_kelamin: employee.gender || null,
+      usia: employee.age || null,
+      department: employee.department || null,
+      jabatan: employee.job_position || null,
+      site: employee.site_name || '-',
+      tanggal_mcu_terakhir: monitor?.tgl_mcu || null,
+      tanggal_jadwal: schedule?.tanggal_jadwal || '',
+      history: schedule ? historyById.get(schedule.id) || [] : [],
+    };
+  });
   return NextResponse.json({ schedules: safeRows, site: user.site || null });
 }
 
@@ -62,7 +94,6 @@ export async function POST(req: NextRequest) {
   if (!nikKaryawan || !nama || !site || !tanggalJadwal) {
     return NextResponse.json({ error: 'NIK Karyawan, nama, site, dan tanggal jadwal wajib diisi' }, { status: 400 });
   }
-  if (!id && !nationalId) return NextResponse.json({ error: 'NIK KTP wajib diisi untuk karyawan baru' }, { status: 400 });
   if (!canUseSite(user, site)) return NextResponse.json({ error: 'PIC hanya dapat mengelola site sendiri' }, { status: 403 });
   const key = hashField(nikKaryawan);
   const record = {

@@ -1489,6 +1489,94 @@ select.admin-input.compact-input {
 .admin-input::placeholder {
   color: var(--muted-foreground);
 }
+
+.mcu-entry-page {
+  gap: 14px;
+  padding: 20px;
+  overflow: hidden;
+}
+.mcu-entry-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.mcu-entry-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  color: var(--muted-foreground);
+}
+.mcu-entry-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 12px;
+}
+.mcu-entry-count {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.mcu-entry-table {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+.mcu-entry-table table {
+  min-width: 1080px;
+}
+.mcu-entry-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--card);
+}
+.mcu-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+}
+.mcu-sort-button:hover {
+  color: #ff4d00;
+}
+.mcu-nik {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.mcu-name {
+  font-weight: 600;
+}
+.mcu-date-input {
+  min-width: 145px;
+  background: var(--background);
+}
+.mcu-empty-state {
+  padding: 42px !important;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+@media (max-width: 700px) {
+  .mcu-entry-page { padding: 12px; }
+  .mcu-entry-toolbar { align-items: stretch; flex-direction: column; }
+  .mcu-entry-count { align-self: flex-end; }
+}
 .admin-form-btn-primary {
   flex: 1;
   height: 34px;
