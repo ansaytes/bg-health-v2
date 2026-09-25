@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 import { MCU_FIELDS } from '@/lib/mcu-fields';
 import { encryptMCURecord } from '@/lib/encryption';
+import { applyMCUCalculations } from '@/lib/mcu-calculations';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
@@ -13,16 +14,17 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { formData } = body;
+    const calculatedFormData = applyMCUCalculations(formData || {});
 
-    const nikKaryawan = formData?.nikKaryawan || formData?.nationalId;
+    const nikKaryawan = calculatedFormData?.nikKaryawan || calculatedFormData?.nationalId;
     if (!formData || !nikKaryawan) {
-      return NextResponse.json({ success: false, error: 'NIK KTP is required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'NIK Karyawan is required' }, { status: 400 });
     }
 
     // Convert formData camelCase keys to snake_case for Supabase, strictly using MCU_FIELDS
     const dbData: Record<string, any> = {};
     for (const field of MCU_FIELDS) {
-      const value = formData[field.id];
+      const value = calculatedFormData[field.id];
       if (value !== '' && value !== undefined && value !== null) {
         const snakeKey = field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase();
         dbData[snakeKey] = value;

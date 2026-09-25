@@ -74,8 +74,8 @@ export function hashField(plain: string | null | undefined): string | null {
   }
 }
 
-// Sensitive fields that need encryption
-// birth_date NOT included — it's a DATE column, PostgreSQL rejects hex string as date
+// Sensitive fields that must never be stored as plaintext.
+// birth_date remains a native DATE so PostgreSQL can calculate age from it.
 const SENSITIVE_FIELDS = ['nik', 'national_id', 'phone_number', 'place_of_birth', 'address'];
 
 // Hash columns for lookup — supports both NIK Karyawan and NIK KTP search

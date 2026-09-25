@@ -244,8 +244,8 @@ export default function ReviewMCU() {
     store.setSaving(true);
     try {
       const formData = store.formData;
-      if (!formData.nationalId) {
-        store.showToast('Data NIK KTP tidak boleh kosong', 'error');
+      if (!formData.nikKaryawan && !formData.nationalId) {
+        store.showToast('NIK Karyawan tidak boleh kosong', 'error');
         store.setSaving(false);
         return;
       }
@@ -656,7 +656,7 @@ export default function ReviewMCU() {
                 <Button
                   onClick={handleSave}
                   disabled={store.saving}
-                  className="w-full h-12 rounded-xl border-2 border-primary text-base font-semibold shadow-md transition-shadow hover:shadow-lg"
+                  className="review-mcu-save-button w-full h-12 rounded-xl border-2 border-primary text-base font-semibold shadow-md transition-shadow hover:shadow-lg"
                   size="lg"
                 >
                   {store.saving ? (

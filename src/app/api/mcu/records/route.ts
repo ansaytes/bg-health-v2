@@ -42,10 +42,14 @@ export async function GET(req: NextRequest) {
     const { data: records, count, error: listError } = await listQuery;
     if (listError) return NextResponse.json({ error: listError.message }, { status: 500 });
     return NextResponse.json({
-      records: (records || []).map(record => ({
-        ...decryptMCURecord(record),
-        nik_karyawan_hash: record.nik_karyawan_hash,
-      })),
+      records: (records || []).map(record => {
+        const decrypted = decryptMCURecord(record);
+        delete decrypted.national_id;
+        return {
+          ...decrypted,
+          nik_karyawan_hash: record.nik_karyawan_hash,
+        };
+      }),
       page,
       pageSize,
       total: count || 0,

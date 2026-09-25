@@ -198,7 +198,10 @@ export function assessZonasi(d: MCUDraft, gender?: string): ZonasiResult {
 
   if (triggers.length === 0) {
     // 1. Hipertensi Grade 1: 140-159/90-99
-    if (tdS !== null && tdD !== null && tdS >= 140 && tdS <= 159 && tdD >= 90 && tdD <= 99) {
+    if (
+      (tdS !== null && tdS >= 140 && tdS <= 159) ||
+      (tdD !== null && tdD >= 90 && tdD <= 99)
+    ) {
       kuningTriggers.push('Hipertensi Grade 1 (Kuning)');
     }
 
@@ -238,13 +241,19 @@ export function assessZonasi(d: MCUDraft, gender?: string): ZonasiResult {
     }
 
     // 9. Obesitas II BMI 30-34.9 tanpa komorbid
-    if (bmi !== null && bmi >= 30 && bmi < 35) {
+    if (bmi !== null && bmi >= 25 && bmi < 30) {
       const hasComorbid = (tdS !== null && tdS >= 140) || (tdD !== null && tdD >= 90) ||
         (hba1c !== null && hba1c >= 7) || (gdp !== null && gdp >= 100) ||
         hasText(spiText, 'OSA') || hasText(spiText, 'OHS') || hasText(spiText, 'asma');
       if (!hasComorbid) {
-        kuningTriggers.push('Obesitas II tanpa Komorbid BMI 30-34.9 (Kuning)');
+        kuningTriggers.push('Overweight/Obesitas tanpa Komorbid BMI 25-29.9 (Kuning)');
       }
+    }
+    if (bmi !== null && bmi >= 30 && bmi < 35) {
+      const hasComorbid = (tdS !== null && tdS >= 140) || (tdD !== null && tdD >= 90) ||
+        (hba1c !== null && hba1c >= 7) || (gdp !== null && gdp >= 100) ||
+        hasText(spiText, 'OSA') || hasText(spiText, 'OHS') || hasText(spiText, 'asma');
+      if (!hasComorbid) kuningTriggers.push('Obesitas BMI 30-34.9 tanpa Komorbid (Kuning)');
     }
 
     // 10. Asam urat 7-9
@@ -341,10 +350,12 @@ export function assessZonasi(d: MCUDraft, gender?: string): ZonasiResult {
   }
 
   if (kuningTriggers.length > 0) {
+    const onlyPrediabetes = kuningTriggers.every(trigger => trigger.startsWith('Prediabetes'));
+    const reviewInterval = onlyPrediabetes ? '6 bulan' : '3 bulan';
     return {
       zona: 'Kuning',
       triggers: kuningTriggers,
-      pengendalian: '• Wajib kontrol dokter minimal setiap 3 bulan\n• Wajib menyerahkan bukti kontrol ke HO\n• Tidak direkomendasikan bekerja di area risiko tinggi bila kondisi belum stabil\n• Evaluasi ulang status zona setiap 3 bulan\n• Program perbaikan gaya hidup (berat badan, diet, olahraga)\n• Layak kerja dengan monitoring (Fit With Note)',
+      pengendalian: `• Wajib kontrol dokter minimal setiap ${reviewInterval}\n• Wajib menyerahkan bukti kontrol ke HO\n• Tidak direkomendasikan bekerja di area risiko tinggi bila kondisi belum stabil\n• Evaluasi ulang status zona setiap ${reviewInterval}\n• Program perbaikan gaya hidup (berat badan, diet, olahraga)\n• Layak kerja dengan monitoring (Fit With Note)`,
     };
   }
 

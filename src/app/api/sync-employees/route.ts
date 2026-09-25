@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { encryptEmployee } from '@/lib/encryption';
 
 // NOTE: Scheduled sync moved to GitHub Actions (no Vercel Hobby timeout limit)
 // This endpoint is for manual trigger only.
@@ -191,7 +192,7 @@ export async function POST(request: NextRequest) {
     // 2. Map rows to employee objects (skip header + invalid rows)
     const allEmployees = rows.slice(1).map(mapRowToEmployee);
     const validEmployees = allEmployees.filter((e): e is Record<string, unknown> => e !== null);
-    const employees = validEmployees.filter(isEligibleEmployee);
+    const employees = validEmployees.filter(isEligibleEmployee).map(encryptEmployee);
     const skipped = allEmployees.length - validEmployees.length;
     const filteredByCriteria = validEmployees.length - employees.length;
 
@@ -205,7 +206,7 @@ export async function POST(request: NextRequest) {
       const batch = employees.slice(i, i + 500);
       const { error, count } = await supabase
         .from('employees')
-        .upsert(batch, { onConflict: 'nik', count: 'exact' });
+        .upsert(batch, { onConflict: 'nik_hash', count: 'exact' });
 
       if (error) {
         console.error(`Batch@${i} (500) failed: ${error.message}`);
@@ -215,7 +216,7 @@ export async function POST(request: NextRequest) {
           const sub = batch.slice(j, j + 50);
           const { error: subErr, count: subCount } = await supabase
             .from('employees')
-            .upsert(sub, { onConflict: 'nik', count: 'exact' });
+            .upsert(sub, { onConflict: 'nik_hash', count: 'exact' });
 
           if (subErr) {
             console.error(`  Sub@${i + j} (50) failed: ${subErr.message}`);
@@ -224,7 +225,7 @@ export async function POST(request: NextRequest) {
             for (const emp of sub) {
               const { error: singleErr } = await supabase
                 .from('employees')
-                .upsert(emp, { onConflict: 'nik' });
+                .upsert(emp, { onConflict: 'nik_hash' });
               if (singleErr) {
                 failedNiks.push(String(emp.nik));
                 batchErrors++;

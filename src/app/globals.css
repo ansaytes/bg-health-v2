@@ -2063,6 +2063,21 @@ select.admin-input.compact-input {
   border-radius: 18px;
   background: transparent;
 }
+.review-mcu-save-button {
+  background: #ff4d00 !important;
+  color: #fff !important;
+  border-color: #ff4d00 !important;
+  opacity: 1 !important;
+}
+.review-mcu-save-button:hover {
+  background: #e64500 !important;
+  border-color: #e64500 !important;
+}
+.review-mcu-save-button:disabled {
+  background: #ff9b72 !important;
+  border-color: #ff9b72 !important;
+  color: #fff !important;
+}
 @media (max-width: 760px) {
   .mcu-records-modern,
   .mcu-entry-modern-shell { padding: 10px; }
