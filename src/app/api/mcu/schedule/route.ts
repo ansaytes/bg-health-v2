@@ -54,6 +54,9 @@ export async function GET(req: NextRequest) {
   const requestedPage = Number.parseInt(searchParams.get('page') || '1', 10);
   const pageSize = 100;
   const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const siteFilter = searchParams.get('site')?.trim() || '';
+  const departmentFilter = searchParams.get('department')?.trim() || '';
+  const searchFilter = searchParams.get('search')?.trim() || '';
   const employeeFrom = (page - 1) * pageSize;
   let employeeQuery = client.from('employees')
     .select('nik,nama,gender,age,department,job_position,site_name,national_id', { count: 'exact' })
@@ -64,6 +67,13 @@ export async function GET(req: NextRequest) {
     .range(employeeFrom, employeeFrom + pageSize - 1);
   if (user.role === 'pic' && user.site && user.site.toLowerCase() !== 'head office') {
     employeeQuery = employeeQuery.eq('site_name', user.site);
+  } else if (siteFilter) {
+    employeeQuery = employeeQuery.eq('site_name', siteFilter);
+  }
+  if (departmentFilter) employeeQuery = employeeQuery.eq('department', departmentFilter);
+  if (searchFilter) {
+    const safeSearch = searchFilter.replace(/[(),]/g, '');
+    if (safeSearch) employeeQuery = employeeQuery.or(`nama.ilike.%${safeSearch}%,department.ilike.%${safeSearch}%,site_name.ilike.%${safeSearch}%`);
   }
   const [{ data: employeeData, count: employeeCount, error: employeeError }, { data: scheduleData, error: scheduleError }, { data: monitorData, error: monitorError }] = await Promise.all([
     employeeQuery,

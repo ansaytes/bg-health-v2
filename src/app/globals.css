@@ -1520,6 +1520,27 @@ select.admin-input.compact-input {
   font: inherit;
   font-size: 12px;
 }
+.mcu-entry-filter {
+  height: 32px;
+  min-width: 132px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--foreground);
+  padding: 0 8px;
+  font: inherit;
+  font-size: 11px;
+}
+.mcu-filter-reset {
+  border: 0;
+  background: transparent;
+  color: #ff4d00;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
 .mcu-entry-count {
   color: var(--muted-foreground);
   font-size: 11px;

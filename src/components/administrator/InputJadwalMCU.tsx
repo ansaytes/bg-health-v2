@@ -36,6 +36,9 @@ export default function InputJadwalMCU() {
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [query, setQuery] = useState('');
+  const [siteFilter, setSiteFilter] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('');
+  const [scheduleFilter, setScheduleFilter] = useState<'all' | 'filled' | 'empty'>('all');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -51,7 +54,11 @@ export default function InputJadwalMCU() {
   const load = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/mcu/schedule?page=${page}`, { headers: await getAuthHeaders() });
+      const params = new URLSearchParams({ page: String(page) });
+      if (query.trim()) params.set('search', query.trim());
+      if (siteFilter) params.set('site', siteFilter);
+      if (departmentFilter.trim()) params.set('department', departmentFilter.trim());
+      const response = await fetch(`/api/mcu/schedule?${params.toString()}`, { headers: await getAuthHeaders() });
       const json = await response.json();
       if (!response.ok) throw new Error(json.error || 'Gagal memuat data karyawan');
       setRows(json.schedules || []);
@@ -64,7 +71,10 @@ export default function InputJadwalMCU() {
     }
   };
 
-  useEffect(() => { void load(); }, [page]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void load(); }, 250);
+    return () => window.clearTimeout(timer);
+  }, [page, query, siteFilter, departmentFilter]);
 
   const updateDate = (nik: string, value: string) => {
     setRows(current => current.map(row => row.nik_karyawan === nik ? { ...row, tanggal_jadwal: value } : row));
@@ -111,16 +121,25 @@ export default function InputJadwalMCU() {
   };
 
   const visibleRows = useMemo(() => {
-    const needle = query.trim().toLowerCase();
     return rows
-      .filter(row => !needle || [row.nik_karyawan, row.nama, row.site, row.department, row.jabatan]
-        .some(value => String(value || '').toLowerCase().includes(needle)))
+      .filter(row => scheduleFilter === 'all' || (scheduleFilter === 'filled' ? Boolean(row.tanggal_jadwal) : !row.tanggal_jadwal))
       .sort((a, b) => {
         const left = String(a[sort.key] || '');
         const right = String(b[sort.key] || '');
         return left.localeCompare(right, 'id', { numeric: true }) * (sort.direction === 'asc' ? 1 : -1);
       });
-  }, [rows, query, sort]);
+  }, [rows, scheduleFilter, sort]);
+
+  const siteOptions = Array.from(new Set(rows.map(row => row.site).filter(Boolean))).sort();
+  const departmentOptions = Array.from(new Set(rows.map(row => row.department).filter(Boolean) as string[])).sort();
+
+  const resetFilters = () => {
+    setQuery('');
+    setSiteFilter('');
+    setDepartmentFilter('');
+    setScheduleFilter('all');
+    setPage(1);
+  };
 
   const changePage = (nextPage: number) => {
     if (nextPage < 1 || (totalPages > 0 && nextPage > totalPages)) return;
@@ -146,7 +165,21 @@ export default function InputJadwalMCU() {
       </div>
       {message && <div className="admin-alert">{message}</div>}
       <div className="mcu-entry-toolbar">
-        <div className="mcu-entry-search"><Search size={16} /><input aria-label="Cari karyawan" placeholder="Cari NIK, nama, site, departemen..." value={query} onChange={event => setQuery(event.target.value)} /></div>
+        <div className="mcu-entry-search"><Search size={16} /><input aria-label="Cari karyawan" placeholder="Cari nama, site, departemen..." value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} /></div>
+        <select className="mcu-entry-filter" aria-label="Filter site" value={siteFilter} onChange={event => { setSiteFilter(event.target.value); setPage(1); }}>
+          <option value="">Semua Site</option>
+          {siteOptions.map(site => <option key={site} value={site}>{site}</option>)}
+        </select>
+        <select className="mcu-entry-filter" aria-label="Filter departemen" value={departmentFilter} onChange={event => { setDepartmentFilter(event.target.value); setPage(1); }}>
+          <option value="">Semua Departemen</option>
+          {departmentOptions.map(department => <option key={department} value={department}>{department}</option>)}
+        </select>
+        <select className="mcu-entry-filter" aria-label="Filter status jadwal" value={scheduleFilter} onChange={event => setScheduleFilter(event.target.value as typeof scheduleFilter)}>
+          <option value="all">Semua Jadwal</option>
+          <option value="filled">Sudah Dijadwalkan</option>
+          <option value="empty">Belum Dijadwalkan</option>
+        </select>
+        {(query || siteFilter || departmentFilter || scheduleFilter !== 'all') && <button type="button" className="mcu-filter-reset" onClick={resetFilters}>Reset</button>}
         <span className="mcu-entry-count">{visibleRows.length} dari {total} karyawan | Halaman {page} dari {totalPages || 1}</span>
       </div>
       <div className="raw-table-scroll mcu-entry-table">
