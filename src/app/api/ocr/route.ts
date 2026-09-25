@@ -24,11 +24,13 @@ ATURAN DATA:
 8. Key JSON harus menggunakan ID field yang persis sama.
 9. Jangan mengisi field "catatan". Field tersebut khusus input manual.
 10. "Pemeriksaan Lain" hanya berisi pemeriksaan yang tidak termasuk daftar field pemeriksaan lain pada form.
-11. "rekFU" harus berisi isi kolom DJ spreadsheet secara verbatim, bukan rekomendasi baru dari AI.
-12. "itemFU" harus berisi isi kolom DK spreadsheet secara verbatim, bukan ringkasan baru dari AI.
+11. "rekFU" harus mengambil nilai dropdown kolom DJ spreadsheet secara verbatim.
+12. "itemFU" adalah hasil formula kolom DK spreadsheet; jangan membuat ringkasan baru karena aplikasi akan menghitungnya dari temuan dan kesimpulan vendor.
 13. "kesVendor" harus mengambil kesimpulan vendor dari kolom DF/dokumen, dengan pilihan yang sesuai:
     Fit To Work, Fit With Note, Fit With Restriction, Currently Unfit, Temporary Unfit, atau Unfit.
-14. "perluFU" harus mengambil nilai Ya/Tidak dari dokumen. Jangan menyimpulkan hanya dari adanya abnormalitas.
+14. "rekQSHE" harus mengambil nilai dropdown kolom DG secara persis:
+    Fit To Work, Fit With Note, Fit With Restriction, Currently Unfit, Unfit, atau Temporary Unfit.
+15. "perluFU" harus mengambil nilai Ya/Tidak dari dokumen. Jangan menyimpulkan hanya dari adanya abnormalitas.
 15. Tanggal harus dikembalikan dalam format YYYY-MM-DD jika tanggal lengkap terbaca.
 16. Jika field tanggal expired tidak tertulis, jangan mengarangnya; aplikasi akan menghitungnya dari tanggal MCU.
 
@@ -40,9 +42,9 @@ DETAIL WAJIB:
 18. Wajib membaca seluruh nilai audiometri:
    acr_500, acr_1k, acr_2k, acr_3k, acr_4k, acr_6k, acr_8k,
    acl_500, acl_1k, acl_2k, acl_3k, acl_4k, acl_6k, acl_8k, audInterp.
-   ACR adalah telinga kanan dan ACL telinga kiri. Nilai frekuensi yang tidak diperiksa diisi "N/A" hanya jika dokumen menyatakan tidak dilakukan.
+   ACR adalah telinga kanan dan ACL telinga kiri. Frekuensi yang tidak diperiksa harus dikosongkan, bukan diisi N/A.
 19. Normalisasi identitas: Laki-laki/Pria menjadi "Laki - Laki"; Perempuan/Wanita menjadi "Perempuan".
-20. Status MCU harus mengikuti nilai yang benar-benar tertulis di dokumen, termasuk "Pre - Employee", "Annual", dan jenis lain yang tersedia pada form.
+20. Status MCU wajib mengikuti dropdown kolom H spreadsheet secara persis: Pre Employee, Annual, Specific, Retirement, Follow Up - Pre Employee, Follow Up - Annual.
 `;
 }
 
@@ -160,11 +162,13 @@ export async function POST(req: Request) {
     }
     if (validData.statusMCU) {
       const status = validData.statusMCU.toLowerCase();
-      const match = status.includes('pre') ? 'Pre - Employee'
-        : status.includes('annual') || status.includes('tahunan') ? 'Annual'
-          : status.includes('resmi') ? 'Resmi'
-            : status.includes('khusus') ? 'Khusus'
-              : status.includes('lain') ? 'Lainnya' : validData.statusMCU;
+      const match = status.includes('follow') && status.includes('pre') ? 'Follow Up - Pre Employee'
+        : status.includes('follow') && status.includes('annual') ? 'Follow Up - Annual'
+          : status.includes('pre') ? 'Pre Employee'
+            : status.includes('annual') || status.includes('tahunan') ? 'Annual'
+              : status.includes('specific') || status.includes('khusus') ? 'Specific'
+                : status.includes('retirement') || status.includes('pensiun') ? 'Retirement'
+                  : validData.statusMCU;
       validData.statusMCU = match;
     }
     if (validData.golDarah) {

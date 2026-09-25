@@ -73,6 +73,79 @@ function buildClinicalSummary(values: MCUValues) {
     else if (systolic >= 130 || diastolic >= 80) findings.push('Hypertension Stage 1');
     else if (systolic >= 120 && systolic <= 129 && diastolic < 80) findings.push('Elevated Blood Pressure');
   }
+
+  function buildFormulaFollowUp(values: MCUValues, findings: string[]) {
+    if (text(values.rekQSHE) === 'Fit To Work') return '';
+    const items: string[] = [];
+    const add = (condition: boolean, value: string) => {
+      if (condition) items.push(value);
+    };
+    const systolic = numberValue(values.tdS);
+    const diastolic = numberValue(values.tdD);
+    const bmi = numberValue(values.bmi);
+    const hb = numberValue(values.hb);
+    const leukosit = numberValue(values.leukosit);
+    const eritrosit = numberValue(values.eritrosit);
+    const hematokrit = numberValue(values.hematokrit);
+    const trombosit = numberValue(values.trombosit);
+    const chol = numberValue(values.chol);
+    const tg = numberValue(values.tg);
+    const hdl = numberValue(values.hdl);
+    const ldl = numberValue(values.ldl);
+    const gdp = numberValue(values.gdp);
+    const gd2pp = numberValue(values.gd2pp);
+    const hba1c = numberValue(values.hba1c);
+    const au = numberValue(values.au);
+    const ureum = numberValue(values.ureum);
+    const kreatinin = numberValue(values.kreatinin);
+    const sgot = numberValue(values.sgot);
+    const sgpt = numberValue(values.sgpt);
+    const gender = text(values.jenisKelamin);
+    const visus = text(values.visusJauh);
+
+    add(abnormal(values.gigiMulut), `Orodental : ${text(values.gigiMulut)}`);
+    add(abnormal(values.fisikHeadToToe), `Fisik : ${text(values.fisikHeadToToe)}`);
+    add(abnormal(values.hemoroid), /Menolak RT|N\/A/.test(text(values.hemoroid))
+      ? 'RT : Pemeriksaan Hemoroid Belum Dilakukan' : `RT : ${text(values.hemoroid)}`);
+    add(abnormal(values.fisikMata), `Mata : ${text(values.fisikMata)}`);
+    add(/\d+\/\d+/.test(visus) && !/6\/6|5\/5|20\/20|Koreksi/i.test(visus), `Visus Jauh : ${visus}`);
+    add(abnormal(values.visusDekat, ['N/A']) && !/6\/6|5\/5|20\/20|J1|Koreksi/i.test(text(values.visusDekat)), `Visus Dekat : ${text(values.visusDekat)}`);
+    add(Boolean(values.defWarna && !['Normal', 'N/A'].includes(text(values.defWarna))), `Defisiensi Persepsi Warna : ${text(values.defWarna)}`);
+    add(abnormal(values.lapangPandang), `Lapang Pandang : ${text(values.lapangPandang)}`);
+    add(systolic !== null && diastolic !== null && (systolic > 130 || diastolic > 89), `TD : ${systolic}/${diastolic} mmHg`);
+    add(bmi !== null && bmi >= 30, `BMI : ${bmi}`);
+    add(hb !== null && ((gender === 'Laki - Laki' && (hb < 13 || hb > 16.5)) || (gender === 'Perempuan' && (hb < 12 || hb > 15))), `Hb : ${text(values.hb)} g/dL`);
+    add(leukosit !== null && (leukosit > 11 || leukosit < 4), `Leukosit : ${text(values.leukosit)} 10³/µL`);
+    add(eritrosit !== null && (eritrosit > 6.2 || eritrosit < 4.5), `Eritrosit : ${text(values.eritrosit)} 10⁶/µL`);
+    add(hematokrit !== null && (hematokrit > 54 || hematokrit < 40), `Hematokrit : ${text(values.hematokrit)} %`);
+    add(trombosit !== null && (trombosit > 400 || trombosit < 150), `Trombosit : ${text(values.trombosit)} 10³/µL`);
+    add(chol !== null && chol >= 200, `Chol : ${text(values.chol)} mg/dL`);
+    add(tg !== null && tg >= 150, `TG : ${text(values.tg)} mg/dL`);
+    add(hdl !== null && ((gender === 'Laki - Laki' && hdl < 40) || (gender === 'Perempuan' && hdl < 50)), `HDL : ${text(values.hdl)} mg/dL`);
+    add(ldl !== null && ldl >= 100, `LDL : ${text(values.ldl)} mg/dL`);
+    add(gdp !== null && gdp >= 100, `GDP : ${text(values.gdp)} mg/dL`);
+    add(gd2pp !== null && gd2pp >= 140, `GD2PP : ${text(values.gd2pp)} mg/dL`);
+    add(hba1c !== null && hba1c >= 6.5, `HbA1c : ${text(values.hba1c)} %`);
+    add(au !== null && ((gender === 'Laki - Laki' && au > 7) || (gender === 'Perempuan' && au > 6)), `AU : ${text(values.au)} mg/dL`);
+    add(ureum !== null && ureum > 48.5, `Ureum : ${text(values.ureum)} mg/dL`);
+    add(kreatinin !== null && kreatinin >= 1.4, `Kreatinin : ${text(values.kreatinin)} mg/dL`);
+    add(sgot !== null && sgot >= 40, `SGOT : ${text(values.sgot)} U/L`);
+    add(sgpt !== null && sgpt >= 41, `SGPT : ${text(values.sgpt)} U/L`);
+    add(abnormal(values.ul), `UL : ${text(values.ul)}`);
+    add(abnormal(values.hbsag, ['N/A', 'Non - Reaktif']), `HbsAg : ${text(values.hbsag)}`);
+    add(abnormal(values.vdrl, ['N/A', 'Non - Reaktif']), `VDRL : ${text(values.vdrl)}`);
+    add(abnormal(values.tpha, ['N/A', 'Non - Reaktif']), `TPHA : ${text(values.tpha)}`);
+    add(abnormal(values.hiv, ['N/A', 'Non - Reaktif']), `HIV : ${text(values.hiv)}`);
+    add(abnormal(values.chestXR), `CXR : Kesan ${text(values.chestXR)}`);
+    add(abnormal(values.lumboXR), `Lumbosacral XR : ${text(values.lumboXR)}`);
+    add(abnormal(values.ecgHasil), `ECG : ${text(values.ecgHasil)}`);
+    add(abnormal(values.tmHasil), `Treadmill : ${text(values.tmHasil)}`);
+    add(abnormal(values.usg), `USG : ${text(values.usg)}`);
+    add(abnormal(values.spiInterp, ['N/A', 'Normal']), `Spirometry : ${text(values.spiInterp)}`);
+    add(abnormal(values.audInterp, ['N/A', 'Normal', 'Normal Audiometry']), `Audiometry : ${text(values.audInterp)}`);
+    add(/Kurang|Buruk/i.test(text(values.tesKebugaran)), `Uji Kebugaran : ${text(values.tesKebugaran)}`);
+    return items.join(', ');
+  }
   if (bmi !== null && bmi >= 25) findings.push(bmi >= 35 ? 'Obesitas II' : bmi >= 30 ? 'Obesitas I' : 'Overweight');
   if (hb !== null && (hb > 16.5 || hb < 12)) findings.push(hb > 16.5 ? 'Polisitemia (Hb High)' : 'Anemia');
   if (leukosit !== null && (leukosit > 11 || leukosit < 4)) findings.push(leukosit > 11 ? 'Leukositosis' : 'Leukopenia');
@@ -86,7 +159,13 @@ function buildClinicalSummary(values: MCUValues) {
   if (gdp !== null && gdp >= 100 && gdp <= 125) findings.push('Prediabetes');
   if (au !== null && ((gender.includes('Laki') && au > 7) || (gender.includes('Perempuan') && au > 6))) findings.push('Hyperuricemia');
   if (ureum !== null && ureum > 48.5) findings.push('Azotemia');
+  // DH follows the workbook's literal threshold (>=40); DK uses >=1.4 separately.
   if (kreatinin !== null && kreatinin >= 40) findings.push('Renal Impairment');
+  const sgot = numberValue(values.sgot);
+  const sgpt = numberValue(values.sgpt);
+  if (sgot !== null && sgpt !== null && sgot >= 40 && sgpt >= 41) findings.push('Transaminitis (AST & ALT High)');
+  else if (sgot !== null && sgot >= 40) findings.push('Transaminitis (AST High)');
+  else if (sgpt !== null && sgpt >= 41) findings.push('Transaminitis (ALT High)');
   if (ggt !== null && ggt >= 61) findings.push('Cholestasis (GGT High)');
   if (alp !== null && alp >= 147) findings.push('Cholestasis (ALP High)');
   if (billirubin !== null && billirubin > 1.2) findings.push('Hyperbilirubinemia');
@@ -100,6 +179,13 @@ function buildClinicalSummary(values: MCUValues) {
   if (abnormal(values.ecgHasil)) findings.push(`ECG : ${text(values.ecgHasil)}`);
   if (abnormal(values.tmHasil)) findings.push(`Treadmill test : ${text(values.tmHasil)}`);
   if (abnormal(values.usg)) findings.push(`USG (${text(values.usg)})`);
+  if (abnormal(values.ul)) findings.push(`UL : ${text(values.ul)}`);
+  if (abnormal(values.spiInterp, ['N/A', 'Normal'])) findings.push(`${text(values.spiInterp)} Lung Disease`);
+  if (abnormal(values.audInterp, ['N/A', 'Normal', 'Normal Audiometry'])) findings.push(text(values.audInterp));
+  if (abnormal(values.tesKebugaran, ['N/A', 'DBN', 'Normal']) &&
+      /Kurang|Buruk/i.test(text(values.tesKebugaran))) {
+    findings.push(text(values.tesKebugaran));
+  }
   return findings.filter(Boolean);
 }
 
@@ -140,9 +226,15 @@ export function applyMCUCalculations(values: MCUValues): MCUValues {
   );
   result.tglExpired = addOneYear(result.tglMCU);
   const findings = buildClinicalSummary(result);
-  result.diagnosaMedis = findings.join(', ');
-  result.itemFU = findings.map(finding => `• ${finding}`).join('\n');
-  result.perluFU = text(result.kesVendor) && text(result.kesVendor) !== 'Fit To Work' && findings.length > 0 ? 'Ya' : 'Tidak';
+  if (!text(result.diagnosaMedis)) {
+    result.diagnosaMedis = findings.join(', ');
+  }
+  // DK is formula-driven in the spreadsheet. It remains empty for Fit To Work.
+  result.itemFU = buildFormulaFollowUp(result, findings);
+  // DI is a Ya/Tidak dropdown in the workbook, so preserve an extracted/manual value.
+  if (!text(result.perluFU)) {
+    result.perluFU = text(result.kesVendor) && text(result.kesVendor) !== 'Fit To Work' && findings.length > 0 ? 'Ya' : 'Tidak';
+  }
 
   const calculationInput: Record<string, string | number | undefined> = Object.fromEntries(
     Object.entries(result).map(([key, value]) => [key, value === null ? undefined : value]),

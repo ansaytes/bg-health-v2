@@ -107,7 +107,9 @@ export const MCU_FIELDS: MCUFieldDef[] = [
   f('jenisKelamin', 'E', 'Jenis Kelamin', 'identity', 'select', { options: ['Laki - Laki', 'Perempuan'] }),
   f('jabatan', 'F', 'Jabatan', 'identity'),
   f('site', 'G', 'Site', 'identity'),
-  f('statusMCU', 'H', 'Status MCU', 'identity', 'select', { options: ['Pre - Employee', 'Annual', 'Resmi', 'Khusus', 'Lainnya'] }),
+  f('statusMCU', 'H', 'Status MCU', 'identity', 'select', {
+    options: ['Pre Employee', 'Annual', 'Specific', 'Retirement', 'Follow Up - Pre Employee', 'Follow Up - Annual'],
+  }),
   f('tglMCU', 'I', 'Tanggal MCU', 'identity', 'date', { textNA: false }),
   f('tempatMCU', 'J', 'Tempat MCU', 'identity'),
 
@@ -223,10 +225,29 @@ export const MCU_FIELDS: MCUFieldDef[] = [
 
   // DF–DS Penilaian dan kalkulasi
   f('kesVendor', 'DF', 'Kesimpulan Vendor', 'assessment', 'select', { options: ['Fit To Work', 'Fit With Note', 'Fit With Restriction', 'Currently Unfit', 'Temporary Unfit', 'Unfit'] }),
-  f('rekQSHE', 'DG', 'Rekomendasi QSHE Medic', 'assessment', 'textarea'),
+  f('rekQSHE', 'DG', 'Rekomendasi QSHE Medic', 'assessment', 'select', {
+    options: ['Fit To Work', 'Fit With Note', 'Fit With Restriction', 'Currently Unfit', 'Unfit', 'Temporary Unfit'],
+  }),
   f('diagnosaMedis', 'DH', 'Diagnosa Medis', 'assessment', 'textarea', { autoCalc: true }),
-  f('perluFU', 'DI', 'Perlu Follow Up?', 'assessment', 'select', { options: ['Ya', 'Tidak'], autoCalc: true }),
-  f('rekFU', 'DJ', 'Rekomendasi Follow Up', 'assessment', 'textarea'),
+  f('perluFU', 'DI', 'Perlu Follow Up?', 'assessment', 'select', { options: ['Ya', 'Tidak'] }),
+  f('rekFU', 'DJ', 'Rekomendasi Follow Up', 'assessment', 'select', {
+    options: [
+      'Konsultasi dan terapi ke Dokter Umum',
+      'Konsultasi dan terapi ke Dokter Sp. PD',
+      'Konsultasi dan terapi ke Dokter Sp. JP',
+      'Konsultasi dan terapi ke Dokter Sp. P',
+      'Konsultasi dan terapi ke Dokter Sp. M',
+      'Konsultasi dan terapi ke Dokter Sp. GK / Ahli Gizi',
+      'Konsultasi dan terapi ke Psikiatri / Psikolog',
+      'Konsultasi dan terapi ke Dokter Gigi',
+      'Konsultasi dan terapi ke Dokter Sp. THT',
+      'Konsultasi dan terapi ke Dokter Sp. B',
+      'Konsultasi dan terapi ke Dokter Sp. U',
+      'Konsultasi dan terapi ke Dokter Sp. OT',
+      'Konsultasi dan terapi ke Dokter Sp. KK',
+      'Pertahankan Kondisi Tubuh Bugar Dengan Diet Sehat & Rutin Olahraga',
+    ],
+  }),
   f('itemFU', 'DK', 'Item Follow Up', 'assessment', 'textarea', { autoCalc: true }),
   f('linkMCU', 'DL', 'Link File MCU', 'assessment'),
   f('tglExpired', 'DM', 'Tanggal Expired MCU', 'calculated', 'date', { autoCalc: true, autoCalcFrom: ['tglMCU'], textNA: false }),

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { toast } from 'sonner';
 import { MCU_FIELDS, TOTAL_COLS, TEXT_NA_INDICES } from './mcu-fields';
 import { assessZonasi, calcBMI, calcMCHC, calcPct, calcDiabetes, calcPerluFU, calcFramingham } from './zonasi-engine';
+import { applyMCUCalculations } from './mcu-calculations';
 
 export type PageTab = 'home' | 'dashboard' | 'data-entry' | 'administrator';
 export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan';
@@ -205,7 +206,7 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
       if (!field || field.autoCalc || field.id === 'kesVendor' || field.id === 'rekQSHE' || field.id === 'catatan') return false;
       return true;
     });
-    updates.perluFU = calcPerluFU(kesVendor, hasAbnormal);
+    if (!fd.perluFU) updates.perluFU = calcPerluFU(kesVendor, hasAbnormal);
     if (fd.tglMCU) {
       const mcuDate = new Date(`${fd.tglMCU}T00:00:00`);
       if (!Number.isNaN(mcuDate.getTime())) {
@@ -225,6 +226,12 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
     updates.zonasi = zResult.zona;
     updates.triggerZona = zResult.triggers.join(' | ');
     updates.pengendalian = zResult.pengendalian;
+
+    const formulaValues = applyMCUCalculations({ ...fd, ...updates });
+    for (const key of ['diagnosaMedis', 'itemFU', 'tglExpired']) {
+      const value = formulaValues[key];
+      if (value !== null && value !== undefined) updates[key] = String(value);
+    }
 
     // Apply only changed values
     const newFd = { ...get().formData };
