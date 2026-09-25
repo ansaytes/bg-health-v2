@@ -20,6 +20,7 @@ export interface MCUFieldDef {
   min?: number;
   max?: number;
   options?: string[];
+  multiple?: boolean;
   autoCalc?: boolean;
   autoCalcFrom?: string[];
   textNA?: boolean;
@@ -231,6 +232,7 @@ export const MCU_FIELDS: MCUFieldDef[] = [
   f('diagnosaMedis', 'DH', 'Diagnosa Medis', 'assessment', 'textarea', { autoCalc: true }),
   f('perluFU', 'DI', 'Perlu Follow Up?', 'assessment', 'select', { options: ['Ya', 'Tidak'] }),
   f('rekFU', 'DJ', 'Rekomendasi Follow Up', 'assessment', 'select', {
+    multiple: true,
     options: [
       'Konsultasi dan terapi ke Dokter Umum',
       'Konsultasi dan terapi ke Dokter Sp. PD',

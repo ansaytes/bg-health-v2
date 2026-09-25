@@ -182,11 +182,35 @@ export async function POST(req: Request) {
 
     // Hanya ambil field yang valid sesuai mcu-fields.ts
     const validData: Record<string, string> = {};
-    const validKeys = new Set(MCU_FIELDS.map(f => f.id));
+    const normalizeKey = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const fieldAliases = new Map<string, string>();
+    for (const field of MCU_FIELDS) {
+      fieldAliases.set(normalizeKey(field.id), field.id);
+      fieldAliases.set(normalizeKey(field.label), field.id);
+    }
+    fieldAliases.set('hbsag', 'hbsag');
+    fieldAliases.set('hbsagresult', 'hbsag');
+    fieldAliases.set('hemoglobin', 'hb');
+    fieldAliases.set('hemoglobinhb', 'hb');
+    fieldAliases.set('whitebloodcell', 'leukosit');
+    fieldAliases.set('whitebloodcells', 'leukosit');
+    fieldAliases.set('wbc', 'leukosit');
+    fieldAliases.set('redbloodcell', 'eritrosit');
+    fieldAliases.set('redbloodcells', 'eritrosit');
+    fieldAliases.set('rbc', 'eritrosit');
+    fieldAliases.set('platelet', 'trombosit');
+    fieldAliases.set('platelets', 'trombosit');
+    fieldAliases.set('plt', 'trombosit');
+    fieldAliases.set('hematocrit', 'hematokrit');
+    fieldAliases.set('mcv', 'mcv');
+    fieldAliases.set('mch', 'mch');
+    fieldAliases.set('mchc', 'mchc');
+    fieldAliases.set('esr', 'led');
     
     for (const [k, v] of Object.entries(parsedData)) {
-        if (validKeys.has(k) && k !== 'catatan' && v !== null && v !== undefined) {
-            validData[k] = String(v);
+        const fieldId = fieldAliases.get(normalizeKey(k));
+        if (fieldId && fieldId !== 'catatan' && v !== null && v !== undefined) {
+            validData[fieldId] = Array.isArray(v) ? v.map(String).join(' | ') : String(v);
         }
     }
     if (validData.jenisKelamin) {

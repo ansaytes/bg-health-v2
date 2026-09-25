@@ -180,8 +180,7 @@ export default function ReviewMCU() {
         if (mapped.jabatan) updates.jabatan = mapped.jabatan;
         if (mapped.site) updates.site = mapped.site;
         if (mapped.usia) updates.usia = mapped.usia;
-        updates.nikKtp = nikInput.trim();
-        updates.nationalId = nikInput.trim();
+        updates.nationalId = emp.national_id || nikInput.trim();
         store.setFormBatch(updates);
         store.showToast('Data karyawan ditemukan', 'success');
       } else {
@@ -381,7 +380,6 @@ export default function ReviewMCU() {
                       if (mapped.usia) updates.usia = mapped.usia;
                       if (mapped.jabatan) updates.jabatan = mapped.jabatan;
                       if (mapped.site) updates.site = mapped.site;
-                      updates.nikKtp = emp.national_id || nikInput.trim();
                       updates.nationalId = emp.national_id || nikInput.trim();
                       store.setFormBatch(updates);
                       store.showToast('Data karyawan ditemukan', 'success');
@@ -746,14 +744,17 @@ function FieldRenderer({
         />
       ) : field.type === 'select' ? (
         <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          multiple={field.multiple}
+          value={field.multiple ? value.split(' | ').filter(Boolean) : value}
+          onChange={(e) => onChange(field.multiple
+            ? Array.from(e.target.selectedOptions).map((option) => option.value).join(' | ')
+            : e.target.value)}
           className={
-            'iOS-select w-full h-9 rounded-xl bg-background border border-input text-sm px-3 text-foreground ' +
+            `iOS-select w-full ${field.multiple ? 'min-h-24 py-2' : 'h-9'} rounded-xl bg-background border border-input text-sm px-3 text-foreground ` +
             (abnormal ? 'border-red-500/60 dark:border-red-500/50' : '')
           }
         >
-          <option value="">Pilih...</option>
+          {!field.multiple && <option value="">Pilih...</option>}
           {field.options?.map((opt) => (
             <option key={opt} value={opt}>{opt}</option>
           ))}
