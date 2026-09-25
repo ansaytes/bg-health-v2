@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/accordion';
 import { useMCUStore } from '@/lib/store';
 import { MCU_FIELDS, MCU_SECTIONS, getFieldsBySection, type MCUFieldDef } from '@/lib/mcu-fields';
+import { supabase } from '@/lib/supabase';
 
 // Icon map for section icons
 const SECTION_ICONS: Record<string, React.ReactNode> = {
@@ -174,10 +175,33 @@ export default function ReviewMCU() {
     }
   }, [nikInput, searchBy, store]);
 
-  // Recall MCU data
+  // Recall the latest persisted MCU record for the selected employee.
   const handleRecall = useCallback(async () => {
-    store.showToast('Recall MCU berhasil (mock)', 'info');
-  }, [store]);
+    if (!store.employee?.nikKaryawan && !store.formData.nationalId) {
+      store.showToast('NIK Karyawan atau NIK KTP belum tersedia', 'error');
+      return;
+    }
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const params = new URLSearchParams();
+      if (store.employee?.nikKaryawan) params.set('nik', store.employee.nikKaryawan);
+      else if (store.formData.nationalId) params.set('national_id', store.formData.nationalId);
+      const response = await fetch(`/api/mcu/records?${params.toString()}`, {
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+      });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.error || 'Gagal mengambil data MCU');
+      if (!json.record) {
+        store.showToast('Belum ada data MCU tersimpan untuk karyawan ini', 'info');
+        return;
+      }
+      store.setFormBatch(json.record);
+      store.showToast('Data MCU terakhir berhasil dipanggil dari database', 'success');
+      goStep('form', 1);
+    } catch (error) {
+      store.showToast(error instanceof Error ? error.message : 'Gagal mengambil data MCU', 'error');
+    }
+  }, [store, goStep]);
 
   // Step 2: OCR extraction
   const handleExtract = useCallback(async () => {
