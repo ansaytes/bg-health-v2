@@ -60,11 +60,10 @@ export default function RecordMCUTableModern() {
       key: field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase(),
       label: field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase(),
     })),
-    { key: 'national_id_hash', label: 'national_id_hash' },
     { key: 'nik_karyawan_hash', label: 'nik_karyawan_hash' },
   ], []);
   const frozenOffsets = useMemo(() => {
-    const widths: Record<string, number> = { id: 180, created_at: 170, updated_at: 170, nik_karyawan: 150, nama: 210, site: 150, jabatan: 190, tgl_mcu: 150, status_mcu: 150, national_id_hash: 270, nik_karyawan_hash: 270 };
+    const widths: Record<string, number> = { id: 180, created_at: 170, updated_at: 170, nik_karyawan: 150, nama: 210, site: 150, jabatan: 190, tgl_mcu: 150, status_mcu: 150, nik_karyawan_hash: 270 };
     let offset = 48;
     return Object.fromEntries(columns.filter(column => frozenColumns.includes(column.key)).map(({ key }) => {
       const value = [key, offset];
@@ -89,7 +88,7 @@ export default function RecordMCUTableModern() {
           <div className="mcu-records-actions">
             <div className="mcu-records-search">
               <Search size={14} />
-              <input aria-label="Cari record MCU" placeholder="Cari NIK Karyawan atau NIK KTP..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+              <input aria-label="Cari record MCU" placeholder="Cari NIK Karyawan..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
             </div>
             <div className="mcu-records-count">{total} record</div>
           </div>

@@ -44,7 +44,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       records: (records || []).map(record => ({
         ...decryptMCURecord(record),
-        national_id_hash: record.national_id_hash,
         nik_karyawan_hash: record.nik_karyawan_hash,
       })),
       page,
