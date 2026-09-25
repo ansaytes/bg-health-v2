@@ -15,13 +15,16 @@ async function caller(req: NextRequest) {
   }
   const { data: { user } } = await client.auth.getUser(token);
   if (!user) return null;
-  const { data: profile } = await client.from('user_profiles').select('role,site,username').eq('user_id', user.id).single();
+  const { data: profile } = await client.from('user_profiles').select('role,site,username,national_id,employee_nik_hash').eq('user_id', user.id).single();
   if (!profile) return null;
-  const { data: linkedEmployee } = await client
-    .from('employees')
-    .select('site_name')
-    .eq('nik_hash', hashField(profile.username))
-    .maybeSingle();
+  const employeeHash = profile.employee_nik_hash || hashField(profile.username);
+  const employeeNationalIdHash = profile.national_id ? hashField(profile.national_id) : null;
+  const employeeQuery = employeeHash
+    ? client.from('employees').select('site_name').eq('nik_hash', employeeHash).maybeSingle()
+    : employeeNationalIdHash
+      ? client.from('employees').select('site_name').eq('national_id_hash', employeeNationalIdHash).maybeSingle()
+      : Promise.resolve({ data: null });
+  const { data: linkedEmployee } = await employeeQuery;
   return { userId: user.id, role: profile.role, site: linkedEmployee?.site_name || profile.site };
 }
 

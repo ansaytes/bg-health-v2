@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { decryptEmployee } from '@/lib/encryption';
+import { decryptEmployee, hashField } from '@/lib/encryption';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
@@ -81,14 +81,35 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    const hashes = (data || []).map(profile => profile.employee_nik_hash).filter(Boolean);
-    const { data: employees, error: employeeError } = hashes.length
-      ? await client.from('employees').select('nik,nik_hash,national_id,nama,department,job_position,site_name').in('nik_hash', hashes)
-      : { data: [], error: null };
+    // Support both newly linked profiles and older profiles that only stored
+    // the employee's national ID. Keep lookup hashes before decryption because
+    // decryptEmployee intentionally removes internal hash columns.
+    const lookupHashes = [...new Set((data || []).flatMap(profile => [
+      profile.employee_nik_hash,
+      profile.national_id ? hashField(profile.national_id) : null,
+      profile.username ? hashField(profile.username) : null,
+    ]).filter((value): value is string => Boolean(value)))];
+    const employeeSelect = 'nik,nik_hash,national_id,national_id_hash,nama,department,job_position,site_name';
+    const [byNik, byNationalId] = lookupHashes.length
+      ? await Promise.all([
+        client.from('employees').select(employeeSelect).in('nik_hash', lookupHashes),
+        client.from('employees').select(employeeSelect).in('national_id_hash', lookupHashes),
+      ])
+      : [{ data: [], error: null }, { data: [], error: null }];
+    const employeeError = byNik.error || byNationalId.error;
     if (employeeError) return NextResponse.json({ error: employeeError.message }, { status: 500 });
-    const employeeByHash = new Map((employees || []).map(employee => [employee.nik_hash, decryptEmployee(employee)]));
+    const employeeByHash = new Map<string, ReturnType<typeof decryptEmployee>>();
+    for (const employee of [...(byNik.data || []), ...(byNationalId.data || [])]) {
+      const decrypted = decryptEmployee(employee);
+      if (employee.nik_hash) employeeByHash.set(employee.nik_hash, decrypted);
+      if (employee.national_id_hash) employeeByHash.set(employee.national_id_hash, decrypted);
+    }
     const enrichedUsers = (data || []).map(profile => {
-      const employee = employeeByHash.get(profile.employee_nik_hash);
+      const employee = [
+        profile.employee_nik_hash,
+        profile.national_id ? hashField(profile.national_id) : null,
+        profile.username ? hashField(profile.username) : null,
+      ].map(value => value ? employeeByHash.get(value) : undefined).find(Boolean);
       return {
         ...profile,
         employee_nik: employee?.nik || null,
