@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { decryptEmployee, hashField } from '@/lib/encryption';
 
 // Client-side Supabase (anon key) — for login, logout, session
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
@@ -94,7 +95,7 @@ export async function POST(req: NextRequest) {
 
     // --- REGISTER (admin only) ---
     if (action === 'register') {
-      const { username, password, role, full_name, national_id, site } = body;
+      const { username, password, role, full_name, national_id, site, employee_nik } = body;
 
       // Verify caller is admin/superuser
       const authInfo = await getSessionRole(req);
@@ -120,6 +121,21 @@ export async function POST(req: NextRequest) {
       if (!validRoles.includes(role)) {
         return NextResponse.json({ error: 'Role tidak valid' }, { status: 400 });
       }
+
+      if (!employee_nik || typeof employee_nik !== 'string') {
+        return NextResponse.json({ error: 'NIK Karyawan wajib dipilih dari data employee' }, { status: 400 });
+      }
+      const employeeHash = hashField(employee_nik.trim());
+      const { data: employee } = await supabaseAdmin
+        .from('employees')
+        .select('nik,nama,national_id,site_name')
+        .eq('nik_hash', employeeHash)
+        .eq('employment_status', 'Aktif')
+        .maybeSingle();
+      if (!employee) {
+        return NextResponse.json({ error: 'NIK Karyawan tidak ditemukan di data employee aktif' }, { status: 400 });
+      }
+      const employeeData = decryptEmployee(employee);
 
       // Check if username already exists in profiles
       const { data: existingProfile } = await supabase
@@ -149,10 +165,11 @@ export async function POST(req: NextRequest) {
         .insert({
           user_id: newUser.user.id,
           username,
-          full_name: full_name || null,
+          full_name: employeeData.nama || full_name || null,
           role,
-          national_id: national_id || null,
-          site: role === 'pic' ? (site || null) : null,
+          national_id: employeeData.national_id || national_id || null,
+          employee_nik_hash: employeeHash,
+          site: employeeData.site_name || (role === 'pic' ? (site || null) : null),
         });
 
       if (profileError) {

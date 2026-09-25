@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { decryptEmployee } from '@/lib/encryption';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
@@ -80,7 +81,25 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ users: data });
+    const hashes = (data || []).map(profile => profile.employee_nik_hash).filter(Boolean);
+    const { data: employees, error: employeeError } = hashes.length
+      ? await client.from('employees').select('nik,nik_hash,national_id,nama,department,job_position,site_name').in('nik_hash', hashes)
+      : { data: [], error: null };
+    if (employeeError) return NextResponse.json({ error: employeeError.message }, { status: 500 });
+    const employeeByHash = new Map((employees || []).map(employee => [employee.nik_hash, decryptEmployee(employee)]));
+    const enrichedUsers = (data || []).map(profile => {
+      const employee = employeeByHash.get(profile.employee_nik_hash);
+      return {
+        ...profile,
+        employee_nik: employee?.nik || null,
+        employee_national_id: employee?.national_id || profile.national_id || null,
+        employee_name: employee?.nama || profile.full_name || null,
+        employee_department: employee?.department || null,
+        employee_job_position: employee?.job_position || null,
+        employee_site: employee?.site_name || profile.site || null,
+      };
+    });
+    return NextResponse.json({ users: enrichedUsers });
   } catch {
     return NextResponse.json({ error: 'Terjadi kesalahan server' }, { status: 500 });
   }
@@ -101,7 +120,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'ID dan role wajib diisi' }, { status: 400 });
     }
 
-    const validRoles = ['superuser', 'administrator', 'viewer'];
+    const validRoles = ['superuser', 'administrator', 'pic', 'viewer'];
     if (!validRoles.includes(role)) {
       return NextResponse.json({ error: 'Role tidak valid' }, { status: 400 });
     }

@@ -11,6 +11,12 @@ interface UserProfile {
   full_name: string | null;
   role: string;
   national_id: string | null;
+  employee_nik: string | null;
+  employee_national_id: string | null;
+  employee_name: string | null;
+  employee_department: string | null;
+  employee_job_position: string | null;
+  employee_site: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -39,7 +45,7 @@ export default function UserManagement() {
   // Register form state
   const [showRegister, setShowRegister] = useState(false);
   const [regForm, setRegForm] = useState({
-    username: '', password: '', full_name: '', role: 'viewer' as string, national_id: '', site: '',
+    username: '', password: '', full_name: '', role: 'viewer' as string, employee_nik: '', national_id: '', site: '',
   });
   const [regLoading, setRegLoading] = useState(false);
   const [regError, setRegError] = useState('');
@@ -108,7 +114,7 @@ export default function UserManagement() {
       const data = await res.json();
       if (!res.ok) { setRegError(data.error || 'Gagal mendaftarkan pengguna'); return; }
       setRegSuccess('Pengguna berhasil didaftarkan!');
-      setRegForm({ username: '', password: '', full_name: '', role: 'viewer', national_id: '', site: '' });
+      setRegForm({ username: '', password: '', full_name: '', role: 'viewer', employee_nik: '', national_id: '', site: '' });
       fetchUsers();
     } catch { setRegError('Gagal terhubung ke server'); } finally { setRegLoading(false); }
   };
@@ -207,42 +213,48 @@ export default function UserManagement() {
               </select>
             </div>
             <div>
-              <label className="admin-label">NIK (National ID)</label>
+              <label className="admin-label">NIK Karyawan *</label>
               <input
-                type="text" value={regForm.national_id}
+                type="text" value={regForm.employee_nik}
                 onChange={async (e) => {
                   const nikVal = e.target.value;
-                  setRegForm({ ...regForm, national_id: nikVal });
+                  setRegForm({ ...regForm, employee_nik: nikVal });
                   if (nikVal.length >= 6) {
                     try {
                       const res = await fetch('/api/employee', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ query: nikVal }),
+                        body: JSON.stringify({ query: nikVal, searchBy: 'nik' }),
                       });
                       const json = await res.json();
                       if (json.success && json.data && json.data.length > 0) {
                         const emp = json.data[0];
                         setRegForm(prev => ({
                           ...prev,
-                          national_id: nikVal,
+                          employee_nik: nikVal,
                           full_name: emp.nama || prev.full_name,
                           username: emp.nik ? String(emp.nik) : prev.username,
+                          national_id: emp.national_id || prev.national_id,
+                          site: emp.site_name || prev.site,
                         }));
                       }
                     } catch {}
                   }
                 }}
-                placeholder="Ketik NIK untuk auto-fill" className="admin-input"
+                placeholder="Ketik NIK Karyawan untuk auto-fill" className="admin-input"
               />
+            </div>
+            <div>
+              <label className="admin-label">NIK KTP</label>
+              <input type="text" value={regForm.national_id} readOnly placeholder="Terisi dari employee" className="admin-input" />
             </div>
             {regForm.role === 'pic' && (
               <div>
                 <label className="admin-label">Site PIC</label>
                 <input
                   type="text" value={regForm.site}
-                  onChange={(e) => setRegForm({ ...regForm, site: e.target.value })}
-                  placeholder="Contoh: Aceh atau Head Office" className="admin-input"
+                  readOnly
+                  placeholder="Terisi dari employee" className="admin-input"
                 />
               </div>
             )}
@@ -295,8 +307,13 @@ export default function UserManagement() {
           <table>
             <thead>
               <tr>
+                <th>NIK Karyawan</th>
+                <th>NIK KTP</th>
+                <th>Nama</th>
+                <th>Departemen</th>
+                <th>Jabatan</th>
+                <th>Site</th>
                 <th>Username</th>
-                <th>Nama Lengkap</th>
                 <th>Role</th>
                 <th>NIK</th>
                 <th>Terdaftar</th>
@@ -305,16 +322,21 @@ export default function UserManagement() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={isSuperuser ? 6 : 5} style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)' }}>Memuat pengguna...</td></tr>
+                <tr><td colSpan={isSuperuser ? 10 : 9} style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)' }}>Memuat pengguna...</td></tr>
               ) : users.length === 0 ? (
-                <tr><td colSpan={isSuperuser ? 6 : 5} style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)' }}>Belum ada pengguna terdaftar</td></tr>
+                <tr><td colSpan={isSuperuser ? 10 : 9} style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)' }}>Belum ada pengguna terdaftar</td></tr>
               ) : (
                 users.map((u) => {
                   const rs = ROLE_STYLES[u.role] || ROLE_STYLES.viewer;
                   return (
                     <tr key={u.id}>
+                      <td style={{ fontFamily: 'monospace', fontSize: 10 }}>{u.employee_nik || '—'}</td>
+                      <td style={{ fontFamily: 'monospace', fontSize: 10 }}>{u.employee_national_id || '—'}</td>
+                      <td>{u.employee_name || u.full_name || '—'}</td>
+                      <td>{u.employee_department || '—'}</td>
+                      <td>{u.employee_job_position || '—'}</td>
+                      <td>{u.employee_site || '—'}</td>
                       <td style={{ fontWeight: 500 }}>{u.username}</td>
-                      <td>{u.full_name || '—'}</td>
                       <td>
                         {isSuperuser ? (
                           <select
@@ -331,7 +353,6 @@ export default function UserManagement() {
                           </span>
                         )}
                       </td>
-                      <td style={{ fontFamily: 'monospace', fontSize: 10 }}>{u.national_id || '—'}</td>
                       <td style={{ color: 'var(--muted-foreground)', fontSize: 10 }}>{new Date(u.created_at).toLocaleDateString('id-ID')}</td>
                       {isSuperuser && (
                         <td style={{ textAlign: 'center' }}>

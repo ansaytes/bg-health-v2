@@ -15,8 +15,14 @@ async function caller(req: NextRequest) {
   }
   const { data: { user } } = await client.auth.getUser(token);
   if (!user) return null;
-  const { data: profile } = await client.from('user_profiles').select('role,site').eq('user_id', user.id).single();
-  return profile ? { userId: user.id, role: profile.role, site: profile.site } : null;
+  const { data: profile } = await client.from('user_profiles').select('role,site,username').eq('user_id', user.id).single();
+  if (!profile) return null;
+  const { data: linkedEmployee } = await client
+    .from('employees')
+    .select('site_name')
+    .eq('nik_hash', hashField(profile.username))
+    .maybeSingle();
+  return { userId: user.id, role: profile.role, site: linkedEmployee?.site_name || profile.site };
 }
 
 function canUseSite(user: { role: string; site?: string | null }, site: string) {
