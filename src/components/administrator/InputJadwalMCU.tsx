@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, CalendarDays, Search, Save } from 'lucide-react';
+import { ArrowDown, ArrowUp, CalendarDays, ChevronLeft, ChevronRight, Search, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
@@ -36,6 +36,9 @@ export default function InputJadwalMCU() {
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [sort, setSort] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({ key: 'nama', direction: 'asc' });
 
   const getAuthHeaders = async (): Promise<HeadersInit> => {
@@ -48,10 +51,12 @@ export default function InputJadwalMCU() {
   const load = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/mcu/schedule', { headers: await getAuthHeaders() });
+      const response = await fetch(`/api/mcu/schedule?page=${page}`, { headers: await getAuthHeaders() });
       const json = await response.json();
       if (!response.ok) throw new Error(json.error || 'Gagal memuat data karyawan');
       setRows(json.schedules || []);
+      setTotal(json.total || 0);
+      setTotalPages(json.totalPages || 0);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Gagal memuat data karyawan');
     } finally {
@@ -59,7 +64,7 @@ export default function InputJadwalMCU() {
     }
   };
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void load(); }, [page]);
 
   const updateDate = (nik: string, value: string) => {
     setRows(current => current.map(row => row.nik_karyawan === nik ? { ...row, tanggal_jadwal: value } : row));
@@ -117,6 +122,11 @@ export default function InputJadwalMCU() {
       });
   }, [rows, query, sort]);
 
+  const changePage = (nextPage: number) => {
+    if (nextPage < 1 || (totalPages > 0 && nextPage > totalPages)) return;
+    setPage(nextPage);
+  };
+
   const header = (key: SortKey, label: string) => (
     <th>
       <button type="button" className="mcu-sort-button" onClick={() => changeSort(key)}>
@@ -137,7 +147,7 @@ export default function InputJadwalMCU() {
       {message && <div className="admin-alert">{message}</div>}
       <div className="mcu-entry-toolbar">
         <div className="mcu-entry-search"><Search size={16} /><input aria-label="Cari karyawan" placeholder="Cari NIK, nama, site, departemen..." value={query} onChange={event => setQuery(event.target.value)} /></div>
-        <span className="mcu-entry-count">{visibleRows.length} dari {rows.length} karyawan</span>
+        <span className="mcu-entry-count">{visibleRows.length} dari {total} karyawan | Halaman {page} dari {totalPages || 1}</span>
       </div>
       <div className="raw-table-scroll mcu-entry-table">
         <table>
@@ -155,6 +165,13 @@ export default function InputJadwalMCU() {
           </tbody>
         </table>
       </div>
+      {totalPages > 1 && (
+        <div className="mcu-entry-pagination">
+          <Button variant="outline" size="sm" disabled={page === 1} onClick={() => changePage(page - 1)}><ChevronLeft size={14} /> Sebelumnya</Button>
+          <span>Halaman {page} / {totalPages}</span>
+          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => changePage(page + 1)}>Berikutnya <ChevronRight size={14} /></Button>
+        </div>
+      )}
     </div>
   );
 }

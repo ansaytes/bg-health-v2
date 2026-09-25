@@ -126,6 +126,11 @@ function mapRowToEmployee(row: string[]): Record<string, unknown> | null {
   return emp;
 }
 
+function isEligibleEmployee(employee: Record<string, unknown>): boolean {
+  return String(employee.division || '').trim().toLowerCase() === 'mining'
+    && String(employee.employment_status || '').trim().toLowerCase() === 'aktif';
+}
+
 export async function GET() {
   if (!csvUrl) {
     return NextResponse.json({ error: 'GOOGLE_SHEETS_CSV_URL not configured' }, { status: 500 });
@@ -185,8 +190,10 @@ export async function POST(request: NextRequest) {
 
     // 2. Map rows to employee objects (skip header + invalid rows)
     const allEmployees = rows.slice(1).map(mapRowToEmployee);
-    const employees = allEmployees.filter((e): e is Record<string, unknown> => e !== null);
-    const skipped = allEmployees.length - employees.length;
+    const validEmployees = allEmployees.filter((e): e is Record<string, unknown> => e !== null);
+    const employees = validEmployees.filter(isEligibleEmployee);
+    const skipped = allEmployees.length - validEmployees.length;
+    const filteredByCriteria = validEmployees.length - employees.length;
 
     // 3. Upsert to Supabase: batch 500 → fallback 50 → fallback 1
     const supabase = createClient(supabaseUrl, supabaseServiceKey || 'placeholder-service-key');
@@ -242,6 +249,7 @@ export async function POST(request: NextRequest) {
       total_rows: rows.length - 1,
       upserted: totalUpserted,
       skipped: skipped,
+      filtered_by_criteria: filteredByCriteria,
       errors: batchErrors,
       failed_niks: failedNiks.slice(0, 20),
       duration_seconds: duration,

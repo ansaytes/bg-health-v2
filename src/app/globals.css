@@ -1572,6 +1572,14 @@ select.admin-input.compact-input {
   text-align: center;
   color: var(--muted-foreground);
 }
+.mcu-entry-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
 @media (max-width: 700px) {
   .mcu-entry-page { padding: 12px; }
   .mcu-entry-toolbar { align-items: stretch; flex-direction: column; }

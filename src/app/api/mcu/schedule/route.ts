@@ -32,23 +32,43 @@ function canUseSite(user: { role: string; site?: string | null }, site: string) 
   return user.role !== 'pic' || (user.site || '').toLowerCase() === 'head office' || user.site === site;
 }
 
+async function fetchAllRows<T>(
+  fetchPage: (from: number, to: number) => Promise<{ data: T[] | null; error: { message: string } | null }>
+) {
+  const pageSize = 1000;
+  const rows: T[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await fetchPage(from, from + pageSize - 1);
+    if (error) return { data: null, error };
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) return { data: rows, error: null };
+  }
+}
+
 export async function GET(req: NextRequest) {
   const user = await caller(req);
   if (!user || !['pic', 'superuser', 'administrator'].includes(user.role)) {
     return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
   }
+  const searchParams = new URL(req.url).searchParams;
+  const requestedPage = Number.parseInt(searchParams.get('page') || '1', 10);
+  const pageSize = 100;
+  const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const employeeFrom = (page - 1) * pageSize;
   let employeeQuery = client.from('employees')
-    .select('nik,nama,gender,age,department,job_position,site_name,national_id')
+    .select('nik,nama,gender,age,department,job_position,site_name,national_id', { count: 'exact' })
     .ilike('employment_status', 'Aktif')
+    .eq('division', 'Mining')
     .order('site_name')
-    .order('nama');
+    .order('nama')
+    .range(employeeFrom, employeeFrom + pageSize - 1);
   if (user.role === 'pic' && user.site && user.site.toLowerCase() !== 'head office') {
     employeeQuery = employeeQuery.eq('site_name', user.site);
   }
-  const [{ data: employeeData, error: employeeError }, { data: scheduleData, error: scheduleError }, { data: monitorData, error: monitorError }] = await Promise.all([
+  const [{ data: employeeData, count: employeeCount, error: employeeError }, { data: scheduleData, error: scheduleError }, { data: monitorData, error: monitorError }] = await Promise.all([
     employeeQuery,
-    client.from('mcu_schedules').select('*'),
-    client.from('monitor_mcu').select('*'),
+    fetchAllRows((from, to) => client.from('mcu_schedules').select('*').range(from, to)),
+    fetchAllRows((from, to) => client.from('monitor_mcu').select('*').range(from, to)),
   ]);
   if (employeeError || scheduleError || monitorError) {
     const error = employeeError || scheduleError || monitorError;
@@ -90,7 +110,14 @@ export async function GET(req: NextRequest) {
       history: schedule ? historyById.get(schedule.id) || [] : [],
     };
   });
-  return NextResponse.json({ schedules: safeRows, site: user.site || null });
+  return NextResponse.json({
+    schedules: safeRows,
+    site: user.site || null,
+    page,
+    pageSize,
+    total: employeeCount || 0,
+    totalPages: Math.ceil((employeeCount || 0) / pageSize),
+  });
 }
 
 export async function POST(req: NextRequest) {

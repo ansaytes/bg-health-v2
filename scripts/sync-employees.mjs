@@ -127,6 +127,11 @@ function mapRow(row) {
   return encryptEmployee(emp);
 }
 
+function isEligibleEmployee(employee) {
+  return String(employee.division || '').trim().toLowerCase() === 'mining'
+    && String(employee.employment_status || '').trim().toLowerCase() === 'aktif';
+}
+
 async function upsertBatch(batch) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/employees`, {
     method: 'POST',
@@ -177,9 +182,11 @@ async function main() {
   console.log(`Parsed ${rows.length - 1} data rows`);
 
   const allEmployees = rows.slice(1).map(mapRow);
-  const employees = allEmployees.filter(e => e !== null);
-  const skipped = allEmployees.length - employees.length;
-  console.log(`Valid employees: ${employees.length} (skipped ${skipped} invalid rows)`);
+  const validEmployees = allEmployees.filter(e => e !== null);
+  const employees = validEmployees.filter(isEligibleEmployee);
+  const skipped = allEmployees.length - validEmployees.length;
+  const filteredByCriteria = validEmployees.length - employees.length;
+  console.log(`Eligible employees: ${employees.length} (skipped ${skipped} invalid rows, filtered ${filteredByCriteria} non-Mining/non-Aktif rows)`);
 
   const BATCH = 500;
   const failedNiks = [];
