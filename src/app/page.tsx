@@ -17,11 +17,11 @@ import LaggingIndicatorPage from '@/components/administrator/LaggingIndicatorPag
 import KunjunganBerobatForm from '@/components/administrator/KunjunganBerobatForm';
 import HealthCampaignForm from '@/components/administrator/HealthCampaignForm';
 import UserManagement from '@/components/administrator/UserManagement';
-import InputJadwalMCU from '@/components/administrator/InputJadwalMCU';
+import InputJadwalMCU from '@/components/administrator/InputJadwalMCUModern';
 import HomeView from '@/components/home/HomeView';
 import DataKesehatanTable from '@/components/dashboard/DataKesehatanTable';
 import DataKunjunganTable from '@/components/dashboard/DataKunjunganTable';
-import RecordMCUTable from '@/components/dashboard/RecordMCUTable';
+import RecordMCUTable from '@/components/dashboard/RecordMCUTableModern';
 import DataManPowerTable from '@/components/dashboard/DataManPowerTable';
 
 /*   Sidebar Icon Components */
