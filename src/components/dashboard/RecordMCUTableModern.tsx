@@ -56,7 +56,7 @@ export default function RecordMCUTableModern() {
     { key: 'id', label: 'id' },
     { key: 'created_at', label: 'created_at' },
     { key: 'updated_at', label: 'updated_at' },
-    ...MCU_FIELDS.map(field => ({
+    ...MCU_FIELDS.filter(field => field.id !== 'nationalId').map(field => ({
       key: field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase(),
       label: field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase(),
     })),
@@ -145,7 +145,7 @@ export default function RecordMCUTableModern() {
                       <tr>
                         <td colSpan={columns.length + 2} className="mcu-records-detail-cell">
                           <div className="mcu-records-detail">
-                            <pre>{JSON.stringify(row, null, 2)}</pre>
+                            <pre>{JSON.stringify(Object.fromEntries(Object.entries(row).filter(([key]) => key !== 'national_id')), null, 2)}</pre>
                           </div>
                         </td>
                       </tr>
