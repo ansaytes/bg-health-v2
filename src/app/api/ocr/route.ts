@@ -126,12 +126,13 @@ export async function POST(req: Request) {
         || /quota exceeded|rate limit|resource_exhausted/i.test(message);
 
       if (isQuotaError) {
-        const retryMatch = message.match(/retry(?:Delay| after)[^0-9]*(\d+(?:\.\d+)?)\s*s?/i);
-        const retrySeconds = retryMatch ? Math.ceil(Number(retryMatch[1])) : 60;
+        const retryMatch = message.match(/retry(?:Delay| after)[^0-9]*(\d+(?:\.\d+)?)\s*(?:s|sec|seconds)?/i)
+          || message.match(/(\d+(?:\.\d+)?)\s*(?:s|sec|seconds)\b/i);
+        const retrySeconds = retryMatch ? Math.max(1, Math.ceil(Number(retryMatch[1]))) : 60;
         return NextResponse.json(
           {
             success: false,
-            error: `Batas penggunaan layanan ekstraksi sedang tercapai. Tunggu sekitar ${retrySeconds} detik sebelum mencoba lagi.`,
+            error: `Batas penggunaan sementara tercapai pada pemeriksaan terakhir. Tunggu sekitar ${retrySeconds} detik, lalu coba lagi. Jika penolakan berlanjut, quota proyek masih penuh karena perhitungannya menggunakan window berjalan.`,
             retryAfterSeconds: retrySeconds,
           },
           {

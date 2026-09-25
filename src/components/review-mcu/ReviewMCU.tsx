@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EmployeeLookupInput, { SearchBy } from '@/components/administrator/EmployeeLookupInput';
 import {
@@ -133,6 +133,14 @@ export default function ReviewMCU() {
   const [ocrText, setOcrText] = useState('');
   const [direction, setDirection] = useState(1);
   const [ocrProgress, setOcrProgress] = useState(0);
+  const [extractionCooldown, setExtractionCooldown] = useState(0);
+  useEffect(() => {
+    if (extractionCooldown <= 0) return;
+    const timer = window.setInterval(() => {
+      setExtractionCooldown((value) => Math.max(0, value - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [extractionCooldown]);
 
   const stepIndex = useMemo(() => {
     return store.reviewStep === 'search' ? 0 : store.reviewStep === 'ocr' ? 1 : 2;
@@ -246,10 +254,12 @@ export default function ReviewMCU() {
         store.showToast('Data berhasil diekstrak', 'success');
         setTimeout(() => goStep('form', 1), 500);
       } else {
-        const retryText = json.retryAfterSeconds
-          ? ` Coba lagi setelah ${json.retryAfterSeconds} detik.`
-          : '';
-        store.showToast(`${json.error || 'Gagal mengekstrak data'}${retryText}`, 'error');
+        const retrySeconds = Number(json.retryAfterSeconds || res.headers.get('Retry-After') || 0);
+        if (retrySeconds > 0) setExtractionCooldown(retrySeconds);
+        const message = retrySeconds > 0
+          ? `${json.error || 'Batas penggunaan sementara tercapai.'} Setelah penghitung selesai, Anda dapat mencoba lagi. Jika masih muncul, berarti quota proyek masih penuh dan perlu menunggu window berikutnya.`
+          : (json.error || 'Gagal mengekstrak data');
+        store.showToast(message, 'error');
       }
     } catch (error) {
       clearInterval(interval);
@@ -557,7 +567,7 @@ export default function ReviewMCU() {
                 <motion.div {...buttonTap} className="flex-1">
                   <Button
                     onClick={handleExtract}
-                    disabled={store.extractingOCR || !ocrText.trim()}
+                    disabled={store.extractingOCR || !ocrText.trim() || extractionCooldown > 0}
                     className="w-full h-11 rounded-xl"
                   >
                     {store.extractingOCR ? (
@@ -565,7 +575,7 @@ export default function ReviewMCU() {
                     ) : (
                       <Sparkles className="size-4" />
                     )}
-                    Ekstrak Data
+                    {extractionCooldown > 0 ? `Tunggu ${extractionCooldown} detik` : 'Ekstrak Data'}
                   </Button>
                 </motion.div>
                 <motion.div {...buttonTap}>
