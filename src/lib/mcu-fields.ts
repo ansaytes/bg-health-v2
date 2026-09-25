@@ -107,7 +107,7 @@ export const MCU_FIELDS: MCUFieldDef[] = [
   f('jenisKelamin', 'E', 'Jenis Kelamin', 'identity', 'select', { options: ['Laki - Laki', 'Perempuan'] }),
   f('jabatan', 'F', 'Jabatan', 'identity'),
   f('site', 'G', 'Site', 'identity'),
-  f('statusMCU', 'H', 'Status MCU', 'identity', 'select', { options: ['Rutin', 'Resmi', 'Khusus', 'Lainnya'] }),
+  f('statusMCU', 'H', 'Status MCU', 'identity', 'select', { options: ['Pre - Employee', 'Annual', 'Resmi', 'Khusus', 'Lainnya'] }),
   f('tglMCU', 'I', 'Tanggal MCU', 'identity', 'date', { textNA: false }),
   f('tempatMCU', 'J', 'Tempat MCU', 'identity'),
 
@@ -218,8 +218,8 @@ export const MCU_FIELDS: MCUFieldDef[] = [
     ['laseque', 'DA', 'Laseque Test'], ['kernig', 'DB', 'Kernig Test'],
   ] as const).map(([id, col, label]) => f(id, col, label, 'neuro')),
   f('tesKebugaran', 'DC', 'Tes Kebugaran (6 Minutes Walk Test, Harvard Step Test)', 'fitness', 'textarea'),
-  f('pemeriksaanLain', 'DD', 'Pemeriksaan Lain', 'fitness', 'textarea'),
-  f('dugaanPAK', 'DE', 'Dugaan PAK', 'fitness', 'textarea'),
+  f('pemeriksaanLain', 'DD', 'Pemeriksaan Lain', 'assessment', 'textarea'),
+  f('dugaanPAK', 'DE', 'Dugaan PAK', 'assessment', 'textarea'),
 
   // DF–DS Penilaian dan kalkulasi
   f('kesVendor', 'DF', 'Kesimpulan Vendor', 'assessment', 'select', { options: ['Fit To Work', 'Fit With Note', 'Fit With Restriction', 'Currently Unfit', 'Temporary Unfit', 'Unfit'] }),

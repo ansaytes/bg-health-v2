@@ -206,11 +206,18 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
       return true;
     });
     updates.perluFU = calcPerluFU(kesVendor, hasAbnormal);
+    if (fd.tglMCU) {
+      const mcuDate = new Date(`${fd.tglMCU}T00:00:00`);
+      if (!Number.isNaN(mcuDate.getTime())) {
+        mcuDate.setFullYear(mcuDate.getFullYear() + 1);
+        updates.tglExpired = mcuDate.toISOString().slice(0, 10);
+      }
+    }
 
     // Framingham
     const fram = calcFramingham(fd);
     updates.framScore = String(fram.score);
-    updates.framProb = fram.prob;
+    updates.framProb = String(fram.prob).replace(/%+/g, '%');
     updates.framKat = fram.kat;
 
     // Zonasi

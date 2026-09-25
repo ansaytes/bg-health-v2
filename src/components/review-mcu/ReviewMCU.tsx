@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EmployeeLookupInput, { SearchBy } from '@/components/administrator/EmployeeLookupInput';
 import {
@@ -21,6 +21,25 @@ import {
 } from '@/components/ui/accordion';
 import { useMCUStore } from '@/lib/store';
 import { MCU_FIELDS, MCU_SECTIONS, getFieldsBySection, type MCUFieldDef } from '@/lib/mcu-fields';
+
+function calculateAge(birthDate?: string | null) {
+  if (!birthDate) return '';
+  const birth = new Date(birthDate);
+  if (Number.isNaN(birth.getTime())) return '';
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const beforeBirthday = now.getMonth() < birth.getMonth()
+    || (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate());
+  if (beforeBirthday) age -= 1;
+  return age >= 0 && age < 130 ? String(age) : '';
+}
+
+function normalizeGender(value?: string | null) {
+  const normalized = String(value || '').toLowerCase();
+  if (normalized.includes('perem') || normalized.includes('female') || normalized.includes('wanita')) return 'Perempuan';
+  if (normalized.includes('laki') || normalized.includes('male') || normalized.includes('pria')) return 'Laki - Laki';
+  return value || '';
+}
 import { supabase } from '@/lib/supabase';
 
 // Icon map for section icons
@@ -150,14 +169,14 @@ export default function ReviewMCU() {
           gender: emp.gender || '',
           jabatan: emp.job_position || '',
           site: emp.site_name || '',
-          usia: emp.age ? String(emp.age) : '',
+          usia: emp.age ? String(emp.age) : calculateAge(emp.birth_date),
         };
         store.setEmployee(mapped);
         // Auto-fill identity fields
         const updates: Record<string, string> = {};
         if (mapped.nikKaryawan) updates.nikKaryawan = mapped.nikKaryawan;
         if (mapped.nama) updates.nama = mapped.nama;
-        if (mapped.gender) updates.jenisKelamin = mapped.gender;
+        if (mapped.gender) updates.jenisKelamin = normalizeGender(mapped.gender);
         if (mapped.jabatan) updates.jabatan = mapped.jabatan;
         if (mapped.site) updates.site = mapped.site;
         if (mapped.usia) updates.usia = mapped.usia;
@@ -297,7 +316,7 @@ export default function ReviewMCU() {
   const pengendalian = store.formData.pengendalian || '';
 
   return (
-    <div className="relative" style={{ overflowY: "auto", maxHeight: "100%" }}>
+    <div className="relative review-mcu-page" style={{ overflowY: "auto", maxHeight: "100%" }}>
       <AnimatePresence mode="wait" custom={direction}>
         {/* ─── STEP 1: SEARCH ─── */}
         {store.reviewStep === 'search' && (
@@ -341,16 +360,17 @@ export default function ReviewMCU() {
                       const mapped = {
                         nikKaryawan: emp.nik || '',
                         nama: emp.nama || '',
-                        gender: emp.gender || '',
+                        gender: normalizeGender(emp.gender),
                         jabatan: emp.job_position || '',
                         site: emp.site_name || '',
-                        usia: '',
+                        usia: emp.age ? String(emp.age) : calculateAge(emp.birth_date),
                       };
                       store.setEmployee(mapped);
                       const updates: Record<string, string> = {};
                       if (mapped.nikKaryawan) updates.nikKaryawan = mapped.nikKaryawan;
                       if (mapped.nama) updates.nama = mapped.nama;
-                      if (mapped.gender) updates.jenisKelamin = mapped.gender;
+                      if (mapped.gender) updates.jenisKelamin = normalizeGender(mapped.gender);
+                      if (mapped.usia) updates.usia = mapped.usia;
                       if (mapped.jabatan) updates.jabatan = mapped.jabatan;
                       if (mapped.site) updates.site = mapped.site;
                       updates.nikKtp = emp.national_id || nikInput.trim();
@@ -539,7 +559,7 @@ export default function ReviewMCU() {
                     ) : (
                       <Sparkles className="size-4" />
                     )}
-                    Ekstrak dengan AI
+                    Ekstrak Data
                   </Button>
                 </motion.div>
                 <motion.div {...buttonTap}>
@@ -773,15 +793,6 @@ function ZonasiCard({
   triggers: string[];
   pengendalian: string;
 }) {
-  const [visible, setVisible] = useState(true);
-  const triggerKey = triggers.join('|');
-
-  useEffect(() => {
-    setVisible(true);
-    const timer = window.setTimeout(() => setVisible(false), 5000);
-    return () => window.clearTimeout(timer);
-  }, [zona, triggerKey, pengendalian]);
-
   const bgColor =
     zona === 'Hijau'
       ? 'bg-zona-hijau'
@@ -809,12 +820,12 @@ function ZonasiCard({
 
   return (
     <AnimatePresence>
-      {visible && (
+      {(
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 8, transition: { duration: 0.8, ease: 'easeOut' } }}
-          className={`${bgColor} rounded-2xl p-4 shadow-lg backdrop-blur-sm`}
+          className={`${bgColor} review-mcu-zonasi-popover rounded-2xl shadow-lg`}
         >
       <div className="flex items-center gap-2 mb-2">
         <ZonaIcon className={`size-5 ${textColor}`} />

@@ -149,7 +149,7 @@ export function applyMCUCalculations(values: MCUValues): MCUValues {
   );
   const framingham = calcFramingham(calculationInput);
   result.framScore = framingham.score;
-  result.framProb = framingham.prob;
+  result.framProb = String(framingham.prob).replace(/%+/g, '%');
   result.framKat = framingham.kat;
 
   const zonasi = assessZonasi(calculationInput, String(result.jenisKelamin || ''));

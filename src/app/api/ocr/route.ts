@@ -9,15 +9,40 @@ function generatePromptSchema() {
   }).join('\n');
 
   return `
-Kamu adalah asisten medis ahli dalam membaca data Medical Check Up (MCU).
-Ekstrak teks MCU berikut ke dalam format JSON dengan key (kunci) yang sesuai dengan daftar ID field berikut:
+Kamu adalah spesialis ekstraksi dan formatter hasil Medical Check Up (MCU).
+Ekstrak dokumen MCU secara teliti ke format JSON dengan key yang persis sama seperti daftar ID field berikut:
 ${fieldsInfo}
 
-Aturan:
-1. Hanya kembalikan data yang ada/terdeteksi di dalam teks (tidak perlu mengembalikan semua key jika tidak ada nilainya).
-2. Format angka sebagai string angka biasa (misal "120" bukan "120 mmHg").
-3. Pastikan key JSON yang dikembalikan menggunakan ID yang persis sama.
-4. Output HARUS valid JSON, tanpa awalan markdown seperti \`\`\`json.
+ATURAN DATA:
+1. Hanya kembalikan data yang benar-benar terbaca dari dokumen.
+2. Gunakan "N/A" hanya jika pemeriksaan memang tidak dilakukan atau dokumen menyatakan N/A. Jangan gunakan N/A hanya karena pembacaan AI gagal.
+3. Hasil pemeriksaan normal ditulis "DBN" jika field tersebut adalah pemeriksaan kualitatif.
+4. Jangan menambahkan satuan pada nilai laboratorium atau angka spirometri. Simpan angka saja.
+5. Gunakan koma untuk desimal. Untuk hasil laboratorium dengan satuan ribuan, normalkan ke satuan ribuan tanpa nol yang tidak perlu: "8.900" menjadi "8,9", "9.030" menjadi "9,03". Jangan menambahkan "000".
+6. Jangan mengubah nilai medis, membulatkan secara bebas, atau membuat diagnosis yang tidak tertulis.
+7. Output HARUS valid JSON tanpa awalan markdown seperti \`\`\`json.
+8. Key JSON harus menggunakan ID field yang persis sama.
+9. Jangan mengisi field "catatan". Field tersebut khusus input manual.
+10. "Pemeriksaan Lain" hanya berisi pemeriksaan yang tidak termasuk daftar field pemeriksaan lain pada form.
+11. "rekFU" harus berisi isi kolom DJ spreadsheet secara verbatim, bukan rekomendasi baru dari AI.
+12. "itemFU" harus berisi isi kolom DK spreadsheet secara verbatim, bukan ringkasan baru dari AI.
+13. "kesVendor" harus mengambil kesimpulan vendor dari kolom DF/dokumen, dengan pilihan yang sesuai:
+    Fit To Work, Fit With Note, Fit With Restriction, Currently Unfit, Temporary Unfit, atau Unfit.
+14. "perluFU" harus mengambil nilai Ya/Tidak dari dokumen. Jangan menyimpulkan hanya dari adanya abnormalitas.
+15. Tanggal harus dikembalikan dalam format YYYY-MM-DD jika tanggal lengkap terbaca.
+16. Jika field tanggal expired tidak tertulis, jangan mengarangnya; aplikasi akan menghitungnya dari tanggal MCU.
+
+DETAIL WAJIB:
+17. Wajib membaca dan memetakan seluruh nilai detail spirometri:
+   - Spirometri: fvcPred, fvcAct, fvcPct, fev1Pred, fev1Act, fev1Pct, fev1FvcPred, fev1FvcAct, fev1FvcPct, spiInterp.
+   Jangan menambahkan "L" pada angka.
+   Format gabungan interpretasi boleh disimpan di spiInterp, tetapi angka detail tetap harus diisi ke field masing-masing.
+18. Wajib membaca seluruh nilai audiometri:
+   acr_500, acr_1k, acr_2k, acr_3k, acr_4k, acr_6k, acr_8k,
+   acl_500, acl_1k, acl_2k, acl_3k, acl_4k, acl_6k, acl_8k, audInterp.
+   ACR adalah telinga kanan dan ACL telinga kiri. Nilai frekuensi yang tidak diperiksa diisi "N/A" hanya jika dokumen menyatakan tidak dilakukan.
+19. Normalisasi identitas: Laki-laki/Pria menjadi "Laki - Laki"; Perempuan/Wanita menjadi "Perempuan".
+20. Status MCU harus mengikuti nilai yang benar-benar tertulis di dokumen, termasuk "Pre - Employee", "Annual", dan jenis lain yang tersedia pada form.
 `;
 }
 
@@ -121,9 +146,32 @@ export async function POST(req: Request) {
     const validKeys = new Set(MCU_FIELDS.map(f => f.id));
     
     for (const [k, v] of Object.entries(parsedData)) {
-        if (validKeys.has(k) && v !== null && v !== undefined) {
+        if (validKeys.has(k) && k !== 'catatan' && v !== null && v !== undefined) {
             validData[k] = String(v);
         }
+    }
+    if (validData.jenisKelamin) {
+      const gender = validData.jenisKelamin.toLowerCase();
+      validData.jenisKelamin = gender.includes('perem') || gender.includes('wanita') || gender.includes('female')
+        ? 'Perempuan'
+        : gender.includes('laki') || gender.includes('pria') || gender.includes('male')
+          ? 'Laki - Laki'
+          : validData.jenisKelamin;
+    }
+    if (validData.statusMCU) {
+      const status = validData.statusMCU.toLowerCase();
+      const match = status.includes('pre') ? 'Pre - Employee'
+        : status.includes('annual') || status.includes('tahunan') ? 'Annual'
+          : status.includes('resmi') ? 'Resmi'
+            : status.includes('khusus') ? 'Khusus'
+              : status.includes('lain') ? 'Lainnya' : validData.statusMCU;
+      validData.statusMCU = match;
+    }
+    if (validData.golDarah) {
+      const blood = validData.golDarah.toUpperCase().replace(/\s+/g, ' ');
+      const group = blood.match(/\b(A B|AB|A|B|O)\b/)?.[1]?.replace('A B', 'AB');
+      const rhesus = /NEGATIF|NEGATIVE|\(-\)|\bRH-\b/.test(blood) ? '-' : /POSITIF|POSITIVE|\(\+\)|\+|\bRH\+?\b/.test(blood) ? '+' : '';
+      if (group && rhesus) validData.golDarah = `${group}${rhesus}`;
     }
 
     return NextResponse.json({ success: true, data: validData });

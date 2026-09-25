@@ -139,7 +139,7 @@ export function assessZonasi(d: MCUDraft, gender?: string): ZonasiResult {
   if (!isNA(d.visusJauh) && !hasText(visusText, 'terkoreksi')) {
     const severeVisions = ['1/60', '2/60', '3/60', '1/300', '20/200', '20/400', 'LP', 'NLP'];
     if (severeVisions.some(v => hasText(visusText, v))) {
-      triggers.push('Gangguan Visus Berat (Merah)');
+      triggers.push(`Gangguan Visus Berat (Merah): ${visusText}`);
     }
   }
 
