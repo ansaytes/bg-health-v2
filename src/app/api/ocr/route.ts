@@ -100,37 +100,47 @@ export async function POST(req: Request) {
       parts.push({ text: text });
     }
 
-    // Gunakan Gemini 3.6 Flash dengan mekanisme Auto-Retry (Max 3x)
+    // One extraction must consume one quota request. Retrying a 429 here
+    // would multiply usage and make the quota error worse.
     let response;
-    let retries = 3;
-    let lastError;
+    try {
+      response = await ai.models.generateContent({
+        model: 'gemini-3.6-flash',
+        contents: [{ role: 'user', parts }],
+        config: {
+          systemInstruction: generatePromptSchema(),
+          responseMimeType: 'application/json',
+          temperature: 0.1,
+        },
+      });
+    } catch (err: unknown) {
+      const apiError = err as { code?: number; status?: string; message?: string };
+      const message = apiError.message || '';
+      const isQuotaError = apiError.code === 429
+        || apiError.status === 'RESOURCE_EXHAUSTED'
+        || /quota exceeded|rate limit|resource_exhausted/i.test(message);
 
-    for (let i = 0; i < retries; i++) {
-      try {
-        response = await ai.models.generateContent({
-            model: 'gemini-3.6-flash',
-            contents: [
-                { role: 'user', parts: parts }
-            ],
-            config: {
-                systemInstruction: generatePromptSchema(),
-                responseMimeType: "application/json",
-                temperature: 0.1, // Low temp for more deterministic extraction
-            }
-        });
-        break; // Berhasil, keluar dari loop
-      } catch (err: any) {
-        lastError = err;
-        console.warn(`[OCR] Gemini API error (Attempt ${i + 1}/${retries}):`, err.message);
-        if (i === retries - 1) break; // Jangan tunggu di percobaan terakhir
-        
-        // Jeda 2 detik sebelum mencoba ulang
-        await new Promise(resolve => setTimeout(resolve, 2000));
+      if (isQuotaError) {
+        const retryMatch = message.match(/retry(?:Delay| after)[^0-9]*(\d+(?:\.\d+)?)\s*s?/i);
+        const retrySeconds = retryMatch ? Math.ceil(Number(retryMatch[1])) : 60;
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Quota AI sedang penuh. Tunggu sekitar ${retrySeconds} detik sebelum mencoba lagi, atau gunakan API key/plan Gemini dengan quota lebih tinggi.`,
+            retryAfterSeconds: retrySeconds,
+          },
+          {
+            status: 429,
+            headers: { 'Retry-After': String(retrySeconds) },
+          },
+        );
       }
-    }
 
-    if (!response) {
-      throw lastError || new Error("Gagal menghubungi server AI setelah beberapa kali percobaan.");
+      console.error('[OCR] Gemini request failed:', message || err);
+      return NextResponse.json(
+        { success: false, error: 'Gagal memproses dokumen dengan AI. Silakan coba lagi.' },
+        { status: 502 },
+      );
     }
 
     const outputText = response.text || "{}";
