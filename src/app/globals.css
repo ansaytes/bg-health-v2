@@ -1621,7 +1621,8 @@ select.admin-input.compact-input {
   box-shadow: 0 10px 30px rgba(0,0,0,.18);
 }
 .mcu-entry-page .mcu-entry-table table {
-  min-width: 1080px;
+  min-width: 0;
+  table-layout: fixed;
 }
 .mcu-entry-page .mcu-entry-table th {
   position: sticky;
@@ -1638,6 +1639,8 @@ select.admin-input.compact-input {
   padding-bottom: 10px;
   border-bottom-color: rgba(20,20,24,.06);
   font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .dark .mcu-entry-page .mcu-entry-table td {
   border-bottom-color: rgba(255,255,255,.07);
@@ -1656,6 +1659,35 @@ select.admin-input.compact-input {
   background: #ff4d00;
   color: #fff;
   box-shadow: 0 4px 10px rgba(255,77,0,.2);
+}
+.mcu-entry-page .mcu-entry-table th:nth-child(1),
+.mcu-entry-page .mcu-entry-table td:nth-child(1) { width: 4%; }
+.mcu-entry-page .mcu-entry-table th:nth-child(2),
+.mcu-entry-page .mcu-entry-table td:nth-child(2) { width: 10%; }
+.mcu-entry-page .mcu-entry-table th:nth-child(3),
+.mcu-entry-page .mcu-entry-table td:nth-child(3) { width: 15%; }
+.mcu-entry-page .mcu-entry-table th:nth-child(4),
+.mcu-entry-page .mcu-entry-table td:nth-child(4) { width: 10%; }
+.mcu-entry-page .mcu-entry-table th:nth-child(5),
+.mcu-entry-page .mcu-entry-table td:nth-child(5) { width: 13%; }
+.mcu-entry-page .mcu-entry-table th:nth-child(6),
+.mcu-entry-page .mcu-entry-table td:nth-child(6) { width: 15%; }
+.mcu-entry-page .mcu-entry-table th:nth-child(7),
+.mcu-entry-page .mcu-entry-table td:nth-child(7) { width: 9%; }
+.mcu-entry-page .mcu-entry-table th:nth-child(8),
+.mcu-entry-page .mcu-entry-table td:nth-child(8) { width: 15%; }
+.mcu-entry-page .mcu-entry-table th:nth-child(9),
+.mcu-entry-page .mcu-entry-table td:nth-child(9) {
+  width: 9%;
+  min-width: 82px;
+  text-align: center;
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: var(--card);
+}
+.mcu-entry-page .mcu-entry-table tbody tr:hover td:nth-child(9) {
+  background: rgba(255,77,0,.035);
 }
 .mcu-entry-page .mcu-entry-table td:last-child button:hover {
   background: #e84500;
@@ -1710,6 +1742,19 @@ select.admin-input.compact-input {
   .mcu-entry-page .mcu-entry-toolbar { align-items: stretch; flex-direction: column; }
   .mcu-entry-page .mcu-entry-filter { width: 100%; }
   .mcu-entry-page .mcu-entry-count { align-self: flex-end; }
+}
+@media (min-width: 701px) and (max-width: 1200px) {
+  .mcu-entry-page .mcu-entry-table {
+    overflow-x: auto;
+  }
+  .mcu-entry-page .mcu-entry-table table {
+    min-width: 1000px;
+    table-layout: auto;
+  }
+  .mcu-entry-page .mcu-entry-table th,
+  .mcu-entry-page .mcu-entry-table td {
+    width: auto !important;
+  }
 }
 .admin-form-btn-primary {
   flex: 1;
