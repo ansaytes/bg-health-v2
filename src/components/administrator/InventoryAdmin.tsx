@@ -184,21 +184,21 @@ export default function InventoryAdmin() {
       </div>
 
       <div className="mcu-records-toolbar" style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'var(--card)', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border)', flexWrap: 'nowrap' }}>
-        <div className="mcu-records-search" style={{ flex: '1 1 auto', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--background)', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}>
-          <Search size={16} className="text-muted-foreground" />
+        <div className="mcu-records-search" style={{ flex: '1 1 0px', minWidth: 0, display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--background)', padding: '0 12px', height: '38px', borderRadius: '6px', border: '1px solid var(--border)', boxSizing: 'border-box' }}>
+          <Search size={16} className="text-muted-foreground" style={{ flexShrink: 0 }} />
           <input 
             type="text" 
             placeholder="Cari nama obat atau bahan medis..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontSize: '13px' }}
+            style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontSize: '13px', height: '100%' }}
           />
         </div>
-        <div style={{ minWidth: '200px', width: '200px', flex: '0 0 200px' }}>
+        <div style={{ flexShrink: 0, width: '180px' }}>
           <select 
             value={categoryFilter} 
             onChange={(e) => setCategoryFilter(e.target.value)}
-            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--background)', fontSize: '13px', outline: 'none', cursor: 'pointer' }}
+            style={{ width: '100%', height: '38px', padding: '0 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--background)', fontSize: '13px', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
           >
             <option value="Semua">Semua Kategori</option>
             <option value="Obat">Obat</option>
@@ -206,7 +206,7 @@ export default function InventoryAdmin() {
             <option value="Lainnya">Lainnya</option>
           </select>
         </div>
-        <div style={{ flex: '0 0 auto' }}>
+        <div style={{ flexShrink: 0 }}>
           <DownloadButton
             variant="compact"
             filename="Data_Inventory_FEFO"
