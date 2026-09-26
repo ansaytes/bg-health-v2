@@ -13,6 +13,7 @@ export type ReviewStep = 'search' | 'ocr' | 'form';
 
 export interface EmployeeData {
   nikKaryawan: string;
+  nationalId?: string;
   nama: string;
   gender: string;
   jabatan: string;

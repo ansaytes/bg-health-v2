@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import EmployeeLookupInput, { SearchBy } from '@/components/administrator/EmployeeLookupInput';
+import EmployeeLookupInput, { type EmployeeData as LookupEmployeeData } from '@/components/administrator/EmployeeLookupInput';
 import {
   Search, ClipboardPaste, Sparkles, ArrowRight, ArrowLeft,
   User, Activity, Eye, HeartPulse, Droplets, FlaskConical,
@@ -19,12 +19,20 @@ import { Progress } from '@/components/ui/progress';
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from '@/components/ui/accordion';
-import { useMCUStore } from '@/lib/store';
+import { useMCUStore, type EmployeeData as MCUEmployeeData } from '@/lib/store';
 import { MCU_FIELDS, MCU_SECTIONS, getFieldsBySection, type MCUFieldDef } from '@/lib/mcu-fields';
+import {
+  DEFAULT_GEMINI_OCR_MODEL,
+  GEMINI_OCR_MODELS,
+  getGeminiOcrModel,
+} from '@/lib/gemini-ocr-models';
+import { calcEgfrCkdEpi2021, getMissingZonasiInputs } from '@/lib/zonasi-engine';
+
+type SearchBy = 'nik' | 'national_id' | 'nama';
 
 function calculateAge(birthDate?: string | null) {
   if (!birthDate) return '';
-  const birth = new Date(birthDate);
+  const birth = new Date(`${birthDate.slice(0, 10)}T00:00:00`);
   if (Number.isNaN(birth.getTime())) return '';
   const now = new Date();
   let age = now.getFullYear() - birth.getFullYear();
@@ -39,6 +47,38 @@ function normalizeGender(value?: string | null) {
   if (normalized.includes('perem') || normalized.includes('female') || normalized.includes('wanita')) return 'Perempuan';
   if (normalized.includes('laki') || normalized.includes('male') || normalized.includes('pria')) return 'Laki - Laki';
   return value || '';
+}
+
+function detectSearchBy(query: string): SearchBy {
+  const trimmed = query.trim();
+  if (/[a-zA-Z]/.test(trimmed)) return 'nama';
+  if (/^\d{16}$/.test(trimmed)) return 'national_id';
+  if (/^\d+$/.test(trimmed)) return 'nik';
+  return 'nama';
+}
+
+function mapEmployee(emp: LookupEmployeeData, query: string, searchBy: SearchBy): MCUEmployeeData {
+  return {
+    nikKaryawan: emp.nik || '',
+    nationalId: emp.national_id || (searchBy === 'national_id' ? query.trim() : ''),
+    nama: emp.nama || '',
+    gender: normalizeGender(emp.gender),
+    jabatan: emp.job_position || '',
+    site: emp.site_name || '',
+    usia: calculateAge(emp.birth_date) || emp.age || '',
+  };
+}
+
+function employeeFormData(employee: MCUEmployeeData): Record<string, string> {
+  return {
+    nationalId: employee.nationalId || '',
+    nikKaryawan: employee.nikKaryawan,
+    nama: employee.nama,
+    jenisKelamin: employee.gender,
+    jabatan: employee.jabatan,
+    site: employee.site,
+    usia: employee.usia,
+  };
 }
 import { supabase } from '@/lib/supabase';
 
@@ -83,14 +123,14 @@ const cardVariants = {
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.05, duration: 0.4, ease: 'easeOut' },
+    transition: { delay: i * 0.05, duration: 0.4, ease: 'easeOut' as const },
   }),
 };
 
 // Button press animation
 const buttonTap = {
   whileTap: { scale: 0.97 },
-  transition: { type: 'spring', stiffness: 400, damping: 17 },
+  transition: { type: 'spring' as const, stiffness: 400, damping: 17 },
 };
 
 // Check if a value is abnormal based on gender
@@ -129,12 +169,11 @@ function getNormalRangeText(field: MCUFieldDef, gender?: string): string {
 export default function ReviewMCU() {
   const store = useMCUStore();
   const [nikInput, setNikInput] = useState('');
-  const [searchBy, setSearchBy] = useState<SearchBy>('national_id'); // default: NIK KTP
   const [ocrText, setOcrText] = useState('');
   const [direction, setDirection] = useState(1);
   const [ocrProgress, setOcrProgress] = useState(0);
   const [extractionCooldown, setExtractionCooldown] = useState(0);
-  const [ocrModelMode, setOcrModelMode] = useState<'primary' | 'alternative'>('primary');
+  const [ocrModelId, setOcrModelId] = useState(DEFAULT_GEMINI_OCR_MODEL);
   useEffect(() => {
     if (extractionCooldown <= 0) return;
     const timer = window.setInterval(() => {
@@ -161,6 +200,7 @@ export default function ReviewMCU() {
   // Step 1: Search employee
   const handleSearch = useCallback(async () => {
     if (!nikInput.trim()) return;
+    const searchBy = detectSearchBy(nikInput);
     store.setSearchingEmployee(true);
     try {
       const res = await fetch('/api/employee', {
@@ -172,25 +212,9 @@ export default function ReviewMCU() {
       if (json.success && json.data) {
         // API returns array of raw records; take first and map fields
         const emp = Array.isArray(json.data) ? json.data[0] : json.data;
-        const mapped = {
-          nikKaryawan: emp.nik || '',
-          nama: emp.nama || '',
-          gender: emp.gender || '',
-          jabatan: emp.job_position || '',
-          site: emp.site_name || '',
-          usia: emp.age ? String(emp.age) : calculateAge(emp.birth_date),
-        };
+        const mapped = mapEmployee(emp, nikInput, searchBy);
         store.setEmployee(mapped);
-        // Auto-fill identity fields
-        const updates: Record<string, string> = {};
-        if (mapped.nikKaryawan) updates.nikKaryawan = mapped.nikKaryawan;
-        if (mapped.nama) updates.nama = mapped.nama;
-        if (mapped.gender) updates.jenisKelamin = normalizeGender(mapped.gender);
-        if (mapped.jabatan) updates.jabatan = mapped.jabatan;
-        if (mapped.site) updates.site = mapped.site;
-        if (mapped.usia) updates.usia = mapped.usia;
-        updates.nationalId = emp.national_id || nikInput.trim();
-        store.setFormBatch(updates);
+        store.setFormBatch(employeeFormData(mapped));
         store.showToast('Data karyawan ditemukan', 'success');
       } else {
         store.showToast(json.error || 'Karyawan tidak ditemukan', 'error');
@@ -200,7 +224,7 @@ export default function ReviewMCU() {
     } finally {
       store.setSearchingEmployee(false);
     }
-  }, [nikInput, searchBy, store]);
+  }, [nikInput, store]);
 
   // Recall the latest persisted MCU record for the selected employee.
   const handleRecall = useCallback(async () => {
@@ -245,13 +269,16 @@ export default function ReviewMCU() {
       const res = await fetch('/api/ocr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: ocrText.trim(), modelMode: ocrModelMode }),
+        body: JSON.stringify({ text: ocrText.trim(), modelId: ocrModelId }),
       });
       clearInterval(interval);
       setOcrProgress(100);
       const json = await res.json();
       if (json.success && json.data) {
-        store.setFormBatch(json.data);
+        store.setFormBatch({
+          ...json.data,
+          ...(store.employee ? employeeFormData(store.employee) : {}),
+        });
         store.showToast('Data berhasil diekstrak', 'success');
         setTimeout(() => goStep('form', 1), 500);
       } else {
@@ -274,7 +301,7 @@ export default function ReviewMCU() {
       store.setExtractingOCR(false);
       setTimeout(() => setOcrProgress(0), 600);
     }
-  }, [ocrText, ocrModelMode, store, goStep]);
+  }, [ocrText, ocrModelId, store, goStep]);
 
   // Save to Supabase
   const handleSave = useCallback(async () => {
@@ -332,6 +359,14 @@ export default function ReviewMCU() {
   }, [store.formData.triggerZona]);
 
   const pengendalian = store.formData.pengendalian || '';
+  const missingZonasiInputs = useMemo(
+    () => getMissingZonasiInputs(store.formData),
+    [store.formData],
+  );
+  const zonasiEgfrEstimate = useMemo(() => {
+    if (store.formData.egfr && store.formData.egfr.toLowerCase() !== 'n/a') return null;
+    return calcEgfrCkdEpi2021(store.formData.kreatinin, store.formData.usia, store.formData.jenisKelamin);
+  }, [store.formData.egfr, store.formData.kreatinin, store.formData.usia, store.formData.jenisKelamin]);
 
   return (
     <div className="relative review-mcu-page" style={{ overflowY: "auto", maxHeight: "100%" }}>
@@ -364,7 +399,7 @@ export default function ReviewMCU() {
                 </div>
                 <div>
                   <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--foreground)', lineHeight: 1.2 }}>Cari Karyawan</h2>
-                  <p style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>Masukkan NIK KTP untuk memulai</p>
+                  <p style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>Cari dengan NIK KTP, NIK Karyawan, atau nama</p>
                 </div>
               </div>
 
@@ -374,29 +409,11 @@ export default function ReviewMCU() {
                     value={nikInput}
                     onChange={setNikInput}
                     onEmployeeFound={(emp) => {
-                      // Auto-fill form when employee is found via debounced search
-                      const mapped = {
-                        nikKaryawan: emp.nik || '',
-                        nama: emp.nama || '',
-                        gender: normalizeGender(emp.gender),
-                        jabatan: emp.job_position || '',
-                        site: emp.site_name || '',
-                        usia: emp.age ? String(emp.age) : calculateAge(emp.birth_date),
-                      };
+                      const mapped = mapEmployee(emp, nikInput, detectSearchBy(nikInput));
                       store.setEmployee(mapped);
-                      const updates: Record<string, string> = {};
-                      if (mapped.nikKaryawan) updates.nikKaryawan = mapped.nikKaryawan;
-                      if (mapped.nama) updates.nama = mapped.nama;
-                      if (mapped.gender) updates.jenisKelamin = normalizeGender(mapped.gender);
-                      if (mapped.usia) updates.usia = mapped.usia;
-                      if (mapped.jabatan) updates.jabatan = mapped.jabatan;
-                      if (mapped.site) updates.site = mapped.site;
-                      updates.nationalId = emp.national_id || nikInput.trim();
-                      store.setFormBatch(updates);
+                      store.setFormBatch(employeeFormData(mapped));
                       store.showToast('Data karyawan ditemukan', 'success');
                     }}
-                    showSearchBySelector={true}
-                    defaultSearchBy="national_id"
                     inputStyle={{
                       height: 40, borderRadius: 10,
                       border: '1px solid var(--border)', background: 'var(--background)',
@@ -453,6 +470,7 @@ export default function ReviewMCU() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   {[
+                    { label: 'NIK KTP', value: store.employee?.nationalId, desc: 'Nomor Induk Kependudukan' },
                     { label: 'NIK Karyawan', value: store.employee?.nikKaryawan, desc: 'Nomor Induk Karyawan' },
                     { label: 'Nama Lengkap', value: store.employee?.nama, desc: 'Nama sesuai data karyawan' },
                     { label: 'Jenis Kelamin', value: store.employee?.gender, desc: 'Laki-laki / Perempuan' },
@@ -553,18 +571,29 @@ export default function ReviewMCU() {
 
               <div className="mt-3 flex flex-col gap-1.5">
                 <label htmlFor="ocr-model-mode" className="text-xs font-medium text-muted-foreground">
-                  Mode ekstraksi
+                  Mode Ekstraksi Data
                 </label>
                 <select
                   id="ocr-model-mode"
-                  value={ocrModelMode}
-                  onChange={(e) => setOcrModelMode(e.target.value as 'primary' | 'alternative')}
+                  value={ocrModelId}
+                  onChange={(e) => setOcrModelId(e.target.value)}
                   disabled={store.extractingOCR || extractionCooldown > 0}
                   className="h-10 rounded-xl border border-input bg-background px-3 text-sm text-foreground"
                 >
-                  <option value="primary">Utama (kualitas maksimal)</option>
-                  <option value="alternative">Alternatif (quota lebih longgar)</option>
+                  {GEMINI_OCR_MODELS.map((model) => (
+                    <option key={model.id} value={model.id}>{model.label}</option>
+                  ))}
                 </select>
+                <p className="text-xs text-muted-foreground">
+                  {getGeminiOcrModel(ocrModelId)?.description}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {getGeminiOcrModel(ocrModelId)?.recommendation} Model 3.8 Flash dipilih secara default
+                  untuk PDF MCU lengkap; 3.5 Flash Lite cocok saat perlu opsi lebih ringan.
+                  Model Live (termasuk yang menampilkan RPM “Unlimited”) tidak disertakan karena
+                  endpoint ekstraksi ini memerlukan keluaran JSON satu kali, bukan sesi audio/video real-time.
+                  Batas model dapat berubah sesuai kuota API key.
+                </p>
               </div>
 
               {store.extractingOCR && (
@@ -689,6 +718,8 @@ export default function ReviewMCU() {
                               field={field}
                               value={store.formData[field.id] || ''}
                               gender={store.formData.jenisKelamin}
+                              age={store.formData.usia}
+                              creatinine={store.formData.kreatinin}
                               onChange={(val) => store.setFieldValue(field.id, val)}
                               isSingleCol={field.type === 'textarea'}
                             />
@@ -703,7 +734,13 @@ export default function ReviewMCU() {
 
             {/* Zonasi card - sticky */}
             <div className="review-mcu-bottom-panel pt-4 pb-2">
-              <ZonasiCard zona={zonasi} triggers={triggers} pengendalian={pengendalian} />
+              <ZonasiCard
+                zona={zonasi}
+                triggers={triggers}
+                pengendalian={pengendalian}
+                missingInputs={missingZonasiInputs}
+                egfrEstimate={zonasiEgfrEstimate}
+              />
 
               <motion.div {...buttonTap} className="mt-3">
                 <Button
@@ -733,17 +770,25 @@ function FieldRenderer({
   field,
   value,
   gender,
+  age,
+  creatinine,
   onChange,
   isSingleCol,
 }: {
   field: MCUFieldDef;
   value: string;
   gender: string;
+  age: string;
+  creatinine: string;
   onChange: (val: string) => void;
   isSingleCol: boolean;
 }) {
   const abnormal = isAbnormal(field, value, gender);
   const normalRange = getNormalRangeText(field, gender);
+  const selectedValues = field.multiple ? value.split(' | ').filter(Boolean) : [];
+  const egfrEstimate = field.id === 'egfr' && (!value || value.toLowerCase() === 'n/a')
+    ? calcEgfrCkdEpi2021(creatinine, age, gender)
+    : null;
   const inputClass = isSingleCol
     ? 'sm:col-span-2'
     : '';
@@ -751,7 +796,7 @@ function FieldRenderer({
   return (
     <div className={inputClass}>
       <div className="flex items-center gap-1.5 mb-1.5">
-        <label className="text-xs font-medium text-muted-foreground">
+        <label className="whitespace-pre-line text-xs font-medium text-muted-foreground">
           {field.label}
         </label>
         {field.autoCalc && (
@@ -770,22 +815,39 @@ function FieldRenderer({
           className="min-h-[60px] text-sm rounded-xl bg-background"
         />
       ) : field.type === 'select' ? (
-        <select
-          multiple={field.multiple}
-          value={field.multiple ? value.split(' | ').filter(Boolean) : value}
-          onChange={(e) => onChange(field.multiple
-            ? Array.from(e.target.selectedOptions).map((option) => option.value).join(' | ')
-            : e.target.value)}
-          className={
-            `iOS-select w-full ${field.multiple ? 'min-h-24 py-2' : 'h-9'} rounded-xl bg-background border border-input text-sm px-3 text-foreground ` +
-            (abnormal ? 'border-red-500/60 dark:border-red-500/50' : '')
-          }
-        >
-          {!field.multiple && <option value="">Pilih...</option>}
-          {field.options?.map((opt) => (
-            <option key={opt} value={opt}>{opt}</option>
-          ))}
-        </select>
+        field.multiple ? (
+          <details className="relative text-sm">
+            <summary className={`flex h-9 cursor-pointer list-none items-center rounded-xl border border-input bg-background px-3 text-foreground ${abnormal ? 'border-red-500/60 dark:border-red-500/50' : ''}`}>
+              {selectedValues.length ? `${selectedValues.length} item dipilih` : 'Pilih satu atau lebih...'}
+            </summary>
+            <div className="mt-1 max-h-52 space-y-1 overflow-y-auto rounded-xl border border-input bg-background p-2 shadow-lg">
+              {field.options?.map((opt) => (
+                <label key={opt} className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
+                  <input
+                    type="checkbox"
+                    checked={selectedValues.includes(opt)}
+                    onChange={(event) => onChange(event.target.checked
+                      ? [...selectedValues, opt].join(' | ')
+                      : selectedValues.filter((selected) => selected !== opt).join(' | '))}
+                    className="mt-0.5 accent-primary"
+                  />
+                  <span>{opt}</span>
+                </label>
+              ))}
+            </div>
+          </details>
+        ) : (
+          <select
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className={`iOS-select h-9 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground ${abnormal ? 'border-red-500/60 dark:border-red-500/50' : ''}`}
+          >
+            <option value="">Pilih...</option>
+            {field.options?.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+        )
       ) : field.type === 'date' ? (
         <Input
           type="date"
@@ -815,6 +877,11 @@ function FieldRenderer({
           Normal: {normalRange} {field.unit || ''}
         </p>
       )}
+      {egfrEstimate !== null && (
+        <p className="mt-1 text-[10px] text-amber-700 dark:text-amber-400">
+          Estimasi CKD-EPI 2021: {egfrEstimate} mL/menit/1,73 m². Nilai lab tetap kosong; estimasi ini digunakan untuk zonasi.
+        </p>
+      )}
     </div>
   );
 }
@@ -824,10 +891,14 @@ function ZonasiCard({
   zona,
   triggers,
   pengendalian,
+  missingInputs,
+  egfrEstimate,
 }: {
   zona: string;
   triggers: string[];
   pengendalian: string;
+  missingInputs: string[];
+  egfrEstimate: number | null;
 }) {
   const bgColor =
     zona === 'Hijau'
@@ -883,6 +954,24 @@ function ZonasiCard({
             ))}
           </div>
         </div>
+      )}
+
+      {missingInputs.length > 0 && (
+        <div className="mb-2">
+          <p className={`text-xs font-semibold ${textColor} mb-1`}>
+            Data wajib zonasi yang belum diisi:
+          </p>
+          <ul className={`list-inside list-disc space-y-0.5 text-[11px] ${textColor}`}>
+            {missingInputs.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        </div>
+      )}
+
+      {egfrEstimate !== null && missingInputs.length === 0 && (
+        <p className={`mb-2 text-[11px] ${textColor}`}>
+          Zonasi menggunakan eGFR estimasi CKD-EPI 2021: {egfrEstimate} mL/menit/1,73 m²
+          {' '}(hasil lab eGFR tidak tersedia).
+        </p>
       )}
 
       {pengendalian && (

@@ -2081,19 +2081,37 @@ select.admin-input.compact-input {
 .review-mcu-page {
   position: relative;
   padding-right: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.review-mcu-page .text-lg {
+  font-size: 15px;
+  line-height: 1.35;
+}
+.review-mcu-page .text-base {
+  font-size: 13px;
+  line-height: 1.4;
+}
+.review-mcu-page .text-sm {
+  font-size: 12px;
+  line-height: 1.4;
+}
+.review-mcu-page .text-xs {
+  font-size: 11px;
+  line-height: 1.4;
 }
 .review-mcu-page input:not([type="checkbox"]):not([type="radio"]),
 .review-mcu-page select {
   min-width: 0;
-  height: 40px;
-  border-radius: 12px;
-  font-size: 13px;
+  height: 36px;
+  border-radius: 8px;
+  font-size: 12px !important;
 }
 .review-mcu-page textarea {
-  min-height: 88px;
+  min-height: 72px;
   max-height: 180px;
-  border-radius: 12px;
-  font-size: 13px;
+  border-radius: 8px;
+  font-size: 12px !important;
   line-height: 1.45;
   resize: vertical;
 }

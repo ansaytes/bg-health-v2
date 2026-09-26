@@ -69,7 +69,7 @@ export const MCU_SECTIONS = [
   { id: 'calculated', label: 'Hasil Kalkulasi', icon: 'Calculator', order: 14 },
 ] as const;
 
-type FieldOptions = Omit<MCUFieldDef, 'id' | 'col' | 'colIndex' | 'label' | 'section' | 'sectionOrder'>;
+type FieldOptions = Omit<MCUFieldDef, 'id' | 'col' | 'colIndex' | 'label' | 'section' | 'sectionOrder' | 'type'>;
 const f = (
   id: string,
   col: string,
@@ -98,6 +98,7 @@ function columnIndex(col: string): number {
 
 const normal = (normalRange: string, unit?: string): FieldOptions => ({ normalRange, unit });
 const select = (options: string[]): FieldOptions => ({ options, textNA: true });
+const kesimpulanOptions = ['Fit To Work', 'Fit With Note', 'Fit With Restriction', 'Currently Unfit', 'Unfit', 'Temporary Unfit'];
 
 export const MCU_FIELDS: MCUFieldDef[] = [
   // B–J Identitas
@@ -222,31 +223,31 @@ export const MCU_FIELDS: MCUFieldDef[] = [
   ] as const).map(([id, col, label]) => f(id, col, label, 'neuro')),
   f('tesKebugaran', 'DC', 'Tes Kebugaran (6 Minutes Walk Test, Harvard Step Test)', 'fitness', 'textarea'),
   f('pemeriksaanLain', 'DD', 'Pemeriksaan Lain', 'assessment', 'textarea'),
-  f('dugaanPAK', 'DE', 'Dugaan PAK', 'assessment', 'textarea'),
+  f('dugaanPAK', 'DE', 'Dugaan PAK', 'assessment', 'select', { options: ['Ya', 'Tidak'] }),
 
   // DF–DS Penilaian dan kalkulasi
-  f('kesVendor', 'DF', 'Kesimpulan Vendor', 'assessment', 'select', { options: ['Fit To Work', 'Fit With Note', 'Fit With Restriction', 'Currently Unfit', 'Temporary Unfit', 'Unfit'] }),
+  f('kesVendor', 'DF', 'Kesimpulan Vendor', 'assessment', 'select', { options: kesimpulanOptions }),
   f('rekQSHE', 'DG', 'Rekomendasi QSHE Medic', 'assessment', 'select', {
-    options: ['Fit To Work', 'Fit With Note', 'Fit With Restriction', 'Currently Unfit', 'Unfit', 'Temporary Unfit'],
+    options: kesimpulanOptions,
   }),
   f('diagnosaMedis', 'DH', 'Diagnosa Medis', 'assessment', 'textarea', { autoCalc: true }),
   f('perluFU', 'DI', 'Perlu Follow Up?', 'assessment', 'select', { options: ['Ya', 'Tidak'] }),
-  f('rekFU', 'DJ', 'Rekomendasi Follow Up', 'assessment', 'select', {
+  f('rekFU', 'DJ', 'Rekomendasi follow up\nKonsultasi dan Terapi ke :', 'assessment', 'select', {
     multiple: true,
     options: [
-      'Konsultasi dan terapi ke Dokter Umum',
-      'Konsultasi dan terapi ke Dokter Sp. PD',
-      'Konsultasi dan terapi ke Dokter Sp. JP',
-      'Konsultasi dan terapi ke Dokter Sp. P',
-      'Konsultasi dan terapi ke Dokter Sp. M',
-      'Konsultasi dan terapi ke Dokter Sp. GK / Ahli Gizi',
-      'Konsultasi dan terapi ke Psikiatri / Psikolog',
-      'Konsultasi dan terapi ke Dokter Gigi',
-      'Konsultasi dan terapi ke Dokter Sp. THT',
-      'Konsultasi dan terapi ke Dokter Sp. B',
-      'Konsultasi dan terapi ke Dokter Sp. U',
-      'Konsultasi dan terapi ke Dokter Sp. OT',
-      'Konsultasi dan terapi ke Dokter Sp. KK',
+      'Dokter Umum',
+      'Dokter Sp. PD',
+      'Dokter Sp. JP',
+      'Dokter Sp. P',
+      'Dokter Sp. M',
+      'Dokter Sp. GK / Ahli Gizi',
+      'Psikiatri / Psikolog',
+      'Dokter Gigi',
+      'Dokter Sp. THT',
+      'Dokter Sp. B',
+      'Dokter Sp. U',
+      'Dokter Sp. OT',
+      'Dokter Sp. KK',
       'Pertahankan Kondisi Tubuh Bugar Dengan Diet Sehat & Rutin Olahraga',
     ],
   }),
@@ -264,19 +265,19 @@ export const MCU_FIELDS: MCUFieldDef[] = [
   f('tglFU1', 'DT', 'Tanggal Follow Up I', 'assessment', 'date', { textNA: false }),
   f('lokasiFU1', 'DU', 'Lokasi Follow Up I', 'assessment'),
   f('hasilFU1', 'DV', 'Hasil Follow Up I', 'assessment', 'textarea'),
-  f('kesimpulanFU1', 'DW', 'Kesimpulan Setelah Follow Up I', 'assessment', 'textarea'),
+  f('kesimpulanFU1', 'DW', 'Kesimpulan Setelah Follow Up I', 'assessment', 'select', { options: kesimpulanOptions }),
   f('linkFU1', 'DX', 'Link File Hasil Follow Up I', 'assessment'),
   f('rekFU2', 'DY', 'Rekomendasi FU II', 'assessment', 'textarea'),
   f('tglFU2', 'DZ', 'Tanggal Follow Up II', 'assessment', 'date', { textNA: false }),
   f('lokasiFU2', 'EA', 'Lokasi Follow Up II', 'assessment'),
   f('hasilFU2', 'EB', 'Hasil Follow Up II', 'assessment', 'textarea'),
-  f('kesimpulanFU2', 'EC', 'Kesimpulan Setelah Follow Up II', 'assessment', 'textarea'),
+  f('kesimpulanFU2', 'EC', 'Kesimpulan Setelah Follow Up II', 'assessment', 'select', { options: kesimpulanOptions }),
   f('linkFU2', 'ED', 'Link File Hasil Follow Up II', 'assessment'),
   f('rekFU3', 'EE', 'Rekomendasi FU III', 'assessment', 'textarea'),
   f('tglFU3', 'EF', 'Tanggal Follow Up III', 'assessment', 'date', { textNA: false }),
   f('lokasiFU3', 'EG', 'Lokasi Follow Up III', 'assessment'),
   f('hasilFU3', 'EH', 'Hasil Follow Up III', 'assessment', 'textarea'),
-  f('kesimpulanFU3', 'EI', 'Kesimpulan Setelah Follow Up III', 'assessment', 'textarea'),
+  f('kesimpulanFU3', 'EI', 'Kesimpulan Setelah Follow Up III', 'assessment', 'select', { options: kesimpulanOptions }),
   f('linkFU3', 'EJ', 'Link File Hasil Follow Up III', 'assessment'),
   f('rekFU4', 'EK', 'Rekomendasi FU IV', 'assessment', 'textarea'),
   f('catatan', 'EL', 'Catatan & Rekomendasi', 'assessment', 'textarea', { textNA: false }),

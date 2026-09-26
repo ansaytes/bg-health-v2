@@ -23,7 +23,7 @@ function n(val: string | number | undefined): number | null {
 
 // Helper: check if value is N/A or empty
 function isNA(val: string | number | undefined): boolean {
-  return val === undefined || val === null || val === '' || val === 'N/A';
+  return val === undefined || val === null || String(val).trim() === '' || /^n\/a|null$/i.test(String(val).trim());
 }
 
 // Helper: search text (case-insensitive)
@@ -32,8 +32,83 @@ function hasText(val: string | undefined, search: string): boolean {
   return val.toLowerCase().includes(search.toLowerCase());
 }
 
+export function calcEgfrCkdEpi2021(
+  creatinine: string | number | undefined,
+  age: string | number | undefined,
+  gender: string | undefined,
+): number | null {
+  const scr = n(creatinine);
+  const years = n(age);
+  if (scr === null || scr <= 0 || years === null || years < 18 || years > 120) return null;
+
+  const normalizedGender = String(gender || '').toLowerCase();
+  const isFemale = normalizedGender.includes('perem') || normalizedGender.includes('female');
+  const isMale = normalizedGender.includes('laki') || normalizedGender.includes('male');
+  if (!isFemale && !isMale) return null;
+
+  const kappa = isFemale ? 0.7 : 0.9;
+  const alpha = isFemale ? -0.241 : -0.302;
+  const ratio = scr / kappa;
+  const egfr = 142
+    * Math.pow(Math.min(ratio, 1), alpha)
+    * Math.pow(Math.max(ratio, 1), -1.2)
+    * Math.pow(0.9938, years)
+    * (isFemale ? 1.012 : 1);
+
+  return Number.isFinite(egfr) ? Number(egfr.toFixed(1)) : null;
+}
+
+export function getMissingZonasiInputs(d: MCUDraft): string[] {
+  const missing: string[] = [];
+  const requireNumber = (key: string, label: string) => {
+    if (n(d[key]) === null) missing.push(label);
+  };
+  const requireText = (key: string, label: string) => {
+    if (isNA(d[key])) missing.push(label);
+  };
+  const hasBMI = n(d.bmi) !== null || (n(d.bb) !== null && n(d.tb) !== null);
+
+  requireNumber('usia', 'Usia');
+  if (!genderValue(d.jenisKelamin)) missing.push('Jenis Kelamin');
+  requireNumber('tdS', 'Tekanan Darah Sistole');
+  requireNumber('tdD', 'Tekanan Darah Diastole');
+  if (!hasBMI) missing.push('BB dan TB (untuk menghitung BMI)');
+  if (n(d.gdp) === null && n(d.hba1c) === null) missing.push('GDP atau HbA1c');
+  if (n(d.egfr) === null && calcEgfrCkdEpi2021(d.kreatinin, d.usia, String(d.jenisKelamin || '')) === null) {
+    missing.push('eGFR atau kreatinin serum + usia + jenis kelamin untuk estimasi eGFR');
+  }
+  requireNumber('ldl', 'LDL');
+  requireNumber('tg', 'Trigliserida (TG)');
+  requireNumber('au', 'Asam Urat (AU)');
+  requireNumber('hb', 'Hemoglobin (Hb)');
+  if (isNA(d.fev1Pct) && isNA(d.spiInterp)) missing.push('Spirometri (FEV1 % atau interpretasi)');
+  requireText('visusJauh', 'Visus Jauh');
+  requireText('audInterp', 'Audiometri (interpretasi)');
+  requireNumber('sgot', 'SGOT');
+  requireNumber('sgpt', 'SGPT');
+  requireText('hbsag', 'HBsAg');
+  requireText('chestXR', 'Chest X-Ray');
+  requireText('tesKebugaran', 'Tes Kebugaran (ESS)');
+
+  return missing;
+}
+
+function genderValue(value: string | number | undefined): boolean {
+  const normalized = String(value || '').toLowerCase();
+  return normalized.includes('laki') || normalized.includes('perem')
+    || normalized.includes('male') || normalized.includes('female');
+}
+
 export function assessZonasi(d: MCUDraft, gender?: string): ZonasiResult {
   const triggers: string[] = [];
+  const missingInputs = getMissingZonasiInputs(d);
+  if (missingInputs.length > 0) {
+    return {
+      zona: 'Belum Lengkap',
+      triggers: [],
+      pengendalian: 'Lengkapi data wajib zonasi yang tercantum di bawah ini untuk menjalankan penilaian.',
+    };
+  }
   const isMale = gender?.toLowerCase().includes('laki');
   const isFemale = gender?.toLowerCase().includes('perem');
 
@@ -65,7 +140,7 @@ export function assessZonasi(d: MCUDraft, gender?: string): ZonasiResult {
   }
 
   // 4. CKD ≥G3b: eGFR <45
-  const egfr = n(d.egfr);
+  const egfr = n(d.egfr) ?? calcEgfrCkdEpi2021(d.kreatinin, d.usia, gender || String(d.jenisKelamin || ''));
   if (egfr !== null && egfr < 45) {
     triggers.push('eGFR Sangat Rendah <45 (Merah)');
   }
