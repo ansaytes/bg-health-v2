@@ -175,7 +175,7 @@ export default function InventoryAdmin() {
       {/* HEADER LAYOUT: SYMMETRICAL & APPLE-LIKE */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Package size={28} style={{ color: 'var(--brand-primary)' }} />
+          <Package size={28} style={{ color: '#ff4d00' }} />
           <div>
             <h2 style={{ fontWeight: 700, letterSpacing: '-0.02em', fontSize: '20px', margin: 0, color: 'var(--foreground)' }}>Stok Obat & BHP</h2>
             <p style={{ color: 'var(--muted-foreground)', fontSize: '13px', margin: '2px 0 0 0' }}>Sistem FIFO/FEFO Otomatis berbasis Batch.</p>
@@ -186,8 +186,8 @@ export default function InventoryAdmin() {
         </Button>
       </div>
 
-      <div className="mcu-records-toolbar" style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'var(--card)', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-        <div className="mcu-records-search" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--background)', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}>
+      <div className="mcu-records-toolbar" style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'var(--card)', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border)', flexWrap: 'wrap' }}>
+        <div className="mcu-records-search" style={{ flex: 1, minWidth: '200px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--background)', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}>
           <Search size={16} className="text-muted-foreground" />
           <input 
             type="text" 
@@ -200,31 +200,33 @@ export default function InventoryAdmin() {
         <select 
           value={categoryFilter} 
           onChange={(e) => setCategoryFilter(e.target.value)}
-          style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--background)', fontSize: '13px', minWidth: '150px' }}
+          style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--background)', fontSize: '13px', minWidth: '150px', flexShrink: 0 }}
         >
           <option value="Semua">Semua Kategori</option>
           <option value="Obat">Obat</option>
           <option value="Bahan Medis">Bahan Medis</option>
           <option value="Lainnya">Lainnya</option>
         </select>
-        <DownloadButton
-          variant="compact"
-          filename="Data_Inventory_FEFO"
-          title="Data Inventory FEFO"
-          getData={tableDataForExport}
-        />
+        <div style={{ flexShrink: 0 }}>
+          <DownloadButton
+            variant="compact"
+            filename="Data_Inventory_FEFO"
+            title="Data Inventory FEFO"
+            getData={tableDataForExport}
+          />
+        </div>
       </div>
 
       <div className="mcu-records-table-wrap" style={{ border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
         <table className="mcu-records-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
           <thead style={{ background: 'var(--muted)', textAlign: 'left', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             <tr>
-              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600 }}>No</th>
-              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600 }}>Nama Item</th>
-              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600 }}>Tgl Expired<br/>(Terdekat)</th>
-              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600 }}>Total Stok</th>
-              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600 }}>Status</th>
-              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', textAlign: 'center', fontWeight: 600 }}>Aksi</th>
+              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600, whiteSpace: 'nowrap' }}>No</th>
+              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600, whiteSpace: 'nowrap' }}>Nama Item</th>
+              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600, whiteSpace: 'nowrap' }}>Tgl Expired (Terdekat)</th>
+              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600, whiteSpace: 'nowrap' }}>Total Stok</th>
+              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600, whiteSpace: 'nowrap' }}>Status</th>
+              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', textAlign: 'center', fontWeight: 600, whiteSpace: 'nowrap' }}>Aksi</th>
             </tr>
           </thead>
           <tbody>
