@@ -33,8 +33,20 @@ export async function POST(req: Request) {
     // Allow NIK KTP to be used as the fallback key when NIK Karyawan is unavailable.
     dbData.nik_karyawan = dbData.nik_karyawan || nikKaryawan;
     const encryptedData = encryptMCURecord(dbData);
-    // Upsert logic: if there is already a record for this NIK and Date, update it, otherwise insert
-    // Since we don't have a composite unique key by default, we'll just check if one exists for the same tgl_mcu
+    const recordId = calculatedFormData?.id || formData?.id;
+
+    // Upsert logic: if an ID is provided, strictly update that record
+    if (recordId) {
+      const { error } = await supabase
+        .from('mcu_records')
+        .update(encryptedData)
+        .eq('id', recordId);
+
+      if (error) throw error;
+      return NextResponse.json({ success: true, action: 'updated' });
+    }
+
+    // Otherwise, check if one exists for the same tgl_mcu
     const { data: existing, error: searchError } = await supabase
       .from('mcu_records')
       .select('id')

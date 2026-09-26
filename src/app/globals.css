@@ -2050,7 +2050,8 @@ select.admin-input.compact-input {
 .mcu-records-table tbody tr:hover td {
   background: var(--hover);
 }
-.mcu-records-table tbody tr:hover td.is-frozen {
+.mcu-records-table tbody tr:hover td.is-frozen,
+.mcu-records-table tbody tr:hover .mcu-records-index {
   background: color-mix(in srgb, var(--card) 94%, #ff4d00 6%);
 }
 .mcu-records-detail-cell {

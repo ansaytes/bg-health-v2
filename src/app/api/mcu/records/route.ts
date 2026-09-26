@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { decryptMCURecord, hashField } from '@/lib/encryption';
+import { MCU_FIELDS } from '@/lib/mcu-fields';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
@@ -66,10 +67,20 @@ export async function GET(req: NextRequest) {
   if (!data) return NextResponse.json({ record: null });
 
   const record = decryptMCURecord(data);
+  const snakeToCamelMap: Record<string, string> = {};
+  for (const field of MCU_FIELDS) {
+    const snakeKey = field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase();
+    snakeToCamelMap[snakeKey] = field.id;
+  }
+
   const formData: Record<string, string> = {};
   for (const [key, value] of Object.entries(record)) {
-    if (['id', 'created_at', 'updated_at'].includes(key) || value == null) continue;
-    const camelKey = key.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+    if (['created_at', 'updated_at'].includes(key) || value == null) continue;
+    if (key === 'id') {
+      formData.id = String(value);
+      continue;
+    }
+    const camelKey = snakeToCamelMap[key] || key.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
     formData[camelKey] = String(value);
   }
   return NextResponse.json({ record: formData, updatedAt: data.updated_at || data.created_at });

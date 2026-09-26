@@ -18,6 +18,7 @@ import KunjunganBerobatForm from '@/components/administrator/KunjunganBerobatFor
 import HealthCampaignForm from '@/components/administrator/HealthCampaignForm';
 import UserManagement from '@/components/administrator/UserManagement';
 import InputJadwalMCU from '@/components/administrator/InputJadwalMCUModern';
+import InventoryAdmin from '@/components/administrator/InventoryAdmin';
 import HomeView from '@/components/home/HomeView';
 import DataKesehatanTable from '@/components/dashboard/DataKesehatanTable';
 import DataKunjunganTable from '@/components/dashboard/DataKunjunganTable';
@@ -141,6 +142,15 @@ function IconUsers() {
     </svg>
   );
 }
+function IconInventory() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+      <line x1="12" y1="22.08" x2="12" y2="12" />
+    </svg>
+  );
+}
 
 /*   Sidebar Configs */
 
@@ -188,6 +198,7 @@ const ADMIN_SIDEBAR: SidebarItem[] = [
   { key: 'review-mcu', label: 'Review MCU', icon: <IconReviewMCU /> },
   { key: 'health-campaign', label: 'Health Campaign', icon: <IconCampaignAdmin /> },
   { key: 'kunjungan-admin', label: 'Kunjungan Berobat', icon: <IconKunjunganAdmin /> },
+  { key: 'inventory', label: 'Inventory (Stok)', icon: <IconInventory /> },
   { key: 'kelola-pengguna', label: 'Kelola Pengguna', icon: <IconUsers />, superuserOnly: true },
 ];
 const DATA_ENTRY_SIDEBAR: SidebarItem[] = [
@@ -348,6 +359,11 @@ function AdminContent() {
       labels: ['Form Input', 'Data Kunjungan'],
       form: <KunjunganBerobatForm />,
       tables: [<div className="admin-form-container" key="kunjungan"><DataKunjunganTable canEdit={isAdmin} /></div>],
+    },
+    'inventory': {
+      hasTable: false,
+      form: <InventoryAdmin />,
+      tables: [],
     },
   };
 

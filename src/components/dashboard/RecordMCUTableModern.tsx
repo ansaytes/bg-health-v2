@@ -1,10 +1,12 @@
 'use client';
 
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Search, Eye, Pin, SlidersHorizontal } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Eye, Pin, SlidersHorizontal, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { MCU_FIELDS } from '@/lib/mcu-fields';
+import { useAuth } from '@/lib/auth-context';
+import { useMCUStore } from '@/lib/store';
 
 type RecordRow = Record<string, any>;
 
@@ -14,6 +16,8 @@ function short(val: any) {
 }
 
 export default function RecordMCUTableModern() {
+  const { isSuperuser } = useAuth();
+  const store = useMCUStore();
   const [rows, setRows] = useState<RecordRow[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -24,6 +28,32 @@ export default function RecordMCUTableModern() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [frozenColumns, setFrozenColumns] = useState<string[]>(['nik_karyawan', 'nama']);
   const [showFrozenPicker, setShowFrozenPicker] = useState(false);
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus data MCU untuk ${name}?`)) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/mcu/records/${id}`, {
+        method: 'DELETE',
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Gagal menghapus data');
+      store.showToast('Data MCU berhasil dihapus', 'success');
+      load();
+    } catch (err) {
+      store.showToast(err instanceof Error ? err.message : 'Gagal menghapus data', 'error');
+    }
+  };
+
+  const handleEdit = (row: RecordRow) => {
+    // Navigate to Review MCU and trigger recall by filling NIK
+    // We can do this by setting store states
+    store.setReviewStep('form');
+    // But we need the decrypted data for the form.
+    // We can just alert for now, or fetch the full record.
+    alert('Untuk mengedit, silakan ke halaman Data Entry > Review MCU dan masukkan NIK Karyawan ini: ' + row.nik_karyawan);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -137,8 +167,14 @@ export default function RecordMCUTableModern() {
                     <tr>
                       <td className="mcu-records-index">{(page - 1) * 100 + idx + 1}</td>
                       {columns.map(c => <td key={c.key} className={frozenColumns.includes(c.key) ? 'is-frozen' : ''} style={frozenColumns.includes(c.key) ? { left: frozenOffsets[c.key] } : undefined} title={short(row[c.key])}>{short(row[c.key])}</td>)}
-                      <td className="mcu-records-action">
-                        <Button size="sm" variant="ghost" onClick={() => setExpanded(s => ({ ...s, [id]: !s[id] }))}><Eye size={14} /> {isExp ? 'Tutup' : 'Lihat'}</Button>
+                      <td className="mcu-records-action" style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                        <Button size="sm" variant="ghost" onClick={() => setExpanded(s => ({ ...s, [id]: !s[id] }))} title={isExp ? 'Tutup detail' : 'Lihat detail'}><Eye size={14} /></Button>
+                        {isSuperuser && (
+                          <>
+                            <Button size="sm" variant="ghost" onClick={() => handleEdit(row)} title="Edit data"><Edit size={14} /></Button>
+                            <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => handleDelete(String(row.id), row.nama)} title="Hapus data"><Trash2 size={14} /></Button>
+                          </>
+                        )}
                       </td>
                     </tr>
                     {isExp && (
