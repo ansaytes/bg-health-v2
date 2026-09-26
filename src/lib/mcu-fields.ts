@@ -98,6 +98,7 @@ function columnIndex(col: string): number {
 
 const normal = (normalRange: string, unit?: string): FieldOptions => ({ normalRange, unit });
 const select = (options: string[]): FieldOptions => ({ options, textNA: true });
+const neurologicalSelect = (options: string[]): FieldOptions => ({ options, textNA: false });
 const kesimpulanOptions = ['Fit To Work', 'Fit With Note', 'Fit With Restriction', 'Currently Unfit', 'Unfit', 'Temporary Unfit'];
 
 export const MCU_FIELDS: MCUFieldDef[] = [
@@ -216,11 +217,14 @@ export const MCU_FIELDS: MCUFieldDef[] = [
   f('audInterp', 'CT', 'Audiometry Interpretasi', 'audiometry'),
 
   // CU–DB Neurologi
-  ...([
-    ['balance', 'CU', 'Balance Test'], ['romberg', 'CV', 'Romberg Test'], ['phalen', 'CW', 'Phalen Test'],
-    ['thinel', 'CX', 'Thinel Test'], ['patrick', 'CY', 'Patrick Test'], ['kontraPatrick', 'CZ', 'Kontra Patrick Test'],
-    ['laseque', 'DA', 'Laseque Test'], ['kernig', 'DB', 'Kernig Test'],
-  ] as const).map(([id, col, label]) => f(id, col, label, 'neuro')),
+  f('balance', 'CU', 'Balance Test', 'neuro', 'select', neurologicalSelect(['Normal', 'Abnormal'])),
+  f('romberg', 'CV', 'Romberg Test', 'neuro', 'select', neurologicalSelect(['Normal', 'Negatif', 'Positif'])),
+  f('phalen', 'CW', 'Phalen Test', 'neuro', 'select', neurologicalSelect(['Normal', 'Negatif', 'Positif'])),
+  f('thinel', 'CX', 'Thinel Test', 'neuro', 'select', neurologicalSelect(['Normal', 'Negatif', 'Positif'])),
+  f('patrick', 'CY', 'Patrick Test', 'neuro', 'select', neurologicalSelect(['Normal', 'Negatif', 'Positif'])),
+  f('kontraPatrick', 'CZ', 'Kontra Patrick Test', 'neuro', 'select', neurologicalSelect(['Normal', 'Negatif', 'Positif'])),
+  f('laseque', 'DA', 'Laseque Test', 'neuro', 'select', neurologicalSelect(['Normal', 'Negatif', 'Positif'])),
+  f('kernig', 'DB', 'Kernig Test', 'neuro', 'select', neurologicalSelect(['Normal', 'Negatif', 'Positif'])),
   f('tesKebugaran', 'DC', 'Tes Kebugaran (6 Minutes Walk Test, Harvard Step Test)', 'fitness', 'textarea'),
   f('pemeriksaanLain', 'DD', 'Pemeriksaan Lain', 'assessment', 'textarea'),
   f('dugaanPAK', 'DE', 'Dugaan PAK', 'assessment', 'select', { options: ['Ya', 'Tidak'] }),
@@ -232,7 +236,7 @@ export const MCU_FIELDS: MCUFieldDef[] = [
   }),
   f('diagnosaMedis', 'DH', 'Diagnosa Medis', 'assessment', 'textarea', { autoCalc: true }),
   f('perluFU', 'DI', 'Perlu Follow Up?', 'assessment', 'select', { options: ['Ya', 'Tidak'] }),
-  f('rekFU', 'DJ', 'Rekomendasi follow up\nKonsultasi dan Terapi ke :', 'assessment', 'select', {
+  f('rekFU', 'DJ', 'Rekomendasi follow up', 'assessment', 'select', {
     multiple: true,
     options: [
       'Dokter Umum',

@@ -57,6 +57,8 @@ DETAIL WAJIB:
 25. Rekomendasi Follow Up yang menyebut dokter spesialis penyakit dalam dipetakan ke "Dokter Sp. PD"; saran diet/olahraga dipetakan ke opsi gaya hidup yang tersedia. Gunakan beberapa opsi bila beberapa tindakan jelas tertulis.
 26. Catatan Tambahan hanya boleh merangkum abnormalitas dan saran yang tercetak dalam dokumen. Jangan menyimpulkan diagnosis atau rekomendasi baru.
 27. Bila eGFR tidak tercantum, biarkan field egfr kosong. Aplikasi boleh menghitung estimasi CKD-EPI 2021 dari kreatinin serum, usia, dan jenis kelamin; jangan memperkirakan eGFR dari ureum.
+28. Untuk hbsag, antiHbs, vdrl, tpha, dan hiv: "Negatif"/"Negative" menjadi "Non - Reaktif"; "Positif"/"Positive" menjadi "Reaktif".
+29. Untuk defWarna dan semua field Neurologi (balance, romberg, phalen, thinel, patrick, kontraPatrick, laseque, kernig), "DBN" menjadi "Normal". Hasil positif/negatif Neurologi ditulis "Positif"/"Negatif".
 `;
 }
 
@@ -235,6 +237,25 @@ export async function POST(req: Request) {
         : gender.includes('laki') || gender.includes('pria') || gender.includes('male')
           ? 'Laki - Laki'
           : validData.jenisKelamin;
+    }
+    if (validData.defWarna && /^dbn$/i.test(validData.defWarna.trim())) {
+      validData.defWarna = 'Normal';
+    }
+    const serologyFields = ['hbsag', 'antiHbs', 'vdrl', 'tpha', 'hiv'];
+    for (const fieldId of serologyFields) {
+      const result = validData[fieldId]?.trim();
+      if (!result) continue;
+      if (/^(negatif|negative|non[\s-]*reaktif|non[\s-]*reactive)$/i.test(result)) {
+        validData[fieldId] = 'Non - Reaktif';
+      } else if (/^(positif|positive|reaktif|reactive)$/i.test(result)) {
+        validData[fieldId] = 'Reaktif';
+      }
+    }
+    const neurologicalFields = ['balance', 'romberg', 'phalen', 'thinel', 'patrick', 'kontraPatrick', 'laseque', 'kernig'];
+    for (const fieldId of neurologicalFields) {
+      if (validData[fieldId] && /^dbn$/i.test(validData[fieldId].trim())) {
+        validData[fieldId] = 'Normal';
+      }
     }
     if (validData.statusMCU) {
       const status = validData.statusMCU.toLowerCase();

@@ -58,7 +58,7 @@ export default function RecordMCUTable() {
     <div className="raw-table-container mcu-records-page">
       <div className="mcu-records-header">
         <div>
-          <h2>Record MCU</h2>
+          <h2>DATABASE</h2>
         </div>
         <span>{total} record</span>
       </div>

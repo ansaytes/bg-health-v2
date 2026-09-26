@@ -27,6 +27,11 @@ diagnosis, rekomendasi, atau nilai yang tidak ada di dokumen.
 - Normalisasi `Laki-laki`/`Pria` menjadi `Laki - Laki` dan `Perempuan`/`Wanita`
   menjadi `Perempuan`. Usia dapat diambil dari dokumen; aplikasi juga menghitung
   usia dari tanggal lahir data karyawan.
+- Untuk field serologi HBsAg, Anti-HBs, VDRL, TPHA, dan HIV, normalisasi
+  `Negatif` menjadi `Non - Reaktif` dan `Positif` menjadi `Reaktif`.
+- Untuk Defisiensi Persepsi Warna dan seluruh tes neurologi, normalisasi `DBN`
+  menjadi `Normal`. Tes neurologi memakai hasil `Normal`, `Negatif`, atau `Positif`
+  sesuai nilai yang tertulis.
 - Status MCU hanya boleh salah satu opsi status MCU. Frasa seperti `Fit dengan
   Catatan` adalah kesimpulan vendor, bukan Status MCU; petakan ke `Fit With Note`.
 - Bila dokumen memberi rekomendasi naratif, pilih hanya opsi dropdown yang didukung
@@ -34,6 +39,8 @@ diagnosis, rekomendasi, atau nilai yang tidak ada di dokumen.
   `Dokter Sp. PD`, dan anjuran diet/olahraga menjadi opsi gaya hidup.
 - Jangan membuat diagnosa, item follow up, atau saran baru. Item Follow Up dihitung
   aplikasi dari hasil pemeriksaan dan Kesimpulan Vendor.
+- Opsi Rekomendasi Follow Up diisi otomatis berdasarkan Item Follow Up; pengguna
+  dapat mengubah pilihan tersebut secara manual.
 - Jika eGFR tidak dicantumkan, biarkan field eGFR kosong; aplikasi akan menampilkan
   estimasi CKD-EPI 2021 hanya bila tersedia kreatinin serum, usia dewasa, dan jenis
   kelamin. Ureum saja tidak cukup untuk menghitung eGFR.

@@ -83,7 +83,7 @@ export default function RecordMCUTableModern() {
         <div className="mcu-records-header">
           <div>
             <div className="mcu-records-kicker">DATABASE MCU</div>
-            <h3>Record MCU</h3>
+            <h3>DATABASE</h3>
           </div>
           <div className="mcu-records-actions">
             <div className="mcu-records-search">

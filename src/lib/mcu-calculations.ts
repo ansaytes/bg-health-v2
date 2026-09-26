@@ -108,6 +108,42 @@ function buildFormulaFollowUp(values: MCUValues) {
   return items.join(', ');
 }
 
+export function buildAutomaticFollowUpRecommendations(values: MCUValues): string[] {
+  const itemFU = text(values.itemFU);
+  const recommendations = new Set<string>();
+  const addIf = (condition: boolean, recommendation: string) => {
+    if (condition) recommendations.add(recommendation);
+  };
+  const hemoroid = text(values.hemoroid);
+  const bmi = numberValue(values.bmi) ?? calcBMI(numberValue(values.bb), numberValue(values.tb));
+  const hasOrodental = abnormal(values.gigiMulut);
+  const hasEyeFinding = abnormal(values.fisikMata)
+    || abnormal(values.visusJauh, ['N/A'])
+    || abnormal(values.visusDekat, ['N/A'])
+    || (text(values.defWarna) && !['Normal', 'N/A'].includes(text(values.defWarna)))
+    || abnormal(values.lapangPandang);
+  const hasPositiveOrthoTest = ['patrick', 'kontraPatrick', 'laseque', 'phalen', 'thinel']
+    .some((field) => /positif|positive/i.test(text(values[field])));
+  const hasMedicalFinding = [
+    'tdS', 'tdD', 'hb', 'leukosit', 'eritrosit', 'hematokrit', 'trombosit',
+    'chol', 'tg', 'hdl', 'ldl', 'gdp', 'gd2pp', 'hba1c', 'au', 'ureum',
+    'kreatinin', 'egfr', 'sgot', 'sgpt', 'ggt', 'alp', 'billirubin',
+  ].some((field) => itemFU.toLowerCase().includes(field.toLowerCase()))
+    || /TD\s*:|BMI\s*:|HbA1c|HbsAg|VDRL|TPHA|HIV|CXR|Lumbosacral|ECG|Treadmill|Spirometry|Audiometry/i.test(itemFU);
+
+  addIf(hasOrodental || /Orodental/i.test(itemFU), 'Dokter Gigi');
+  addIf(/menolak rt|belum dilakukan/i.test(hemoroid) || /Pemeriksaan Hemoroid Belum Dilakukan/i.test(itemFU), 'Dokter Umum');
+  addIf(/positif/i.test(hemoroid) || /RT\s*:\s*Positif/i.test(itemFU), 'Dokter Sp. B');
+  addIf(hasEyeFinding || /Visus|Defisiensi Persepsi Warna|Mata\s*:/i.test(itemFU), 'Dokter Sp. M');
+  addIf(hasPositiveOrthoTest, 'Dokter Sp. OT');
+  addIf(hasMedicalFinding, 'Dokter Sp. PD');
+  addIf(bmi !== null && bmi >= 25 || /BMI\s*:|Chol\s*:|TG\s*:|LDL\s*:/i.test(itemFU),
+    'Pertahankan Kondisi Tubuh Bugar Dengan Diet Sehat & Rutin Olahraga');
+
+  if (itemFU && recommendations.size === 0) recommendations.add('Dokter Umum');
+  return [...recommendations];
+}
+
 function buildClinicalSummary(values: MCUValues) {
   const findings: string[] = [];
   const systolic = numberValue(values.tdS);

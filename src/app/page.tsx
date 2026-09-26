@@ -330,7 +330,7 @@ function AdminContent() {
     },
     'review-mcu': {
       hasTable: true,
-      labels: ['Form Input', 'Record MCU'],
+      labels: ['Form Input', 'DATABASE'],
       form: (
         <div style={{ display: 'flex', flexDirection: 'column', width: '90%', margin: '0 auto', padding: 16, overflow: 'auto', flex: 1, minHeight: 0 }}>
           <ReviewMCU />

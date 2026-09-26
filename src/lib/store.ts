@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { toast } from 'sonner';
 import { MCU_FIELDS, TOTAL_COLS, TEXT_NA_INDICES } from './mcu-fields';
 import { assessZonasi, calcBMI, calcMCHC, calcPct, calcDiabetes, calcPerluFU, calcFramingham } from './zonasi-engine';
-import { applyMCUCalculations } from './mcu-calculations';
+import { applyMCUCalculations, buildAutomaticFollowUpRecommendations } from './mcu-calculations';
 
 export type PageTab = 'home' | 'dashboard' | 'data-entry' | 'administrator';
 export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan';
@@ -59,6 +59,7 @@ interface MCUStore {
 
   // MCU form data
   formData: Record<string, string>;
+  autoRekFU: string;
   setFieldValue: (id: string, value: string) => void;
   setFormBatch: (data: Record<string, string>) => void;
   resetForm: () => void;
@@ -117,20 +118,23 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
   setEmployee: (emp) => set({ employee: emp }),
 
   formData: initialFormData(),
+  autoRekFU: '',
   setFieldValue: (id, value) => {
     set(state => ({
-      formData: { ...state.formData, [id]: value }
+      formData: { ...state.formData, [id]: value },
+      ...(id === 'rekFU' ? { autoRekFU: '' } : {}),
     }));
     // Trigger auto-calcs after a short delay
     setTimeout(() => get().runAutoCalcs(), 0);
   },
   setFormBatch: (data) => {
     set(state => ({
-      formData: { ...state.formData, ...data }
+      formData: { ...state.formData, ...data },
+      ...('rekFU' in data ? { autoRekFU: '' } : {}),
     }));
     setTimeout(() => get().runAutoCalcs(), 0);
   },
-  resetForm: () => set({ formData: initialFormData(), employee: null, reviewStep: 'search' }),
+  resetForm: () => set({ formData: initialFormData(), autoRekFU: '', employee: null, reviewStep: 'search' }),
 
   searchingEmployee: false,
   setSearchingEmployee: (v) => set({ searchingEmployee: v }),
@@ -155,7 +159,8 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
   clearToast: () => set({ toast: null }),
 
   runAutoCalcs: () => {
-    const fd = get().formData;
+    const currentState = get();
+    const fd = currentState.formData;
     const updates: Record<string, string> = {};
 
     // BMI
@@ -233,6 +238,16 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
       const value = formulaValues[key];
       if (value !== null && value !== undefined) updates[key] = String(value);
     }
+    const automaticRecommendations = buildAutomaticFollowUpRecommendations({
+      ...formulaValues,
+      ...updates,
+      bmi: updates.bmi || formulaValues.bmi,
+    }).join(' | ');
+    const currentRecommendations = fd.rekFU || '';
+    if (!currentRecommendations || (currentState.autoRekFU && currentRecommendations === currentState.autoRekFU)) {
+      updates.rekFU = automaticRecommendations;
+    }
+    const nextAutoRekFU = updates.rekFU !== undefined ? automaticRecommendations : currentState.autoRekFU;
 
     // Apply only changed values
     const newFd = { ...get().formData };
@@ -243,7 +258,9 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
         changed = true;
       }
     }
-    if (changed) set({ formData: newFd });
+    if (changed || nextAutoRekFU !== currentState.autoRekFU) {
+      set({ formData: newFd, autoRekFU: nextAutoRekFU });
+    }
   },
 
   buildRowData: () => {

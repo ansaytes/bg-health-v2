@@ -275,8 +275,10 @@ export default function ReviewMCU() {
       setOcrProgress(100);
       const json = await res.json();
       if (json.success && json.data) {
+        const extractedData = { ...json.data };
+        delete extractedData.rekFU;
         store.setFormBatch({
-          ...json.data,
+          ...extractedData,
           ...(store.employee ? employeeFormData(store.employee) : {}),
         });
         store.showToast('Data berhasil diekstrak', 'success');
@@ -321,6 +323,9 @@ export default function ReviewMCU() {
       const json = await res.json();
       if (json.success) {
         store.showToast(`Data MCU berhasil disimpan ke database (${json.action})`, 'success');
+        setNikInput('');
+        setOcrText('');
+        store.resetForm();
       } else {
         store.showToast(json.error || 'Gagal menyimpan', 'error');
       }
@@ -587,13 +592,6 @@ export default function ReviewMCU() {
                 <p className="text-xs text-muted-foreground">
                   {getGeminiOcrModel(ocrModelId)?.description}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  {getGeminiOcrModel(ocrModelId)?.recommendation} Model 3.8 Flash dipilih secara default
-                  untuk PDF MCU lengkap; 3.5 Flash Lite cocok saat perlu opsi lebih ringan.
-                  Model Live (termasuk yang menampilkan RPM “Unlimited”) tidak disertakan karena
-                  endpoint ekstraksi ini memerlukan keluaran JSON satu kali, bukan sesi audio/video real-time.
-                  Batas model dapat berubah sesuai kuota API key.
-                </p>
               </div>
 
               {store.extractingOCR && (
@@ -721,7 +719,7 @@ export default function ReviewMCU() {
                               age={store.formData.usia}
                               creatinine={store.formData.kreatinin}
                               onChange={(val) => store.setFieldValue(field.id, val)}
-                              isSingleCol={field.type === 'textarea'}
+                              isSingleCol={field.type === 'textarea' || field.id === 'rekFU'}
                             />
                           ))}
                         </div>
@@ -795,15 +793,20 @@ function FieldRenderer({
 
   return (
     <div className={inputClass}>
-      <div className="flex items-center gap-1.5 mb-1.5">
-        <label className="whitespace-pre-line text-xs font-medium text-muted-foreground">
-          {field.label}
-        </label>
-        {field.autoCalc && (
-          <Zap className="size-3 text-amber-500" />
-        )}
-        {field.unit && (
-          <span className="text-[10px] text-muted-foreground">({field.unit})</span>
+      <div className={`mb-1.5 ${field.id === 'rekFU' ? 'flex min-h-9 flex-col items-start gap-0' : 'flex items-center gap-1.5'}`}>
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs font-medium text-muted-foreground">
+            {field.label}
+          </label>
+          {field.autoCalc && (
+            <Zap className="size-3 text-amber-500" />
+          )}
+          {field.unit && (
+            <span className="text-[10px] text-muted-foreground">({field.unit})</span>
+          )}
+        </div>
+        {field.id === 'rekFU' && (
+          <span className="text-[10px] leading-4 text-muted-foreground">Konsultasi dan Terapi ke :</span>
         )}
       </div>
 
@@ -817,10 +820,14 @@ function FieldRenderer({
       ) : field.type === 'select' ? (
         field.multiple ? (
           <details className="relative text-sm">
-            <summary className={`flex h-9 cursor-pointer list-none items-center rounded-xl border border-input bg-background px-3 text-foreground ${abnormal ? 'border-red-500/60 dark:border-red-500/50' : ''}`}>
-              {selectedValues.length ? `${selectedValues.length} item dipilih` : 'Pilih satu atau lebih...'}
+            <summary className={`flex min-h-9 cursor-pointer list-none flex-wrap items-center gap-1.5 rounded-lg border border-input bg-background px-3 py-1.5 text-xs text-foreground ${abnormal ? 'border-red-500/60 dark:border-red-500/50' : ''}`}>
+              {selectedValues.length
+                ? selectedValues.map((selected) => (
+                    <span key={selected} className="rounded-md bg-primary/10 px-2 py-1 text-primary">{selected}</span>
+                  ))
+                : 'Pilih satu atau lebih...'}
             </summary>
-            <div className="mt-1 max-h-52 space-y-1 overflow-y-auto rounded-xl border border-input bg-background p-2 shadow-lg">
+            <div className="absolute left-0 right-0 z-20 mt-1 max-h-52 space-y-1 overflow-y-auto rounded-lg border border-input bg-background p-2 shadow-lg">
               {field.options?.map((opt) => (
                 <label key={opt} className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
                   <input
@@ -840,7 +847,7 @@ function FieldRenderer({
           <select
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className={`iOS-select h-9 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground ${abnormal ? 'border-red-500/60 dark:border-red-500/50' : ''}`}
+            className={`iOS-select h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground ${abnormal ? 'border-red-500/60 dark:border-red-500/50' : ''}`}
           >
             <option value="">Pilih...</option>
             {field.options?.map((opt) => (
