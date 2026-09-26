@@ -170,24 +170,21 @@ export default function InventoryAdmin() {
   };
 
   return (
-    <div className="admin-form-container" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div className="admin-form-container" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '0 24px 24px 24px' }}>
       
       {/* HEADER LAYOUT: SYMMETRICAL & APPLE-LIKE */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Package size={28} style={{ color: '#ff4d00' }} />
-          <div>
-            <h2 style={{ fontWeight: 700, letterSpacing: '-0.02em', fontSize: '20px', margin: 0, color: 'var(--foreground)' }}>Stok Obat & BHP</h2>
-            <p style={{ color: 'var(--muted-foreground)', fontSize: '13px', margin: '2px 0 0 0' }}>Sistem FIFO/FEFO Otomatis berbasis Batch.</p>
-          </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid var(--border)' }}>
+        <div>
+          <h2 style={{ fontWeight: 700, letterSpacing: '-0.02em', fontSize: '20px', margin: 0, color: 'var(--foreground)' }}>Stok Obat & BHP</h2>
+          <p style={{ color: 'var(--muted-foreground)', fontSize: '13px', margin: '4px 0 0 0' }}>Sistem FIFO/FEFO Otomatis berbasis Batch.</p>
         </div>
         <Button onClick={() => setIsAddOpen(true)} style={{ borderRadius: '999px', padding: '0 20px', fontWeight: 600, border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
           <Plus size={16} className="mr-2" /> Tambah Item Master
         </Button>
       </div>
 
-      <div className="mcu-records-toolbar" style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'var(--card)', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border)', flexWrap: 'wrap' }}>
-        <div className="mcu-records-search" style={{ flex: 1, minWidth: '200px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--background)', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}>
+      <div className="mcu-records-toolbar" style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'var(--card)', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border)', flexWrap: 'nowrap' }}>
+        <div className="mcu-records-search" style={{ flex: '1 1 auto', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--background)', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}>
           <Search size={16} className="text-muted-foreground" />
           <input 
             type="text" 
@@ -200,14 +197,14 @@ export default function InventoryAdmin() {
         <select 
           value={categoryFilter} 
           onChange={(e) => setCategoryFilter(e.target.value)}
-          style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--background)', fontSize: '13px', minWidth: '150px', flexShrink: 0 }}
+          style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--background)', fontSize: '13px', minWidth: '150px', flex: '0 0 auto' }}
         >
           <option value="Semua">Semua Kategori</option>
           <option value="Obat">Obat</option>
           <option value="Bahan Medis">Bahan Medis</option>
           <option value="Lainnya">Lainnya</option>
         </select>
-        <div style={{ flexShrink: 0 }}>
+        <div style={{ flex: '0 0 auto' }}>
           <DownloadButton
             variant="compact"
             filename="Data_Inventory_FEFO"
