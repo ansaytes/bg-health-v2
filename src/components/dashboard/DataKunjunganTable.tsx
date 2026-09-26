@@ -43,11 +43,11 @@ const COLUMNS = [
   { key: 'nik', label: 'NIK' },
   { key: 'nama', label: 'Nama' },
   { key: 'departemen', label: 'Departemen' },
-  { key: 'site', label: 'Site' },
+  { key: 'jobsite', label: 'Site' },
   { key: 'diagnosa', label: 'Diagnosa' },
-  { key: 'jenisObat', label: 'Jenis Obat' },
-  { key: 'rujukRS', label: 'Rujuk RS' },
-  { key: 'namaRS', label: 'Nama RS' },
+  { key: 'jenis_obat', label: 'Jenis Obat' },
+  { key: 'rujuk_rs', label: 'Rujuk RS' },
+  { key: 'nama_rs', label: 'Nama RS' },
 ];
 
 const EDITABLE_FIELDS = [
@@ -55,11 +55,11 @@ const EDITABLE_FIELDS = [
   { key: 'nik', label: 'NIK', type: 'text' },
   { key: 'nama', label: 'Nama', type: 'text' },
   { key: 'departemen', label: 'Departemen', type: 'text' },
-  { key: 'site', label: 'Site', type: 'text' },
+  { key: 'jobsite', label: 'Site', type: 'text' },
   { key: 'diagnosa', label: 'Diagnosa', type: 'text' },
-  { key: 'jenisObat', label: 'Jenis Obat', type: 'text' },
-  { key: 'rujukRS', label: 'Rujuk RS', type: 'select', options: ['Ya', 'Tidak'] },
-  { key: 'namaRS', label: 'Nama RS', type: 'text' },
+  { key: 'jenis_obat', label: 'Jenis Obat', type: 'text' },
+  { key: 'rujuk_rs', label: 'Rujuk RS', type: 'select', options: ['Ya', 'Tidak'] },
+  { key: 'nama_rs', label: 'Nama RS', type: 'text' },
 ];
 
 /* Get auth token for API calls */
@@ -138,7 +138,7 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
     setEditRow(row);
     const data: Record<string, string> = {};
     EDITABLE_FIELDS.forEach(f => {
-      if (f.key === 'rujukRS') {
+      if (f.key === 'rujuk_rs') {
         data[f.key] = row.rujuk_rs === true || row.rujukRS === 'Ya' ? 'Ya' : 'Tidak';
       } else if (f.type === 'date') {
         data[f.key] = toDateInput(row[f.key]);
@@ -160,11 +160,11 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
         nik: editData.nik,
         nama: editData.nama,
         departemen: editData.departemen || null,
-        jobsite: editData.site || null,
+        jobsite: editData.jobsite || null,
         diagnosa: editData.diagnosa || null,
-        jenis_obat: editData.jenisObat || null,
-        rujuk_rs: editData.rujukRS === 'Ya',
-        nama_rs: editData.namaRS || null,
+        jenis_obat: editData.jenis_obat || null,
+        rujuk_rs: editData.rujuk_rs === 'Ya',
+        nama_rs: editData.nama_rs || null,
       };
 
       const res = await fetch(`/api/kunjungan/${editRow.id}`, {
@@ -277,7 +277,7 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
                     {COLUMNS.map(col => {
                       let val: React.ReactNode = '-';
                       let valStr: string = '-';
-                      if (col.key === 'rujukRS') {
+                      if (col.key === 'rujuk_rs') {
                         val = rujukVal;
                         valStr = rujukVal;
                       } else if (col.key === 'tanggal') {
@@ -297,7 +297,7 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
                           val = String(row[col.key] || '-');
                           valStr = String(row[col.key] || '-');
                         }
-                      } else if (col.key === 'jenisObat') {
+                      } else if (col.key === 'jenis_obat') {
                         // The column might be called 'jenis_obat' in DB, so let's check row['jenis_obat'] as well
                         const raw = row[col.key] || row['jenis_obat'];
                         try {
@@ -323,7 +323,7 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
                         val = String(row[col.key] || '-');
                         valStr = String(row[col.key] || '-');
                       }
-                      const isRujuk = col.key === 'rujukRS';
+                      const isRujuk = col.key === 'rujuk_rs';
                       return (
                         <td key={col.key} style={{
                           fontWeight: isRujuk ? 600 : 400,

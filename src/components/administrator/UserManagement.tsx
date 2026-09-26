@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
+import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
 
 interface UserProfile {
   id: string;
@@ -213,35 +214,27 @@ export default function UserManagement() {
               </select>
             </div>
             <div>
-              <label className="admin-label">NIK Karyawan *</label>
-              <input
-                type="text" value={regForm.employee_nik}
-                onChange={async (e) => {
-                  const nikVal = e.target.value;
-                  setRegForm({ ...regForm, employee_nik: nikVal });
-                  if (nikVal.length >= 6) {
-                    try {
-                      const res = await fetch('/api/employee', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ query: nikVal, searchBy: 'nik' }),
-                      });
-                      const json = await res.json();
-                      if (json.success && json.data && json.data.length > 0) {
-                        const emp = json.data[0];
-                        setRegForm(prev => ({
-                          ...prev,
-                          employee_nik: nikVal,
-                          full_name: emp.nama || prev.full_name,
-                          username: emp.nik ? String(emp.nik) : prev.username,
-                          national_id: emp.national_id || prev.national_id,
-                          site: emp.site_name || prev.site,
-                        }));
-                      }
-                    } catch {}
-                  }
+              <EmployeeLookupInput
+                value={regForm.employee_nik || ''}
+                onChange={(v) => setRegForm({ ...regForm, employee_nik: v })}
+                onEmployeeFound={(emp) => {
+                  setRegForm((prev) => ({
+                    ...prev,
+                    employee_nik: emp.nik ? String(emp.nik) : prev.employee_nik,
+                    full_name: emp.nama || prev.full_name,
+                    username: emp.nik ? String(emp.nik) : prev.username,
+                    national_id: emp.national_id || prev.national_id,
+                    site: emp.site_name || prev.site,
+                  }));
                 }}
-                placeholder="Ketik NIK Karyawan untuk auto-fill" className="admin-input"
+                placeholder="Ketik Nama, NIK, atau KTP Karyawan"
+                label={
+                  <span className="admin-label" style={{ marginBottom: 0 }}>
+                    Cari Data Karyawan *
+                  </span>
+                }
+                required
+                inputStyle={{ width: '100%', height: 38, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)', padding: '0 12px', fontSize: 13, color: 'var(--foreground)' }}
               />
             </div>
             <div>

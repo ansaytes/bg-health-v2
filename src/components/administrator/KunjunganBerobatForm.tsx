@@ -30,7 +30,9 @@ const FORM_FIELDS = [
 ];
 
 export default function KunjunganBerobatForm() {
-  const [form, setForm] = useState<Record<string, string>>({});
+  const [form, setForm] = useState<Record<string, string>>({
+    tanggalKunjungan: new Date().toISOString().split('T')[0],
+  });
   const [diagnoses, setDiagnoses] = useState([{ id: Date.now().toString(), text: '' }]);
   const [medications, setMedications] = useState([{ id: Date.now().toString(), nama: '', aturan: '', jumlah: '' }]);
   const [saving, setSaving] = useState(false);
@@ -82,7 +84,9 @@ export default function KunjunganBerobatForm() {
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Gagal menyimpan');
       setSaved(true);
-      setForm({});
+      setForm({
+        tanggalKunjungan: new Date().toISOString().split('T')[0],
+      });
       setDiagnoses([{ id: Date.now().toString(), text: '' }]);
       setMedications([{ id: Date.now().toString(), nama: '', aturan: '', jumlah: '' }]);
       setTimeout(() => setSaved(false), 3000);
