@@ -198,7 +198,7 @@ const ADMIN_SIDEBAR: SidebarItem[] = [
   { key: 'review-mcu', label: 'Review MCU', icon: <IconReviewMCU /> },
   { key: 'health-campaign', label: 'Health Campaign', icon: <IconCampaignAdmin /> },
   { key: 'kunjungan-admin', label: 'Kunjungan Berobat', icon: <IconKunjunganAdmin /> },
-  { key: 'inventory', label: 'Inventory (Stok)', icon: <IconInventory /> },
+  { key: 'inventory', label: 'Inventory', icon: <IconInventory /> },
   { key: 'kelola-pengguna', label: 'Kelola Pengguna', icon: <IconUsers />, superuserOnly: true },
 ];
 const DATA_ENTRY_SIDEBAR: SidebarItem[] = [

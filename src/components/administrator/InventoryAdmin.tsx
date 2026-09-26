@@ -38,12 +38,12 @@ export default function InventoryAdmin() {
 
   return (
     <div className="admin-form-container" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div className="admin-form-header">
+      <div className="admin-form-header" style={{ alignItems: 'center' }}>
         <div>
-          <h2><Package size={20} /> Stok Obat & Bahan Medis</h2>
-          <p>Kelola ketersediaan stok obat-obatan, bahan medis habis pakai, dan item lainnya.</p>
+          <h2 style={{ fontWeight: 700, letterSpacing: '-0.02em' }}><Package size={20} style={{ marginRight: '8px' }} /> Stok Obat & BHP</h2>
+          <p style={{ color: 'var(--muted-foreground)', fontSize: '14px', marginTop: '4px' }}>Kelola ketersediaan inventaris klinik.</p>
         </div>
-        <Button onClick={() => alert('Fitur tambah item akan segera tersedia')}><Plus size={16} className="mr-2" /> Tambah Item</Button>
+        <Button onClick={() => alert('Fitur tambah item akan segera tersedia')} style={{ borderRadius: '999px', padding: '0 20px' }}><Plus size={16} className="mr-2" /> Tambah Item</Button>
       </div>
 
       <div className="mcu-records-toolbar" style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'var(--card)', padding: '12px 16px', borderRadius: '12px', border: '1px solid var(--border)' }}>

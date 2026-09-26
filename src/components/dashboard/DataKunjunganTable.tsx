@@ -275,19 +275,59 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
                   <tr key={row.id || idx}>
                     <td style={{ color: 'var(--muted-foreground)' }}>{idx + 1}</td>
                     {COLUMNS.map(col => {
-                      let val: string;
+                      let val: React.ReactNode = '-';
+                      let valStr: string = '-';
                       if (col.key === 'rujukRS') {
                         val = rujukVal;
+                        valStr = rujukVal;
                       } else if (col.key === 'tanggal') {
                         val = fmtDate(row[col.key]);
+                        valStr = fmtDate(row[col.key]);
+                      } else if (col.key === 'diagnosa') {
+                        try {
+                          const parsed = JSON.parse(row[col.key]);
+                          if (Array.isArray(parsed)) {
+                            val = parsed.join(', ');
+                            valStr = parsed.join(', ');
+                          } else {
+                            val = String(row[col.key] || '-');
+                            valStr = String(row[col.key] || '-');
+                          }
+                        } catch {
+                          val = String(row[col.key] || '-');
+                          valStr = String(row[col.key] || '-');
+                        }
+                      } else if (col.key === 'jenisObat') {
+                        // The column might be called 'jenis_obat' in DB, so let's check row['jenis_obat'] as well
+                        const raw = row[col.key] || row['jenis_obat'];
+                        try {
+                          const parsed = JSON.parse(raw);
+                          if (Array.isArray(parsed)) {
+                            val = (
+                              <ul style={{ margin: 0, paddingLeft: '16px', listStyleType: 'disc' }}>
+                                {parsed.map((m: any, i: number) => (
+                                  <li key={i}>{m.nama} - {m.aturan} ({m.jumlah})</li>
+                                ))}
+                              </ul>
+                            );
+                            valStr = parsed.map((m: any) => `${m.nama} - ${m.aturan} (${m.jumlah})`).join(', ');
+                          } else {
+                            val = String(raw || '-');
+                            valStr = String(raw || '-');
+                          }
+                        } catch {
+                          val = String(raw || '-');
+                          valStr = String(raw || '-');
+                        }
                       } else {
                         val = String(row[col.key] || '-');
+                        valStr = String(row[col.key] || '-');
                       }
                       const isRujuk = col.key === 'rujukRS';
                       return (
                         <td key={col.key} style={{
                           fontWeight: isRujuk ? 600 : 400,
-                          color: isRujuk && val === 'Ya' ? '#ff4d00' : undefined,
+                          color: isRujuk && valStr === 'Ya' ? '#ff4d00' : undefined,
                         }}>
                           {val}
                         </td>

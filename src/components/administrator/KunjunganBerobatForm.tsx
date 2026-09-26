@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { Plus, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
 
 const JOBSITES = [
@@ -22,8 +24,6 @@ const FORM_FIELDS = [
   { id: 'departemen', label: 'Departemen', type: 'text', placeholder: 'Nama departemen', required: true },
   { id: 'site', label: 'Jobsite', type: 'jobsite', placeholder: 'Pilih lokasi site', required: true },
   { id: 'tanggalKunjungan', label: 'Tanggal Kunjungan', type: 'date', placeholder: '', required: true },
-  { id: 'diagnosa', label: 'Diagnosa', type: 'text', placeholder: 'Diagnosa dokter' },
-  { id: 'jenisObat', label: 'Jenis Obat', type: 'text', placeholder: 'Obat yang diberikan' },
   { id: 'rujukRS', label: 'Rujuk RS', type: 'select', options: ['Tidak', 'Ya'], required: true },
   { id: 'namaRS', label: 'Nama RS (jika dirujuk)', type: 'text', placeholder: 'Nama rumah sakit rujukan' },
   { id: 'catatan', label: 'Catatan', type: 'textarea', placeholder: 'Catatan tambahan...' },
@@ -31,6 +31,8 @@ const FORM_FIELDS = [
 
 export default function KunjunganBerobatForm() {
   const [form, setForm] = useState<Record<string, string>>({});
+  const [diagnoses, setDiagnoses] = useState([{ id: Date.now().toString(), text: '' }]);
+  const [medications, setMedications] = useState([{ id: Date.now().toString(), nama: '', aturan: '', jumlah: '' }]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -39,6 +41,14 @@ export default function KunjunganBerobatForm() {
     setForm(prev => ({ ...prev, [id]: value }));
     setSaved(false);
   };
+
+  const handleAddDiagnosis = () => setDiagnoses(prev => [...prev, { id: Date.now().toString(), text: '' }]);
+  const handleRemoveDiagnosis = (id: string) => setDiagnoses(prev => prev.filter(d => d.id !== id));
+  const handleDiagnosisChange = (id: string, text: string) => setDiagnoses(prev => prev.map(d => d.id === id ? { ...d, text } : d));
+
+  const handleAddMedication = () => setMedications(prev => [...prev, { id: Date.now().toString(), nama: '', aturan: '', jumlah: '' }]);
+  const handleRemoveMedication = (id: string) => setMedications(prev => prev.filter(m => m.id !== id));
+  const handleMedicationChange = (id: string, field: 'nama'|'aturan'|'jumlah', value: string) => setMedications(prev => prev.map(m => m.id === id ? { ...m, [field]: value } : m));
 
   const handleEmployeeFound = useCallback((data: EmployeeData) => {
     // Smart-fill: match site_name against JOBSITES (case-insensitive)
@@ -64,7 +74,8 @@ export default function KunjunganBerobatForm() {
         body: JSON.stringify({
           nik: form.nik, nama: form.nama, departemen: form.departemen,
           jobsite: form.site, tanggal: form.tanggalKunjungan,
-          diagnosa: form.diagnosa, jenis_obat: form.jenisObat,
+          diagnosa: JSON.stringify(diagnoses.map(d => d.text).filter(Boolean)), 
+          jenis_obat: JSON.stringify(medications.filter(m => m.nama).map(({ nama, aturan, jumlah }) => ({ nama, aturan, jumlah }))),
           rujuk_rs: form.rujukRS, nama_rs: form.namaRS,
         }),
       });
@@ -72,6 +83,8 @@ export default function KunjunganBerobatForm() {
       if (!json.success) throw new Error(json.error || 'Gagal menyimpan');
       setSaved(true);
       setForm({});
+      setDiagnoses([{ id: Date.now().toString(), text: '' }]);
+      setMedications([{ id: Date.now().toString(), nama: '', aturan: '', jumlah: '' }]);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Gagal menyimpan data');
@@ -192,6 +205,44 @@ export default function KunjunganBerobatForm() {
                 );
               })}
             </div>
+
+            <div style={{ marginTop: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <h4 style={{ fontWeight: 600, fontSize: 14 }}>Daftar Diagnosa</h4>
+                <Button type="button" variant="outline" size="sm" onClick={handleAddDiagnosis}><Plus size={14} className="mr-2" /> Tambah</Button>
+              </div>
+              {diagnoses.map((diag, index) => (
+                <div key={diag.id} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                  <span style={{ fontSize: 13, color: 'var(--muted-foreground)', width: 20 }}>{index + 1}.</span>
+                  <input type="text" value={diag.text} onChange={e => handleDiagnosisChange(diag.id, e.target.value)} placeholder="Tuliskan diagnosa..." className="admin-input" style={{ flex: 1 }} />
+                  <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveDiagnosis(diag.id)} className="text-red-500 hover:text-red-600"><Trash2 size={16} /></Button>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginTop: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <h4 style={{ fontWeight: 600, fontSize: 14 }}>Resep & Obat (Dari Inventory)</h4>
+                <Button type="button" variant="outline" size="sm" onClick={handleAddMedication}><Plus size={14} className="mr-2" /> Tambah Obat</Button>
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, width: 20 }}></span>
+                <span style={{ fontSize: 12, fontWeight: 600, flex: 2 }}>Nama Obat / BHP</span>
+                <span style={{ fontSize: 12, fontWeight: 600, flex: 1 }}>Aturan Pakai</span>
+                <span style={{ fontSize: 12, fontWeight: 600, width: 80 }}>Jumlah</span>
+                <span style={{ width: 40 }}></span>
+              </div>
+              {medications.map((med, index) => (
+                <div key={med.id} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                  <span style={{ fontSize: 13, color: 'var(--muted-foreground)', width: 20 }}>{index + 1}.</span>
+                  <input type="text" value={med.nama} onChange={e => handleMedicationChange(med.id, 'nama', e.target.value)} placeholder="Cari obat..." className="admin-input" style={{ flex: 2 }} />
+                  <input type="text" value={med.aturan} onChange={e => handleMedicationChange(med.id, 'aturan', e.target.value)} placeholder="Cth: 3x1" className="admin-input" style={{ flex: 1 }} />
+                  <input type="number" value={med.jumlah} onChange={e => handleMedicationChange(med.id, 'jumlah', e.target.value)} placeholder="Jml" className="admin-input" style={{ width: 80 }} />
+                  <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveMedication(med.id)} className="text-red-500 hover:text-red-600"><Trash2 size={16} /></Button>
+                </div>
+              ))}
+            </div>
+
             {errorMsg && <p className="login-error-msg" style={{ marginTop: 16 }}>{errorMsg}</p>}
             <div style={{ marginTop: 20, display: 'flex', gap: 10 }}>
               <button
