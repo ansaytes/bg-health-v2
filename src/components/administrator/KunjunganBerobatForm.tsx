@@ -222,7 +222,7 @@ export default function KunjunganBerobatForm() {
 
             <div style={{ marginTop: 24 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <h4 style={{ fontWeight: 600, fontSize: 14 }}>Resep & Obat (Dari Inventory)</h4>
+                <h4 style={{ fontWeight: 600, fontSize: 14 }}>Resep & Obat</h4>
                 <Button type="button" variant="outline" size="sm" onClick={handleAddMedication}><Plus size={14} className="mr-2" /> Tambah Obat</Button>
               </div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
