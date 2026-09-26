@@ -197,7 +197,7 @@ export default function InventoryAdmin() {
         <select 
           value={categoryFilter} 
           onChange={(e) => setCategoryFilter(e.target.value)}
-          style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--background)', fontSize: '13px', minWidth: '180px', width: '180px', flex: '0 0 auto' }}
+          style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--background)', fontSize: '13px', width: '220px', flex: '0 0 220px', textOverflow: 'clip' }}
         >
           <option value="Semua">Semua Kategori</option>
           <option value="Obat">Obat</option>
