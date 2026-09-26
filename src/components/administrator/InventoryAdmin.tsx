@@ -194,16 +194,18 @@ export default function InventoryAdmin() {
             style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontSize: '13px' }}
           />
         </div>
-        <select 
-          value={categoryFilter} 
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--background)', fontSize: '13px', width: '220px', flex: '0 0 220px', textOverflow: 'clip' }}
-        >
-          <option value="Semua">Semua Kategori</option>
-          <option value="Obat">Obat</option>
-          <option value="Bahan Medis">Bahan Medis</option>
-          <option value="Lainnya">Lainnya</option>
-        </select>
+        <div style={{ minWidth: '200px', width: '200px', flex: '0 0 200px' }}>
+          <select 
+            value={categoryFilter} 
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--background)', fontSize: '13px', outline: 'none', cursor: 'pointer' }}
+          >
+            <option value="Semua">Semua Kategori</option>
+            <option value="Obat">Obat</option>
+            <option value="Bahan Medis">Bahan Medis</option>
+            <option value="Lainnya">Lainnya</option>
+          </select>
+        </div>
         <div style={{ flex: '0 0 auto' }}>
           <DownloadButton
             variant="compact"
