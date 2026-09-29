@@ -76,41 +76,104 @@ async function fetchYouTubeVideos(): Promise<FeedItem[]> {
 async function fetchInstagramPosts(): Promise<FeedItem[]> {
   try {
     const rssUrl = process.env.INSTAGRAM_RSS_URL || 'https://rss.app/feeds/OiXO4pjBV8QvcXke.xml';
+    console.log(`[IG-RSS] Fetching Instagram RSS: ${rssUrl.substring(0, 50)}${rssUrl.length > 50 ? '...' : ''}`);
+
     const res = await fetch(rssUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-      signal: AbortSignal.timeout(10000),
-      next: { revalidate: 3600 }
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; BGHealthFeedBot/1.0)',
+        Accept: 'application/rss+xml, application/xml, text/xml, */*',
+      },
+      signal: AbortSignal.timeout(20000),
+      cache: 'no-store',
     });
-    if (!res.ok) return [];
-    
+
+    console.log(`[IG-RSS] HTTP response: status=${res.status} statusText="${res.statusText}" length=${res.headers.get('content-length') || '?'}`);
+
+    if (!res.ok) {
+      console.error(`[IG-RSS] GAGAL: HTTP ${res.status} ${res.statusText} — cek URL INSTAGRAM_RSS_URL di .env.local apakah masih aktif!`);
+      return [];
+    }
+
     const xml = await res.text();
+    console.log(`[IG-RSS] Response body length: ${xml.length} chars`);
+
+    // Validate: response harus mengandung XML RSS tag (bukan teks error halaman web biasa)
+    const hasRssTag = /<rss[\s>]/i.test(xml) || /<channel[\s>]/i.test(xml);
+    const hasAnyItemTag = /<item[\s>]/i.test(xml);
+
+    if (!hasRssTag || !hasAnyItemTag) {
+      // Preview 200 chars pertama untuk memberi petunjuk error ke developer
+      const preview = xml.replace(/\s+/g, ' ').slice(0, 200);
+      console.error(
+        `[IG-RSS] GAGAL: Response BUKAN format RSS/XML yang valid! ` +
+        `(<rss>=${hasRssTag}, <item>=${hasAnyItemTag}). ` +
+        `Kemungkinan URL INSTAGRAM_RSS_URL sudah EXPIRED / feed provider (rss.app) perlu di-upgrade. ` +
+        `Preview body: "${preview}"`
+      );
+      return [];
+    }
+
     const posts: FeedItem[] = [];
-    const items = xml.split('<item>').slice(1);
-    
+    const items = xml.split(/<item[\s>]*>/i).slice(1);
+    console.log(`[IG-RSS] Jumlah <item> tag ditemukan: ${items.length}`);
+
     for (const item of items) {
-      const linkMatch = item.match(/<link>([^<]+)<\/link>/);
-      const pubDateMatch = item.match(/<pubDate>([^<]+)<\/pubDate>/);
-      const mediaMatch = item.match(/<media:content[^>]+url="([^"]+)"/);
-      const descMatch = item.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/);
-      
+      // Coba beberapa variant regex untuk link, karena format beda-beda per provider RSS
+      const linkMatch =
+        item.match(/<link>([^<]+)<\/link>/) ||
+        item.match(/<guid[^>]*>([^<]+)<\/guid>/i);
+      // Coba beberapa variant regex untuk tanggal
+      const pubDateMatch =
+        item.match(/<pubDate>([^<]+)<\/pubDate>/i) ||
+        item.match(/<dc:date>([^<]+)<\/dc:date>/i) ||
+        item.match(/<published>([^<]+)<\/published>/i);
+      // Coba beberapa variant regex untuk URL media (GAMBAR/VIDEO POST)
+      const mediaMatch =
+        item.match(/<media:content[^>]+url="([^"]+)"/i) ||
+        item.match(/<media:thumbnail[^>]+url="([^"]+)"/i) ||
+        item.match(/<enclosure[^>]+url="([^"]+)"/i) ||
+        item.match(/<img[^>]+src="([^"]+\.(?:jpg|jpeg|png|webp|gif)[^"]*)"/i);
+      // Coba beberapa variant regex untuk CAPTION (description bisa CDATA atau plain, atau pakai content:encoded)
+      const descMatch =
+        item.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/) ||
+        item.match(/<description>([\s\S]*?)<\/description>/) ||
+        item.match(/<content:encoded><!\[CDATA\[([\s\S]*?)\]\]><\/content:encoded>/i) ||
+        item.match(/<content:encoded>([\s\S]*?)<\/content:encoded>/i);
+
       if (linkMatch && pubDateMatch) {
         let caption = '';
         if (descMatch) {
-          caption = descMatch[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+          caption = descMatch[1]
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
         }
 
-        // Filter out Health Campaign from IG
         if (/health\s*campaign/i.test(caption)) continue;
 
-        const link = linkMatch[1];
-        const publishedAt = new Date(pubDateMatch[1]).toISOString();
+        const link = linkMatch[1].replace(/&amp;/g, '&');
+
+        let publishedAt: string;
+        try {
+          publishedAt = new Date(pubDateMatch[1]).toISOString();
+        } catch {
+          publishedAt = new Date().toISOString();
+        }
+
         let mediaUrl = mediaMatch ? mediaMatch[1] : '';
         if (mediaUrl) mediaUrl = mediaUrl.replace(/&amp;/g, '&');
-        
-        const title = caption.slice(0, 80) || 'Postingan @Bagongnews';
-        const idMatch = link.match(/\/p\/([^/]+)/);
-        const id = idMatch ? `ig-${idMatch[1]}` : `ig-${Math.random().toString(36).slice(2)}`;
-        
+
+        const title = caption.length > 80 ? caption.slice(0, 80) + '…' : caption || 'Postingan @Bagongnews';
+        // Support semua format URL Instagram: /p/ (post foto), /reel/ (reels video), /tv/ (IGTV)
+        const idMatch = link.match(/\/(?:p|reel|tv)\/([^/?#]+)/);
+        const id = idMatch ? `ig-${idMatch[1]}` : `ig-${Math.random().toString(36).slice(2, 14)}`;
+
         posts.push({
           id,
           title,
@@ -120,13 +183,19 @@ async function fetchInstagramPosts(): Promise<FeedItem[]> {
           published_at: publishedAt,
           external_url: link,
         });
-        
+
         if (posts.length >= 12) break;
       }
     }
+
+    console.log(`[IG-RSS] Berhasil di-parse: ${posts.length} posts`);
     return posts;
-  } catch (err) {
-    console.error('Instagram RSS fetch failed:', err);
+  } catch (err: any) {
+    if (err?.name === 'TimeoutError' || err?.message?.includes('aborted')) {
+      console.error(`[IG-RSS] GAGAL: TIMEOUT (>20 detik). Server RSS lambat atau URL tidak bisa diakses dari jaringan ini.`);
+    } else {
+      console.error(`[IG-RSS] GAGAL (exception): ${err?.name || 'Error'} - ${err?.message || String(err)}`);
+    }
     return [];
   }
 }
