@@ -112,12 +112,14 @@ async function fetchInstagramPosts(): Promise<FeedItem[]> {
       const link = `https://www.instagram.com/p/${node.shortcode}/`;
       const publishedAt = new Date(node.taken_at_timestamp * 1000).toISOString();
       const mediaUrl = node.display_url || '';
+      const videoUrl = node.is_video ? node.video_url : undefined;
       
       posts.push({
         id,
         title,
         caption: captionText.slice(0, 300),
         media_url: mediaUrl,
+        video_url: videoUrl,
         source: 'instagram',
         published_at: publishedAt,
         external_url: link,

@@ -83,7 +83,7 @@ const LONG_CAPTION_THRESHOLD = 120;
 /* ── Feed Card Component ── */
 function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOpen: (item: FeedItem) => void }) {
   const placeholder = PLACEHOLDER_BG[index % PLACEHOLDER_BG.length];
-  const isVideo = item.source === 'youtube' || item.type === 'talk' || item.type === 'podcast';
+  const isVideo = item.source === 'youtube' || item.type === 'talk' || item.type === 'podcast' || !!item.video_url;
   const isIgStyle = item.type === 'campaign' || item.type === 'news';
   const isYouTube = item.source === 'youtube' || item.type === 'talk';
   // Normalize the thumbnail URL (auto-converts Google Drive share links to direct image URLs)
@@ -249,7 +249,7 @@ function FeedSection({
 /* ── Content Modal — Instagram-style for campaigns, full video for others ── */
 function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () => void }) {
   if (!item) return null;
-  const isVideo = item.source === 'youtube' || item.type === 'talk' || item.type === 'podcast';
+  const isVideo = item.source === 'youtube' || item.type === 'talk' || item.type === 'podcast' || !!item.video_url;
   const isIgStyle = item.type === 'campaign' || item.type === 'news';
   const thumbnail = normalizeImageUrl(item.media_url || item.thumbnail_url || item.image_url);
   const videoUrl = item.video_url || item.external_url || '';
@@ -270,11 +270,13 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
           <div className="ig-modal-inner">
             {/* Image section — full size, scrollable to view entire image */}
             <div className="ig-modal-image-section">
-              {thumbnail ? (
+              {item.video_url ? (
+                <video src={item.video_url} controls autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }} />
+              ) : thumbnail ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={thumbnail} alt={item.title || ''} />
               ) : (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#fff' }}>Tidak ada gambar</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#fff' }}>Tidak ada media</div>
               )}
             </div>
             {/* Caption section — scrollable, IG-style */}
