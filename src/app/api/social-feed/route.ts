@@ -75,58 +75,58 @@ async function fetchYouTubeVideos(): Promise<FeedItem[]> {
 
 async function fetchInstagramPosts(): Promise<FeedItem[]> {
   try {
-    const rssUrl = process.env.INSTAGRAM_RSS_URL || 'https://rss.app/feeds/OiXO4pjBV8QvcXke.xml';
-    const res = await fetch(rssUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
+    const rapidApiKey = process.env.RAPIDAPI_KEY || '8769028d1amsh51c797f7358a865p1fc02ejsn6f997537a39a';
+    const username = 'bagongnews'; // atau ambil dari env jika diinginkan
+    const url = `https://instagram-public-bulk-scraper.p.rapidapi.com/v1/user_posts?nocors=true&count=12&username_or_id=${username}`;
+    
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'x-rapidapi-key': rapidApiKey,
+        'x-rapidapi-host': 'instagram-public-bulk-scraper.p.rapidapi.com'
+      },
       signal: AbortSignal.timeout(10000),
       next: { revalidate: 3600 }
     });
+    
     if (!res.ok) return [];
     
-    const xml = await res.text();
+    const json = await res.json();
     const posts: FeedItem[] = [];
-    const items = xml.split('<item>').slice(1);
     
-    for (const item of items) {
-      const linkMatch = item.match(/<link>([^<]+)<\/link>/);
-      const pubDateMatch = item.match(/<pubDate>([^<]+)<\/pubDate>/);
-      const mediaMatch = item.match(/<media:content[^>]+url="([^"]+)"/);
-      const descMatch = item.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/);
+    const edges = json?.data?.edge_owner_to_timeline_media?.edges || [];
+    
+    for (const edge of edges) {
+      const node = edge.node;
+      if (!node) continue;
       
-      if (linkMatch && pubDateMatch) {
-        let caption = '';
-        if (descMatch) {
-          caption = descMatch[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-        }
-
-        // Filter out Health Campaign from IG
-        if (/health\s*campaign/i.test(caption)) continue;
-
-        const link = linkMatch[1];
-        const publishedAt = new Date(pubDateMatch[1]).toISOString();
-        let mediaUrl = mediaMatch ? mediaMatch[1] : '';
-        if (mediaUrl) mediaUrl = mediaUrl.replace(/&amp;/g, '&');
-        
-        const title = caption.slice(0, 80) || 'Postingan @Bagongnews';
-        const idMatch = link.match(/\/p\/([^/]+)/);
-        const id = idMatch ? `ig-${idMatch[1]}` : `ig-${Math.random().toString(36).slice(2)}`;
-        
-        posts.push({
-          id,
-          title,
-          caption: caption.slice(0, 300),
-          media_url: mediaUrl,
-          source: 'instagram',
-          published_at: publishedAt,
-          external_url: link,
-        });
-        
-        if (posts.length >= 12) break;
-      }
+      const captionNodes = node.edge_media_to_caption?.edges || [];
+      const captionText = captionNodes.length > 0 ? captionNodes[0].node?.text || '' : '';
+      
+      // Filter out Health Campaign from IG
+      if (/health\s*campaign/i.test(captionText)) continue;
+      
+      const id = `ig-${node.shortcode}`;
+      const title = captionText.slice(0, 80) || 'Postingan @Bagongnews';
+      const link = `https://www.instagram.com/p/${node.shortcode}/`;
+      const publishedAt = new Date(node.taken_at_timestamp * 1000).toISOString();
+      const mediaUrl = node.display_url || '';
+      
+      posts.push({
+        id,
+        title,
+        caption: captionText.slice(0, 300),
+        media_url: mediaUrl,
+        source: 'instagram',
+        published_at: publishedAt,
+        external_url: link,
+      });
+      
+      if (posts.length >= 12) break;
     }
     return posts;
   } catch (err) {
-    console.error('Instagram RSS fetch failed:', err);
+    console.error('Instagram API fetch failed:', err);
     return [];
   }
 }
