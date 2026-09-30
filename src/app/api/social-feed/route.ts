@@ -77,7 +77,7 @@ async function fetchInstagramPosts(): Promise<FeedItem[]> {
   try {
     const rapidApiKey = process.env.RAPIDAPI_KEY || '8769028d1amsh51c797f7358a865p1fc02ejsn6f997537a39a';
     const username = 'bagongnews'; // atau ambil dari env jika diinginkan
-    const url = `https://instagram-public-bulk-scraper.p.rapidapi.com/v1/user_posts?nocors=true&count=12&username_or_id=${username}`;
+    const url = `https://instagram-public-bulk-scraper.p.rapidapi.com/v1/user_posts?nocors=true&count=40&username_or_id=${username}`;
     
     const res = await fetch(url, {
       method: 'GET',
@@ -125,7 +125,7 @@ async function fetchInstagramPosts(): Promise<FeedItem[]> {
         external_url: link,
       });
       
-      if (posts.length >= 12) break;
+      if (posts.length >= 20) break;
     }
     return posts;
   } catch (err) {
