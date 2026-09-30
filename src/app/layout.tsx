@@ -41,7 +41,7 @@ export const metadata: Metadata = {
 /* Production-only devtools deterrent script */
 const devtoolsScript = `
 (function(){
-  if (typeof window === 'undefined' || process.env.NODE_ENV !== 'production') return;
+  if (typeof window === 'undefined') return;
   var threshold = 160;
   var check = function(){
     var widthDiff = window.outerWidth - window.innerWidth;
@@ -59,6 +59,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const isProduction = process.env.NODE_ENV === 'production';
+
   return (
     <html lang="id" suppressHydrationWarning>
       <body
@@ -70,9 +72,11 @@ export default function RootLayout({
             <Toaster position="top-center" richColors />
           </AuthProvider>
         </ThemeProvider>
-        <Script id="devtools-deterrent" strategy="afterInteractive">
-          {devtoolsScript}
-        </Script>
+        {isProduction && (
+          <Script id="devtools-deterrent" strategy="afterInteractive">
+            {devtoolsScript}
+          </Script>
+        )}
       </body>
     </html>
   );

@@ -42,8 +42,12 @@ const COLUMNS = [
   { key: 'tanggal', label: 'Tanggal' },
   { key: 'nik', label: 'NIK' },
   { key: 'nama', label: 'Nama' },
+  { key: 'usia', label: 'Usia' },
+  { key: 'jk', label: 'JK' },
+  { key: 'jabatan', label: 'Jabatan' },
   { key: 'departemen', label: 'Departemen' },
   { key: 'jobsite', label: 'Site' },
+  { key: 'keluhan', label: 'Keluhan' },
   { key: 'diagnosa', label: 'Diagnosa' },
   { key: 'jenis_obat', label: 'Jenis Obat' },
   { key: 'rujuk_rs', label: 'Rujuk RS' },
@@ -54,8 +58,12 @@ const EDITABLE_FIELDS = [
   { key: 'tanggal', label: 'Tanggal', type: 'date' },
   { key: 'nik', label: 'NIK', type: 'text' },
   { key: 'nama', label: 'Nama', type: 'text' },
+  { key: 'usia', label: 'Usia', type: 'number' },
+  { key: 'jk', label: 'Jenis Kelamin', type: 'select', options: ['Laki - Laki', 'Perempuan'] },
+  { key: 'jabatan', label: 'Jabatan', type: 'text' },
   { key: 'departemen', label: 'Departemen', type: 'text' },
   { key: 'jobsite', label: 'Site', type: 'text' },
+  { key: 'keluhan', label: 'Keluhan', type: 'text' },
   { key: 'diagnosa', label: 'Diagnosa', type: 'text' },
   { key: 'jenis_obat', label: 'Jenis Obat', type: 'text' },
   { key: 'rujuk_rs', label: 'Rujuk RS', type: 'select', options: ['Ya', 'Tidak'] },
@@ -213,21 +221,45 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
   };
 
   const tableDataForExport = () => {
-    return rows.map((r, idx) => ({
-      No: idx + 1,
-      Tanggal: fmtDate(r.tanggal),
-      NIK: r.nik || '-',
-      Nama: r.nama || '-',
-      Usia: r.usia != null ? r.usia : '-',
-      JK: r.jk || '-',
-      Departemen: r.departemen || '-',
-      Jobsite: r.jobsite || '-',
-      Diagnosa: Array.isArray(r.diagnosa) ? r.diagnosa.join(', ') : (r.diagnosa || '-'),
-      Jenis_Obat: Array.isArray(r.jenisObat) ? r.jenisObat.join(', ') : (r.jenisObat || '-'),
-      Rujuk_RS: r.rujukRS ? 'Ya' : 'Tidak',
-      Nama_RS: r.namaRS || '-',
-      Keterangan: r.keterangan || '-',
-    }));
+    return rows.map((r, idx) => {
+      let diagStr = '-';
+      try {
+        const parsed = typeof r.diagnosa === 'string' && r.diagnosa.startsWith('[') ? JSON.parse(r.diagnosa) : r.diagnosa;
+        diagStr = Array.isArray(parsed) ? parsed.join(', ') : (r.diagnosa || '-');
+      } catch {
+        diagStr = r.diagnosa || '-';
+      }
+
+      let obatStr = '-';
+      try {
+        const rawObat = r.jenis_obat || r.jenisObat;
+        const parsed = typeof rawObat === 'string' && rawObat.startsWith('[') ? JSON.parse(rawObat) : rawObat;
+        obatStr = Array.isArray(parsed)
+          ? parsed.map((m: any) => `${m.nama} ${m.aturan ? `(${m.aturan})` : ''} ${m.jumlah ? `- ${m.jumlah}` : ''}`.trim()).join('; ')
+          : (rawObat || '-');
+      } catch {
+        obatStr = r.jenis_obat || r.jenisObat || '-';
+      }
+
+      const isRujuk = r.rujuk_rs === true || r.rujukRS === true || r.rujuk_rs === 'Ya';
+
+      return {
+        No: idx + 1,
+        Tanggal: fmtDate(r.tanggal),
+        NIK: r.nik || '-',
+        Nama: r.nama || '-',
+        Usia: r.usia != null ? r.usia : '-',
+        JK: r.jk || '-',
+        Jabatan: r.jabatan || '-',
+        Departemen: r.departemen || '-',
+        Jobsite: r.jobsite || '-',
+        Keluhan: r.keluhan || '-',
+        Diagnosa: diagStr,
+        Jenis_Obat: obatStr,
+        Rujuk_RS: isRujuk ? 'Ya' : 'Tidak',
+        Nama_RS: r.nama_rs || r.namaRS || '-',
+      };
+    });
   };
 
   return (

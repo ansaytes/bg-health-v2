@@ -3,33 +3,14 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import {
   Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
+  registerables,
   type ChartData,
   type ChartOptions,
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 
-// Register Chart.js plugins
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-  ChartDataLabels
-);
+// Register Chart.js plugins and all controllers/scales/elements
+ChartJS.register(...registerables, ChartDataLabels);
 
 interface KunjunganRecord {
   id: string;

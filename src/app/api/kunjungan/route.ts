@@ -15,15 +15,17 @@ export async function GET(request: NextRequest) {
 
     let query = supabase.from('kunjungan_berobat').select('*').order('tanggal', { ascending: false });
 
-    if (jobsite && jobsite !== 'All Site') {
+    if (jobsite && jobsite !== 'All Site' && jobsite !== 'all') {
       query = query.eq('jobsite', jobsite);
     }
-    if (bulan) {
-      // Filter by month extracted from tanggal
-      const monthNum = parseInt(bulan);
-      const startDate = `${tahun || '2026'}-${String(monthNum).padStart(2, '0')}-01`;
-      const endDate = `${tahun || '2026'}-${String(monthNum).padStart(2, '0')}-31`;
-      query = query.gte('tanggal', startDate).lte('tanggal', endDate);
+    if (bulan && bulan !== '0' && bulan !== 'all' && bulan !== 'Semua') {
+      const monthNum = parseInt(bulan, 10);
+      const y = tahun && tahun !== 'all' && tahun !== 'Semua' ? tahun : '2026';
+      const mStr = String(monthNum).padStart(2, '0');
+      const lastDay = new Date(parseInt(y, 10), monthNum, 0).getDate();
+      query = query.gte('tanggal', `${y}-${mStr}-01`).lte('tanggal', `${y}-${mStr}-${String(lastDay).padStart(2, '0')}`);
+    } else if (tahun && tahun !== 'all' && tahun !== 'Semua') {
+      query = query.gte('tanggal', `${tahun}-01-01`).lte('tanggal', `${tahun}-12-31`);
     }
     if (rujukRs === 'true') {
       query = query.eq('rujuk_rs', true);
