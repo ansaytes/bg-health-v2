@@ -399,7 +399,7 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
             title: p.title,
             imageHint: 'News',
             media_url: p.media_url,
-            video_url: p.video_url || p.external_url,
+            video_url: p.video_url,
             external_url: p.external_url,
             source: p.source === 'youtube' ? 'youtube' : '@BagongNews',
             date: fmtDate(p.published_at),
