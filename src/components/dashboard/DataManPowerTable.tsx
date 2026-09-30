@@ -167,12 +167,25 @@ export default function DataManPowerTable({ canEdit = false }: DataManPowerTable
     }
   };
 
+  const tableDataForExport = () => {
+    return rows.map((r, idx) => ({
+      No: idx + 1,
+      Jobsite: r.jobsite || '-',
+      Bulan: MONTHS[r.bulan] || r.bulan,
+      Tahun: r.tahun,
+      Man_Power: r.man_power,
+      Hari_Kerja: r.hari_kerja,
+      Man_Hours: r.man_hours,
+      Kunjungan_Klinik: r.kunjungan_klinik || 0,
+    }));
+  };
+
   return (
     <div className="raw-table-container">
       <div className="raw-table-header-bar">
         <span>Data Σ Man Power per Site per Bulan</span>
         <span style={{ color: 'var(--fg-dim)' }}>{rows.length} records</span>
-</div>
+      </div>
       <div className="raw-table-filter-bar">
         <div className="filter-tag">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
@@ -187,7 +200,14 @@ export default function DataManPowerTable({ canEdit = false }: DataManPowerTable
         <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
             <option value="2026">2026</option><option value="2025">2025</option><option value="2024">2024</option>
         </select>
-        <DownloadButton getData={() => rows} filename="man-power" title="DataManPower" variant="compact" style={{ marginLeft: 'auto', flexShrink: 0 }} />
+        <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
+          <DownloadButton
+            variant="compact"
+            filename="Data_Man_Power"
+            title="Data Man Power"
+            getData={tableDataForExport}
+          />
+        </div>
       </div>
       <div className="raw-table-scroll">
         <table>

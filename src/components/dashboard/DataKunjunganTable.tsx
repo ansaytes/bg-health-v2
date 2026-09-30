@@ -212,6 +212,24 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
     }
   };
 
+  const tableDataForExport = () => {
+    return rows.map((r, idx) => ({
+      No: idx + 1,
+      Tanggal: fmtDate(r.tanggal),
+      NIK: r.nik || '-',
+      Nama: r.nama || '-',
+      Usia: r.usia != null ? r.usia : '-',
+      JK: r.jk || '-',
+      Departemen: r.departemen || '-',
+      Jobsite: r.jobsite || '-',
+      Diagnosa: Array.isArray(r.diagnosa) ? r.diagnosa.join(', ') : (r.diagnosa || '-'),
+      Jenis_Obat: Array.isArray(r.jenisObat) ? r.jenisObat.join(', ') : (r.jenisObat || '-'),
+      Rujuk_RS: r.rujukRS ? 'Ya' : 'Tidak',
+      Nama_RS: r.namaRS || '-',
+      Keterangan: r.keterangan || '-',
+    }));
+  };
+
   return (
     <div className="raw-table-container" style={{ position: 'absolute', inset: 0 }}>
       {/* Header Bar */}
@@ -222,7 +240,7 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
           <span style={{ margin: '0 6px', opacity: 0.3 }}>|</span>
           {rujukCount} rujuk RS
         </span>
-</div>
+      </div>
 
       {/* Filters */}
       <div className="raw-table-filter-bar">
@@ -241,6 +259,14 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
         <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
           {YEARS.map(y => (<option key={y} value={y}>{y}</option>))}
         </select>
+        <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
+          <DownloadButton
+            variant="compact"
+            filename="Data_Kunjungan_Berobat"
+            title="Data Kunjungan Berobat"
+            getData={tableDataForExport}
+          />
+        </div>
       </div>
 
       {/* Table - fills remaining height */}
@@ -392,8 +418,7 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
                     style={{ width: '100%', height: 32, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)', padding: '0 8px', fontSize: 12, color: 'var(--foreground)', outline: 'none', boxSizing: 'border-box' }}
                   />
                 )}
-              
-        <DownloadButton getData={() => rows} filename="kunjungan" title="DataKunjungan" variant="compact" style={{ marginLeft: "auto", flexShrink: 0 }} /></div>
+              </div>
             ))}
           </div>
           <DialogFooter>

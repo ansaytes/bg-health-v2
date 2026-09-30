@@ -48,18 +48,19 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { nik, nama, departemen, jobsite, tanggal, diagnosa, jenis_obat, rujuk_rs, nama_rs } = body;
+    const { nik, nama, departemen, jobsite, tanggal, diagnosa, jenis_obat, rujuk_rs, nama_rs, usia, jk, jabatan, keluhan } = body;
 
-    if (!nik || !nama || !jobsite || !tanggal) {
+    // NIK is optional (e.g. for new hires or interns not yet registered in employee table)
+    if (!nama || !jobsite || !tanggal) {
       return NextResponse.json(
-        { success: false, error: 'NIK, Nama, Jobsite, dan Tanggal wajib diisi' },
+        { success: false, error: 'Nama, Jobsite, dan Tanggal wajib diisi' },
         { status: 400 }
       );
     }
 
     const row = {
-      nik,
-      nama,
+      nik: nik && String(nik).trim() ? String(nik).trim() : null,
+      nama: String(nama).trim(),
       departemen: departemen || null,
       jobsite,
       tanggal,
@@ -67,6 +68,10 @@ export async function POST(request: NextRequest) {
       jenis_obat: jenis_obat || null,
       rujuk_rs: rujuk_rs === 'Ya' || rujuk_rs === true,
       nama_rs: nama_rs || null,
+      usia: usia ? parseInt(String(usia), 10) || null : null,
+      jk: jk || null,
+      jabatan: jabatan || null,
+      keluhan: keluhan || null,
     };
 
     const { data, error } = await supabase.from('kunjungan_berobat').insert(row).select();

@@ -5,7 +5,7 @@ import { assessZonasi, calcBMI, calcMCHC, calcPct, calcDiabetes, calcPerluFU, ca
 import { applyMCUCalculations, buildAutomaticFollowUpRecommendations } from './mcu-calculations';
 
 export type PageTab = 'home' | 'dashboard' | 'data-entry' | 'administrator';
-export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan';
+export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan' | 'inventory-dashboard';
 export type AdminSidebar = 'lagging-indicator' | 'review-mcu' | 'input-jadwal-mcu' | 'kunjungan-admin' | 'health-campaign' | 'kelola-pengguna';
 export type DataEntrySidebar = 'input-jadwal-mcu';
 export type HomeSidebar = 'semua-feed' | 'health-campaign' | 'health-talk' | 'podcast' | 'news';

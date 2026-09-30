@@ -225,6 +225,26 @@ export default function DataKesehatanTable({ canEdit = false }: DataKesehatanTab
     }
   };
 
+  const tableDataForExport = () => {
+    return rows.map((r, idx) => ({
+      No: idx + 1,
+      NIK: r.nik || '-',
+      Nama: r.nama || '-',
+      Jobsite: r.jobsite || '-',
+      Jabatan: r.jabatan || '-',
+      'Tgl Mulai A': r.tgl_mulai_a || '-',
+      'Tgl Selesai A': r.tgl_selesai_a || '-',
+      'Hari A': r.hari_a ?? '-',
+      'Tgl Mulai B': r.tgl_mulai_b || '-',
+      'Tgl Selesai B': r.tgl_selesai_b || '-',
+      'Hari B': r.hari_b ?? '-',
+      'Tgl Mulai C': r.tgl_mulai_c || '-',
+      'Tgl Selesai C': r.tgl_selesai_c || '-',
+      'Hari C': r.hari_c ?? '-',
+      Spell: r.jumlah_spell ?? r.spell ?? '-',
+    }));
+  };
+
   return (
     <div className="raw-table-container">
       {/* Header Bar */}
@@ -239,7 +259,7 @@ export default function DataKesehatanTable({ canEdit = false }: DataKesehatanTab
           <span style={{ margin: '0 6px', opacity: 0.3 }}>|</span>
           {totalSpell} spell
         </span>
-</div>
+      </div>
 
       {/* Filters */}
       <div className="raw-table-filter-bar">
@@ -258,7 +278,14 @@ export default function DataKesehatanTable({ canEdit = false }: DataKesehatanTab
         <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
           {YEARS.map(y => (<option key={y} value={y}>{y}</option>))}
         </select>
-      <DownloadButton getData={() => rows} filename="kesehatan" title="DataKesehatan" variant="compact" style={{ marginLeft: "auto", flexShrink: 0 }} />
+        <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
+          <DownloadButton
+            variant="compact"
+            filename="Data_Karyawan_Sakit"
+            title="Data Karyawan Sakit"
+            getData={tableDataForExport}
+          />
+        </div>
       </div>
       {/* Table */}
       <div className="raw-table-scroll">

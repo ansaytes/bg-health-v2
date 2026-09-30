@@ -25,6 +25,7 @@ interface EmployeeLookupInputProps {
   className?: string;
   autoFill?: Record<string, string>;
   onAutoFill?: (formFieldId: string, value: string) => void;
+  onNewIdentity?: () => void;
   minLength?: number;
   debounceMs?: number;
   inputStyle?: React.CSSProperties;
@@ -66,6 +67,7 @@ export default function EmployeeLookupInput({
   className = 'admin-input',
   autoFill,
   onAutoFill,
+  onNewIdentity,
   minLength: minLengthProp,
   debounceMs = 400,
   inputStyle,
@@ -219,7 +221,7 @@ export default function EmployeeLookupInput({
     ...(status === 'found'
       ? { borderColor: FOUND_COLOR, boxShadow: '0 0 0 2px rgba(0,184,148,0.15)' }
       : status === 'not_found'
-        ? { borderColor: NOT_FOUND_COLOR }
+        ? (required === false ? { borderColor: '#f59e0b' } : { borderColor: NOT_FOUND_COLOR })
         : {}),
     paddingRight: 36,
   };
@@ -241,7 +243,7 @@ export default function EmployeeLookupInput({
     }
     if (status === 'not_found') {
       return (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={NOT_FOUND_COLOR} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={required === false ? '#f59e0b' : NOT_FOUND_COLOR} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <line x1="18" y1="6" x2="6" y2="18" />
           <line x1="6" y1="6" x2="18" y2="18" />
         </svg>
@@ -296,6 +298,51 @@ export default function EmployeeLookupInput({
           {indicatorIcon}
         </span>
       </div>
+
+      {status === 'not_found' && (
+        <div style={{
+          marginTop: 6,
+          fontSize: 11,
+          color: required === false ? '#b45309' : '#dc2626',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: required === false ? 'rgba(245,158,11,0.08)' : 'rgba(239,68,68,0.08)',
+          padding: '6px 10px',
+          borderRadius: 8,
+          border: required === false ? '1px solid rgba(245,158,11,0.2)' : '1px solid rgba(239,68,68,0.2)',
+        }}>
+          <span style={{ lineHeight: 1.3 }}>
+            {required === false
+              ? 'Data tidak ditemukan di master employee.'
+              : 'Karyawan tidak ditemukan di master data.'}
+          </span>
+          {onNewIdentity && (
+            <button
+              type="button"
+              onClick={onNewIdentity}
+              style={{
+                background: 'linear-gradient(135deg, #ff4d00, #ff6b2b)',
+                border: 'none',
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: 11,
+                fontWeight: 600,
+                borderRadius: 6,
+                padding: '4px 10px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                boxShadow: '0 2px 4px rgba(255,77,0,0.25)',
+                whiteSpace: 'nowrap',
+                marginLeft: 8,
+              }}
+            >
+              + Tambah Identitas Baru
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Suggestions dropdown — modern design */}
       {showSuggestions && suggestions.length > 0 && (

@@ -24,6 +24,7 @@ import DataKesehatanTable from '@/components/dashboard/DataKesehatanTable';
 import DataKunjunganTable from '@/components/dashboard/DataKunjunganTable';
 import RecordMCUTable from '@/components/dashboard/RecordMCUTableModern';
 import DataManPowerTable from '@/components/dashboard/DataManPowerTable';
+import InventoryDashboard from '@/components/dashboard/InventoryDashboard';
 
 /*   Sidebar Icon Components */
 
@@ -166,6 +167,7 @@ interface SidebarItem {
   label: string;
   icon: React.ReactNode;
   superuserOnly?: boolean;
+  adminOnly?: boolean;
 }
 
 function IconPodcast() {
@@ -191,6 +193,7 @@ const DASH_SIDEBAR: SidebarItem[] = [
   { key: 'monitoring', label: 'Monitoring MCU', icon: <IconMonitoring /> },
   { key: 'tindak-lanjut', label: 'Analisa & Tindak Lanjut MCU', icon: <IconTindakLanjut /> },
   { key: 'kunjungan', label: 'Kunjungan Berobat', icon: <IconKunjunganDash /> },
+  { key: 'inventory-dashboard', label: 'Monitoring Obat & BHP', icon: <IconInventory />, adminOnly: true },
 ];
 
 const ADMIN_SIDEBAR: SidebarItem[] = [
@@ -253,6 +256,7 @@ function DashContent() {
     case 'monitoring': return <MonitoringMCU />;
     case 'tindak-lanjut': return <HasilTindakLanjutMCU />;
     case 'kunjungan': return <KunjunganBerobat />;
+    case 'inventory-dashboard': return <InventoryDashboard />;
     default: return <DashboardView />;
   }
 }
@@ -683,7 +687,13 @@ export default function Home() {
   // Role-based sidebar items
   const getSidebarItems = (): SidebarItem[] => {
     if (activePage === 'home') return HOME_SIDEBAR;
-    if (activePage === 'dashboard') return DASH_SIDEBAR;
+    if (activePage === 'dashboard') {
+      return DASH_SIDEBAR.filter((item) => {
+        if (item.adminOnly && !['administrator', 'superuser'].includes(role || '')) return false;
+        if (item.superuserOnly && !isSuperuser) return false;
+        return true;
+      });
+    }
     if (activePage === 'data-entry') return DATA_ENTRY_SIDEBAR;
     // Administrator sidebar — filter by role
     return ADMIN_SIDEBAR.filter((item) => {

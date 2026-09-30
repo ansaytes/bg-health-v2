@@ -53,6 +53,7 @@ export async function PATCH(
     const allowedFields = [
       'nik', 'nama', 'departemen', 'jobsite', 'tanggal',
       'diagnosa', 'jenis_obat', 'rujuk_rs', 'nama_rs',
+      'usia', 'jk', 'jabatan', 'keluhan',
     ];
 
     for (const key of allowedFields) {
