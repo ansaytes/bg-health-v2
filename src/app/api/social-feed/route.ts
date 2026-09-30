@@ -94,7 +94,8 @@ async function fetchInstagramPosts(): Promise<FeedItem[]> {
     const json = await res.json();
     const posts: FeedItem[] = [];
     
-    const edges = json?.data?.edge_owner_to_timeline_media?.edges || [];
+    // API v1/user_posts langsung mengembalikan posts di json.data.edges
+    const edges = json?.data?.edges || [];
     
     for (const edge of edges) {
       const node = edge.node;
