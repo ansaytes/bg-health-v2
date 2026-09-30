@@ -126,6 +126,20 @@ export default function InventoryDashboard() {
 
   const totalAvgMonthly = useMemo(() => items.reduce((acc, i) => acc + (i.avg_monthly_usage || 0), 0), [items]);
 
+  // Operational Action Tab State
+  const [actionTab, setActionTab] = useState<'habis' | 'kritis' | 'fast' | 'fefo'>('habis');
+
+  // Specific Lists based on clinic operational needs
+  const habisItems = useMemo(() => items.filter(i => (i.stock || 0) <= 0), [items]);
+  const kritisItems = useMemo(() => items.filter(i => {
+    const s = getStockStatus(i);
+    return s === 'Kritis' || s === 'Menipis';
+  }), [items]);
+  const fastMovingList = useMemo(() => [...items].sort((a, b) => (b.avg_monthly_usage || 0) - (a.avg_monthly_usage || 0)), [items]);
+  const topFastItem = fastMovingList[0] || null;
+  const expiredItems = useMemo(() => items.filter(i => getExpiredStatus(i.tanggal_expired) === 'Sudah Kadaluarsa'), [items]);
+  const expSoonItems = useMemo(() => items.filter(i => getExpiredStatus(i.tanggal_expired) === 'Kadaluarsa < 3 Bulan'), [items]);
+
   // Specific List: Items that are OUT OF STOCK or NEED RESTOCK (Critical / Low)
   const criticalStockItems = useMemo(() => {
     return items
@@ -230,6 +244,8 @@ export default function InventoryDashboard() {
 
     // 1. Chart Status Ketersediaan Stok (Doughnut)
     if (stockStatusCanvasRef.current) {
+      const existing = ChartJS.getChart(stockStatusCanvasRef.current);
+      if (existing) existing.destroy();
       if (stockStatusChart.current) stockStatusChart.current.destroy();
 
       let aman = 0, menipis = 0, kritis = 0, habis = 0;
@@ -280,6 +296,8 @@ export default function InventoryDashboard() {
 
     // 2. Chart Distribusi Kategori (Doughnut)
     if (categoryCanvasRef.current) {
+      const existing = ChartJS.getChart(categoryCanvasRef.current);
+      if (existing) existing.destroy();
       if (categoryChart.current) categoryChart.current.destroy();
 
       const catCounts: Record<string, number> = {};
@@ -329,6 +347,8 @@ export default function InventoryDashboard() {
 
     // 3. Top 10 Fast-Moving Items (Horizontal Bar)
     if (fastMovingCanvasRef.current) {
+      const existing = ChartJS.getChart(fastMovingCanvasRef.current);
+      if (existing) existing.destroy();
       if (fastMovingChart.current) fastMovingChart.current.destroy();
 
       const topFast = [...items]
@@ -338,15 +358,40 @@ export default function InventoryDashboard() {
       const labels = topFast.map(i => i.name.length > 20 ? i.name.slice(0, 18) + '...' : i.name);
       const values = topFast.map(i => i.avg_monthly_usage || 0);
 
+      const paletteColors = [
+        'rgba(255, 77, 0, 0.85)',   // #1 Degirol: Oranye
+        'rgba(0, 188, 212, 0.85)',  // #2 Caviplex: Cyan
+        'rgba(155, 89, 182, 0.85)', // #3 Anadex: Ungu
+        'rgba(0, 184, 148, 0.85)',  // #4 Demacolin: Hijau
+        'rgba(255, 152, 0, 0.85)',  // #5 Paratusin: Amber
+        'rgba(233, 30, 99, 0.85)',   // #6 Vitacimin: Pink
+        'rgba(52, 152, 219, 0.85)',  // #7 Atorvastatin: Biru
+        'rgba(243, 156, 18, 0.85)',  // #8 Grantusif: Emas
+        'rgba(26, 188, 156, 0.85)',  // #9 Graxine: Teal
+        'rgba(230, 126, 34, 0.85)',  // #10 Paracetamol: Terracotta
+      ];
+      const paletteBorders = [
+        '#ff4d00',
+        '#00BCD4',
+        '#9B59B6',
+        '#00B894',
+        '#FF9800',
+        '#E91E63',
+        '#3498DB',
+        '#F39C12',
+        '#1ABC9C',
+        '#E67E22',
+      ];
+
       const data: ChartData<'bar'> = {
         labels,
         datasets: [
           {
-            label: 'Pemakaian/Bulan',
             data: values,
-            backgroundColor: '#00BCD4',
-            hoverBackgroundColor: '#26C6DA',
-            borderRadius: 4,
+            backgroundColor: paletteColors.slice(0, values.length),
+            borderColor: paletteBorders.slice(0, values.length),
+            borderWidth: 1.5,
+            borderRadius: 6,
             barThickness: 13,
           },
         ],
@@ -367,7 +412,7 @@ export default function InventoryDashboard() {
           datalabels: {
             anchor: 'end',
             align: 'right',
-            color: '#00BCD4',
+            color: textColor,
             font: { size: 9, weight: 'bold', family: fontFamily },
             formatter: (v) => `${v}`,
           },
@@ -394,6 +439,8 @@ export default function InventoryDashboard() {
 
     // 4. Status Expired Timeline (Bar Chart)
     if (expiredTimelineCanvasRef.current) {
+      const existing = ChartJS.getChart(expiredTimelineCanvasRef.current);
+      if (existing) existing.destroy();
       if (expiredTimelineChart.current) expiredTimelineChart.current.destroy();
 
       let expired = 0, under3m = 0, under6m = 0, safe = 0;
@@ -522,70 +569,126 @@ export default function InventoryDashboard() {
         </div>
       </div>
 
-      {/* KPI Cards Row */}
+      {/* KPI Cards Row — Operational Action Focus */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 14 }}>
-        {/* Total Ragam Item */}
-        <div className="card glow-orange" style={{ padding: '12px 14px' }}>
+        {/* Card 1: Obat Habis */}
+        <div
+          className="card glow-coral"
+          onClick={() => setActionTab('habis')}
+          style={{
+            padding: '12px 14px',
+            cursor: 'pointer',
+            border: actionTab === 'habis' ? '2px solid #FF4444' : undefined,
+            transition: 'all 0.15s ease',
+          }}
+          title="Klik untuk melihat daftar obat yang stoknya habis"
+        >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 11, color: 'var(--muted-foreground)', fontWeight: 600, textTransform: 'uppercase' }}>Total Item</span>
-            <Boxes size={16} color="#ff4d00" />
+            <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 700, textTransform: 'uppercase' }}>Obat Habis (Stok 0)</span>
+            <AlertCircle size={16} color="#FF4444" />
           </div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#ff4d00', marginTop: 6 }}>
-            {totalRagam}
+          <div style={{ fontSize: 24, fontWeight: 800, color: '#FF4444', marginTop: 6 }}>
+            {habisItems.length} <span style={{ fontSize: 13, fontWeight: 500 }}>Obat</span>
           </div>
-          <div style={{ fontSize: 10, color: 'var(--muted-foreground)', marginTop: 2 }}>Ragam Obat & BHP</div>
+          <div style={{ fontSize: 10, color: habisItems.length > 0 ? '#b91c1c' : 'var(--muted-foreground)', marginTop: 2, fontWeight: 500 }}>
+            {habisItems.length > 0 ? 'Perlu Order Mendesak' : 'Semua Obat Tersedia'}
+          </div>
         </div>
 
-        {/* Total Sisa Stok Fisik */}
-        <div className="card glow-teal" style={{ padding: '12px 14px' }}>
+        {/* Card 2: Stok Kritis / Menipis */}
+        <div
+          className="card glow-amber"
+          onClick={() => setActionTab('kritis')}
+          style={{
+            padding: '12px 14px',
+            cursor: 'pointer',
+            border: actionTab === 'kritis' ? '2px solid #FF9800' : undefined,
+            transition: 'all 0.15s ease',
+          }}
+          title="Klik untuk melihat daftar obat yang stoknya menipis"
+        >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 11, color: 'var(--muted-foreground)', fontWeight: 600, textTransform: 'uppercase' }}>Total Stok Fisik</span>
-            <PackageCheck size={16} color="#00B894" />
-          </div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#00B894', marginTop: 6 }}>
-            {totalStokFisik.toLocaleString()}
-          </div>
-          <div style={{ fontSize: 10, color: 'var(--muted-foreground)', marginTop: 2 }}>Unit / Tablet / Pcs</div>
-        </div>
-
-        {/* Perlu Restock */}
-        <div className="card glow-amber" style={{ padding: '12px 14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 11, color: 'var(--muted-foreground)', fontWeight: 600, textTransform: 'uppercase' }}>Perlu Restock</span>
+            <span style={{ fontSize: 11, color: '#d97706', fontWeight: 700, textTransform: 'uppercase' }}>Stok Menipis</span>
             <AlertTriangle size={16} color="#FF9800" />
           </div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: perluRestockCount > 0 ? '#FF9800' : 'var(--foreground)', marginTop: 6 }}>
-            {perluRestockCount}
+          <div style={{ fontSize: 24, fontWeight: 800, color: '#FF9800', marginTop: 6 }}>
+            {kritisItems.length} <span style={{ fontSize: 13, fontWeight: 500 }}>Obat</span>
           </div>
-          <div style={{ fontSize: 10, color: perluRestockCount > 0 ? '#d97706' : 'var(--muted-foreground)', marginTop: 2 }}>
-            {perluRestockCount > 0 ? 'Stok Menipis / Kritis' : 'Semua Stok Aman'}
-          </div>
-        </div>
-
-        {/* Expired Soon / Kadaluarsa */}
-        <div className="card glow-coral" style={{ padding: '12px 14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 11, color: 'var(--muted-foreground)', fontWeight: 600, textTransform: 'uppercase' }}>Peringatan ED</span>
-            <Clock size={16} color="#FF4444" />
-          </div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: expiredAlertCount > 0 ? '#FF4444' : 'var(--foreground)', marginTop: 6 }}>
-            {expiredAlertCount}
-          </div>
-          <div style={{ fontSize: 10, color: expiredAlertCount > 0 ? '#dc2626' : 'var(--muted-foreground)', marginTop: 2 }}>
-            {expiredAlertCount > 0 ? 'ED < 3 Bulan / Lewat' : 'Tidak Ada ED Dekat'}
+          <div style={{ fontSize: 10, color: '#b45309', marginTop: 2, fontWeight: 500 }}>
+            &lt; 3× Kebutuhan Bulanan
           </div>
         </div>
 
-        {/* Total Pemakaian Bulanan */}
-        <div className="card glow-steel" style={{ padding: '12px 14px' }}>
+        {/* Card 3: Top Fast-Moving Item #1 */}
+        <div
+          className="card glow-teal"
+          onClick={() => setActionTab('fast')}
+          style={{
+            padding: '12px 14px',
+            cursor: 'pointer',
+            border: actionTab === 'fast' ? '2px solid #00BCD4' : undefined,
+            transition: 'all 0.15s ease',
+          }}
+          title="Klik untuk melihat ranking obat fast moving"
+        >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 11, color: 'var(--muted-foreground)', fontWeight: 600, textTransform: 'uppercase' }}>Pemakaian/Bulan</span>
-            <AlertCircle size={16} color="#778899" />
+            <span style={{ fontSize: 11, color: '#00838f', fontWeight: 700, textTransform: 'uppercase' }}>Fast-Move Terbanyak</span>
+            <Boxes size={16} color="#00BCD4" />
           </div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--foreground)', marginTop: 6 }}>
-            {totalAvgMonthly.toLocaleString()}
+          <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--foreground)', marginTop: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {topFastItem?.name || '-'}
           </div>
-          <div style={{ fontSize: 10, color: 'var(--muted-foreground)', marginTop: 2 }}>Rata-rata kebutuhan/bln</div>
+          <div style={{ fontSize: 10.5, color: '#00BCD4', marginTop: 2, fontWeight: 700 }}>
+            ⚡ {topFastItem?.avg_monthly_usage || 0} {topFastItem?.unit || 'unit'}/bulan
+          </div>
+        </div>
+
+        {/* Card 4: Segera Expired (< 3 Bulan) */}
+        <div
+          className="card glow-orange"
+          onClick={() => setActionTab('fefo')}
+          style={{
+            padding: '12px 14px',
+            cursor: 'pointer',
+            border: actionTab === 'fefo' ? '2px solid #E67E22' : undefined,
+            transition: 'all 0.15s ease',
+          }}
+          title="Klik untuk melihat obat yang mendekati masa expired"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 11, color: '#c2410c', fontWeight: 700, textTransform: 'uppercase' }}>Segera ED (&lt; 3 Bln)</span>
+            <Clock size={16} color="#E67E22" />
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: '#E67E22', marginTop: 6 }}>
+            {expSoonItems.length} <span style={{ fontSize: 13, fontWeight: 500 }}>Obat</span>
+          </div>
+          <div style={{ fontSize: 10, color: '#9a3412', marginTop: 2, fontWeight: 500 }}>
+            Prioritaskan Resep FEFO
+          </div>
+        </div>
+
+        {/* Card 5: Sudah Kadaluarsa */}
+        <div
+          className="card glow-coral"
+          onClick={() => setActionTab('fefo')}
+          style={{
+            padding: '12px 14px',
+            cursor: 'pointer',
+            border: actionTab === 'fefo' ? '2px solid #dc2626' : undefined,
+            transition: 'all 0.15s ease',
+          }}
+          title="Klik untuk melihat obat yang sudah kadaluarsa"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 700, textTransform: 'uppercase' }}>Sudah Kadaluarsa</span>
+            <ShieldAlert size={16} color="#dc2626" />
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: '#dc2626', marginTop: 6 }}>
+            {expiredItems.length} <span style={{ fontSize: 13, fontWeight: 500 }}>Obat</span>
+          </div>
+          <div style={{ fontSize: 10, color: '#991b1b', marginTop: 2, fontWeight: 500 }}>
+            {expiredItems.length > 0 ? 'Wajib Tarik & Berita Acara' : 'Tidak Ada Obat ED'}
+          </div>
         </div>
       </div>
 
@@ -609,7 +712,7 @@ export default function InventoryDashboard() {
 
         {/* Chart 3: Top Fast Moving */}
         <div className="card glow-coral" style={{ padding: '12px 14px', height: 210, display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Top Fast-Moving (Pakai/Bln)</h3>
+          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Top 10 Fast-Moving (Pakai/Bln)</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
             <canvas ref={fastMovingCanvasRef} />
           </div>
@@ -624,138 +727,154 @@ export default function InventoryDashboard() {
         </div>
       </div>
 
-      {/* ACTIONABLE WATCHLIST: ITEM SPESIFIK HABIS/RESTOCK & KADALUARSA */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-        {/* Panel Kiri: Item Habis & Kritis (Perlu Restock Segera) */}
-        <div className="card glow-coral" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', minHeight: 280, maxHeight: 320 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(255,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <AlertTriangle size={15} color="#FF4444" />
-              </div>
-              <div>
-                <h3 style={{ fontSize: 13, fontWeight: 700, margin: 0, color: 'var(--foreground)' }}>
-                  Perlu Restock Segera (Habis / Menipis)
-                </h3>
-                <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>
-                  {criticalStockItems.length} item di bawah batas buffer aman klinik (3× rata-rata bulanan)
-                </span>
-              </div>
-            </div>
+      {/* ACTIONABLE OPERATIONAL BOARD — 4 TAB OPERASIONAL KLINIK */}
+      <div className="card glow-steel" style={{ padding: '14px 16px', marginBottom: 16 }}>
+        {/* Tab Headers */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderBottom: '1px solid var(--border)', paddingBottom: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => setActionTab('habis')}
+              style={{
+                height: 32,
+                padding: '0 12px',
+                borderRadius: 6,
+                border: 'none',
+                background: actionTab === 'habis' ? '#FF4444' : 'var(--muted)',
+                color: actionTab === 'habis' ? '#ffffff' : 'var(--foreground)',
+                fontSize: 11.5,
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <AlertCircle size={14} />
+              🔴 Obat Habis ({habisItems.length})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActionTab('kritis')}
+              style={{
+                height: 32,
+                padding: '0 12px',
+                borderRadius: 6,
+                border: 'none',
+                background: actionTab === 'kritis' ? '#FF9800' : 'var(--muted)',
+                color: actionTab === 'kritis' ? '#ffffff' : 'var(--foreground)',
+                fontSize: 11.5,
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <AlertTriangle size={14} />
+              ⚠️ Stok Tinggal Sedikit ({kritisItems.length})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActionTab('fast')}
+              style={{
+                height: 32,
+                padding: '0 12px',
+                borderRadius: 6,
+                border: 'none',
+                background: actionTab === 'fast' ? '#00BCD4' : 'var(--muted)',
+                color: actionTab === 'fast' ? '#ffffff' : 'var(--foreground)',
+                fontSize: 11.5,
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <Boxes size={14} />
+              🚀 15 Obat Fast-Moving Teratas
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActionTab('fefo')}
+              style={{
+                height: 32,
+                padding: '0 12px',
+                borderRadius: 6,
+                border: 'none',
+                background: actionTab === 'fefo' ? '#E67E22' : 'var(--muted)',
+                color: actionTab === 'fefo' ? '#ffffff' : 'var(--foreground)',
+                fontSize: 11.5,
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <Clock size={14} />
+              ⏳ Peringatan Kadaluarsa / FEFO ({expiredItems.length + expSoonItems.length})
+            </button>
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5 }}>
-              <thead>
-                <tr style={{ background: 'var(--muted)', textAlign: 'left', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 1 }}>
-                  <th style={{ padding: '6px 8px', fontWeight: 600 }}>Nama Item</th>
-                  <th style={{ padding: '6px 8px', fontWeight: 600, textAlign: 'right' }}>Sisa Stok</th>
-                  <th style={{ padding: '6px 8px', fontWeight: 600, textAlign: 'right' }}>Batas Aman</th>
-                  <th style={{ padding: '6px 8px', fontWeight: 600, textAlign: 'right' }}>Defisit</th>
-                  <th style={{ padding: '6px 8px', fontWeight: 600, textAlign: 'center' }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {criticalStockItems.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} style={{ padding: 24, textAlign: 'center', color: '#00B894' }}>
-                      ✓ Seluruh stok obat dan BHP dalam kondisi aman.
-                    </td>
-                  </tr>
-                ) : (
-                  criticalStockItems.map((item, idx) => (
-                    <tr key={item.id || idx} style={{ borderBottom: '1px solid var(--border)', background: item.stock === 0 ? 'rgba(255,68,68,0.05)' : undefined }}>
-                      <td style={{ padding: '6px 8px', fontWeight: 600 }}>{item.name}</td>
-                      <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700, color: item.stock === 0 ? '#FF4444' : '#FF9800' }}>
-                        {item.stock} {item.unit}
-                      </td>
-                      <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--muted-foreground)' }}>
-                        {item.safeLimit} {item.unit}
-                      </td>
-                      <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700, color: '#FF4444' }}>
-                        +{item.defisit}
-                      </td>
-                      <td style={{ padding: '6px 8px', textAlign: 'center' }}>
-                        <span style={{
-                          background: item.stock === 0 ? 'rgba(255,68,68,0.15)' : 'rgba(255,152,0,0.15)',
-                          color: item.stock === 0 ? '#FF4444' : '#d97706',
-                          padding: '2px 6px',
-                          borderRadius: 4,
-                          fontSize: 10,
-                          fontWeight: 700,
-                        }}>
-                          {item.stock === 0 ? 'HABIS' : item.status.toUpperCase()}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>
+            {actionTab === 'habis' && `Menampilkan seluruh ${habisItems.length} obat yang stoknya habis (0)`}
+            {actionTab === 'kritis' && `Menampilkan ${kritisItems.length} obat dengan stok di bawah batas aman`}
+            {actionTab === 'fast' && `Menampilkan 15 obat dengan frekuensi resep tertinggi klinik`}
+            {actionTab === 'fefo' && `Menampilkan obat yang expired atau akan expired < 3 bulan`}
+          </span>
         </div>
 
-        {/* Panel Kanan: Item Kadaluarsa & Segera Expired (FEFO Watchlist) */}
-        <div className="card glow-amber" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', minHeight: 280, maxHeight: 320 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(255,152,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Clock size={15} color="#FF9800" />
-              </div>
-              <div>
-                <h3 style={{ fontSize: 13, fontWeight: 700, margin: 0, color: 'var(--foreground)' }}>
-                  Peringatan FEFO & Kadaluarsa
-                </h3>
-                <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>
-                  {criticalExpiredItems.length} item sudah kadaluarsa atau akan expired dalam &lt; 3 bulan
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5 }}>
+        {/* Tab Content 1: OBAT HABIS */}
+        {actionTab === 'habis' && (
+          <div style={{ overflowX: 'auto', maxHeight: 320 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
-                <tr style={{ background: 'var(--muted)', textAlign: 'left', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 1 }}>
-                  <th style={{ padding: '6px 8px', fontWeight: 600 }}>Nama Item</th>
-                  <th style={{ padding: '6px 8px', fontWeight: 600 }}>Tgl Expired</th>
-                  <th style={{ padding: '6px 8px', fontWeight: 600 }}>Sisa Waktu</th>
-                  <th style={{ padding: '6px 8px', fontWeight: 600, textAlign: 'right' }}>Stok Fisik</th>
-                  <th style={{ padding: '6px 8px', fontWeight: 600, textAlign: 'center' }}>Rekomendasi</th>
+                <tr style={{ background: 'var(--muted)', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>No</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Nama Obat / BHP</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Kategori</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Sisa Stok</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Konsumsi/Bln</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Buffer Rekomendasi (3 Bln)</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Status</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Tindakan</th>
                 </tr>
               </thead>
               <tbody>
-                {criticalExpiredItems.length === 0 ? (
+                {habisItems.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ padding: 24, textAlign: 'center', color: '#00B894' }}>
-                      ✓ Tidak ada obat atau BHP yang mendekati masa kadaluarsa (&lt; 3 bulan).
+                    <td colSpan={8} style={{ padding: 24, textAlign: 'center', color: '#00B894' }}>
+                      ✓ Tidak ada obat yang habis. Seluruh inventaris klinik tersedia!
                     </td>
                   </tr>
                 ) : (
-                  criticalExpiredItems.map((item, idx) => {
-                    const isPassed = (item.daysLeft ?? 0) <= 0;
+                  habisItems.map((item, idx) => {
+                    const bufferMin = Math.max(10, (item.avg_monthly_usage || 0) * 3);
                     return (
-                      <tr key={item.id || idx} style={{ borderBottom: '1px solid var(--border)', background: isPassed ? 'rgba(255,68,68,0.06)' : undefined }}>
-                        <td style={{ padding: '6px 8px', fontWeight: 600 }}>{item.name}</td>
-                        <td style={{ padding: '6px 8px', fontFamily: 'monospace', fontSize: 11 }}>
-                          {item.tanggal_expired}
+                      <tr key={item.id || idx} style={{ borderBottom: '1px solid var(--border)', background: 'rgba(255,68,68,0.04)' }}>
+                        <td style={{ padding: '8px 10px', color: 'var(--muted-foreground)' }}>{idx + 1}</td>
+                        <td style={{ padding: '8px 10px', fontWeight: 700, color: 'var(--foreground)' }}>{item.name}</td>
+                        <td style={{ padding: '8px 10px', color: 'var(--muted-foreground)' }}>{item.category}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800, color: '#FF4444' }}>
+                          0 {item.unit}
                         </td>
-                        <td style={{ padding: '6px 8px', fontWeight: 600, color: isPassed ? '#FF4444' : '#d97706' }}>
-                          {isPassed ? `Sudah Lewat (${Math.abs(item.daysLeft ?? 0)} hr)` : `${item.daysLeft} hari lagi`}
+                        <td style={{ padding: '8px 10px', textAlign: 'right' }}>{item.avg_monthly_usage} {item.unit}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600, color: '#ff4d00' }}>
+                          +{bufferMin} {item.unit}
                         </td>
-                        <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700 }}>
-                          {item.stock} {item.unit}
+                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                          <span style={{ background: 'rgba(255,68,68,0.15)', color: '#FF4444', padding: '3px 8px', borderRadius: 4, fontSize: 10.5, fontWeight: 800 }}>
+                            HABIS (0)
+                          </span>
                         </td>
-                        <td style={{ padding: '6px 8px', textAlign: 'center' }}>
-                          <span style={{
-                            background: isPassed ? 'rgba(255,68,68,0.15)' : 'rgba(255,152,0,0.15)',
-                            color: isPassed ? '#FF4444' : '#d97706',
-                            padding: '2px 6px',
-                            borderRadius: 4,
-                            fontSize: 10,
-                            fontWeight: 700,
-                          }}>
-                            {isPassed ? 'Tarik / Retur' : 'Prioritaskan Resep'}
+                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#FF4444' }}>
+                            Order Mendesak
                           </span>
                         </td>
                       </tr>
@@ -765,7 +884,196 @@ export default function InventoryDashboard() {
               </tbody>
             </table>
           </div>
-        </div>
+        )}
+
+        {/* Tab Content 2: STOK KRITIS / TINGGAL SEDIKIT */}
+        {actionTab === 'kritis' && (
+          <div style={{ overflowX: 'auto', maxHeight: 320 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: 'var(--muted)', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>No</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Nama Obat / BHP</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Sisa Stok Saat Ini</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Pakai/Bulan</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Batas Aman (3 Bln)</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Defisit Restock</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {kritisItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ padding: 24, textAlign: 'center', color: '#00B894' }}>
+                      ✓ Seluruh stok obat berada dalam batas aman.
+                    </td>
+                  </tr>
+                ) : (
+                  kritisItems.map((item, idx) => {
+                    const safeLimit = Math.max(1, (item.avg_monthly_usage || 0) * 3);
+                    const defisit = Math.max(0, safeLimit - item.stock);
+                    const isVeryLow = item.stock <= 5;
+                    return (
+                      <tr key={item.id || idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '8px 10px', color: 'var(--muted-foreground)' }}>{idx + 1}</td>
+                        <td style={{ padding: '8px 10px', fontWeight: 600 }}>{item.name}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800, color: isVeryLow ? '#FF4444' : '#FF9800' }}>
+                          {item.stock} {item.unit}
+                        </td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right' }}>{item.avg_monthly_usage} {item.unit}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right', color: 'var(--muted-foreground)' }}>
+                          {safeLimit} {item.unit}
+                        </td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: '#FF4444' }}>
+                          +{defisit} {item.unit}
+                        </td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                          <span style={{
+                            background: isVeryLow ? 'rgba(255,68,68,0.15)' : 'rgba(255,152,0,0.15)',
+                            color: isVeryLow ? '#FF4444' : '#d97706',
+                            padding: '3px 8px',
+                            borderRadius: 4,
+                            fontSize: 10.5,
+                            fontWeight: 700,
+                          }}>
+                            {isVeryLow ? 'KRITIS' : 'MENIPIS'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Tab Content 3: 15 OBAT FAST-MOVING */}
+        {actionTab === 'fast' && (
+          <div style={{ overflowX: 'auto', maxHeight: 320 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: 'var(--muted)', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, width: 45 }}>Rank</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Nama Obat / BHP</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Pemakaian/Bulan</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Sisa Stok Saat Ini</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Kecukupan Stok</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Status Ketersediaan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fastMovingList.slice(0, 15).map((item, idx) => {
+                  const status = getStockStatus(item);
+                  const isEnough = item.stock >= (item.avg_monthly_usage * 3);
+                  return (
+                    <tr key={item.id || idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '8px 10px', fontWeight: 800, color: idx < 3 ? '#ff4d00' : 'var(--muted-foreground)' }}>
+                        #{idx + 1}
+                      </td>
+                      <td style={{ padding: '8px 10px', fontWeight: 600 }}>{item.name}</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800, color: '#00BCD4' }}>
+                        {item.avg_monthly_usage} {item.unit}/bln
+                      </td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: item.stock <= 5 ? '#FF4444' : undefined }}>
+                        {item.stock} {item.unit}
+                      </td>
+                      <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                        <span style={{
+                          color: isEnough ? '#00B894' : item.stock === 0 ? '#FF4444' : '#FF9800',
+                          fontWeight: 700,
+                          fontSize: 11,
+                        }}>
+                          {item.stock === 0 ? 'Habis (0)' : `${Math.round((item.stock / Math.max(1, item.avg_monthly_usage)) * 10) / 10} Bulan Pakai`}
+                        </span>
+                      </td>
+                      <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                        <span style={{
+                          background: item.stock === 0 ? 'rgba(255,68,68,0.15)' : isEnough ? 'rgba(0,184,148,0.15)' : 'rgba(255,152,0,0.15)',
+                          color: item.stock === 0 ? '#FF4444' : isEnough ? '#00B894' : '#d97706',
+                          padding: '3px 8px',
+                          borderRadius: 4,
+                          fontSize: 10.5,
+                          fontWeight: 700,
+                        }}>
+                          {status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Tab Content 4: FEFO / KADALUARSA */}
+        {actionTab === 'fefo' && (
+          <div style={{ overflowX: 'auto', maxHeight: 320 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: 'var(--muted)', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>No</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Nama Item Obat / BHP</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Tgl Expired</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Sisa Waktu</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Stok Terancam</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Status FEFO</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Rekomendasi Tindakan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {criticalExpiredItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ padding: 24, textAlign: 'center', color: '#00B894' }}>
+                      ✓ Tidak ada obat mendekati tanggal kedaluwarsa (&lt; 3 bulan).
+                    </td>
+                  </tr>
+                ) : (
+                  criticalExpiredItems.map((item, idx) => {
+                    const isPassed = (item.daysLeft ?? 0) <= 0;
+                    return (
+                      <tr key={item.id || idx} style={{ borderBottom: '1px solid var(--border)', background: isPassed ? 'rgba(255,68,68,0.06)' : undefined }}>
+                        <td style={{ padding: '8px 10px', color: 'var(--muted-foreground)' }}>{idx + 1}</td>
+                        <td style={{ padding: '8px 10px', fontWeight: 600 }}>{item.name}</td>
+                        <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontSize: 11.5 }}>
+                          {item.tanggal_expired}
+                        </td>
+                        <td style={{ padding: '8px 10px', fontWeight: 700, color: isPassed ? '#FF4444' : '#d97706' }}>
+                          {isPassed ? `Sudah Lewat (${Math.abs(item.daysLeft ?? 0)} hari)` : `${item.daysLeft} hari lagi`}
+                        </td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700 }}>
+                          {item.stock} {item.unit}
+                        </td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                          <span style={{
+                            background: isPassed ? 'rgba(255,68,68,0.15)' : 'rgba(255,152,0,0.15)',
+                            color: isPassed ? '#FF4444' : '#d97706',
+                            padding: '3px 8px',
+                            borderRadius: 4,
+                            fontSize: 10.5,
+                            fontWeight: 700,
+                          }}>
+                            {isPassed ? 'KADALUARSA' : '< 3 BULAN'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                          <span style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: isPassed ? '#FF4444' : '#00B894',
+                          }}>
+                            {isPassed ? 'Tarik & Buang Berita Acara' : 'Prioritaskan Resep Pasien'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Tabel Data Monitoring Obat & BHP dengan DownloadButton */}
