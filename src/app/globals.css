@@ -1493,7 +1493,8 @@ select.admin-input.compact-input {
 .mcu-entry-page {
   gap: 16px;
   padding: 28px 30px 24px;
-  overflow: visible;
+  min-height: 0;
+  overflow: hidden;
   background: linear-gradient(180deg, rgba(255,255,255,.78) 0%, rgba(247,248,250,.92) 100%);
 }
 .dark .mcu-entry-page {
