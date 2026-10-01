@@ -240,6 +240,14 @@ export default function InventoryAdmin() {
   const inputStyle: React.CSSProperties = {
     width: '100%', height: 38, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)', padding: '0 12px', fontSize: 13, color: 'var(--foreground)', outline: 'none'
   };
+  const inventoryHeaderCellStyle: React.CSSProperties = {
+    padding: '10px 12px',
+    borderBottom: '1px solid var(--border)',
+    fontWeight: 600,
+    whiteSpace: 'nowrap',
+    background: 'var(--background)',
+    color: 'var(--foreground)',
+  };
 
   return (
     <div className="admin-form-container" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '0 24px 24px 24px' }}>
@@ -289,16 +297,16 @@ export default function InventoryAdmin() {
       </div>
 
       <div className="mcu-records-table-wrap inventory-admin-table-wrap" style={{ border: '1px solid var(--border)', borderRadius: '10px' }}>
-        <table className="mcu-records-table inventory-admin-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+        <table className="mcu-records-table inventory-admin-table" style={{ borderCollapse: 'collapse', fontSize: '13px' }}>
           <thead style={{ background: 'var(--muted)', textAlign: 'left', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             <tr>
-              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600, whiteSpace: 'nowrap' }}>No</th>
-              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600, whiteSpace: 'nowrap' }}>Nama Item</th>
-              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600, whiteSpace: 'nowrap' }}>Tanggal Masuk</th>
-              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600, whiteSpace: 'nowrap' }}>Tgl Expired (Terdekat)</th>
-              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600, whiteSpace: 'nowrap' }}>Total Stok</th>
-              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600, whiteSpace: 'nowrap' }}>Status</th>
-              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', textAlign: 'center', fontWeight: 600, whiteSpace: 'nowrap' }}>Aksi</th>
+              <th style={inventoryHeaderCellStyle}>No</th>
+              <th style={inventoryHeaderCellStyle}>Nama Item</th>
+              <th style={inventoryHeaderCellStyle}>Tanggal Masuk</th>
+              <th style={inventoryHeaderCellStyle}>Tgl Expired (Terdekat)</th>
+              <th style={inventoryHeaderCellStyle}>Total Stok</th>
+              <th style={inventoryHeaderCellStyle}>Status</th>
+              <th style={{ ...inventoryHeaderCellStyle, textAlign: 'center' }}>Aksi</th>
             </tr>
           </thead>
           <tbody>

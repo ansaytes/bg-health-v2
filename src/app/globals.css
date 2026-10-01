@@ -2030,17 +2030,25 @@ select.admin-input.compact-input {
   text-align: center;
 }
 .inventory-admin-table th:nth-child(2),
-.inventory-admin-table td:nth-child(2) { width: 25%; }
+.inventory-admin-table td:nth-child(2) { width: 240px; }
 .inventory-admin-table th:nth-child(3),
-.inventory-admin-table td:nth-child(3),
+.inventory-admin-table td:nth-child(3) { width: 135px; }
 .inventory-admin-table th:nth-child(4),
-.inventory-admin-table td:nth-child(4) { width: 150px; }
+.inventory-admin-table td:nth-child(4) { width: 180px; }
 .inventory-admin-table th:nth-child(5),
-.inventory-admin-table td:nth-child(5) { width: 105px; }
+.inventory-admin-table td:nth-child(5) { width: 125px; }
 .inventory-admin-table th:nth-child(6),
-.inventory-admin-table td:nth-child(6) { width: 100px; }
+.inventory-admin-table td:nth-child(6) { width: 110px; }
 .inventory-admin-table th:nth-child(7),
-.inventory-admin-table td:nth-child(7) { width: 170px; }
+.inventory-admin-table td:nth-child(7) { width: 185px; }
+.inventory-admin-table th {
+  background: #f1e7e3;
+  color: #30231f;
+}
+.dark .inventory-admin-table th {
+  background: #353538;
+  color: #f5f5f5;
+}
 .mcu-records-table .mcu-records-index {
   position: sticky;
   left: 0;
