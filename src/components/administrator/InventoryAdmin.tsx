@@ -363,7 +363,7 @@ export default function InventoryAdmin() {
                     </td>
                     <td style={{ padding: '10px 12px', textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                        <Button size="sm" variant="outline" title="Tambah Stok / Restock (Batch Baru)" style={{ padding: '0 8px', height: '28px', fontSize: '12px', background: 'var(--brand-primary)', color: 'white', border: 'none' }} onClick={() => openRestock(item)}>
+                        <Button size="sm" variant="outline" title="Tambah Stok / Restock (Batch Baru)" style={{ padding: '0 8px', height: '28px', fontSize: '12px', background: '#c2410c', color: '#ffffff', border: 'none' }} onClick={() => openRestock(item)}>
                           <ArchiveRestore size={13} className="mr-1" /> Restock
                         </Button>
                         <Button size="sm" variant="ghost" title={`Edit ${item.name}`} style={{ width: '28px', height: '28px', padding: 0 }} onClick={() => openEdit(item)}><Edit size={14} /></Button>
