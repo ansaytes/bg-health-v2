@@ -252,7 +252,7 @@ export default function InventoryDashboard() {
 
   // Render Charts
   useEffect(() => {
-    if (loading || !isAuthorized || items.length === 0) return;
+    if (loading || !isAuthorized || !isDashboardView || items.length === 0) return;
 
     const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
     const textColor = isDark ? '#e5e7eb' : '#374151';
@@ -562,7 +562,7 @@ export default function InventoryDashboard() {
       topExpSoonChart.current?.destroy();
       fastMovingChart.current?.destroy();
     };
-  }, [items, loading, isAuthorized]);
+  }, [items, loading, isAuthorized, isDashboardView]);
 
   // Access guard
   if (!isAuthorized) {

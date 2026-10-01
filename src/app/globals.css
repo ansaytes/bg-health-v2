@@ -1614,7 +1614,7 @@ select.admin-input.compact-input {
   margin: 0 auto;
   overflow-x: auto;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior-y: auto;
   border: 1px solid rgba(20,20,24,.08);
   border-radius: 16px;
   background: rgba(255,255,255,.92);
