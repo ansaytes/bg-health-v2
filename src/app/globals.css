@@ -2021,6 +2021,25 @@ select.admin-input.compact-input {
 .mcu-records-table td:nth-child(6) { width: 150px; }
 .mcu-records-table th:nth-child(7),
 .mcu-records-table td:nth-child(7) { width: 150px; }
+.inventory-admin-table th:first-child,
+.inventory-admin-table td:first-child {
+  width: 52px;
+  min-width: 52px;
+  max-width: 52px;
+  text-align: center;
+}
+.inventory-admin-table th:nth-child(2),
+.inventory-admin-table td:nth-child(2) { width: 25%; }
+.inventory-admin-table th:nth-child(3),
+.inventory-admin-table td:nth-child(3),
+.inventory-admin-table th:nth-child(4),
+.inventory-admin-table td:nth-child(4) { width: 150px; }
+.inventory-admin-table th:nth-child(5),
+.inventory-admin-table td:nth-child(5) { width: 105px; }
+.inventory-admin-table th:nth-child(6),
+.inventory-admin-table td:nth-child(6) { width: 100px; }
+.inventory-admin-table th:nth-child(7),
+.inventory-admin-table td:nth-child(7) { width: 170px; }
 .mcu-records-table .mcu-records-index {
   position: sticky;
   left: 0;

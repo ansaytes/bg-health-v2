@@ -296,7 +296,7 @@ export default function InventoryDashboard() {
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: (ctx) => ` ${ctx.parsed.x} unit expired`,
+              label: (ctx) => ` ${ctx.parsed.x} ${topExpired[ctx.dataIndex]?.unit || 'satuan'} expired`,
             },
           },
           datalabels: {
@@ -364,7 +364,7 @@ export default function InventoryDashboard() {
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: (ctx) => ` ${ctx.parsed.x} unit/bulan kebutuhan`,
+              label: (ctx) => ` ${ctx.parsed.x} ${topHabis[ctx.dataIndex]?.unit || 'satuan'}/bulan kebutuhan`,
             },
           },
           datalabels: {
@@ -433,7 +433,7 @@ export default function InventoryDashboard() {
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: (ctx) => ` ${ctx.parsed.x} unit terancam`,
+              label: (ctx) => ` ${ctx.parsed.x} ${topExpSoon[ctx.dataIndex]?.unit || 'satuan'} terancam`,
             },
           },
           datalabels: {
@@ -525,7 +525,7 @@ export default function InventoryDashboard() {
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: (ctx) => ` ${ctx.parsed.x} unit/bulan`,
+              label: (ctx) => ` ${ctx.parsed.x} ${topFast[ctx.dataIndex]?.unit || 'satuan'}/bulan`,
             },
           },
           datalabels: {
@@ -783,7 +783,7 @@ export default function InventoryDashboard() {
               <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
         {/* Chart 1: Top Sudah Expired */}
         <div className="card glow-coral" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Sudah Expired (unit)</h3>
+          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Stok Obat/BHP Expired</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
             <canvas ref={topExpiredCanvasRef} />
           </div>
@@ -799,7 +799,7 @@ export default function InventoryDashboard() {
 
         {/* Chart 3: Top Akan Expired < 3 Bulan */}
         <div className="card glow-amber" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Akan Expired &lt; 3 Bln (unit)</h3>
+          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Stok Akan Expired &lt; 3 Bln</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
             <canvas ref={topExpSoonCanvasRef} />
           </div>
@@ -807,7 +807,7 @@ export default function InventoryDashboard() {
 
         {/* Chart 4: Top Fast Moving */}
         <div className="card glow-teal" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Fast-Moving (unit/bln)</h3>
+          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Pemakaian per Bulan</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
             <canvas ref={fastMovingCanvasRef} />
           </div>

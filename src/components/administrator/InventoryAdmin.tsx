@@ -216,12 +216,13 @@ export default function InventoryAdmin() {
         </div>
       </div>
 
-      <div className="mcu-records-table-wrap" style={{ border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
-        <table className="mcu-records-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+      <div className="mcu-records-table-wrap inventory-admin-table-wrap" style={{ border: '1px solid var(--border)', borderRadius: '10px' }}>
+        <table className="mcu-records-table inventory-admin-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
           <thead style={{ background: 'var(--muted)', textAlign: 'left', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             <tr>
               <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600, whiteSpace: 'nowrap' }}>No</th>
               <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600, whiteSpace: 'nowrap' }}>Nama Item</th>
+              <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600, whiteSpace: 'nowrap' }}>Tanggal Masuk</th>
               <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600, whiteSpace: 'nowrap' }}>Tgl Expired (Terdekat)</th>
               <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600, whiteSpace: 'nowrap' }}>Total Stok</th>
               <th style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600, whiteSpace: 'nowrap' }}>Status</th>
@@ -231,14 +232,14 @@ export default function InventoryAdmin() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
                   <Loader2 className="animate-spin" size={24} style={{ margin: '0 auto 8px auto' }} />
                   Memuat data inventory...
                 </td>
               </tr>
             ) : filteredItems.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: 'var(--muted-foreground)' }}>Tidak ada data ditemukan.</td>
+                <td colSpan={7} style={{ padding: '32px', textAlign: 'center', color: 'var(--muted-foreground)' }}>Tidak ada data ditemukan.</td>
               </tr>
             ) : (
               filteredItems.map((item, idx) => {
@@ -252,6 +253,10 @@ export default function InventoryAdmin() {
                     <td style={{ padding: '10px 12px' }}>
                       <div style={{ fontWeight: 600 }}>{item.name}</div>
                       <div style={{ fontSize: '11px', color: 'var(--muted-foreground)', marginTop: '2px' }}>{item.category}</div>
+                    </td>
+
+                    <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                      {item.tanggal_masuk ? new Date(item.tanggal_masuk).toLocaleDateString('id-ID') : '-'}
                     </td>
                     
                     <td style={{ padding: '10px 12px' }}>
