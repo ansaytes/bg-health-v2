@@ -1610,7 +1610,8 @@ select.admin-input.compact-input {
 .mcu-entry-page .mcu-entry-table {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
   overscroll-behavior: contain;
   border: 1px solid rgba(20,20,24,.08);
   border-radius: 16px;
@@ -1629,7 +1630,7 @@ select.admin-input.compact-input {
 .mcu-entry-page .mcu-entry-table th {
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 10;
   background: var(--card);
   padding-top: 12px;
   padding-bottom: 12px;
@@ -1663,30 +1664,26 @@ select.admin-input.compact-input {
   box-shadow: 0 4px 10px rgba(255,77,0,.2);
 }
 .mcu-entry-page .mcu-entry-table th:nth-child(1),
-.mcu-entry-page .mcu-entry-table td:nth-child(1) { width: 60px; min-width: 60px; }
+.mcu-entry-page .mcu-entry-table td:nth-child(1) { width: 50px; min-width: 50px; }
 .mcu-entry-page .mcu-entry-table th:nth-child(2),
-.mcu-entry-page .mcu-entry-table td:nth-child(2) { width: 120px; min-width: 120px; }
+.mcu-entry-page .mcu-entry-table td:nth-child(2) { width: 110px; min-width: 110px; }
 .mcu-entry-page .mcu-entry-table th:nth-child(3),
-.mcu-entry-page .mcu-entry-table td:nth-child(3) { width: 180px; min-width: 180px; }
+.mcu-entry-page .mcu-entry-table td:nth-child(3) { width: 160px; min-width: 160px; }
 .mcu-entry-page .mcu-entry-table th:nth-child(4),
-.mcu-entry-page .mcu-entry-table td:nth-child(4) { width: 100px; min-width: 100px; }
+.mcu-entry-page .mcu-entry-table td:nth-child(4) { width: 90px; min-width: 90px; }
 .mcu-entry-page .mcu-entry-table th:nth-child(5),
-.mcu-entry-page .mcu-entry-table td:nth-child(5) { width: 130px; min-width: 130px; }
+.mcu-entry-page .mcu-entry-table td:nth-child(5) { width: 100px; min-width: 100px; }
 .mcu-entry-page .mcu-entry-table th:nth-child(6),
-.mcu-entry-page .mcu-entry-table td:nth-child(6) { width: 150px; min-width: 150px; }
+.mcu-entry-page .mcu-entry-table td:nth-child(6) { width: 120px; min-width: 120px; }
 .mcu-entry-page .mcu-entry-table th:nth-child(7),
-.mcu-entry-page .mcu-entry-table td:nth-child(7) { width: 110px; min-width: 110px; }
+.mcu-entry-page .mcu-entry-table td:nth-child(7) { width: 100px; min-width: 100px; }
 .mcu-entry-page .mcu-entry-table th:nth-child(8),
-.mcu-entry-page .mcu-entry-table td:nth-child(8) { width: 150px; min-width: 150px; }
+.mcu-entry-page .mcu-entry-table td:nth-child(8) { width: 140px; min-width: 140px; }
 .mcu-entry-page .mcu-entry-table th:nth-child(9),
 .mcu-entry-page .mcu-entry-table td:nth-child(9) {
-  width: 100px;
-  min-width: 100px;
+  width: 90px;
+  min-width: 90px;
   text-align: center;
-  position: sticky;
-  right: 0;
-  z-index: 1;
-  background: var(--card);
 }
 .mcu-entry-page .mcu-entry-table tbody tr:hover td:nth-child(9) {
   background: rgba(255,77,0,.035);
