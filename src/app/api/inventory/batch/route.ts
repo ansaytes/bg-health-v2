@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getInventoryCallerRole, inventorySupabase as supabase } from '@/lib/inventory-auth';
 
 export async function POST(request: NextRequest) {
   try {
+    const role = await getInventoryCallerRole(request);
+    if (!role || !['administrator', 'superuser'].includes(role)) {
+      return NextResponse.json({ success: false, error: 'Hanya administrator dan superuser yang dapat menambah stok' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { item_id, jumlah_masuk, tanggal_masuk, tanggal_expired } = body;
     

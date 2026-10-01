@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Package, Search, Plus, Edit, Trash2, AlertTriangle, Loader2, ArchiveRestore } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
+import { supabase } from '@/lib/supabase';
 import DownloadButton from '@/components/ui/download-button';
 import {
   Dialog,
@@ -34,7 +35,17 @@ export default function InventoryAdmin() {
   // Add Master Item state
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   const [addForm, setAddForm] = useState({
+    name: '',
+    category: 'Obat',
+    unit: '',
+    avg_monthly_usage: '',
+  });
+  const [editForm, setEditForm] = useState({
     name: '',
     category: 'Obat',
     unit: '',
@@ -70,25 +81,30 @@ export default function InventoryAdmin() {
     fetchItems();
   }, []);
 
+  const getAuthHeaders = async (): Promise<Record<string, string>> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+  };
+
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
       const res = await fetch('/api/inventory', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
         body: JSON.stringify(addForm),
       });
       const json = await res.json();
       if (json.success) {
         setIsAddOpen(false);
         setAddForm({ name: '', category: 'Obat', unit: '', avg_monthly_usage: '' });
-        fetchItems();
+        await fetchItems();
       } else {
         alert(json.error);
       }
     } catch (err) {
-      alert('Gagal menyimpan item');
+      alert(err instanceof Error ? err.message : 'Gagal menyimpan item');
     } finally {
       setSaving(false);
     }
@@ -101,7 +117,7 @@ export default function InventoryAdmin() {
     try {
       const res = await fetch('/api/inventory/batch', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
         body: JSON.stringify({
           item_id: selectedItem.id,
           ...restockForm
@@ -111,7 +127,7 @@ export default function InventoryAdmin() {
       if (json.success) {
         setIsRestockOpen(false);
         setRestockForm({ jumlah_masuk: '', tanggal_masuk: '', tanggal_expired: '' });
-        fetchItems();
+        await fetchItems();
       } else {
         alert(json.error);
       }
@@ -130,6 +146,62 @@ export default function InventoryAdmin() {
       tanggal_expired: ''
     });
     setIsRestockOpen(true);
+  };
+
+  const openEdit = (item: InventoryItem) => {
+    setEditingItem(item);
+    setEditForm({
+      name: item.name,
+      category: item.category,
+      unit: item.unit,
+      avg_monthly_usage: String(item.avg_monthly_usage ?? 0),
+    });
+    setIsEditOpen(true);
+  };
+
+  const handleEditItem = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editingItem) return;
+    setEditSaving(true);
+    try {
+      const res = await fetch('/api/inventory', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
+        body: JSON.stringify({ id: editingItem.id, ...editForm }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || 'Gagal mengubah item');
+
+      setIsEditOpen(false);
+      setEditingItem(null);
+      await fetchItems();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Gagal mengubah item');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const handleDeleteItem = async (item: InventoryItem) => {
+    const confirmed = window.confirm(
+      `Hapus "${item.name}" secara permanen? Stok saat ini: ${item.stock} ${item.unit}. Semua batch dan riwayat transaksi terkait juga akan terhapus.`,
+    );
+    if (!confirmed) return;
+
+    setDeletingItemId(item.id);
+    try {
+      const res = await fetch(`/api/inventory?id=${encodeURIComponent(item.id)}`, {
+        method: 'DELETE',
+        headers: await getAuthHeaders(),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || 'Gagal menghapus item');
+      await fetchItems();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Gagal menghapus item');
+    } finally {
+      setDeletingItemId(null);
+    }
   };
 
   const filteredItems = items.filter(item => {
@@ -294,9 +366,9 @@ export default function InventoryAdmin() {
                         <Button size="sm" variant="outline" title="Tambah Stok / Restock (Batch Baru)" style={{ padding: '0 8px', height: '28px', fontSize: '12px', background: 'var(--brand-primary)', color: 'white', border: 'none' }} onClick={() => openRestock(item)}>
                           <ArchiveRestore size={13} className="mr-1" /> Restock
                         </Button>
-                        <Button size="sm" variant="ghost" style={{ width: '28px', height: '28px', padding: 0 }} onClick={() => alert(`Edit ${item.name}`)}><Edit size={14} /></Button>
+                        <Button size="sm" variant="ghost" title={`Edit ${item.name}`} style={{ width: '28px', height: '28px', padding: 0 }} onClick={() => openEdit(item)}><Edit size={14} /></Button>
                         {isSuperuser && (
-                          <Button size="sm" variant="ghost" style={{ width: '28px', height: '28px', padding: 0 }} className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => alert(`Hapus ${item.name}`)}><Trash2 size={14} /></Button>
+                          <Button size="sm" variant="ghost" title={`Hapus ${item.name}`} disabled={deletingItemId === item.id} style={{ width: '28px', height: '28px', padding: 0 }} className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => void handleDeleteItem(item)}><Trash2 size={14} /></Button>
                         )}
                       </div>
                     </td>
@@ -343,6 +415,45 @@ export default function InventoryAdmin() {
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setIsAddOpen(false)}>Batal</Button>
               <Button type="submit" disabled={saving}>{saving ? 'Menyimpan...' : 'Simpan Master Item'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* EDIT MASTER ITEM DIALOG */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent style={{ maxWidth: 450 }}>
+          <DialogHeader>
+            <DialogTitle>Edit Item Master</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditItem} style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
+              <div>
+                <label className="admin-label">Nama Obat / BHP</label>
+                <input type="text" style={inputStyle} required value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label className="admin-label">Kategori</label>
+                  <select style={inputStyle} value={editForm.category} onChange={e => setEditForm({ ...editForm, category: e.target.value })}>
+                    <option value="Obat">Obat</option>
+                    <option value="Bahan Medis">Bahan Medis</option>
+                    <option value="Lainnya">Lainnya</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="admin-label">Satuan</label>
+                  <input type="text" style={inputStyle} required value={editForm.unit} onChange={e => setEditForm({ ...editForm, unit: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <label className="admin-label">Rata-rata Pemakaian / Bulan</label>
+                <input type="number" min="0" step="1" style={inputStyle} required value={editForm.avg_monthly_usage} onChange={e => setEditForm({ ...editForm, avg_monthly_usage: e.target.value })} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setIsEditOpen(false)}>Batal</Button>
+              <Button type="submit" disabled={editSaving}>{editSaving ? 'Menyimpan...' : 'Simpan Perubahan'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
