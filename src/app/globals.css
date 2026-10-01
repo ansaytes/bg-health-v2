@@ -1427,7 +1427,7 @@ select.admin-input.compact-input {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: visible;
+  overflow: hidden;
   width: 100%;
 }
 .admin-form-inner {
@@ -1493,7 +1493,7 @@ select.admin-input.compact-input {
 .mcu-entry-page {
   gap: 16px;
   padding: 28px 30px 24px;
-  overflow: hidden;
+  overflow: visible;
   background: linear-gradient(180deg, rgba(255,255,255,.78) 0%, rgba(247,248,250,.92) 100%);
 }
 .dark .mcu-entry-page {
