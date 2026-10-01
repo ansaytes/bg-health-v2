@@ -1623,8 +1623,8 @@ select.admin-input.compact-input {
   box-shadow: 0 10px 30px rgba(0,0,0,.18);
 }
 .mcu-entry-page .mcu-entry-table table {
-  min-width: 0;
-  table-layout: fixed;
+  min-width: 100%;
+  table-layout: auto;
 }
 .mcu-entry-page .mcu-entry-table th {
   position: sticky;
@@ -1663,25 +1663,25 @@ select.admin-input.compact-input {
   box-shadow: 0 4px 10px rgba(255,77,0,.2);
 }
 .mcu-entry-page .mcu-entry-table th:nth-child(1),
-.mcu-entry-page .mcu-entry-table td:nth-child(1) { width: 4%; }
+.mcu-entry-page .mcu-entry-table td:nth-child(1) { width: 60px; min-width: 60px; }
 .mcu-entry-page .mcu-entry-table th:nth-child(2),
-.mcu-entry-page .mcu-entry-table td:nth-child(2) { width: 10%; }
+.mcu-entry-page .mcu-entry-table td:nth-child(2) { width: 120px; min-width: 120px; }
 .mcu-entry-page .mcu-entry-table th:nth-child(3),
-.mcu-entry-page .mcu-entry-table td:nth-child(3) { width: 15%; }
+.mcu-entry-page .mcu-entry-table td:nth-child(3) { width: 180px; min-width: 180px; }
 .mcu-entry-page .mcu-entry-table th:nth-child(4),
-.mcu-entry-page .mcu-entry-table td:nth-child(4) { width: 10%; }
+.mcu-entry-page .mcu-entry-table td:nth-child(4) { width: 100px; min-width: 100px; }
 .mcu-entry-page .mcu-entry-table th:nth-child(5),
-.mcu-entry-page .mcu-entry-table td:nth-child(5) { width: 13%; }
+.mcu-entry-page .mcu-entry-table td:nth-child(5) { width: 130px; min-width: 130px; }
 .mcu-entry-page .mcu-entry-table th:nth-child(6),
-.mcu-entry-page .mcu-entry-table td:nth-child(6) { width: 15%; }
+.mcu-entry-page .mcu-entry-table td:nth-child(6) { width: 150px; min-width: 150px; }
 .mcu-entry-page .mcu-entry-table th:nth-child(7),
-.mcu-entry-page .mcu-entry-table td:nth-child(7) { width: 9%; }
+.mcu-entry-page .mcu-entry-table td:nth-child(7) { width: 110px; min-width: 110px; }
 .mcu-entry-page .mcu-entry-table th:nth-child(8),
-.mcu-entry-page .mcu-entry-table td:nth-child(8) { width: 15%; }
+.mcu-entry-page .mcu-entry-table td:nth-child(8) { width: 150px; min-width: 150px; }
 .mcu-entry-page .mcu-entry-table th:nth-child(9),
 .mcu-entry-page .mcu-entry-table td:nth-child(9) {
-  width: 9%;
-  min-width: 82px;
+  width: 100px;
+  min-width: 100px;
   text-align: center;
   position: sticky;
   right: 0;
