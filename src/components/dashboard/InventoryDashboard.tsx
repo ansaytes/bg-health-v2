@@ -585,11 +585,8 @@ export default function InventoryDashboard() {
                 <div>
                   <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--foreground)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Boxes size={20} color="var(--brand-primary, #ff4d00)" />
-                    Monitoring Stok Obat & BHP Klinik
+                    Stok Obat & BHP
                   </h1>
-                  <p style={{ fontSize: 12, color: 'var(--muted-foreground)', margin: '4px 0 0 0' }}>
-                    Pemantauan ketersediaan stok fisik, peringatan restock, dan kontrol kedaluwarsa FEFO (First Expired First Out).
-                  </p>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -618,7 +615,7 @@ export default function InventoryDashboard() {
                 </div>
               </div>
 
-              {/* KPI Cards Row — Operational Action Focus */}
+              {/* KPI Cards Row */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 14 }}>
                 {/* Card 1: Obat Habis */}
                 <div
@@ -633,14 +630,14 @@ export default function InventoryDashboard() {
                   title="Klik untuk melihat daftar obat yang stoknya habis"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 700, textTransform: 'uppercase' }}>Obat Habis (Stok 0)</span>
+                    <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 700 }}>Stok Habis</span>
                     <AlertCircle size={16} color="#FF4444" />
                   </div>
                   <div style={{ fontSize: 24, fontWeight: 800, color: '#FF4444', marginTop: 6 }}>
-                    {habisItems.length} <span style={{ fontSize: 13, fontWeight: 500 }}>Obat</span>
+                    {habisItems.length}
                   </div>
                   <div style={{ fontSize: 10, color: habisItems.length > 0 ? '#b91c1c' : 'var(--muted-foreground)', marginTop: 2, fontWeight: 500 }}>
-                    {habisItems.length > 0 ? 'Perlu Order Mendesak' : 'Semua Obat Tersedia'}
+                    {habisItems.length > 0 ? 'Order segera' : 'Tersedia'}
                   </div>
                 </div>
 
@@ -657,14 +654,14 @@ export default function InventoryDashboard() {
                   title="Klik untuk melihat daftar obat yang stoknya menipis"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 11, color: '#d97706', fontWeight: 700, textTransform: 'uppercase' }}>Stok Menipis</span>
+                    <span style={{ fontSize: 11, color: '#d97706', fontWeight: 700 }}>Stok Menipis</span>
                     <AlertTriangle size={16} color="#FF9800" />
                   </div>
                   <div style={{ fontSize: 24, fontWeight: 800, color: '#FF9800', marginTop: 6 }}>
-                    {kritisItems.length} <span style={{ fontSize: 13, fontWeight: 500 }}>Obat</span>
+                    {kritisItems.length}
                   </div>
                   <div style={{ fontSize: 10, color: '#b45309', marginTop: 2, fontWeight: 500 }}>
-                    &lt; 3× Kebutuhan Bulanan
+                    &lt; 3 bulan pemakaian
                   </div>
                 </div>
 
@@ -681,14 +678,14 @@ export default function InventoryDashboard() {
                   title="Klik untuk melihat ranking obat fast moving"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 11, color: '#00838f', fontWeight: 700, textTransform: 'uppercase' }}>Fast-Move Terbanyak</span>
+                    <span style={{ fontSize: 11, color: '#00838f', fontWeight: 700 }}>Fast-Moving</span>
                     <Boxes size={16} color="#00BCD4" />
                   </div>
                   <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--foreground)', marginTop: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {topFastItem?.name || '-'}
                   </div>
                   <div style={{ fontSize: 10.5, color: '#00BCD4', marginTop: 2, fontWeight: 700 }}>
-                    ⚡ {topFastItem?.avg_monthly_usage || 0} {topFastItem?.unit || 'unit'}/bulan
+                    {topFastItem?.avg_monthly_usage || 0} {topFastItem?.unit || 'unit'}/bln
                   </div>
                 </div>
 
@@ -705,14 +702,14 @@ export default function InventoryDashboard() {
                   title="Klik untuk melihat obat yang mendekati masa expired"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 11, color: '#c2410c', fontWeight: 700, textTransform: 'uppercase' }}>Segera ED (&lt; 3 Bln)</span>
+                    <span style={{ fontSize: 11, color: '#c2410c', fontWeight: 700 }}>Expired &lt; 3 Bln</span>
                     <Clock size={16} color="#E67E22" />
                   </div>
                   <div style={{ fontSize: 24, fontWeight: 800, color: '#E67E22', marginTop: 6 }}>
-                    {expSoonItems.length} <span style={{ fontSize: 13, fontWeight: 500 }}>Obat</span>
+                    {expSoonItems.length}
                   </div>
                   <div style={{ fontSize: 10, color: '#9a3412', marginTop: 2, fontWeight: 500 }}>
-                    Prioritaskan Resep FEFO
+                    Prioritas FEFO
                   </div>
                 </div>
 
@@ -729,14 +726,14 @@ export default function InventoryDashboard() {
                   title="Klik untuk melihat obat yang sudah kadaluarsa"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 700, textTransform: 'uppercase' }}>Sudah Kadaluarsa</span>
+                    <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 700 }}>Sudah Expired</span>
                     <ShieldAlert size={16} color="#dc2626" />
                   </div>
                   <div style={{ fontSize: 24, fontWeight: 800, color: '#dc2626', marginTop: 6 }}>
-                    {expiredItems.length} <span style={{ fontSize: 13, fontWeight: 500 }}>Obat</span>
+                    {expiredItems.length}
                   </div>
                   <div style={{ fontSize: 10, color: '#991b1b', marginTop: 2, fontWeight: 500 }}>
-                    {expiredItems.length > 0 ? 'Wajib Tarik & Berita Acara' : 'Tidak Ada Obat ED'}
+                    {expiredItems.length > 0 ? 'Tarik & Berita Acara' : 'Aman'}
                   </div>
                 </div>
               </div>
@@ -745,7 +742,7 @@ export default function InventoryDashboard() {
               <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
         {/* Chart 1: Status Ketersediaan */}
         <div className="card glow-orange" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Status Ketersediaan Stok</h3>
+          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Status Stok</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
             <canvas ref={stockStatusCanvasRef} />
           </div>
@@ -753,7 +750,7 @@ export default function InventoryDashboard() {
 
         {/* Chart 2: Distribusi Kategori */}
         <div className="card glow-teal" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Komposisi Kategori</h3>
+          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Kategori</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
             <canvas ref={categoryCanvasRef} />
           </div>
@@ -761,7 +758,7 @@ export default function InventoryDashboard() {
 
         {/* Chart 3: Top Fast Moving */}
         <div className="card glow-coral" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Top 10 Fast-Moving (Pakai/Bln)</h3>
+          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Fast-Moving (unit/bln)</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
             <canvas ref={fastMovingCanvasRef} />
           </div>
@@ -769,7 +766,7 @@ export default function InventoryDashboard() {
 
         {/* Chart 4: Timeline Kadaluarsa FEFO */}
         <div className="card glow-amber" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Distribusi Expired FEFO</h3>
+          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Expired FEFO</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
             <canvas ref={expiredTimelineCanvasRef} />
           </div>
@@ -791,6 +788,26 @@ export default function InventoryDashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <button
               type="button"
+              onClick={handleToggleView}
+              style={{
+                height: 32,
+                padding: '0 12px',
+                borderRadius: 6,
+                border: '1px solid var(--border)',
+                background: 'var(--background)',
+                color: 'var(--foreground)',
+                fontSize: 11.5,
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              ← Kembali ke Dashboard
+            </button>
+            <button
+              type="button"
               onClick={() => setActionTab('semua')}
               style={{
                 height: 32,
@@ -808,7 +825,7 @@ export default function InventoryDashboard() {
               }}
             >
               <PackageCheck size={14} />
-              Semua Data ({items.length})
+              Semua ({items.length})
             </button>
             <button
               type="button"
@@ -829,7 +846,7 @@ export default function InventoryDashboard() {
               }}
             >
               <AlertCircle size={14} />
-              🔴 Obat Habis ({habisItems.length})
+              Habis ({habisItems.length})
             </button>
 
             <button
@@ -851,7 +868,7 @@ export default function InventoryDashboard() {
               }}
             >
               <AlertTriangle size={14} />
-              ⚠️ Stok Tinggal Sedikit ({kritisItems.length})
+              Menipis ({kritisItems.length})
             </button>
 
             <button
@@ -873,7 +890,7 @@ export default function InventoryDashboard() {
               }}
             >
               <Boxes size={14} />
-              🚀 15 Obat Fast-Moving Teratas
+              Fast-Moving
             </button>
 
             <button
@@ -895,16 +912,16 @@ export default function InventoryDashboard() {
               }}
             >
               <Clock size={14} />
-              ⏳ Peringatan Kadaluarsa / FEFO ({expiredItems.length + expSoonItems.length})
+              Expired/FEFO ({expiredItems.length + expSoonItems.length})
             </button>
           </div>
 
           <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>
-            {actionTab === 'semua' && `Menampilkan ${filteredItems.length} item inventory`}
-            {actionTab === 'habis' && `Menampilkan seluruh ${habisItems.length} obat yang stoknya habis (0)`}
-            {actionTab === 'kritis' && `Menampilkan ${kritisItems.length} obat dengan stok di bawah batas aman`}
-            {actionTab === 'fast' && `Menampilkan 15 obat dengan frekuensi resep tertinggi klinik`}
-            {actionTab === 'fefo' && `Menampilkan obat yang expired atau akan expired < 3 bulan`}
+            {actionTab === 'semua' && `${filteredItems.length} item`}
+            {actionTab === 'habis' && `${habisItems.length} item stok 0`}
+            {actionTab === 'kritis' && `${kritisItems.length} item stok menipis`}
+            {actionTab === 'fast' && `15 item fast-moving`}
+            {actionTab === 'fefo' && `${expiredItems.length + expSoonItems.length} item expired/FEFO`}
           </span>
         </div>
 
@@ -915,11 +932,11 @@ export default function InventoryDashboard() {
               <thead>
                 <tr style={{ background: 'var(--muted)', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
                   <th style={{ padding: '8px 10px', fontWeight: 600 }}>No</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Nama Obat / BHP</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Nama</th>
                   <th style={{ padding: '8px 10px', fontWeight: 600 }}>Kategori</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Sisa Stok</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Konsumsi/Bln</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Buffer Rekomendasi (3 Bln)</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Stok</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Pakai/Bln</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Rekomendasi</th>
                   <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Status</th>
                   <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Tindakan</th>
                 </tr>
@@ -928,7 +945,7 @@ export default function InventoryDashboard() {
                 {habisItems.length === 0 ? (
                   <tr>
                     <td colSpan={8} style={{ padding: 24, textAlign: 'center', color: '#00B894' }}>
-                      ✓ Tidak ada obat yang habis. Seluruh inventaris klinik tersedia!
+                      ✓ Semua stok tersedia
                     </td>
                   </tr>
                 ) : (
@@ -948,12 +965,12 @@ export default function InventoryDashboard() {
                         </td>
                         <td style={{ padding: '8px 10px', textAlign: 'center' }}>
                           <span style={{ background: 'rgba(255,68,68,0.15)', color: '#FF4444', padding: '3px 8px', borderRadius: 4, fontSize: 10.5, fontWeight: 800 }}>
-                            HABIS (0)
+                            HABIS
                           </span>
                         </td>
                         <td style={{ padding: '8px 10px', textAlign: 'center' }}>
                           <span style={{ fontSize: 11, fontWeight: 700, color: '#FF4444' }}>
-                            Order Mendesak
+                            Order
                           </span>
                         </td>
                       </tr>
@@ -972,11 +989,11 @@ export default function InventoryDashboard() {
               <thead>
                 <tr style={{ background: 'var(--muted)', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
                   <th style={{ padding: '8px 10px', fontWeight: 600 }}>No</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Nama Obat / BHP</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Sisa Stok Saat Ini</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Pakai/Bulan</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Batas Aman (3 Bln)</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Defisit Restock</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Nama</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Stok</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Pakai/Bln</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Batas Aman</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Kurang</th>
                   <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Status</th>
                 </tr>
               </thead>
@@ -984,7 +1001,7 @@ export default function InventoryDashboard() {
                 {kritisItems.length === 0 ? (
                   <tr>
                     <td colSpan={7} style={{ padding: 24, textAlign: 'center', color: '#00B894' }}>
-                      ✓ Seluruh stok obat berada dalam batas aman.
+                      ✓ Semua stok aman
                     </td>
                   </tr>
                 ) : (
@@ -1034,11 +1051,11 @@ export default function InventoryDashboard() {
               <thead>
                 <tr style={{ background: 'var(--muted)', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
                   <th style={{ padding: '8px 10px', fontWeight: 600, width: 45 }}>Rank</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Nama Obat / BHP</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Pemakaian/Bulan</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Sisa Stok Saat Ini</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Kecukupan Stok</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Status Ketersediaan</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Nama</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Pakai/Bln</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Stok</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Cukup</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -1063,7 +1080,7 @@ export default function InventoryDashboard() {
                           fontWeight: 700,
                           fontSize: 11,
                         }}>
-                          {item.stock === 0 ? 'Habis (0)' : `${Math.round((item.stock / Math.max(1, item.avg_monthly_usage)) * 10) / 10} Bulan Pakai`}
+                          {item.stock === 0 ? 'Habis' : `${Math.round((item.stock / Math.max(1, item.avg_monthly_usage)) * 10) / 10} bln`}
                         </span>
                       </td>
                       <td style={{ padding: '8px 10px', textAlign: 'center' }}>
@@ -1093,19 +1110,19 @@ export default function InventoryDashboard() {
               <thead>
                 <tr style={{ background: 'var(--muted)', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
                   <th style={{ padding: '8px 10px', fontWeight: 600 }}>No</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Nama Item Obat / BHP</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Nama</th>
                   <th style={{ padding: '8px 10px', fontWeight: 600 }}>Tgl Expired</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Sisa Waktu</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Stok Terancam</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Sisa</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Stok</th>
                   <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Status FEFO</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Rekomendasi Tindakan</th>
+                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Tindakan</th>
                 </tr>
               </thead>
               <tbody>
                 {criticalExpiredItems.length === 0 ? (
                   <tr>
                     <td colSpan={7} style={{ padding: 24, textAlign: 'center', color: '#00B894' }}>
-                      ✓ Tidak ada obat mendekati tanggal kedaluwarsa (&lt; 3 bulan).
+                      ✓ Tidak ada obat &lt; 3 bulan expired
                     </td>
                   </tr>
                 ) : (
@@ -1119,7 +1136,7 @@ export default function InventoryDashboard() {
                           {item.tanggal_expired}
                         </td>
                         <td style={{ padding: '8px 10px', fontWeight: 700, color: isPassed ? '#FF4444' : '#d97706' }}>
-                          {isPassed ? `Sudah Lewat (${Math.abs(item.daysLeft ?? 0)} hari)` : `${item.daysLeft} hari lagi`}
+                          {isPassed ? `${Math.abs(item.daysLeft ?? 0)} hari lewat` : `${item.daysLeft} hari`}
                         </td>
                         <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700 }}>
                           {item.stock} {item.unit}
@@ -1133,7 +1150,7 @@ export default function InventoryDashboard() {
                             fontSize: 10.5,
                             fontWeight: 700,
                           }}>
-                            {isPassed ? 'KADALUARSA' : '< 3 BULAN'}
+                            {isPassed ? 'Expired' : '&lt; 3 BLN'}
                           </span>
                         </td>
                         <td style={{ padding: '8px 10px', textAlign: 'center' }}>
@@ -1142,7 +1159,7 @@ export default function InventoryDashboard() {
                             fontWeight: 700,
                             color: isPassed ? '#FF4444' : '#00B894',
                           }}>
-                            {isPassed ? 'Tarik & Buang Berita Acara' : 'Prioritaskan Resep Pasien'}
+                            {isPassed ? 'Tarik & Berita Acara' : 'Prioritas FEFO'}
                           </span>
                         </td>
                       </tr>
@@ -1223,27 +1240,27 @@ export default function InventoryDashboard() {
                   <thead>
                     <tr style={{ background: 'var(--muted)', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
                       <th style={{ padding: '8px 10px', fontWeight: 600 }}>No</th>
-                      <th style={{ padding: '8px 10px', fontWeight: 600 }}>Nama Item Obat / BHP</th>
+                      <th style={{ padding: '8px 10px', fontWeight: 600 }}>Nama</th>
                       <th style={{ padding: '8px 10px', fontWeight: 600 }}>Kategori</th>
-                      <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Total Stok</th>
+                      <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Stok</th>
                       <th style={{ padding: '8px 10px', fontWeight: 600 }}>Satuan</th>
                       <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Pakai/Bln</th>
-                      <th style={{ padding: '8px 10px', fontWeight: 600 }}>Expired Terdekat</th>
-                      <th style={{ padding: '8px 10px', fontWeight: 600 }}>Status Stok</th>
-                      <th style={{ padding: '8px 10px', fontWeight: 600 }}>Status Expired</th>
+                      <th style={{ padding: '8px 10px', fontWeight: 600 }}>ED</th>
+                      <th style={{ padding: '8px 10px', fontWeight: 600 }}>Stok</th>
+                      <th style={{ padding: '8px 10px', fontWeight: 600 }}>ED</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
                       <tr>
                         <td colSpan={9} style={{ padding: 30, textAlign: 'center', color: 'var(--muted-foreground)' }}>
-                          Memuat data stok inventory klinik...
+                          Memuat...
                         </td>
                       </tr>
                     ) : filteredItems.length === 0 ? (
                       <tr>
                         <td colSpan={9} style={{ padding: 30, textAlign: 'center', color: 'var(--muted-foreground)' }}>
-                          Tidak ada item yang sesuai dengan filter pencarian.
+                          Tidak ada data
                         </td>
                       </tr>
                     ) : (
