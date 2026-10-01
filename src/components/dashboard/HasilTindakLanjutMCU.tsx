@@ -1,112 +1,183 @@
 'use client';
 
-import { JOBSITES, MONTHS } from '@/lib/lagging-data';
+import { useMemo, useState } from 'react';
+import {
+  MCUChart,
+  MCUChartCard,
+  MCUDashboardFilters,
+  MCURefreshButton,
+  useMCUDashboardData,
+} from '@/components/dashboard/MCUDashboardShared';
 
-const ChartPlaceholder = ({ id }: { id: string }) => (
-  <div className="chart-box"><canvas id={id} /></div>
-);
+const RESULT_ORDER = [
+  'Fit To Work', 'Fit With Note', 'Fit With Restriction', 'Currently Unfit',
+  'Temporary Unfit', 'Unfit', 'Belum Ada MCU',
+];
+const RESULT_COLORS: Record<string, string> = {
+  'fit to work': '#00B894',
+  'fit with note': '#FFD700',
+  'fit with restriction': '#9B59B6',
+  'currently unfit': '#FF4444',
+  'temporary unfit': '#8B4513',
+  unfit: '#FF4444',
+  'belum ada mcu': '#616161',
+};
+
+function splitValues(value: string | null) {
+  return (value || '').split(/[,;\n|]+/).map(item => item.trim()).filter(Boolean);
+}
 
 export default function HasilTindakLanjutMCU() {
+  const { rows, loading, error, refresh } = useMCUDashboardData();
+  const [site, setSite] = useState('All Site');
+  const [area, setArea] = useState('');
+  const [clients, setClients] = useState<string[]>([]);
+
+  const filtered = useMemo(() => rows.filter(row =>
+    (site === 'All Site' || row.site === site)
+    && (!area || row.area === area)
+    && (!clients.length || (row.client && clients.includes(row.client))),
+  ), [rows, site, area, clients]);
+
+  const followUpSummary = useMemo(() => ({
+    total: filtered.length,
+    needs: filtered.filter(row => row.status_follow_up === 'Perlu FU').length,
+    done: filtered.filter(row => row.status_follow_up === 'Selesai FU').length,
+    noReview: filtered.filter(row => row.status_follow_up === 'Belum Review').length,
+    exempt: filtered.filter(row => row.status_follow_up === 'Exempt' || row.exempt).length,
+  }), [filtered]);
+
+  const diseases = useMemo(() => {
+    const counts = new Map<string, number>();
+    filtered.filter(row => !row.exempt).forEach(row => {
+      splitValues(row.diagnosa).forEach(value => {
+        const diagnosis = value.replace(/^ECG\s*:\s*/i, '').trim();
+        if (!diagnosis || diagnosis === '-' || /^anti\s*-?\s*hbs$/i.test(diagnosis)) return;
+        counts.set(diagnosis, (counts.get(diagnosis) || 0) + 1);
+      });
+    });
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+  }, [filtered]);
+
+  const resultDistribution = useMemo(() => {
+    const counts = new Map<string, number>();
+    filtered.filter(row => !row.exempt).forEach(row => {
+      const result = row.hasil_mcu?.trim() || 'Belum Ada MCU';
+      counts.set(result, (counts.get(result) || 0) + 1);
+    });
+    return [...counts.entries()].sort((a, b) => {
+      const ai = RESULT_ORDER.indexOf(a[0]);
+      const bi = RESULT_ORDER.indexOf(b[0]);
+      if (ai >= 0 && bi >= 0) return ai - bi;
+      if (ai >= 0) return -1;
+      if (bi >= 0) return 1;
+      return b[1] - a[1];
+    });
+  }, [filtered]);
+
+  const frsDistribution = useMemo(() => {
+    const counts = new Map<string, number>();
+    filtered.filter(row => !row.exempt).forEach(row => {
+      const category = row.frs_kategori?.trim() || 'FRS Belum Dimapping';
+      counts.set(category, (counts.get(category) || 0) + 1);
+    });
+    const preferred = ['High Risk', 'Intermediate Risk', 'Low Risk', 'FRS Belum Dimapping'];
+    return [...counts.entries()].sort((a, b) => {
+      const ai = preferred.indexOf(a[0]);
+      const bi = preferred.indexOf(b[0]);
+      if (ai >= 0 && bi >= 0) return ai - bi;
+      if (ai >= 0) return -1;
+      if (bi >= 0) return 1;
+      return b[1] - a[1];
+    });
+  }, [filtered]);
+
+  const doctorTypes = useMemo(() => {
+    const counts = new Map<string, number>();
+    filtered.filter(row => !row.exempt).forEach(row => {
+      splitValues(row.rekomendasi_fu).filter(value => /dokter/i.test(value)).forEach(value => {
+        counts.set(value, (counts.get(value) || 0) + 1);
+      });
+    });
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+  }, [filtered]);
+
+  const riskDistribution = useMemo(() => {
+    const counts = new Map<string, number>();
+    filtered.filter(row => !row.exempt).forEach(row => {
+      const risk = row.zona_risiko?.trim() || 'Tidak Ada Data';
+      counts.set(risk, (counts.get(risk) || 0) + 1);
+    });
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  }, [filtered]);
+
+  const palette = ['#3498DB', '#00B894', '#FF8C42', '#FF4444', '#9B59B6', '#00BCD4', '#F39C12', '#E91E63', '#2ECC71', '#778899'];
+  const resultColors = resultDistribution.map(([label]) => RESULT_COLORS[label.toLowerCase()] || '#616161');
+  const frsColors = frsDistribution.map(([label]) => {
+    const normalized = label.toLowerCase();
+    if (normalized.includes('high')) return '#E74C3C';
+    if (normalized.includes('intermediate')) return '#F39C12';
+    if (normalized.includes('low')) return '#00B894';
+    return '#616161';
+  });
+  const riskColors = riskDistribution.map(([label], index) => {
+    const normalized = label.toLowerCase();
+    if (normalized === 'merah') return '#FF4444';
+    if (normalized === 'kuning') return '#FFD700';
+    if (normalized === 'hijau') return '#00B894';
+    return palette[index % palette.length];
+  });
+
   return (
-    <div className="dashboard">
-      {/* Filter + Total Bar — satu baris */}
-      <div className="dashboard-top-bar">
-        <div className="header-filter">
-          <div className="filter-tag">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-            </svg>
-            Filtering
-          </div>
-          <select defaultValue="All Site">
-            {JOBSITES.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <select defaultValue="all">
-            <option value="all">Bulan (YTD)</option>
-            {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-          </select>
-          <select defaultValue={new Date().getFullYear()}>
-            <option value={2025}>2025</option>
-            <option value={2026}>2026</option>
-            <option value={2027}>2027</option>
-            <option value={2028}>2028</option>
-          </select>
-        </div>
+    <div className="dashboard mcu-live-dashboard">
+      <div className="dashboard-top-bar mcu-live-top-bar">
+        <MCUDashboardFilters
+          rows={rows}
+          site={site}
+          area={area}
+          clients={clients}
+          onSiteChange={value => { setSite(value); setArea(''); }}
+          onAreaChange={setArea}
+          onClientsChange={value => { setClients(value); setArea(''); setSite('All Site'); }}
+        />
         <div className="mcu-total-bar">
           <span className="mcu-total-label">Total:</span>
-          <span className="mcu-total-num">0</span>
-          <span style={{ color: '#ff8c42', fontWeight: 700 }}>Perlu FU: 0</span>
-          <span style={{ color: '#00B894', fontWeight: 700 }}>Selesai FU: 0</span>
-          <span style={{ color: '#555', fontWeight: 700 }}>Belum Review: 0</span>
-          <span style={{ color: '#778899', fontWeight: 700 }}>Exempt: 0</span>
+          <span className="mcu-total-num">{followUpSummary.total}</span>
+          <span className="mcu-total-fu">Perlu FU: {followUpSummary.needs}</span>
+          <span className="mcu-total-done">Selesai FU: {followUpSummary.done}</span>
+          <span className="mcu-total-nodata">Belum Review: {followUpSummary.noReview}</span>
+          <span className="mcu-total-exempt">Exempt: {followUpSummary.exempt}</span>
+          <MCURefreshButton loading={loading} onClick={refresh} />
         </div>
       </div>
 
-      {/* Row 1 — 3 cards */}
-      <div className="mcu-row1">
-        <div className="card glow-orange">
-          <div className="card-head">
-            <div className="card-icon" style={{ background: 'rgba(255,77,0,.1)' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#ff4d00" strokeWidth="2" strokeLinecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>
+      {loading ? <div className="mcu-dashboard-message">Memuat data MCU...</div>
+        : error ? <div className="mcu-dashboard-message is-error">{error}</div>
+          : <>
+            <div className="mcu-row1 mcu-live-chart-row">
+              <MCUChartCard title="Top 10 Diseases">
+                <MCUChart type="bar" horizontal labels={diseases.map(([name]) => name)} values={diseases.map(([, count]) => count)} colors={diseases.map((_, index) => palette[index % palette.length])} />
+              </MCUChartCard>
+              <MCUChartCard title="Status Follow Up" className="glow-amber">
+                <MCUChart type="doughnut" labels={['Selesai FU', 'Perlu FU']} values={[followUpSummary.done, followUpSummary.needs]} colors={['#00B894', '#FF8C42']} centerText={`${followUpSummary.done + followUpSummary.needs}`} percentLabels />
+              </MCUChartCard>
+              <MCUChartCard title="Framingham Risk Score" className="glow-steel">
+                <MCUChart type="doughnut" labels={frsDistribution.map(([name]) => name)} values={frsDistribution.map(([, count]) => count)} colors={frsColors} centerText={`${frsDistribution.reduce((sum, [, count]) => sum + count, 0)}`} percentLabels />
+              </MCUChartCard>
             </div>
-            <div><h2>Top 10 Diseases</h2><p>Diagnosa terbanyak dari hasil MCU</p></div>
-          </div>
-          <ChartPlaceholder id="reviewDiseaseChart" />
-        </div>
 
-        <div className="card glow-amber">
-          <div className="card-head">
-            <div className="card-icon" style={{ background: 'rgba(255,140,66,.1)' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#ff8c42" strokeWidth="2" strokeLinecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>
+            <div className="mcu-row2 mcu-live-chart-row">
+              <MCUChartCard title="Hasil MCU" className="glow-coral">
+                <MCUChart type="bar" labels={resultDistribution.map(([name]) => name)} values={resultDistribution.map(([, count]) => count)} colors={resultColors} />
+              </MCUChartCard>
+              <MCUChartCard title="10 Peringkat Konsultasi Dokter" className="glow-teal">
+                <MCUChart type="bar" horizontal labels={doctorTypes.map(([name]) => name)} values={doctorTypes.map(([, count]) => count)} colors={Array(10).fill('#2ECC71')} percentLabels />
+              </MCUChartCard>
+              <MCUChartCard title="Profil Zona Risiko" className="glow-steel">
+                <MCUChart type="doughnut" labels={riskDistribution.map(([name]) => name)} values={riskDistribution.map(([, count]) => count)} colors={riskColors} centerText={`${riskDistribution.reduce((sum, [, count]) => sum + count, 0)}`} percentLabels />
+              </MCUChartCard>
             </div>
-            <div><h2>Status Follow Up</h2><p>Perlu FU vs Selesai FU</p></div>
-          </div>
-          <ChartPlaceholder id="reviewFuStatusChart" />
-        </div>
-
-        <div className="card glow-steel">
-          <div className="card-head">
-            <div className="card-icon" style={{ background: 'rgba(155,89,182,.1)' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#9B59B6" strokeWidth="2" strokeLinecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>
-            </div>
-            <div><h2>Framingham Risk Score</h2><p>Distribusi kategori risiko kardiovaskular</p></div>
-          </div>
-          <ChartPlaceholder id="reviewFrsChart" />
-        </div>
-      </div>
-
-      {/* Row 2 — 3 cards */}
-      <div className="mcu-row2">
-        <div className="card glow-coral">
-          <div className="card-head">
-            <div className="card-icon" style={{ background: 'rgba(255,99,71,.1)' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#ff6347" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" /></svg>
-            </div>
-            <div><h2>Hasil MCU</h2><p>Distribusi hasil review MCU</p></div>
-          </div>
-          <ChartPlaceholder id="reviewResultChart" />
-        </div>
-
-        <div className="card glow-teal">
-          <div className="card-head">
-            <div className="card-icon" style={{ background: 'rgba(0,184,148,.1)' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#00B894" strokeWidth="2" strokeLinecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
-            </div>
-            <div><h2>10 Peringkat Konsultasi Dokter</h2><p>Dokter Yang Dituju Untuk Konsultasi Temuan MCU</p></div>
-          </div>
-          <ChartPlaceholder id="reviewFuTypeChart" />
-        </div>
-
-        <div className="card glow-steel">
-          <div className="card-head">
-            <div className="card-icon" style={{ background: 'rgba(119,136,153,.1)' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#778899" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
-            </div>
-            <div><h2>Profil Zona Risiko</h2><p>Distribusi zona risiko kesehatan karyawan</p></div>
-          </div>
-          <ChartPlaceholder id="reviewRiskChart" />
-        </div>
-      </div>
+          </>}
     </div>
   );
 }

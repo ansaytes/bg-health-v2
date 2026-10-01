@@ -48,6 +48,7 @@ CREATE TABLE employees (
   last_education    text,
   place_of_hire     text,
   site_name         text,
+  client            text,
   address           text,
   religion          text,
   grading           text,

@@ -27,7 +27,7 @@ if (FORCE_FRESH) {
 
 const COLUMN_MAP = {
   0: 'nik', 1: 'nama', 2: 'gender', 3: 'department', 4: 'division',
-  // 5: USER (skipped)
+  5: 'client',
   6: 'level_golongan', 7: 'job_position', 8: 'tanggal_pkwt', 9: 'masa_kerja',
   10: 'employee_status', 11: 'employment_status', 12: 'tanggal_resign',
   13: 'national_id', 14: 'phone_number', 15: 'place_of_birth',
@@ -133,7 +133,7 @@ function isEligibleEmployee(employee) {
 }
 
 async function upsertBatch(batch) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/employees`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/employees?on_conflict=nik_hash`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -151,7 +151,7 @@ async function upsertBatch(batch) {
 }
 
 async function upsertSingle(emp) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/employees`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/employees?on_conflict=nik_hash`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
