@@ -2323,7 +2323,7 @@ select.admin-input.compact-input {
 }
 .raw-table-scroll {
   flex: 1;
-  overflow: auto;
+  overflow: auto !important;
   overscroll-behavior: contain;
   min-height: 0;
   border-top: 1px solid var(--border);

@@ -183,7 +183,7 @@ export default function InputJadwalMCU() {
         {(query || siteFilter || departmentFilter || scheduleFilter !== 'all') && <button type="button" className="mcu-filter-reset" onClick={resetFilters}>Reset</button>}
         <span className="mcu-entry-count">{visibleRows.length} dari {total} karyawan | Halaman {page} dari {totalPages || 1}</span>
       </div>
-      <div className="raw-table-scroll mcu-entry-table">
+      <div className="raw-table-scroll mcu-entry-table" style={{ overflow: 'auto', overscrollBehavior: 'contain' }}>
         <table>
           <thead><tr>
             <th>No</th>{header('nik_karyawan', 'NIK Karyawan')}{header('nama', 'Nama')}{header('site', 'Site')}{header('department', 'Departemen')}{header('jabatan', 'Jabatan')}{header('tanggal_mcu_terakhir', 'MCU Terakhir')}{header('tanggal_jadwal', 'Jadwal MCU Berikutnya')}<th>Aksi</th>
