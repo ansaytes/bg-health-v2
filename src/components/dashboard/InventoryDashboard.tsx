@@ -41,16 +41,16 @@ export default function InventoryDashboard() {
   const [expiredStatusFilter, setExpiredStatusFilter] = useState('Semua');
 
   // Chart canvas refs
-  const stockStatusCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const categoryCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const topExpiredCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const topHabisCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const topExpSoonCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const fastMovingCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const expiredTimelineCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Chart instances
-  const stockStatusChart = useRef<ChartJS | null>(null);
-  const categoryChart = useRef<ChartJS | null>(null);
+  const topExpiredChart = useRef<ChartJS | null>(null);
+  const topHabisChart = useRef<ChartJS | null>(null);
+  const topExpSoonChart = useRef<ChartJS | null>(null);
   const fastMovingChart = useRef<ChartJS | null>(null);
-  const expiredTimelineChart = useRef<ChartJS | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -259,110 +259,212 @@ export default function InventoryDashboard() {
     const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
     const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
-    // 1. Chart Status Ketersediaan Stok (Doughnut)
-    if (stockStatusCanvasRef.current) {
-      const existing = ChartJS.getChart(stockStatusCanvasRef.current);
+    // 1. Top 10 Sudah Expired (Horizontal Bar)
+    if (topExpiredCanvasRef.current) {
+      const existing = ChartJS.getChart(topExpiredCanvasRef.current);
       if (existing) existing.destroy();
-      if (stockStatusChart.current) stockStatusChart.current.destroy();
+      if (topExpiredChart.current) topExpiredChart.current.destroy();
 
-      let aman = 0, menipis = 0, kritis = 0, habis = 0;
-      items.forEach(i => {
-        const s = getStockStatus(i);
-        if (s === 'Aman') aman++;
-        else if (s === 'Menipis') menipis++;
-        else if (s === 'Kritis') kritis++;
-        else if (s === 'Habis') habis++;
-      });
+      const topExpired = items
+        .filter(i => getExpiredStatus(i.tanggal_expired) === 'Sudah Kadaluarsa')
+        .sort((a, b) => (b.stock || 0) - (a.stock || 0))
+        .slice(0, 10);
 
-      const data: ChartData<'doughnut'> = {
-        labels: ['Stok Aman', 'Menipis', 'Kritis', 'Habis'],
+      const labels = topExpired.map(i => i.name.length > 20 ? i.name.slice(0, 18) + '...' : i.name);
+      const values = topExpired.map(i => i.stock || 0);
+
+      const data: ChartData<'bar'> = {
+        labels,
         datasets: [
           {
-            data: [aman, menipis, kritis, habis],
-            backgroundColor: ['#00B894', '#FF9800', '#FF7043', '#FF4444'],
-            hoverBackgroundColor: ['#26de81', '#ffa726', '#ff8a65', '#ff6b6b'],
-            borderWidth: 2,
-            borderColor: isDark ? '#1f2937' : '#ffffff',
+            data: values,
+            backgroundColor: 'rgba(220, 38, 38, 0.85)',
+            borderColor: '#dc2626',
+            borderWidth: 1.5,
+            borderRadius: 6,
+            barThickness: 13,
           },
         ],
       };
 
-      const options: ChartOptions<'doughnut'> = {
+      const options: ChartOptions<'bar'> = {
+        indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
-        animation: { duration: 600, easing: 'easeOutQuart' },
+        animation: { duration: 500, easing: 'easeOutQuart' },
         plugins: {
-          legend: {
-            position: 'bottom',
-            labels: { boxWidth: 10, font: { size: 10, family: fontFamily }, color: textColor },
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.parsed.x} unit expired`,
+            },
           },
           datalabels: {
-            color: '#ffffff',
-            font: { weight: 'bold', size: 10, family: fontFamily },
-            formatter: (value) => (value > 0 ? value : ''),
+            anchor: 'end',
+            align: 'right',
+            color: textColor,
+            font: { size: 9, weight: 'bold', family: fontFamily },
+            formatter: (v) => (v > 0 ? `${v}` : ''),
+          },
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            grid: { color: gridColor },
+            ticks: { color: textColor, font: { size: 8, family: fontFamily } },
+          },
+          y: {
+            grid: { display: false },
+            ticks: { color: textColor, font: { size: 8.5, family: fontFamily } },
           },
         },
       };
 
-      stockStatusChart.current = new ChartJS(stockStatusCanvasRef.current, {
-        type: 'doughnut',
+      topExpiredChart.current = new ChartJS(topExpiredCanvasRef.current, {
+        type: 'bar',
         data,
         options,
       });
     }
 
-    // 2. Chart Distribusi Kategori (Doughnut)
-    if (categoryCanvasRef.current) {
-      const existing = ChartJS.getChart(categoryCanvasRef.current);
+    // 2. Top 10 Stok Habis (Horizontal Bar)
+    if (topHabisCanvasRef.current) {
+      const existing = ChartJS.getChart(topHabisCanvasRef.current);
       if (existing) existing.destroy();
-      if (categoryChart.current) categoryChart.current.destroy();
+      if (topHabisChart.current) topHabisChart.current.destroy();
 
-      const catCounts: Record<string, number> = {};
-      items.forEach(i => {
-        const cat = i.category || 'Obat';
-        catCounts[cat] = (catCounts[cat] || 0) + 1;
-      });
+      const topHabis = items
+        .filter(i => (i.stock || 0) <= 0)
+        .sort((a, b) => (b.avg_monthly_usage || 0) - (a.avg_monthly_usage || 0))
+        .slice(0, 10);
 
-      const catLabels = Object.keys(catCounts);
-      const catData = Object.values(catCounts);
+      const labels = topHabis.map(i => i.name.length > 20 ? i.name.slice(0, 18) + '...' : i.name);
+      const values = topHabis.map(i => i.avg_monthly_usage || 0);
 
-      const data: ChartData<'doughnut'> = {
-        labels: catLabels,
+      const data: ChartData<'bar'> = {
+        labels,
         datasets: [
           {
-            data: catData,
-            backgroundColor: ['#ff4d00', '#00BCD4', '#9B59B6', '#E91E63', '#3498DB'],
-            borderWidth: 2,
-            borderColor: isDark ? '#1f2937' : '#ffffff',
+            data: values,
+            backgroundColor: 'rgba(255, 68, 68, 0.85)',
+            borderColor: '#FF4444',
+            borderWidth: 1.5,
+            borderRadius: 6,
+            barThickness: 13,
           },
         ],
       };
 
-      const options: ChartOptions<'doughnut'> = {
+      const options: ChartOptions<'bar'> = {
+        indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
-        animation: { duration: 600, easing: 'easeOutQuart' },
+        animation: { duration: 500, easing: 'easeOutQuart' },
         plugins: {
-          legend: {
-            position: 'bottom',
-            labels: { boxWidth: 10, font: { size: 10, family: fontFamily }, color: textColor },
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.parsed.x} unit/bulan kebutuhan`,
+            },
           },
           datalabels: {
-            color: '#ffffff',
-            font: { weight: 'bold', size: 10, family: fontFamily },
-            formatter: (value) => (value > 0 ? value : ''),
+            anchor: 'end',
+            align: 'right',
+            color: textColor,
+            font: { size: 9, weight: 'bold', family: fontFamily },
+            formatter: (v) => (v > 0 ? `${v}` : ''),
+          },
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            grid: { color: gridColor },
+            ticks: { color: textColor, font: { size: 8, family: fontFamily } },
+          },
+          y: {
+            grid: { display: false },
+            ticks: { color: textColor, font: { size: 8.5, family: fontFamily } },
           },
         },
       };
 
-      categoryChart.current = new ChartJS(categoryCanvasRef.current, {
-        type: 'doughnut',
+      topHabisChart.current = new ChartJS(topHabisCanvasRef.current, {
+        type: 'bar',
         data,
         options,
       });
     }
 
-    // 3. Top 10 Fast-Moving Items (Horizontal Bar)
+    // 3. Top 10 Akan Expired < 3 Bulan (Horizontal Bar)
+    if (topExpSoonCanvasRef.current) {
+      const existing = ChartJS.getChart(topExpSoonCanvasRef.current);
+      if (existing) existing.destroy();
+      if (topExpSoonChart.current) topExpSoonChart.current.destroy();
+
+      const topExpSoon = items
+        .filter(i => getExpiredStatus(i.tanggal_expired) === 'Kadaluarsa < 3 Bulan')
+        .map(i => ({ ...i, daysLeft: getDaysUntilExpired(i.tanggal_expired) }))
+        .sort((a, b) => (a.daysLeft ?? 999) - (b.daysLeft ?? 999))
+        .slice(0, 10);
+
+      const labels = topExpSoon.map(i => i.name.length > 20 ? i.name.slice(0, 18) + '...' : i.name);
+      const values = topExpSoon.map(i => i.stock || 0);
+
+      const data: ChartData<'bar'> = {
+        labels,
+        datasets: [
+          {
+            data: values,
+            backgroundColor: 'rgba(230, 126, 34, 0.85)',
+            borderColor: '#E67E22',
+            borderWidth: 1.5,
+            borderRadius: 6,
+            barThickness: 13,
+          },
+        ],
+      };
+
+      const options: ChartOptions<'bar'> = {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 500, easing: 'easeOutQuart' },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.parsed.x} unit terancam`,
+            },
+          },
+          datalabels: {
+            anchor: 'end',
+            align: 'right',
+            color: textColor,
+            font: { size: 9, weight: 'bold', family: fontFamily },
+            formatter: (v) => (v > 0 ? `${v}` : ''),
+          },
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            grid: { color: gridColor },
+            ticks: { color: textColor, font: { size: 8, family: fontFamily } },
+          },
+          y: {
+            grid: { display: false },
+            ticks: { color: textColor, font: { size: 8.5, family: fontFamily } },
+          },
+        },
+      };
+
+      topExpSoonChart.current = new ChartJS(topExpSoonCanvasRef.current, {
+        type: 'bar',
+        data,
+        options,
+      });
+    }
+
+    // 4. Top 10 Fast-Moving Items (Horizontal Bar)
     if (fastMovingCanvasRef.current) {
       const existing = ChartJS.getChart(fastMovingCanvasRef.current);
       if (existing) existing.destroy();
@@ -454,74 +556,13 @@ export default function InventoryDashboard() {
       });
     }
 
-    // 4. Status Expired Timeline (Bar Chart)
-    if (expiredTimelineCanvasRef.current) {
-      const existing = ChartJS.getChart(expiredTimelineCanvasRef.current);
-      if (existing) existing.destroy();
-      if (expiredTimelineChart.current) expiredTimelineChart.current.destroy();
-
-      let expired = 0, under3m = 0, under6m = 0, safe = 0;
-      items.forEach(i => {
-        const s = getExpiredStatus(i.tanggal_expired);
-        if (s === 'Sudah Kadaluarsa') expired++;
-        else if (s === 'Kadaluarsa < 3 Bulan') under3m++;
-        else if (s === 'Kadaluarsa < 6 Bulan') under6m++;
-        else if (s === 'Aman') safe++;
-      });
-
-      const data: ChartData<'bar'> = {
-        labels: ['Sudah ED', '< 3 Bulan', '3-6 Bulan', '> 6 Bulan'],
-        datasets: [
-          {
-            data: [expired, under3m, under6m, safe],
-            backgroundColor: ['#FF4444', '#FF9800', '#FFCA28', '#00B894'],
-            borderRadius: 4,
-            barThickness: 24,
-          },
-        ],
-      };
-
-      const options: ChartOptions<'bar'> = {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: { duration: 500, easing: 'easeOutQuart' },
-        plugins: {
-          legend: { display: false },
-          datalabels: {
-            anchor: 'end',
-            align: 'top',
-            color: textColor,
-            font: { size: 9, weight: 'bold', family: fontFamily },
-            formatter: (v) => (v > 0 ? `${v}` : ''),
-          },
-        },
-        scales: {
-          x: {
-            grid: { display: false },
-            ticks: { color: textColor, font: { size: 8.5, family: fontFamily } },
-          },
-          y: {
-            beginAtZero: true,
-            grid: { color: gridColor },
-            ticks: { color: textColor, font: { size: 8, family: fontFamily }, precision: 0 },
-          },
-        },
-      };
-
-      expiredTimelineChart.current = new ChartJS(expiredTimelineCanvasRef.current, {
-        type: 'bar',
-        data,
-        options,
-      });
-    }
-
     return () => {
-      stockStatusChart.current?.destroy();
-      categoryChart.current?.destroy();
+      topExpiredChart.current?.destroy();
+      topHabisChart.current?.destroy();
+      topExpSoonChart.current?.destroy();
       fastMovingChart.current?.destroy();
-      expiredTimelineChart.current?.destroy();
     };
-  }, [items, loading, isAuthorized, isDashboardView]);
+  }, [items, loading, isAuthorized]);
 
   // Access guard
   if (!isAuthorized) {
@@ -740,35 +781,35 @@ export default function InventoryDashboard() {
 
               {/* 4 Charts Grid */}
               <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-        {/* Chart 1: Status Ketersediaan */}
-        <div className="card glow-orange" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Status Stok</h3>
-          <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-            <canvas ref={stockStatusCanvasRef} />
-          </div>
-        </div>
-
-        {/* Chart 2: Distribusi Kategori */}
-        <div className="card glow-teal" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Kategori</h3>
-          <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-            <canvas ref={categoryCanvasRef} />
-          </div>
-        </div>
-
-        {/* Chart 3: Top Fast Moving */}
+        {/* Chart 1: Top Sudah Expired */}
         <div className="card glow-coral" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Sudah Expired (unit)</h3>
+          <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+            <canvas ref={topExpiredCanvasRef} />
+          </div>
+        </div>
+
+        {/* Chart 2: Top Stok Habis */}
+        <div className="card glow-orange" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Stok Habis (kebutuhan/bln)</h3>
+          <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+            <canvas ref={topHabisCanvasRef} />
+          </div>
+        </div>
+
+        {/* Chart 3: Top Akan Expired < 3 Bulan */}
+        <div className="card glow-amber" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Akan Expired &lt; 3 Bln (unit)</h3>
+          <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+            <canvas ref={topExpSoonCanvasRef} />
+          </div>
+        </div>
+
+        {/* Chart 4: Top Fast Moving */}
+        <div className="card glow-teal" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Fast-Moving (unit/bln)</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
             <canvas ref={fastMovingCanvasRef} />
-          </div>
-        </div>
-
-        {/* Chart 4: Timeline Kadaluarsa FEFO */}
-        <div className="card glow-amber" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Expired FEFO</h3>
-          <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-            <canvas ref={expiredTimelineCanvasRef} />
           </div>
         </div>
               </div>
