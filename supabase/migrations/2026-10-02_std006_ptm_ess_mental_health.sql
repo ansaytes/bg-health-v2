@@ -10,7 +10,7 @@
 --    exists" meskipun sempat dijalankan dua kali.
 --
 --  Isi migrasi:
---    1. Menambah 15 kolom baru ke public.mcu_records
+--    1. Menambah 18 kolom baru ke public.mcu_records
 --       (riwayat penyakit, LBP, skor kuesioner, PTA, ringkasan, catatan SOP)
 --    2. Membuat tabel public.mcu_ess
 --    3. Membuat tabel public.mcu_mental_health
@@ -196,7 +196,7 @@ COMMENT ON TABLE public.mcu_ess IS
 -- 3. TABEL mcu_mental_health
 -- ----------------------------------------------------------------------------
 --
--- Satu baris memuat tiga instrumen sekaligus karena ketiganya assesses
+-- Satu baris memuat tiga instrumen sekaligus karena ketiganya menilai
 -- kondisi mental yang sama dan sering diisi dalam satu sesi:
 --   SRQ-20 (20 item Ya/Tidak) · DASS-21 (21 item skala 0-3) · Zung SDS (20 item skala 1-4)
 --
@@ -272,19 +272,22 @@ CREATE INDEX IF NOT EXISTS mcu_mental_health_nid_hash_idx
 -- IF NOT EXISTS. Alasannya: batas DASS-21 pernah diset seragam 27/27/27, dan
 -- penjagaan itu membuat versi yang benar tidak akan pernah terpasang pada
 -- database yang sudah menjalankan migrasi ini.
+--
+-- CATATAN SINTAKS: CHECK menerima SATU ekspresi boolean. Kondisi
+-- berganda HARUS disambung dengan AND, bukan dipisahkan koma.
 ALTER TABLE public.mcu_mental_health
   DROP CONSTRAINT IF EXISTS mcu_mental_health_range;
 
 ALTER TABLE public.mcu_mental_health
   ADD CONSTRAINT mcu_mental_health_range CHECK (
-    skor_srq20 IS NULL OR skor_srq20 BETWEEN 0 AND 20,
-    (indeks_sds IS NULL OR indeks_sds BETWEEN 20 AND 80),
+    (skor_srq20 IS NULL OR skor_srq20 BETWEEN 0 AND 20)
+    AND (indeks_sds IS NULL OR indeks_sds BETWEEN 20 AND 80)
     -- Batas DASS-21 mengikuti jumlah butir tiap subskala (9, 7, 5 butir
     -- skala 0-3). Membatasi ketiganya di 27 membuat ansietas dan stres
     -- menerima nilai yang tidak mungkin dicapai.
-    (dass_depresi IS NULL OR dass_depresi BETWEEN 0 AND 27),
-    (dass_ansietas IS NULL OR dass_ansietas BETWEEN 0 AND 21),
-    (dass_stres IS NULL OR dass_stres BETWEEN 0 AND 15)
+    AND (dass_depresi IS NULL OR dass_depresi BETWEEN 0 AND 27)
+    AND (dass_ansietas IS NULL OR dass_ansietas BETWEEN 0 AND 21)
+    AND (dass_stres IS NULL OR dass_stres BETWEEN 0 AND 15)
   );
 
 COMMENT ON TABLE public.mcu_mental_health IS
@@ -343,10 +346,14 @@ COMMIT;
 --    AND column_name IN (
 --      'riwayat_epilepsi','riwayat_jantung','riwayat_stroke','riwayat_asma',
 --      'riwayat_sleep_apnea','lbp','ess_score','srq20_score','dass_depresi',
---      'dass_cemas','dass_stres','sds_score','pta','ringkasan_kuesioner',
---      'hasil_kebugaran','frekuensi_evaluasi','catatan_sop')
+--      'dass_cemas','dass_stres','sds_score','kuesioner_tgl','pta',
+--      'ringkasan_kuesioner','hasil_kebugaran','frekuensi_evaluasi','catatan_sop')
 --  ORDER BY column_name;
---  → harus mengembalikan 17 baris
+--  → harus mengembalikan 18 baris
+--
+-- CATATAN: migrasi ini hanya MENAMBAH kolom dan MEMBUAT tabel. Isi
+-- mcu_records tidak ikut. Untuk mengisi 1299 record MCU, lihat bagian
+-- "Cara menjalankan migrasi dan import" pada docs/PANDUAN-STD-006.md.
 --
 -- SELECT table_name FROM information_schema.tables
 --  WHERE table_name IN ('mcu_ess','mcu_mental_health');
