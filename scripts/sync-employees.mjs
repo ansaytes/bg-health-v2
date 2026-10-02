@@ -127,8 +127,17 @@ function mapRow(row) {
 }
 
 function isEligibleEmployee(employee) {
-  return String(employee.division || '').trim().toLowerCase() === 'mining'
-    && String(employee.employment_status || '').trim().toLowerCase() === 'aktif';
+  const division = String(employee.division || '').trim().toLowerCase();
+  const status = String(employee.employment_status || '').trim().toLowerCase();
+  
+  // Log filter criteria for debugging
+  console.log(`Filtering employee: division="${division}", status="${status}"`);
+  
+  // More flexible matching - allow variations
+  const isMining = division === 'mining' || division.includes('mining');
+  const isActive = status === 'aktif' || status === 'active' || status === 'active';
+  
+  return isMining && isActive;
 }
 
 async function upsertBatch(batch) {
@@ -185,7 +194,15 @@ async function main() {
   const employees = validEmployees.filter(isEligibleEmployee);
   const skipped = allEmployees.length - validEmployees.length;
   const filteredByCriteria = validEmployees.length - employees.length;
+  
+  console.log(`Total rows: ${rows.length - 1}`);
+  console.log(`Valid employees: ${validEmployees.length}`);
   console.log(`Eligible employees: ${employees.length} (skipped ${skipped} invalid rows, filtered ${filteredByCriteria} non-Mining/non-Aktif rows)`);
+  
+  // Log sample data for debugging
+  if (validEmployees.length > 0) {
+    console.log('Sample employee data:', JSON.stringify(validEmployees[0], null, 2));
+  }
 
   const BATCH = 500;
   const failedNiks = [];

@@ -60,7 +60,8 @@ CREATE TABLE employees (
   created_at        timestamptz NOT NULL DEFAULT now(),
   updated_at        timestamptz NOT NULL DEFAULT now(),
 
-  CONSTRAINT uq_employees_nik UNIQUE (nik)
+  CONSTRAINT uq_employees_nik UNIQUE (nik),
+  CONSTRAINT uq_employees_nik_hash UNIQUE (nik_hash)
 );
 
 COMMENT ON TABLE employees IS 'Master Data Karyawan — sync otomatis dari Google Sheets';

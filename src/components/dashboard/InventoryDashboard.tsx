@@ -141,12 +141,8 @@ export default function InventoryDashboard() {
     });
   }, []);
 
-  // Trigger chart re-render when switching to dashboard view
-  useEffect(() => {
-    if (isDashboardView) {
-      setChartRenderKey(prev => prev + 1);
-    }
-  }, [isDashboardView]);
+  // chartRenderKey will be updated via onAnimationComplete on the dashboard motion.div
+
 
   const openTableTab = useCallback((tab: 'semua' | 'habis' | 'kritis' | 'fast' | 'fefo') => {
     setActionTab(tab);
@@ -628,6 +624,7 @@ export default function InventoryDashboard() {
               exit={{ opacity: 0, x: -36 }}
               transition={{ duration: 0.22, ease: 'easeOut' }}
               style={{ position: 'absolute', inset: 0, overflow: 'hidden', paddingRight: 28, display: 'flex', flexDirection: 'column' }}
+              onAnimationComplete={() => setChartRenderKey(prev => prev + 1)}
             >
               {/* Header Bar */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
