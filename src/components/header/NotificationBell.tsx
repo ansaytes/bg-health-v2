@@ -175,8 +175,14 @@ export default function NotificationBell({ isSuperuser }: { isSuperuser: boolean
 
             <div style={{ maxHeight: 400, overflowY: 'auto' }}>
               {loading ? (
-                <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>
-                  Memuat...
+                <div style={{ padding: 0 }}>
+                  <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat notifikasi">
+                    <div className="bm-loading-spinner">
+                      <div className="bm-loading-ring" aria-hidden="true" />
+                      <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                    </div>
+                    <p className="bm-loading-label">Memuat notifikasi…</p>
+                  </div>
                 </div>
               ) : count === 0 ? (
                 <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>

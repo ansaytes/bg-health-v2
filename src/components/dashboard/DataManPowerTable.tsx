@@ -227,7 +227,15 @@ export default function DataManPowerTable({ canEdit = false }: DataManPowerTable
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8 + (canEdit ? 1 : 0)} style={{ textAlign: 'center', padding: 24, color: 'var(--fg-dim)' }}>Memuat data...</td>
+                <td colSpan={8 + (canEdit ? 1 : 0)} style={{ padding: 0 }}>
+                  <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data man power">
+                    <div className="bm-loading-spinner">
+                      <div className="bm-loading-ring" aria-hidden="true" />
+                      <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                    </div>
+                    <p className="bm-loading-label">Memuat data man power…</p>
+                  </div>
+                </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>

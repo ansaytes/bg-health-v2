@@ -474,12 +474,14 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
 
   if (loading) {
     return (
-      <div className="home-feed" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-        <div style={{ textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>
-          <div className="loading-spinner" style={{ margin: '0 auto 10px' }}>
-            <img src="/BM.png" alt="Loading" />
+      <div className="home-feed" style={{ display: 'flex', alignItems: 'stretch', justifyContent: 'stretch', flex: 1 }}>
+        <div className="bm-loading" role="status" aria-live="polite" aria-label="Memuat feed home">
+          <div className="bm-loading-spinner">
+            <div className="bm-loading-ring" aria-hidden="true" />
+            <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
           </div>
-          Memuat feed...
+          <p className="bm-loading-label">Memuat feed Home…</p>
+          <p className="bm-loading-sub">Menarik data Health Talk, Podcast, News & Health Campaign.</p>
         </div>
       </div>
     );

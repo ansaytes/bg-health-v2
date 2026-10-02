@@ -151,7 +151,16 @@ export default function HasilTindakLanjutMCU() {
         </div>
       </div>
 
-      {loading ? <div className="mcu-dashboard-message">Memuat data MCU...</div>
+      {loading ? (
+        <div className="bm-loading is-card" role="status" aria-live="polite" aria-label="Memuat data analisa dan tindak lanjut MCU">
+          <div className="bm-loading-spinner">
+            <div className="bm-loading-ring" aria-hidden="true" />
+            <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+          </div>
+          <p className="bm-loading-label">Memuat data Analisa & Tindak Lanjut MCU…</p>
+          <p className="bm-loading-sub">Menyiapkan ringkasan follow up, diagnosa dan zona risiko.</p>
+        </div>
+      )
         : error ? <div className="mcu-dashboard-message is-error">{error}</div>
           : <>
             <div className="mcu-row1 mcu-live-chart-row">

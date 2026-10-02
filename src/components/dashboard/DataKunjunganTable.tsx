@@ -316,8 +316,14 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={COLUMNS.length + 1 + (canEdit ? 1 : 0)} style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>
-                  Memuat data...
+                <td colSpan={COLUMNS.length + 1 + (canEdit ? 1 : 0)} style={{ padding: 0 }}>
+                  <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data kunjungan berobat">
+                    <div className="bm-loading-spinner">
+                      <div className="bm-loading-ring" aria-hidden="true" />
+                      <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                    </div>
+                    <p className="bm-loading-label">Memuat data kunjungan berobat…</p>
+                  </div>
                 </td>
               </tr>
             ) : rows.length === 0 ? (

@@ -315,7 +315,17 @@ export default function UserManagement() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={isSuperuser ? 10 : 9} style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)' }}>Memuat pengguna...</td></tr>
+                <tr>
+                  <td colSpan={isSuperuser ? 10 : 9} style={{ padding: 0 }}>
+                    <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat daftar pengguna">
+                      <div className="bm-loading-spinner">
+                        <div className="bm-loading-ring" aria-hidden="true" />
+                        <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                      </div>
+                      <p className="bm-loading-label">Memuat daftar pengguna…</p>
+                    </div>
+                  </td>
+                </tr>
               ) : users.length === 0 ? (
                 <tr><td colSpan={isSuperuser ? 10 : 9} style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)' }}>Belum ada pengguna terdaftar</td></tr>
               ) : (

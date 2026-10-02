@@ -1299,8 +1299,14 @@ export default function InventoryDashboard() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={9} style={{ padding: 30, textAlign: 'center', color: 'var(--muted-foreground)' }}>
-                          Memuat...
+                        <td colSpan={9} style={{ padding: 0 }}>
+                          <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data inventory">
+                            <div className="bm-loading-spinner">
+                              <div className="bm-loading-ring" aria-hidden="true" />
+                              <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                            </div>
+                            <p className="bm-loading-label">Memuat data inventory obat & BHP…</p>
+                          </div>
                         </td>
                       </tr>
                     ) : filteredItems.length === 0 ? (

@@ -68,7 +68,19 @@ export default function RecordMCUTable() {
         <table>
           <thead><tr><th>No</th>{columns.map(column => <th key={column.key}>{column.label}</th>)}</tr></thead>
           <tbody>
-            {loading ? <tr><td colSpan={columns.length + 1} className="mcu-empty-state">Memuat record MCU...</td></tr>
+            {loading ? (
+              <tr>
+                <td colSpan={columns.length + 1} className="mcu-empty-state" style={{ padding: 0 }}>
+                  <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat record MCU">
+                    <div className="bm-loading-spinner">
+                      <div className="bm-loading-ring" aria-hidden="true" />
+                      <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                    </div>
+                    <p className="bm-loading-label">Memuat record MCU…</p>
+                  </div>
+                </td>
+              </tr>
+            )
               : rows.length === 0 ? <tr><td colSpan={columns.length + 1} className="mcu-empty-state">Belum ada record MCU.</td></tr>
               : rows.map((row, index) => <tr key={String(row.id || `${page}-${index}`)}>
                 <td>{(page - 1) * 100 + index + 1}</td>

@@ -312,9 +312,14 @@ export default function InventoryAdmin() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
-                  <Loader2 className="animate-spin" size={24} style={{ margin: '0 auto 8px auto' }} />
-                  Memuat data inventory...
+                <td colSpan={7} style={{ padding: 0 }}>
+                  <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data inventory admin">
+                    <div className="bm-loading-spinner">
+                      <div className="bm-loading-ring" aria-hidden="true" />
+                      <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                    </div>
+                    <p className="bm-loading-label">Memuat data inventory admin…</p>
+                  </div>
                 </td>
               </tr>
             ) : filteredItems.length === 0 ? (

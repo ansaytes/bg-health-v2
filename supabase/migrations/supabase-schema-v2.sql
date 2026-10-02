@@ -51,12 +51,7 @@ CREATE TABLE employees (
   client            text,
   address           text,
   religion          text,
-  grading           text,
-  marital_status    text,
-  child             text,
-  specification_job text,
   area              text,
-  spesification     text,
   created_at        timestamptz NOT NULL DEFAULT now(),
   updated_at        timestamptz NOT NULL DEFAULT now(),
 

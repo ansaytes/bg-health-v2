@@ -137,7 +137,16 @@ export default function MonitoringMCU() {
         </div>
       </div>
 
-      {loading ? <div className="mcu-dashboard-message">Memuat data MCU...</div>
+      {loading ? (
+        <div className="bm-loading is-card" role="status" aria-live="polite" aria-label="Memuat data monitoring MCU">
+          <div className="bm-loading-spinner">
+            <div className="bm-loading-ring" aria-hidden="true" />
+            <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+          </div>
+          <p className="bm-loading-label">Memuat data Monitoring MCU…</p>
+          <p className="bm-loading-sub">Menarik data terbaru dari server, mohon tunggu sebentar.</p>
+        </div>
+      )
         : error ? <div className="mcu-dashboard-message is-error">{error}</div>
           : <>
             <div className="mcu-grid-3 mcu-live-chart-row">

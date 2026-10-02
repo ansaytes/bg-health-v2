@@ -156,7 +156,17 @@ export default function RecordMCUTableModern() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={columns.length + 2} style={{ padding: 40, textAlign: 'center' }}>Memuat record MCU...</td></tr>
+                <tr>
+                  <td colSpan={columns.length + 2} style={{ padding: 0 }}>
+                    <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat record MCU">
+                      <div className="bm-loading-spinner">
+                        <div className="bm-loading-ring" aria-hidden="true" />
+                        <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                      </div>
+                      <p className="bm-loading-label">Memuat record MCU…</p>
+                    </div>
+                  </td>
+                </tr>
               ) : rows.length === 0 ? (
                 <tr><td colSpan={columns.length + 2} style={{ padding: 36, textAlign: 'center' }}>Belum ada record MCU.</td></tr>
               ) : rows.map((row, idx) => {

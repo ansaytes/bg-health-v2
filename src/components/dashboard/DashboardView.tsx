@@ -394,8 +394,14 @@ export default function DashboardView() {
               </div>
             </div>
             {loadingKpi ? (
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted-foreground)', fontSize: 11 }}>
-                Memuat data...
+              <div style={{ flex: 1, padding: 0 }}>
+                <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat statistik kesehatan">
+                  <div className="bm-loading-spinner">
+                    <div className="bm-loading-ring" aria-hidden="true" />
+                    <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                  </div>
+                  <p className="bm-loading-label">Memuat statistik kesehatan…</p>
+                </div>
               </div>
             ) : currentMonth ? (
               <>
@@ -457,8 +463,14 @@ export default function DashboardView() {
             <div className="chart-box" style={{ flex: 1, minHeight: 0, position: 'relative' }}>
               <canvas id="asrChart" style={{ position: 'absolute', inset: 0 }} />
               {loadingAsr && (
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted-foreground)', fontSize: 11 }}>
-                  Memuat ranking...
+                <div style={{ position: 'absolute', inset: 0, background: 'color-mix(in srgb, var(--card, #fff) 85%, transparent)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3, padding: 0 }}>
+                  <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat ranking ASR">
+                    <div className="bm-loading-spinner">
+                      <div className="bm-loading-ring" aria-hidden="true" />
+                      <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                    </div>
+                    <p className="bm-loading-label">Memuat ranking ASR…</p>
+                  </div>
                 </div>
               )}
               {!loadingAsr && asrRank.length === 0 && (
@@ -489,7 +501,15 @@ export default function DashboardView() {
                 Harap Pilih Periode Bulan Untuk Menampilkan List Karyawan Sakit
               </div>
             ) : loadingSick ? (
-              <div className="sick-empty-state">Memuat data karyawan sakit...</div>
+              <div style={{ padding: 0 }}>
+                <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data karyawan sakit">
+                  <div className="bm-loading-spinner">
+                    <div className="bm-loading-ring" aria-hidden="true" />
+                    <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                  </div>
+                  <p className="bm-loading-label">Memuat data karyawan sakit…</p>
+                </div>
+              </div>
             ) : sickList.length === 0 ? (
               <div className="sick-empty-state">Tidak ada karyawan sakit untuk periode ini.</div>
             ) : (

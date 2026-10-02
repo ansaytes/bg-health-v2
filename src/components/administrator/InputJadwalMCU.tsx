@@ -189,7 +189,19 @@ export default function InputJadwalMCU() {
             <th>No</th>{header('nik_karyawan', 'NIK Karyawan')}{header('nama', 'Nama')}{header('site', 'Site')}{header('department', 'Departemen')}{header('jabatan', 'Jabatan')}{header('tanggal_mcu_terakhir', 'MCU Terakhir')}{header('tanggal_jadwal', 'Jadwal MCU Berikutnya')}<th>Aksi</th>
           </tr></thead>
           <tbody>
-            {loading ? <tr><td colSpan={9} className="mcu-empty-state">Memuat data karyawan...</td></tr>
+            {loading ? (
+              <tr>
+                <td colSpan={9} className="mcu-empty-state" style={{ padding: 0 }}>
+                  <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data karyawan">
+                    <div className="bm-loading-spinner">
+                      <div className="bm-loading-ring" aria-hidden="true" />
+                      <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                    </div>
+                    <p className="bm-loading-label">Memuat data karyawan & jadwal MCU…</p>
+                  </div>
+                </td>
+              </tr>
+            )
               : visibleRows.length === 0 ? <tr><td colSpan={9} className="mcu-empty-state">Tidak ada data karyawan.</td></tr>
               : visibleRows.map((row, index) => <tr key={row.nik_karyawan}>
                 <td>{index + 1}</td><td className="mcu-nik">{row.nik_karyawan}</td><td className="mcu-name">{row.nama}</td><td>{row.site}</td><td>{row.department || '-'}</td><td>{row.jabatan || '-'}</td><td>{formatDate(row.tanggal_mcu_terakhir)}</td>
