@@ -13,6 +13,34 @@ Gangguan Tidur (ESS) dan Kesehatan Mental (SRQ-20, DASS-21, Zung SDS) **tidak
 terikat pada pemeriksaan MCU**. Keduanya bisa diisi kapan saja, tanpa harus ada
 MCU, dan dijadwalkan jauh lebih sering — misalnya setiap 3 atau 6 bulan.
 
+### 1.0 Diisi tanpa login
+
+Kedua kuesioner dibuka sebagai halaman mandiri, **tanpa perlu masuk** ke
+aplikasi:
+
+| Halaman | Alamat |
+|---|---|
+| Pilihan kuesioner | `/kuesioner` |
+| Gangguan Tidur | `/kuesioner/gangguan-tidur` |
+| Kesehatan Mental | `/kuesioner/kesehatan-mental` |
+
+Satu-satunya syarat untuk mengisi adalah identitasnya ditemukan di data
+karyawan. Cari dengan **NIK KTP**, NIK Karyawan, atau sebagian nama. Setelah
+ketemu, nama, jabatan, dan unit kerja terisi otomatis dan **tidak bisa
+diketik ulang**, sehingga hasil tidak mungkin tersimpan ke karyawan lain.
+
+Setelah tersimpan, sebuah popup menampilkan skor, kesimpulan, zona MCU
+terbaru, dan berapa record MCU yang ikut diperbarui.
+
+> **Peringatan keamanan yang perlu dipahami.** Membuka penulisan data
+> kesehatan mental tanpa login berarti siapa pun yang mengetahui NIK KTP
+> seorang karyawan dapat menulis hasil kuesioner atas namanya. Batas laju
+> 30 permintaan per menit per alamat IP menahan penyalahgunaan dalam volume
+> besar, **bukan** penyalahgunaan yang terarah. Batas ini ditinjau di
+> `denyUnlessSelfService()` pada `src/lib/questionnaire-store.ts`. Bila
+> kuesioner ini nanti dipakai sebagai pemicu tindakan kerja, gerbang harus
+> dikembalikan ke wajib login.
+
 Akibatnya, keduanya tidak disimpan di `mcu_records`. Sumber kebenaran ada di
 dua tabel tersendiri:
 
@@ -188,6 +216,34 @@ Istilah hipertensi memakai **Grade** (I, II, III) mengikuti dokumen SOP.
 Istilah *stage* hanya muncul pada `CKD Stage G2`–`G5`, yang memang memakai
 klasifikasi tahap gagal ginjal resmi.
 
+### 4.0 Kuesioner menggeser zona
+
+Skor SRQ-20 dan DASS-21 ikut menentukan zona MCU, persis seperti
+parameter fisik lain. Aturannya mengikuti parameter KESEHATAN MENTAL
+di STD-006 Rev001:
+
+| Skor | Zona |
+|---|---|
+| SRQ-20 6 atau lebih | Kuning |
+| DASS-21 kategori "berat" (depresi 22+, ansietas 20+, stres 26+) | Kuning |
+| DASS-21 kategori "sangat berat" | Merah |
+| SDS 60–69 | Kuning |
+| SDS 70 atau lebih | Merah |
+
+Ambang DASS-21 ditentukan dari **kategori**, bukan angka tetap, karena
+batas "berat" tiap subskala berbeda. Satu tabel ambang untuk ketiga
+subskala akan salah menandai stres ringan sebagai depresi ringan.
+
+Perlu dicatat: tabel Lovibond asli menulis "extremely severe" mulai
+28, tetapi angka itu berasal dari versi 42 butir. Pada DASS-21 jumlah
+butir tiap subskala hanya 9, 7, dan 5, sehingga skor maksimum yang
+mungkin dicapai hanyalah 27, 21, dan 15. Karena itu kategori tertinggi
+hanya muncul bila **setiap butir dijawab maksimum**.
+
+Konsekuensi yang perlu diketahui: skor DASS-21 pada batas maksimum
+kini membaca sebagai kategori tertinggi, sehingga record yang bersangkutan
+bergeser dari zona Kuning menjadi Merah.
+
 ### 4.1 Kolom riwayat
 
 Kolom berikut adalah input manual: riwayat epilepsi, jantung, stroke, asma,
@@ -246,7 +302,11 @@ Supabase → SQL Editor → New Query → buka
 
 Migrasi menambah 18 kolom baru ke `mcu_records`, membuat tabel `mcu_ess` dan
 `mcu_mental_health`, serta menyiapkan RLS. **Wajib lebih dulu**, karena tanpa
-kolom tersebut seluruh INSERT gagal dengan `column does not exist`.
+tabel tersebut penyimpanan kuesioner gagal dengan pesan
+`Penyimpanan hasil ESS gagal karena tabel public.mcu_ess belum ada di database`.
+
+Tidak ada CLI maupun psql di lingkungan ini, dan Supabase JS tidak menyediakan
+cara menjalankan DDL. Maka migrasi **hanya dapat diterapkan lewat SQL Editor**.
 
 Verifikasi — harus mengembalikan **18 baris**:
 

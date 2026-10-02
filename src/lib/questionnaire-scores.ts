@@ -167,29 +167,43 @@ export interface Dass21Result {
  * satu tabel untuk ketiganya. Depresi mulai dianggap tidak normal pada skor
  * 10, ansietas sudah pada 8, sedangkan stres masih normal sampai 11. Satu
  * tabel bersama akan salah menandai stres ringan sebagai depresi ringan.
- * Rentang maksimum juga berbeda: depresi 27, ansietas 21, stres 15.
+ *
+ * CATATAN TENTANG BANDA TERATAS
+ *
+ * Tabel asli Lovibond menulis "extremely severe" mulai 28 untuk depresi dan
+ * ansietas. Angka itu berasal dari versi 42 butir. Pada DASS-21, jumlah item
+ * tiap subskala hanya 9, 7, dan 5, sehingga skor maksimum yang mungkin
+ * hanyalah 27, 21, dan 15. Dengan tabel apa adanya, banda "sangat berat"
+ * tidak akan pernah muncul sama sekali — skor tertinggi yang mungkin dicapai
+ * akan terbaca sebagai "berat".
+ *
+ * Karena itu banda teratas di sini dimulai tepat pada batas maksimum yang
+ * mungkin dicapai. Semua batas di bawahnya tetap sama persis dengan tabel
+ * asli; yang berubah hanya batas terakhir, dari 28 (tidak tercapai) menjadi
+ * 27 / 21 / 15. Konsekuensinya: pada DASS-21, kategori tertinggi hanya bisa
+ * dicapai bila SETIAP item berskor maksimum.
  */
 const DASS_BANDS: Record<DassDomain, { max: number; category: DassCategory; label: string }[]> = {
   depresi: [
     { max: 9, category: 'normal', label: 'Normal' },
     { max: 13, category: 'ringan', label: 'Mild Depression' },
     { max: 21, category: 'sedang', label: 'Moderate Depression' },
-    { max: 27, category: 'berat', label: 'Severe Depression' },
-    { max: Infinity, category: 'sangat-berat', label: 'Extremely Severe Depression' },
+    { max: 26, category: 'berat', label: 'Severe Depression' },
+    { max: 27, category: 'sangat-berat', label: 'Extremely Severe Depression' },
   ],
   ansietas: [
     { max: 7, category: 'normal', label: 'Normal' },
     { max: 14, category: 'ringan', label: 'Mild Anxiety' },
     { max: 19, category: 'sedang', label: 'Moderate Anxiety' },
-    { max: 27, category: 'berat', label: 'Severe Anxiety' },
-    { max: Infinity, category: 'sangat-berat', label: 'Extremely Severe Anxiety' },
+    { max: 20, category: 'berat', label: 'Severe Anxiety' },
+    { max: 21, category: 'sangat-berat', label: 'Extremely Severe Anxiety' },
   ],
   stres: [
     { max: 11, category: 'normal', label: 'Normal' },
     { max: 19, category: 'ringan', label: 'Mild Stress' },
     { max: 25, category: 'sedang', label: 'Moderate Stress' },
-    { max: 31, category: 'berat', label: 'Severe Stress' },
-    { max: Infinity, category: 'sangat-berat', label: 'Extremely Severe Stress' },
+    { max: 26, category: 'berat', label: 'Severe Stress' },
+    { max: 27, category: 'sangat-berat', label: 'Extremely Severe Stress' },
   ],
 };
 

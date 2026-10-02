@@ -538,6 +538,14 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
               Daftar di sini
             </button>
           </p>
+          <p className="login-footer-text" style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+            Hanya ingin mengisi kuesioner?{' '}
+            <a href="/kuesioner" style={{ color: '#ff4d00', fontWeight: 600, fontSize: 12 }}>
+              Gangguan Tidur dan Kesehatan Mental
+            </a>
+            <br />
+            <span style={{ fontSize: 11, opacity: 0.75 }}>Kuesioner tidak memerlukan akun.</span>
+          </p>
           </>
           ) : (
           <>
@@ -571,11 +579,11 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
             }
           }} style={{ display: 'flex', flexDirection: 'column' }}>
             <div className="login-input-group">
-              <label className="login-input-label">NIK (National ID) *</label>
+              <label className="login-input-label">NIK KTP *</label>
               <input
                 type="text"
                 className="login-input"
-                placeholder="Masukkan NIK"
+                placeholder="NIK KTP"
                 value={regNik}
                 onChange={async (e) => {
                   const val = e.target.value;

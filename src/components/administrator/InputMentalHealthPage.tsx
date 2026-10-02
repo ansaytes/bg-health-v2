@@ -24,12 +24,15 @@ import {
   HistoryTable,
   IdentityPanel,
   ItemGroup,
+  ResultDialog,
   ResultPanel,
   StatusBanner,
   SubmitBar,
   toneFor,
   useEmployeeLookup,
   useSubmitStatus,
+  type ResultDialogData,
+  type ScoreLine,
 } from '@/components/questionnaire/QuestionnaireUI';
 
 type Section = 'srq20' | 'dass21' | 'sds';
@@ -60,6 +63,60 @@ interface MhHistoryRow {
   dipakaiMCU: boolean;
 }
 
+/**
+ * Menyusun baris hasil untuk popup dari respons server.
+ *
+ * Hanya instrumen yang benar-benar diisi yang ditampilkan. Menampilkan skor 0
+ * untuk instrumen yang tidak diisi akan menyesatkan: pada DASS-21, "0" berarti
+ * "tidak ada gejala sama sekali", bukan "tidak menjawab".
+ */
+function barisHasil(body: any): ScoreLine[] {
+  const lines: ScoreLine[] = [];
+
+  if (body.srq20?.answered > 0) {
+    lines.push({
+      label: 'SRQ-20',
+      value: `${body.srq20.score} — ${body.srq20.label}`,
+      tone: toneFor(body.srq20.category),
+    });
+  }
+
+  const dass = body.dass21;
+  if (dass?.answered > 0) {
+    lines.push({
+      label: 'DASS-21 depresi',
+      value: `${dass.depresi.score} — ${dass.depresi.label}`,
+      tone: toneFor(dass.depresi.category),
+    });
+    lines.push({
+      label: 'DASS-21 ansietas',
+      value: `${dass.ansietas.score} — ${dass.ansietas.label}`,
+      tone: toneFor(dass.ansietas.category),
+    });
+    lines.push({
+      label: 'DASS-21 stres',
+      value: `${dass.stres.score} — ${dass.stres.label}`,
+      tone: toneFor(dass.stres.category),
+    });
+  }
+
+  if (body.sds?.answered > 0) {
+    lines.push({
+      label: 'Zung SDS',
+      value: `${body.sds.rawIndex} — ${body.sds.label}`,
+      tone: toneFor(body.sds.category),
+    });
+  }
+
+  lines.push({
+    label: 'Perlu rujukan',
+    value: body.perluRujukan ? 'Ya' : 'Tidak',
+    tone: body.perluRujukan ? 'bad' : 'good',
+  });
+
+  return lines;
+}
+
 export default function InputMentalHealthPage() {
   const { query, setQuery, identity, history, setHistory, searching, error, search } = useEmployeeLookup('/api/mental-health');
   const submit = useSubmitStatus();
@@ -71,6 +128,7 @@ export default function InputMentalHealthPage() {
   const [petugas, setPetugas] = useState('');
   const [catatan, setCatatan] = useState('');
   const [saved, setSaved] = useState<{ ringkasan: string; perluRujukan: boolean; zonasi: string | null; mcuUpdated: number } | null>(null);
+  const [resultDialog, setResultDialog] = useState<ResultDialogData | null>(null);
 
   const srqFilled = countFilled(SRQ20_ITEMS, values);
   const dassFilled = countFilled(DASS21_ITEMS, values);
@@ -97,6 +155,7 @@ export default function InputMentalHealthPage() {
     setLokasi('');
     setPetugas('');
     setSaved(null);
+    setResultDialog(null);
     submit.setStatus('idle');
     submit.setMessage('');
   }
@@ -138,13 +197,14 @@ export default function InputMentalHealthPage() {
         zonasi: body.zonasi ?? null,
         mcuUpdated: body.mcuUpdated ?? 0,
       });
-      submit.success(
-        `Kesehatan mental ${identity.nama} tersimpan.`
-        + (body.perluRujukan ? ' Hasil menunjukkan perlu rujukan.' : '')
-        + (body.mcuUpdated > 0
-          ? ` Salinan pada ${body.mcuUpdated} record MCU yang diperiksa pada atau setelah tanggal ini ikut diperbarui.`
-          : ' Tidak ada MCU pada atau setelah tanggal ini, jadi tidak ada salinan yang perlu diperbarui.'),
-      );
+      setResultDialog({
+        nama: identity.nama,
+        tanggal: tglPemeriksaan,
+        lines: barisHasil(body),
+        kesimpulan: body.kesimpulan ?? '',
+        zonaMCU: body.zonasi ?? null,
+        mcuUpdated: body.mcuUpdated ?? 0,
+      });
       await refreshHistory();
     } catch {
       submit.failure('Gagal menghubungi server. Coba lagi.');
@@ -372,6 +432,8 @@ export default function InputMentalHealthPage() {
         onReset={clearForm}
         hint="Pemeriksaan pada tanggal yang sama akan menimpa hasil sebelumnya. Tanggal berbeda menjadi riwayat baru."
       />
+
+      <ResultDialog data={resultDialog} onClose={() => setResultDialog(null)} />
     </div>
   );
 }

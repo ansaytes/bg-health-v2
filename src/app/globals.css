@@ -4394,6 +4394,152 @@ select.admin-input.compact-input {
   cursor: not-allowed;
 }
 
+/* ------------------------------------------------------------------ */
+/* Popup hasil kuesioner                                                */
+/* ------------------------------------------------------------------ */
+/* Jendela hasil muncul di atas segalanya (z-index di atas sidebar dan
+   toast), jadi Popup tetap terlihat walau halaman kuesioner berada di dalam
+   wadah dengan overflow tersembunyi seperti .admin-form-container. */
+.qh-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 15, 20, 0.55);
+  backdrop-filter: blur(2px);
+  animation: qh-modal-fade 140ms ease-out;
+}
+.qh-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 560px;
+  max-height: 88vh;
+  background: var(--card, #fff);
+  color: var(--card-foreground, #1a1a1a);
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: qh-modal-rise 160ms ease-out;
+}
+.qh-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+}
+.qh-modal-head h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+.qh-modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--fg-dim, #666);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.qh-modal-close:hover {
+  background: var(--input, rgba(0, 0, 0, 0.05));
+  border-color: var(--border, rgba(0, 0, 0, 0.1));
+}
+.qh-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+  overflow-y: auto;
+}
+.qh-modal-subject {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+.qh-modal-subject strong {
+  font-size: 15px;
+}
+.qh-modal-subject span {
+  font-size: 12px;
+  color: var(--fg-dim, #666);
+}
+.qh-modal-kesimpulan {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px 14px;
+  border: 1px solid;
+  border-radius: 10px;
+}
+.qh-modal-kesimpulan strong {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.85;
+}
+.qh-modal-kesimpulan p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.qh-modal-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+.qh-modal-meta > div {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+}
+.qh-modal-meta dt {
+  flex: 0 0 190px;
+  color: var(--fg-dim, #666);
+}
+.qh-modal-meta dd {
+  margin: 0;
+  font-weight: 600;
+}
+.qh-modal-warning {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--fg-dim, #666);
+  background: var(--input, rgba(0, 0, 0, 0.04));
+  border-radius: 8px;
+}
+.qh-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+}
+
+@keyframes qh-modal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes qh-modal-rise {
+  from { opacity: 0; transform: translateY(10px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 @media (max-width: 720px) {
   .qh-page { padding: 14px; }
   .qh-item,
@@ -4405,4 +4551,7 @@ select.admin-input.compact-input {
   }
   .qh-radio { flex: 1 1 120px; }
   .qh-options-header { display: none; }
+  .qh-modal { max-height: 92vh; }
+  .qh-modal-meta > div { flex-direction: column; gap: 2px; }
+  .qh-modal-meta dt { flex: none; }
 }

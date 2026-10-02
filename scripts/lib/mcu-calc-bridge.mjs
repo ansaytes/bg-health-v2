@@ -26,6 +26,7 @@ const DEPS = [
   'src/lib/clinical-classification.ts',
   'src/lib/questionnaire-items.ts',
   'src/lib/questionnaire-scores.ts',
+  'src/lib/questionnaire-conclusion.ts',
 ].map((rel) => path.join(ROOT, ...rel.split('/')));
 
 let cached = null;
@@ -158,6 +159,28 @@ export function calculateRecord(record) {
     record[dbKey] = value === null || value === undefined || value === '' ? null : value;
   }
   return record;
+}
+
+/**
+ * Memuat modul skor kuesioner dari hasil kompilasi yang sama dengan engine
+ * aplikasi, supaya uji skor tidak menguji salinan yang bisa berbeda dari yang
+ * benar-benar dipakai aplikasi.
+ */
+export function loadQuestionnaireScores() {
+  if (needsBuild()) build();
+  return require(path.join(OUT_DIR, 'questionnaire-scores.js'));
+}
+
+/**
+ * Memuat modul kesimpulan hasil kuesioner.
+ *
+ * Dipisah dari loadQuestionnaireScores karena modul kesimpulan adalah lapisan
+ * presentasi yang berdiri sendiri; mengujinya bersama skor akan membuat
+ * kegagalan sulit dilacak.
+ */
+export function loadQuestionnaireConclusion() {
+  if (needsBuild()) build();
+  return require(path.join(OUT_DIR, 'questionnaire-conclusion.js'));
 }
 
 export { OUTPUT_KEYS as CALCULATED_COLUMNS };

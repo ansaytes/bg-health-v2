@@ -2,15 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { ESS_ITEMS, ESS_OPTIONS } from '@/lib/questionnaire-items';
 import { scoreEss } from '@/lib/questionnaire-scores';
+import { kesimpulanEss } from '@/lib/questionnaire-conclusion';
 import {
-  denyUnlessWriter,
+  adminClient,
+  denyUnlessSelfService,
   findEmployeeIdentity,
   getCaller,
+  pesanGalat,
   questionnaireIdentityColumns,
   readNumber,
   refreshQuestionnaireSnapshot,
   upsertQuestionnaire,
-  adminClient,
 } from '@/lib/questionnaire-store';
 
 /**
@@ -22,10 +24,14 @@ import {
  * POST /api/ess
  *   Menyimpan hasil ESS. Memakai aturan satu baris per karyawan per tanggal,
  *   jadi pengukuran ulang pada tanggal yang sama menimpa baris lama.
+ *
+ * Kedua verb terbuka tanpa login: kuesioner ini diisi karyawan sendiri, dan
+ * mewajibkan sesi hanya membuat pengisiannya dilewati. Petugas yang sudah
+ * masuk tetap boleh, dan tidak ikut dihitung oleh batas laju.
  */
 export async function GET(req: NextRequest) {
   const caller = await getCaller(req);
-  const denied = denyUnlessWriter(caller);
+  const denied = denyUnlessSelfService(req, caller);
   if (denied) return denied;
 
   const query = new URL(req.url).searchParams.get('query')?.trim() ?? '';
@@ -47,7 +53,7 @@ export async function GET(req: NextRequest) {
 
   const identity = await findEmployeeIdentity(query);
   if (!identity) {
-    return NextResponse.json({ error: 'Karyawan tidak ditemukan. Gunakan NIK Karyawan, NIK KTP, atau nama.' }, { status: 404 });
+    return NextResponse.json({ error: 'Karyawan tidak ditemukan. Gunakan NIK KTP, NIK Karyawan, atau nama.' }, { status: 404 });
   }
 
   const client = adminClient();
@@ -84,7 +90,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const caller = await getCaller(req);
-  const denied = denyUnlessWriter(caller);
+  const denied = denyUnlessSelfService(req, caller);
   if (denied) return denied;
 
   let body: Record<string, unknown>;
@@ -97,7 +103,7 @@ export async function POST(req: NextRequest) {
   const query = String(body.query ?? body.nikKaryawan ?? body.nationalId ?? '').trim();
   const tglEss = String(body.tglEss ?? '').trim();
   if (!query) {
-    return NextResponse.json({ error: 'NIK Karyawan, NIK KTP, atau nama wajib diisi' }, { status: 400 });
+    return NextResponse.json({ error: 'NIK KTP, NIK Karyawan, atau nama wajib diisi' }, { status: 400 });
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(tglEss)) {
     return NextResponse.json({ error: 'Tanggal ESS wajib diisi dengan format YYYY-MM-DD' }, { status: 400 });
@@ -105,7 +111,7 @@ export async function POST(req: NextRequest) {
 
   const identity = await findEmployeeIdentity(query);
   if (!identity) {
-    return NextResponse.json({ error: 'Karyawan tidak ditemukan. Gunakan NIK Karyawan, NIK KTP, atau nama.' }, { status: 404 });
+    return NextResponse.json({ error: 'Karyawan tidak ditemukan. Gunakan NIK KTP, NIK Karyawan, atau nama.' }, { status: 404 });
   }
 
   // Skala ESS 0-4. Nilai di luar rentang ditolak, bukan dibulatkan diam-diam.
@@ -165,12 +171,15 @@ export async function POST(req: NextRequest) {
       success: true,
       action: saved.action,
       result,
-      zonasi: sync.zonasi,
+      kesimpulan: kesimpulanEss(result),
+      zonaMCU: sync.zonasi,
       mcuUpdated: sync.updated,
+      // `zonasi` dipertahankan sebagai alias agar klien lama tidak ikut rusak.
+      zonasi: sync.zonasi,
     });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Gagal menyimpan hasil ESS' },
+      { error: pesanGalat(error, 'Penyimpanan hasil ESS') },
       { status: 500 },
     );
   }

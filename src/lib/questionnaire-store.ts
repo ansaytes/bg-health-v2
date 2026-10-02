@@ -61,6 +61,63 @@ export function canWriteQuestionnaires(caller: CallerProfile | null): boolean {
   return !!caller && ALLOWED_ROLES.includes(caller.role);
 }
 
+/**
+ * Gerbang akses endpoint kuesioner.
+ *
+ * Kuesioner Gangguan Tidur dan Kesehatan Mental dibuka sebagai pengisian
+ * mandiri: karyawan boleh mengisinya tanpa masuk ke aplikasi, cukup dengan
+ * identitasnya (nama, NIK Karyawan, atau NIK KTP) ditemukan. Hasil skrining
+ * ini memang harus diisi oleh orang yang mengalaminya, sehingga mewajibkan
+ * login hanya membuat kuesioner dilewati.
+ *
+ * Dua lapis pelamar ada di sini:
+ *   1. Petugas yang sudah masuk (PIC/administrator/superuser) tetap boleh,
+ *      supaya bisa mengoreksi hasil atau melihat riwayat.
+ *   2. Pengunjung tanpa sesi tetap boleh, tetapi dibatasi jumlah permintaan per
+ *      alamat IP. Tanpa batas ini, endpoint terbuka bisa dipakai menebak NIK
+ *      KTP orang satu per satu dan menimpa baris pada tanggal yang sama.
+ *
+ * SECURITY NOTE. This does open up writing mental health data without
+ * authentication, as requested. The consequence: anyone who knows an employee's
+ * NIK KTP can write a questionnaire result in that person's name. The rate
+ * limit below holds off bulk abuse, but does NOT hold off targeted abuse. If
+ * this questionnaire ever feeds an employment action, this gate must go back
+ * to mandatory login with a single-use token.
+ */
+const RATE_LIMIT = { windowMs: 60_000, max: 30 };
+const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+
+function clientAddress(req: NextRequest): string {
+  const forwarded = req.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return req.headers.get('x-real-ip') ?? 'lokal';
+}
+
+export function denyUnlessSelfService(req: NextRequest, caller: CallerProfile | null): NextResponse | null {
+  // Petugas yang sudah masuk tidak dibatasi — jumlah pemakaiannya normal dan
+  // tercatat di log aplikasi.
+  if (caller && ALLOWED_ROLES.includes(caller.role)) return null;
+
+  const key = clientAddress(req);
+  const now = Date.now();
+  const bucket = rateBuckets.get(key);
+
+  if (!bucket || now > bucket.resetAt) {
+    rateBuckets.set(key, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
+    return null;
+  }
+
+  bucket.count += 1;
+  if (bucket.count > RATE_LIMIT.max) {
+    return NextResponse.json(
+      { error: `Terlalu banyak permintaan. Coba lagi dalam ${Math.ceil(RATE_LIMIT.windowMs / 1000)} detik.` },
+      { status: 429 },
+    );
+  }
+  return null;
+}
+
+/** Dipakai endpoint lain yang tetap mewajibkan login. */
 export function denyUnlessWriter(caller: CallerProfile | null): NextResponse | null {
   if (!caller) {
     return NextResponse.json({ error: 'Sesi tidak ditemukan. Silakan masuk kembali.' }, { status: 401 });
@@ -69,6 +126,25 @@ export function denyUnlessWriter(caller: CallerProfile | null): NextResponse | n
     return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
   }
   return null;
+}
+
+/**
+ * Menerjemahkan galat PostgREST menjadi kalimat yang bisa ditindaklanjuti.
+ *
+ * Kasus yang paling sering muncul di lingkungan ini adalah tabel kuesioner
+ * belum ada karena migrasi belum dijalankan. Tanpa terjemahan ini, yang tampil
+ * hanya "Could not find the table 'public.mcu_ess' in the schema cache", yang
+ * tidak memberi petunjuk apa yang harus dilakukan.
+ */
+export function pesanGalat(error: unknown, konteks: string): string {
+  const mentah = error instanceof Error ? error.message : String(error);
+  if (/Could not find the table|schema cache|PGRST205|42P01/i.test(mentah)) {
+    const tabel = (/table '([^']+)'/i.exec(mentah) ?? [])[1] ?? 'tabel kuesioner';
+    return `${konteks} gagal karena tabel ${tabel} belum ada di database. `
+      + 'Jalankan supabase/migrations/2026-10-02_std006_ptm_ess_mental_health.sql '
+      + 'lewat Supabase SQL Editor lebih dulu.';
+  }
+  return mentah;
 }
 
 export interface EmployeeIdentity {

@@ -22,6 +22,10 @@
     "./../src/lib/mcu-calculations.ts",
     "./../src/lib/zonasi-engine.ts",
     "./../src/lib/mcu-fields.ts",
-    "./../src/lib/icd10-codes.ts"
+    "./../src/lib/mcu-diagnosis.ts",
+    "./../src/lib/clinical-classification.ts",
+    "./../src/lib/questionnaire-items.ts",
+    "./../src/lib/questionnaire-scores.ts",
+    "./../src/lib/questionnaire-conclusion.ts"
   ]
 }

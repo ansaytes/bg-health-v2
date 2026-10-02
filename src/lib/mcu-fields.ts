@@ -264,14 +264,18 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
     min: 0,
     max: 20,
   }),
+  // Batas maksimum mengikuti jumlah item tiap subskala DASS-21: 9, 7, dan 5
+  // butir dengan skala 0-3. Membatasi ketiganya di 27 membuat ansietas dan
+  // stres menerima nilai yang tidak mungkin dicapai, dan nilai semacam itu
+  // akan terbaca sebagai kategori berat pada zona.
   f('dassDepresi', 'Skor DASS-21 Depresi', 'anamnesis', 'number', {
     unit: 'skor', normalRange: '0-9', min: 0, max: 27,
   }),
   f('dassCemas', 'Skor DASS-21 Ansietas', 'anamnesis', 'number', {
-    unit: 'skor', normalRange: '0-9', min: 0, max: 27,
+    unit: 'skor', normalRange: '0-7', min: 0, max: 21,
   }),
   f('dassStres', 'Skor DASS-21 Stres', 'anamnesis', 'number', {
-    unit: 'skor', normalRange: '0-9', min: 0, max: 27,
+    unit: 'skor', normalRange: '0-11', min: 0, max: 15,
   }),
   f('sdsScore', 'Indeks SDS (Zung Depression Scale)', 'anamnesis', 'number', {
     unit: 'indeks', normalRange: '20-49', min: 20, max: 80,

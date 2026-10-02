@@ -26,12 +26,14 @@ import {
   HistoryTable,
   IdentityPanel,
   ItemGroup,
+  ResultDialog,
   ResultPanel,
   StatusBanner,
   SubmitBar,
   toneFor,
   useEmployeeLookup,
   useSubmitStatus,
+  type ResultDialogData,
 } from '@/components/questionnaire/QuestionnaireUI';
 
 function today(): string {
@@ -58,6 +60,7 @@ export default function GangguanTidurPage() {
   const [petugas, setPetugas] = useState('');
   const [catatan, setCatatan] = useState('');
   const [saved, setSaved] = useState<{ score: number; category: string; label: string; zonasi: string | null; mcuUpdated: number } | null>(null);
+  const [resultDialog, setResultDialog] = useState<ResultDialogData | null>(null);
 
   const filled = ESS_ITEMS.filter((item) => values[item.id] !== undefined && values[item.id] !== '').length;
   const preview = scoreEss(values);
@@ -77,6 +80,7 @@ export default function GangguanTidurPage() {
     setValues({});
     setCatatan('');
     setSaved(null);
+    setResultDialog(null);
     submit.setStatus('idle');
     submit.setMessage('');
   }
@@ -113,12 +117,18 @@ export default function GangguanTidurPage() {
         mcuUpdated: body.mcuUpdated ?? 0,
       });
       setValues({});
-      submit.success(
-        `ESS ${identity.nama} tersimpan: skor ${body.result.score} (${body.result.label}).`
-        + (body.mcuUpdated > 0
-          ? ` Salinan pada ${body.mcuUpdated} record MCU yang diperiksa pada atau setelah tanggal ini ikut diperbarui.`
-          : ' Tidak ada MCU pada atau setelah tanggal ini, jadi tidak ada salinan yang perlu diperbarui.'),
-      );
+      setResultDialog({
+        nama: identity.nama,
+        tanggal: tglEss,
+        lines: [
+          { label: 'Item terisi', value: `${body.result.answered} / ${body.result.total}` },
+          { label: 'Skor ESS', value: String(body.result.score) },
+          { label: 'Kategori', value: body.result.label, tone: toneFor(body.result.category) },
+        ],
+        kesimpulan: body.kesimpulan ?? '',
+        zonaMCU: body.zonasi ?? null,
+        mcuUpdated: body.mcuUpdated ?? 0,
+      });
       await refreshHistory();
     } catch {
       submit.failure('Gagal menghubungi server. Coba lagi.');
@@ -265,6 +275,8 @@ export default function GangguanTidurPage() {
         onReset={clearForm}
         hint="ESS untuk tanggal yang sama menimpa hasil sebelumnya. Tanggal berbeda menjadi riwayat baru."
       />
+
+      <ResultDialog data={resultDialog} onClose={() => setResultDialog(null)} />
     </div>
   );
 }

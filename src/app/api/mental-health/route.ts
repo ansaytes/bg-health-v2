@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { DASS21_ITEMS, DASS21_SECTIONS, SDS_ITEMS, SRQ20_ITEMS } from '@/lib/questionnaire-items';
 import { isDassActionable, scoreDass21, scoreSrq20, scoreSds } from '@/lib/questionnaire-scores';
+import { kesimpulanSrqDass } from '@/lib/questionnaire-conclusion';
 import {
   adminClient,
-  denyUnlessWriter,
+  denyUnlessSelfService,
   findEmployeeIdentity,
   getCaller,
+  pesanGalat,
   questionnaireIdentityColumns,
   readNumber,
   refreshQuestionnaireSnapshot,
@@ -24,10 +26,14 @@ const DATE_COLUMN = 'tgl_pemeriksaan';
  * POST /api/mental-health
  *   Menyimpan SRQ-20, DASS-21, dan Zung SDS sekaligus dalam satu baris.
  *   Pengukuran ulang pada tanggal yang sama menimpa baris lama.
+ *
+ * Kedua verb terbuka tanpa login: kuesioner ini diisi karyawan sendiri, dan
+ * mewajibkan sesi hanya membuat pengisiannya dilewati. Petugas yang sudah
+ * masuk tetap boleh, dan tidak ikut dihitung oleh batas laju.
  */
 export async function GET(req: NextRequest) {
   const caller = await getCaller(req);
-  const denied = denyUnlessWriter(caller);
+  const denied = denyUnlessSelfService(req, caller);
   if (denied) return denied;
 
   const query = new URL(req.url).searchParams.get('query')?.trim() ?? '';
@@ -69,7 +75,7 @@ export async function GET(req: NextRequest) {
 
   const identity = await findEmployeeIdentity(query);
   if (!identity) {
-    return NextResponse.json({ error: 'Karyawan tidak ditemukan. Gunakan NIK Karyawan, NIK KTP, atau nama.' }, { status: 404 });
+    return NextResponse.json({ error: 'Karyawan tidak ditemukan. Gunakan NIK KTP, NIK Karyawan, atau nama.' }, { status: 404 });
   }
 
   const client = adminClient();
@@ -107,7 +113,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const caller = await getCaller(req);
-  const denied = denyUnlessWriter(caller);
+  const denied = denyUnlessSelfService(req, caller);
   if (denied) return denied;
 
   let body: Record<string, unknown>;
@@ -120,7 +126,7 @@ export async function POST(req: NextRequest) {
   const query = String(body.query ?? body.nikKaryawan ?? body.nationalId ?? '').trim();
   const tgl = String(body.tglPemeriksaan ?? '').trim();
   if (!query) {
-    return NextResponse.json({ error: 'NIK Karyawan, NIK KTP, atau nama wajib diisi' }, { status: 400 });
+    return NextResponse.json({ error: 'NIK KTP, NIK Karyawan, atau nama wajib diisi' }, { status: 400 });
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(tgl)) {
     return NextResponse.json({ error: 'Tanggal pemeriksaan wajib diisi dengan format YYYY-MM-DD' }, { status: 400 });
@@ -128,7 +134,7 @@ export async function POST(req: NextRequest) {
 
   const identity = await findEmployeeIdentity(query);
   if (!identity) {
-    return NextResponse.json({ error: 'Karyawan tidak ditemukan. Gunakan NIK Karyawan, NIK KTP, atau nama.' }, { status: 404 });
+    return NextResponse.json({ error: 'Karyawan tidak ditemukan. Gunakan NIK KTP, NIK Karyawan, atau nama.' }, { status: 404 });
   }
 
   const row: Record<string, unknown> = {
@@ -237,9 +243,11 @@ export async function POST(req: NextRequest) {
   }
   if (sds.answered > 0) parts.push(`SDS ${sds.rawIndex} (${sds.label})`);
   row.ringkasan_hasil = parts.join('; ');
+  const ringkasan = row.ringkasan_hasil as string;
 
   // Perlu rujukan bila ada instrumen yang masuk kategori "berat", memakai
-  // ambang per subskala (depresi 22, ansietas 20, stres 26) dan ambang SDS 60.
+  // ambang per subskala dan ambang SDS 60. Bandingkan dengan DASS_BANDS di
+  // src/lib/questionnaire-scores.ts bila salah satu angka di sini diubah.
   const perluRujukan =
     srq.category === 'perlu-tindak-lanjut'
     || isDassActionable('depresi', dass.depresi.score)
@@ -261,13 +269,20 @@ export async function POST(req: NextRequest) {
       srq20: srq,
       dass21: dass,
       sds,
+      // Dikembalikan juga di luar row karena popup hasil membacanya. Sebelumnya
+      // ringkasan hanya disimpan ke kolom ringkasan_hasil, sehingga panel
+      // "Hasil Tersimpan" selalu menampilkan tanda hubung.
+      ringkasan,
       perluRujukan,
-      zonasi: sync.zonasi,
+      kesimpulan: kesimpulanSrqDass(srq, dass, sds, perluRujukan),
+      zonaMCU: sync.zonasi,
       mcuUpdated: sync.updated,
+      // `zonasi` dipertahankan sebagai alias agar klien lama tidak ikut rusak.
+      zonasi: sync.zonasi,
     });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Gagal menyimpan hasil kesehatan mental' },
+      { error: pesanGalat(error, 'Penyimpanan hasil kesehatan mental') },
       { status: 500 },
     );
   }

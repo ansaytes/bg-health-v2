@@ -81,6 +81,10 @@ interface IdentityPanelProps {
  * ditampilkan sebagai kartu baca-saja: nama, NIK, jabatan, dan unit kerja
  * berasal dari data MCU dan tidak boleh diketik ulang, supaya tidak mungkin
  * salah simpan ke karyawan yang lain.
+ *
+ * NIK KTP ditampilkan kembali meskipun tidak menjadi kata kunci yang
+ * mengandungnya, karena orang yang mencari dengan NIK Karyawan biasanya ingin
+ * memastikan NIK KTP-nya cocok — itulah yang mereka ketik pertama kali.
  */
 export function IdentityPanel({
   query,
@@ -97,7 +101,7 @@ export function IdentityPanel({
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div style={{ flex: '1 1 320px' }}>
           <label className="qh-label" htmlFor="qh-identity-search">
-            Cari karyawan
+            NIK Karyawan atau NIK KTP
           </label>
           <input
             id="qh-identity-search"
@@ -107,8 +111,11 @@ export function IdentityPanel({
             onKeyDown={(e) => {
               if (e.key === 'Enter') onSearch();
             }}
-            placeholder="NIK Karyawan, NIK KTP, atau nama"
+            placeholder="NIK KTP"
           />
+          <p className="qh-hint">
+            Bisa diisi NIK KTP, NIK Karyawan, atau sebagian nama. Identitas lain terisi otomatis.
+          </p>
         </div>
         <button type="button" className="qh-btn qh-btn-primary" onClick={onSearch} disabled={searching}>
           {searching ? 'Mencari…' : 'Cari'}
@@ -120,6 +127,10 @@ export function IdentityPanel({
           <div className="qh-identity-row">
             <span>Nama</span>
             <strong>{identity.nama || '—'}</strong>
+          </div>
+          <div className="qh-identity-row">
+            <span>NIK KTP</span>
+            <strong>{identity.nationalId || '—'}</strong>
           </div>
           <div className="qh-identity-row">
             <span>NIK Karyawan</span>
@@ -390,6 +401,133 @@ export function SubmitBar({
 }
 
 /* ------------------------------------------------------------------ */
+/*  Popup hasil                                                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Jendela hasil yang muncul tepat setelah kuesioner tersimpan.
+ *
+ * Kuesioner ini diisi karyawan sendiri tanpa login, jadi hasil dan
+ * kesimpulannya harus langsung terlihat di layar — bukan berupa pesan kecil
+ * yang hilang sendiri di bagian atas formulir. Assessor pun memakai halaman
+ * yang sama, sehingga isi jendela ini cukup untuk keduanya: angka skornya,
+ * kesimpulan bahasa sehari-hari, dan efeknya terhadap zona MCU.
+ *
+ * Peringatan "bukan diagnosis" disertakan karena ESS, SRQ-20, DASS-21, dan
+ * SDS adalah instrumen skrining. Menuduh seseorang memiliki gangguan mental
+ * hanya dari skor kuesioner tidak dapat dibenarkan.
+ */
+export interface ResultDialogData {
+  nama: string;
+  tanggal: string;
+  /** Baris angka hasil, mis. "Skor ESS: 17". */
+  lines: ScoreLine[];
+  /** Kesimpulan bahasa sehari-hari dari server. */
+  kesimpulan: string;
+  /** Zona MCU terbaru, atau null bila belum ada MCU. */
+  zonaMCU: string | null;
+  /** Berapa record MCU yang salinannya ikut diperbarui. */
+  mcuUpdated: number;
+}
+
+export function ResultDialog({
+  data,
+  onClose,
+}: {
+  data: ResultDialogData | null;
+  onClose: () => void;
+}) {
+  if (!data) return null;
+
+  const tone: Tone = data.lines.find((line) => line.tone === 'bad')?.tone
+    ?? (data.lines.find((line) => line.tone === 'warn') ? 'warn' : 'good');
+
+  const PALET: Record<Tone, { bg: string; border: string; text: string }> = {
+    good: { bg: 'rgba(0,184,148,0.10)', border: 'rgba(0,184,148,0.45)', text: '#00806a' },
+    warn: { bg: 'rgba(255,140,0,0.10)', border: 'rgba(255,140,0,0.45)', text: '#a35a00' },
+    bad: { bg: 'rgba(220,50,50,0.10)', border: 'rgba(220,50,50,0.45)', text: '#b3261e' },
+    neutral: { bg: 'rgba(120,120,128,0.10)', border: 'rgba(120,120,128,0.4)', text: '#4a4a52' },
+  };
+  const warna = PALET[tone];
+
+  return (
+    <div
+      className="qh-modal-overlay"
+      role="presentation"
+      onClick={onClose}
+    >
+      <div
+        className="qh-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="qh-modal-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <header className="qh-modal-head">
+          <h3 id="qh-modal-title">Hasil Kuesioner</h3>
+          <button type="button" className="qh-modal-close" onClick={onClose} aria-label="Tutup">
+            ×
+          </button>
+        </header>
+
+        <div className="qh-modal-body">
+          <p className="qh-modal-subject">
+            <strong>{data.nama || '—'}</strong>
+            <span>{data.tanggal}</span>
+          </p>
+
+          <table className="qh-result-table">
+            <tbody>
+              {data.lines.map((line) => (
+                <tr key={line.label}>
+                  <td>{line.label}</td>
+                  <td>
+                    <strong className={`qh-tone-${line.tone ?? 'neutral'}`}>{line.value}</strong>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div
+            className="qh-modal-kesimpulan"
+            style={{ background: warna.bg, borderColor: warna.border, color: warna.text }}
+          >
+            <strong>Kesimpulan</strong>
+            <p>{data.kesimpulan}</p>
+          </div>
+
+          <dl className="qh-modal-meta">
+            <div>
+              <dt>Zona MCU terbaru</dt>
+              <dd>{data.zonaMCU || 'Belum ada MCU yang memakai hasil ini'}</dd>
+            </div>
+            <div>
+              <dt>MCU yang ikut diperbarui</dt>
+              <dd>
+                {data.mcuUpdated} record
+                {data.mcuUpdated === 0 && ' — tidak ada MCU pada atau setelah tanggal ini'}
+              </dd>
+            </div>
+          </dl>
+
+          <p className="qh-modal-warning">
+            Kuesioner ini merupakan <strong>skrining</strong>, bukan diagnosis. Diagnosis hanya
+            dapat ditegakkan setelah pemeriksaan dan konfirmasi tenaga kesehatan.
+          </p>
+        </div>
+
+        <footer className="qh-modal-foot">
+          <button type="button" className="qh-btn qh-btn-primary" onClick={onClose}>
+            Saya mengerti
+          </button>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Hook lookup                                                         */
 /* ------------------------------------------------------------------ */
 
@@ -407,7 +545,7 @@ export function useEmployeeLookup(endpoint: string) {
   async function search(value?: string): Promise<EmployeeIdentityView | null> {
     const term = (value ?? query).trim();
     if (!term) {
-      setError('Isi NIK Karyawan, NIK KTP, atau nama terlebih dahulu.');
+      setError('Isi NIK KTP, NIK Karyawan, atau nama terlebih dahulu.');
       return null;
     }
 

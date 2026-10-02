@@ -268,22 +268,24 @@ CREATE INDEX IF NOT EXISTS mcu_mental_health_nid_hash_idx
   ON public.mcu_mental_health (national_id_hash)
   WHERE national_id_hash IS NOT NULL;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'mcu_mental_health_range'
-  ) THEN
-    ALTER TABLE public.mcu_mental_health
-      ADD CONSTRAINT mcu_mental_health_range CHECK (
-        skor_srq20 IS NULL OR skor_srq20 BETWEEN 0 AND 20,
-        (indeks_sds IS NULL OR indeks_sds BETWEEN 20 AND 80),
-        (dass_depresi IS NULL OR dass_depresi BETWEEN 0 AND 27),
-        (dass_ansietas IS NULL OR dass_ansietas BETWEEN 0 AND 27),
-        (dass_stres IS NULL OR dass_stres BETWEEN 0 AND 27)
-      );
-    RAISE NOTICE 'Constraint mcu_mental_health_range dibuat.';
-  END IF;
-END $$;
+-- Constraint ini dijatuhkan lebih dulu lalu dibuat ulang, bukan dijaga dengan
+-- IF NOT EXISTS. Alasannya: batas DASS-21 pernah diset seragam 27/27/27, dan
+-- penjagaan itu membuat versi yang benar tidak akan pernah terpasang pada
+-- database yang sudah menjalankan migrasi ini.
+ALTER TABLE public.mcu_mental_health
+  DROP CONSTRAINT IF EXISTS mcu_mental_health_range;
+
+ALTER TABLE public.mcu_mental_health
+  ADD CONSTRAINT mcu_mental_health_range CHECK (
+    skor_srq20 IS NULL OR skor_srq20 BETWEEN 0 AND 20,
+    (indeks_sds IS NULL OR indeks_sds BETWEEN 20 AND 80),
+    -- Batas DASS-21 mengikuti jumlah butir tiap subskala (9, 7, 5 butir
+    -- skala 0-3). Membatasi ketiganya di 27 membuat ansietas dan stres
+    -- menerima nilai yang tidak mungkin dicapai.
+    (dass_depresi IS NULL OR dass_depresi BETWEEN 0 AND 27),
+    (dass_ansietas IS NULL OR dass_ansietas BETWEEN 0 AND 21),
+    (dass_stres IS NULL OR dass_stres BETWEEN 0 AND 15)
+  );
 
 COMMENT ON TABLE public.mcu_mental_health IS
   'Kesehatan mental karyawan: SRQ-20, DASS-21, dan Zung SDS. Parameter zonasi MENTAL HEALTH pada STD-006 Rev001. Satu baris per karyawan per tanggal pemeriksaan.';
