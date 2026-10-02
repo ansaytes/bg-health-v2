@@ -7,9 +7,10 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import XLSX from 'xlsx';
-import crypto from 'crypto';
 import dotenv from 'dotenv';
 import { parseExcelDate } from './lib/excel-date.mjs';
+import { encrypt, hashField } from './lib/encryption.mjs';
+import { calculateRecord } from './lib/mcu-calc-bridge.mjs';
 
 const __f = fileURLToPath(import.meta.url);
 const __d = path.dirname(__f);
@@ -24,32 +25,19 @@ const OUT_CSV_MANIFEST = path.join(ROOT, 'scripts', 'mcu-import-instructions.txt
 const BATCH_SIZE = 50;
 if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
 
+// Preflight: ENCRYPTION_KEY harus ada sebelum kerja apa pun, karena
+// lib/encryption.mjs melempar exception (bukan process.exit) saat dipakai.
+const encKey = process.env.ENCRYPTION_KEY || '';
+if (encKey.length !== 64) {
+  console.error('ENCRYPTION_KEY harus 64 karakter hex (32 byte) di .env.local. Import dibatalkan.');
+  process.exit(1);
+}
+
 // ============================================================
-// INLINE: encryption, hash, calculations — SAMA PERSIS DENGAN
-// script import pertama (agar hasil hash & value IDENTIK)
+// Enkripsi & hash: pakai modul yang sama dengan aplikasi
+// (scripts/lib/encryption.mjs) agar hash NIK hasil import selalu
+// cocok dengan pencarian NIK di aplikasi.
 // ============================================================
-const ALGO = 'aes-256-gcm';
-const IV = 12, TAG = 16;
-function getKey() {
-  const raw = process.env.ENCRYPTION_KEY || '';
-  if (!raw || raw.length !== 64) { console.error('ENCRYPTION_KEY salah!'); process.exit(1); }
-  return Buffer.from(raw, 'hex');
-}
-function encrypt(plain) {
-  if (plain == null || plain === '') return null;
-  try {
-    const k = getKey();
-    const iv = crypto.randomBytes(IV);
-    const c = crypto.createCipheriv(ALGO, k, iv);
-    const enc = Buffer.concat([c.update(String(plain), 'utf8'), c.final()]);
-    const tag = c.getAuthTag();
-    return Buffer.concat([iv, tag, enc]).toString('hex');
-  } catch (e) { return null; }
-}
-function hashField(plain) {
-  if (!plain) return null;
-  return crypto.createHmac('sha256', getKey()).update(String(plain), 'utf8').digest('hex');
-}
 function encryptMCURecord(r) {
   const o = { ...r };
   // Hash WAJIB dari plaintext (sebelum enkripsi) agar pencarian NIK di app ketemu.
@@ -58,38 +46,10 @@ function encryptMCURecord(r) {
   for (const f of ['national_id','nik_karyawan','nama','link_mcu']) if (o[f]) o[f] = encrypt(String(o[f]));
   return o;
 }
-function num(v) {
-  if (v == null || v === '' || v === 'N/A') return null;
-  const s = String(v).replace(',','.').replace(/%/g,'').trim();
-  if (!s) return null; const n = Number(s); return isNaN(n) ? null : n;
-}
-function addOneYear(v) {
-  if (!v) return '';
-  const d = new Date(String(v));
-  if (isNaN(d.getTime())) return '';
-  d.setFullYear(d.getFullYear() + 1);
-  return d.toISOString().slice(0, 10);
-}
-function applyMCUCalculations(values) {
-  const r = { ...values };
-  const bb = num(r.bb), tb = num(r.tb);
-  if (bb && tb) r.bmi = Math.round((bb / Math.pow(tb/100, 2)) * 10) / 10;
-  const hb = num(r.hb), hk = num(r.hematokrit), er = num(r.eritrosit);
-  if (hb && hk) r.mchc = Math.round((hb/hk*100)*10)/10;
-  if (er && hk) r.mcv = Math.round((hk/er*10)*10)/10;
-  if (hb && er) r.mch = Math.round((hb/er*10)*10)/10;
-  const fA = num(r.fvcAct), fP = num(r.fvcPred);
-  if (fA && fP) r.fvcPct = Math.round((fA/fP*100)*10)/10;
-  const feA = num(r.fev1Act), feP = num(r.fev1Pred);
-  if (feA && feP) r.fev1Pct = Math.round((feA/feP*100)*10)/10;
-  if (feA && fA) r.fev1FvcAct = Math.round((feA/fA)*100)/100;
-  const fvfA = num(r.fev1FvcAct), fvfP = num(r.fev1FvcPred);
-  if (fvfA && fvfP) r.fev1FvcPct = Math.round((fvfA/fvfP*100)*10)/10;
-  const gdp = num(r.gdp), gd2 = num(r.gd2pp), hba = num(r.hba1c);
-  if (gdp >= 126 || gd2 >= 200 || hba >= 6.5) r.diabetes = 'Ya';
-  else if (gdp || gd2 || hba) r.diabetes = 'Tidak';
-  if (!r.tglExpired && r.tglMcu) r.tglExpired = addOneYear(r.tglMcu);
-  return r;
+
+/** NIK yang dipakai sebagai pengenal dedupe: NIK Karyawan, atau NIK KTP. */
+function finalNationalId(dbRow) {
+  return dbRow.nik_karyawan || dbRow.national_id || '';
 }
 
 // ============================================================
@@ -238,46 +198,6 @@ const EXCEL_COL_TO_DB_COL = {
   EK: 'rek_fu4',
   EL: 'catatan',
 };
-const DB_TO_CAMEL = {
-  national_id:'nationalId', nik_karyawan:'nikKaryawan', nama:'nama', usia:'usia',
-  jenis_kelamin:'jenisKelamin', jabatan:'jabatan', site:'site', status_mcu:'statusMCU',
-  tgl_mcu:'tglMCU', tempat_mcu:'tempatMCU', gol_darah:'golDarah', gigi_mulut:'gigiMulut',
-  fisik_head_to_toe:'fisikHeadToToe', hemoroid:'hemoroid', visus_jauh:'visusJauh',
-  visus_dekat:'visusDekat', def_warna:'defWarna', lapang_pandang:'lapangPandang',
-  fisik_mata:'fisikMata', merokok:'merokok', td_s:'tdS', td_d:'tdD', nadi:'nadi',
-  bb:'bb', tb:'tb', bmi:'bmi', lp:'lp', hb:'hb', leukosit:'leukosit',
-  eritrosit:'eritrosit', hematokrit:'hematokrit', trombosit:'trombosit', mcv:'mcv',
-  mch:'mch', mchc:'mchc', led:'led', chol:'chol', tg:'tg', hdl:'hdl', ldl:'ldl',
-  gdp:'gdp', gd2pp:'gd2pp', hba1c:'hba1c', diabetes:'diabetes', au:'au',
-  ureum:'ureum', kreatinin:'kreatinin', egfr:'egfr', sgot:'sgot', sgpt:'sgpt',
-  ggt:'ggt', alp:'alp', billirubin:'billirubin', ul:'ul', hbsag:'hbsag',
-  anti_hbs:'antiHbs', vdrl:'vdrl', tpha:'tpha', hiv:'hiv',
-  drug_amp:'drugAmp', drug_meth:'drugMeth', drug_morph:'drugMorph', drug_canna:'drugCanna',
-  drug_coc:'drugCoc', drug_benz:'drugBenz', drug_caris:'drugCaris',
-  alkohol:'alkohol', psa:'psa', chest_xr:'chestXR', lumbo_xr:'lumboXR',
-  ecg_hasil:'ecgHasil', tm_hasil:'tmHasil', usg:'usg',
-  fvc_pred:'fvcPred', fvc_act:'fvcAct', fvc_pct:'fvcPct',
-  fev1_pred:'fev1Pred', fev1_act:'fev1Act', fev1_pct:'fev1Pct',
-  fev1_fvc_pred:'fev1FvcPred', fev1_fvc_act:'fev1FvcAct', fev1_fvc_pct:'fev1FvcPct',
-  spi_interp:'spiInterp', aud_interp:'audInterp',
-  balance:'balance', romberg:'romberg', phalen:'phalen', thinel:'thinel',
-  patrick:'patrick', kontra_patrick:'kontraPatrick', laseque:'laseque', kernig:'kernig',
-  tes_kebugaran:'tesKebugaran', pemeriksaan_lain:'pemeriksaanLain',
-  dugaan_pak:'dugaanPAK', kes_vendor:'kesVendor', rek_qshe:'rekQSHE',
-  diagnosa_medis:'diagnosaMedis', perlu_fu:'perluFU', rek_fu:'rekFU',
-  item_fu:'itemFU', link_mcu:'linkMCU', tgl_expired:'tglExpired',
-  fram_score:'framScore',
-  zonasi:'zonasi', trigger_zona:'triggerZona', pengendalian:'pengendalian',
-  catatan:'catatan',
-  tgl_fu1:'tglFU1', lokasi_fu1:'lokasiFU1', hasil_fu1:'hasilFU1',
-  kesimpulan_fu1:'kesimpulanFU1', link_fu1:'linkFU1',
-  rek_fu2:'rekFU2', tgl_fu2:'tglFU2', lokasi_fu2:'lokasiFU2',
-  hasil_fu2:'hasilFU2', kesimpulan_fu2:'kesimpulanFU2', link_fu2:'linkFU2',
-  rek_fu3:'rekFU3', tgl_fu3:'tglFU3', lokasi_fu3:'lokasiFU3',
-  hasil_fu3:'hasilFU3', kesimpulan_fu3:'kesimpulanFU3', link_fu3:'linkFU3',
-  rek_fu4:'rekFU4',
-};
-const CAMEL_TO_DB = Object.fromEntries(Object.entries(DB_TO_CAMEL).map(([k,v]) => [v, k]));
 
 const RELEVANT_COL_COUNT = Object.keys(EXCEL_COL_TO_DB_COL).length;
 function colIdx(letter) {
@@ -314,8 +234,15 @@ const NUMERIC = new Set([
   'fev1_fvc_pred','fev1_fvc_act','fev1_fvc_pct',
   'acr_500','acr_1k','acr_2k','acr_3k','acr_4k','acr_6k','acr_8k',
   'acl_500','acl_1k','acl_2k','acl_3k','acl_4k','acl_6k','acl_8k','fram_score',
+  // Skor kuesioner dan PTA. Angka ini tidak ada di Excel sumber, jadi nilainya
+  // selalu kosong saat import; tetap didaftarkan agar kolomnya dibuat dan
+  // tidak tertimpa NULL oleh bulk import.
+  'ess_score','srq20_score','dass_depresi','dass_cemas','dass_stres','sds_score','pta',
 ]);
-const DATE = new Set(['tgl_mcu','tgl_expired','tgl_fu1','tgl_fu2','tgl_fu3']);
+// kuesioner_tgl ditulis ulang setelah import, bukan diambil dari Excel:
+// column ini mencatat tanggal kuesioner yang dipakai sebagai salinan, dan
+// nilainya hanya diketahui setelah mcu_ess / mcu_mental_health terisi.
+const DATE = new Set(['tgl_mcu','tgl_expired','tgl_fu1','tgl_fu2','tgl_fu3','kuesioner_tgl']);
 
 // ============================================================
 // 1. Baca Excel dan bangun data array (1361 qualified) — ulang
@@ -346,11 +273,20 @@ const ALL_COLUMNS_ORDERED = [
   'hbsag','anti_hbs','vdrl','tpha','hiv',
   'drug_amp','drug_meth','drug_morph','drug_canna','drug_coc','drug_benz','drug_caris','alkohol','psa',
   'chest_xr','lumbo_xr','ecg_hasil','tm_hasil','usg',
+  // Riwayat penyakit, LBP, dan skor kuesioner. Urutannya sama persis dengan
+  // src/lib/mcu-fields.ts. Kolom-kolom ini WAJIB ada di daftar: CSV bulk import
+  // mengosongkan setiap kolom yang tidak disebut di header, jadi kolom yang
+  // hilang dari daftar ini akan ditimpa NULL saat import.
+  'riwayat_epilepsi','riwayat_jantung','riwayat_stroke','riwayat_asma','riwayat_sleep_apnea','lbp',
+  'ess_score','srq20_score','dass_depresi','dass_cemas','dass_stres','sds_score',
   'fvc_pred','fvc_act','fvc_pct','fev1_pred','fev1_act','fev1_pct','fev1_fvc_pred','fev1_fvc_act','fev1_fvc_pct','spi_interp',
-  'acr_500','acr_1k','acr_2k','acr_3k','acr_4k','acr_6k','acr_8k','acl_500','acl_1k','acl_2k','acl_3k','acl_4k','acl_6k','acl_8k','aud_interp',
+  'acr_500','acr_1k','acr_2k','acr_3k','acr_4k','acr_6k','acr_8k','acl_500','acl_1k','acl_2k','acl_3k','acl_4k','acl_6k','acl_8k',
+  'pta',
+  'aud_interp',
   'balance','romberg','phalen','thinel','patrick','kontra_patrick','laseque','kernig',
-  'tes_kebugaran','pemeriksaan_lain','dugaan_pak','kes_vendor','rek_qshe','diagnosa_medis','perlu_fu','rek_fu','item_fu','link_mcu',
+  'tes_kebugaran','hasil_kebugaran','pemeriksaan_lain','dugaan_pak','kes_vendor','rek_qshe','diagnosa_medis','ringkasan_kuesioner','perlu_fu','rek_fu','item_fu','link_mcu',
   'tgl_expired','fram_score','fram_prob','fram_kat','zonasi','trigger_zona','pengendalian',
+  'frekuensi_evaluasi','catatan_sop','kuesioner_tgl',
   'tgl_fu1','lokasi_fu1','hasil_fu1','kesimpulan_fu1','link_fu1','rek_fu2',
   'tgl_fu2','lokasi_fu2','hasil_fu2','kesimpulan_fu2','link_fu2','rek_fu3',
   'tgl_fu3','lokasi_fu3','hasil_fu3','kesimpulan_fu3','link_fu3','rek_fu4',
@@ -380,21 +316,89 @@ for (let i = 0; i < dRows.length; i++) {
   }
   if (!dbRow.nik_karyawan && dbRow.national_id) dbRow.nik_karyawan = dbRow.national_id;
 
-  const camel = {};
-  for (const [k, v] of Object.entries(dbRow)) if (DB_TO_CAMEL[k]) camel[DB_TO_CAMEL[k]] = v;
-  let calc; try { calc = applyMCUCalculations(camel); } catch { calc = camel; }
-  const snake = {};
-  for (const [k, v] of Object.entries(calc)) {
-    if (v === '' || v == null) continue;
-    if (CAMEL_TO_DB[k]) snake[CAMEL_TO_DB[k]] = v;
-    else snake[k.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase()] = v;
-  }
-  const merged = { ...dbRow, ...snake };
-  const final = encryptMCURecord(merged);
-  records.push(final);
+  // Rumus dihitung oleh engine aplikasi (src/lib/mcu-calculations.ts) agar
+  // hasil import sama persis dengan yang dipakai aplikasi, bukan rumus lama Excel.
+  // Data mentah (belum dihitung) ikut disimpan karena dedupe di bawah perlu
+  // menggabungkan kolom sebelum kolom turunan dihitung ulang.
+  records.push({ raw: dbRow, excelRow: i + 2, filled, key: `${hashField(String(finalNationalId(dbRow))) || ''}|${dbRow.tgl_mcu || ''}` });
 }
 
 console.log(`✅ Total records lolos: ${records.length}`);
+
+// ============================================================
+// 1b. DEDUPE: NIK + tgl_mcu yang sama = duplikat input Excel.
+//
+//     Baris paling lengkap menjadi dasar, tetapi kolom yang masih kosong
+//     pada baris itu diisi dari baris yang kalah. "Paling lengkap" hanya
+//     menghitung jumlah kolom terisi, sehingga baris yang kalah bisa saja
+//     menyimpan satu hasil lab yang tidak tercatat di baris dasar.
+//     Membuang seluruh baris tanpa memeriksa isinya berarti kehilangan data
+//     klinis tanpa jejak.
+//
+//     NIK sama tapi tgl_mcu berbeda = 2 record sah, keduanya dipertahankan
+//     (view monitor_mcu sudah ambil tgl_mcu terbaru via record_rank=1).
+// ============================================================
+const byKey = new Map();
+const dropped = [];
+for (const rec of records) {
+  const prev = byKey.get(rec.key);
+  if (!prev) { byKey.set(rec.key, rec); continue; }
+
+  const [winner, loser] = rec.filled > prev.filled ? [rec, prev] : [prev, rec];
+  const recovered = [];
+  for (const [col, val] of Object.entries(loser.raw)) {
+    if (isEmpty(winner.raw[col]) && !isEmpty(val)) {
+      winner.raw[col] = val;
+      recovered.push(col);
+    }
+  }
+  byKey.set(rec.key, winner);
+  dropped.push({
+    excelRow: loser.excelRow,
+    filled: loser.filled,
+    winner: `excel#${winner.excelRow}`,
+    recovered,
+  });
+}
+if (dropped.length) {
+  console.log(`\n♻️  Dedupe: ${dropped.length} baris duplikat (NIK + tgl_mcu sama) digabung ke baris teratas.`);
+  for (const d of dropped.slice(0, 10)) {
+    console.log(`   excel#${d.excelRow} digabung ke ${d.winner}` +
+      (d.recovered.length ? ` — ${d.recovered.length} kolom dipulihkan: ${d.recovered.join(', ')}` : ' — tidak ada kolom yang perlu dipulihkan'));
+  }
+  if (dropped.length > 10) console.log(`   ... +${dropped.length - 10} baris lain`);
+  fs.writeFileSync(
+    path.join(ROOT, 'scripts', 'mcu-import-duplicates.txt'),
+    [
+      'DUPLIKAT DIGABUNG (NIK + Tanggal MCU sama)',
+      `Total: ${dropped.length} baris`,
+      '',
+      'Setiap baris di bawah digabung ke baris yang dipertahankan. Kolom yang',
+      'dipulihkan berisi nilai yang HANYA ada di baris yang kalah — nilai',
+      'tersebut tidak ikut masuk ke file CSV, jadi tidak bisa dilihat kembali',
+      'setelah diimpor. Tinjau daftar ini bila hasil import terasa kurang lengkap.',
+      '',
+      ...dropped.flatMap((d, i) => [
+        `${i + 1}. excel baris #${d.excelRow} (${d.filled} kolom terisi) → dipertahankan ${d.winner}`,
+        ...(d.recovered.length ? [`   dipulihkan (${d.recovered.length}): ${d.recovered.join(', ')}`] : ['   tidak ada kolom yang perlu dipulihkan']),
+      ]),
+    ].join('\n'),
+    'utf8',
+  );
+  console.log(`   → scripts/mcu-import-duplicates.txt`);
+}
+
+// Kolom turunan (zonasi, diagnosa_medis, item_fu, fram_*) dihitung SETELAH
+// dedupe, karena gabungan kolom di atas bisa mengubah nilai acunya.
+const finalRecords = [...byKey.values()].map((r) => encryptMCURecord(calculateRecord(r.raw)));
+console.log(`✅ Total record final: ${finalRecords.length}`);
+
+// NIK yang sama dengan tgl_mcu berbeda sengaja menghasilkan lebih dari satu
+// record, jadi count(distinct national_id_hash) bisa lebih kecil dari total.
+const expectedUniqueNik = new Set(finalRecords.map((r) => r.national_id_hash).filter(Boolean)).size;
+if (expectedUniqueNik !== finalRecords.length) {
+  console.log(`   → ${finalRecords.length - expectedUniqueNik} karyawan punya >1 MCU (tgl_mcu berbeda), keduanya dipertahankan`);
+}
 
 // ============================================================
 // 2. GENERATE: BATCH SQL KECIL (per 50 baris)
@@ -406,13 +410,65 @@ function sq(v) {
   return `'${String(v).replace(/'/g, "''").replace(/\0/g, '')}'`;
 }
 
-const totalBatches = Math.ceil(records.length / BATCH_SIZE);
+// Hapus batch lama supaya tidak tertinggal file dari generate sebelumnya
+for (const f of fs.readdirSync(OUT_DIR)) {
+  if (/^batch-.*\.sql$/.test(f)) fs.unlinkSync(path.join(OUT_DIR, f));
+}
+
+// Prasyarat idempotensi. Tanpa constraint unik, `ON CONFLICT (a, b)` tidak punya
+// indeks yang uniquenya dan PostgreSQL menolaknya. Jalankan sekali sebelum
+// batch manapun. Idempoten: kalau constraint sudah ada, tidak terjadi apa-apa.
+fs.writeFileSync(
+  path.join(OUT_DIR, 'batch-00-prasyarat.sql'),
+  `-- Jalankan file ini SATU KALI sebelum batch-01.
+--
+-- LANGKAH 1 — WAJIB. Terapkan migrasi STD-006 lebih dulu. File ini menambah 17
+-- kolom baru ke mcu_records (riwayat penyakit, LBP, skor kuesioner, PTA,
+-- ringkasan, catatan SOP). Tanpa itu, seluruh INSERT di bawah gagal dengan
+-- pesan "column does not exist".
+--
+--   Supabase Dashboard → SQL Editor → New Query
+--   Buka file: supabase/migrations/2026-10-02_std006_ptm_ess_mental_health.sql
+--   Tempel seluruh isinya → RUN
+--
+-- LANGKAH 2 — file ini. Menambahkan constraint unik agar batch SQL bisa
+-- dijalankan ulang tanpa menyalin data (ON CONFLICT butuh target constraint
+-- yang ada).
+BEGIN;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'mcu_records_nik_tgl_uniq'
+  ) THEN
+    -- Bersihkan duplikat lama lebih dulu: constraint tidak bisa dibuat
+    -- selama masih ada pasangan (nik_karyawan_hash, tgl_mcu) yang sama.
+    DELETE FROM public.mcu_records a
+    USING public.mcu_records b
+    WHERE a.nik_karyawan_hash = b.nik_karyawan_hash
+      AND a.tgl_mcu IS NOT DISTINCT FROM b.tgl_mcu
+      AND a.id > b.id;
+
+    ALTER TABLE public.mcu_records
+      ADD CONSTRAINT mcu_records_nik_tgl_uniq UNIQUE (nik_karyawan_hash, tgl_mcu);
+    RAISE NOTICE 'Constraint mcu_records_nik_tgl_uniq dibuat.';
+  ELSE
+    RAISE NOTICE 'Constraint mcu_records_nik_tgl_uniq sudah ada, dilewati.';
+  END IF;
+END $$;
+
+COMMIT;
+`,
+  'utf8',
+);
+
+const totalBatches = Math.ceil(finalRecords.length / BATCH_SIZE);
 for (let b = 0; b < totalBatches; b++) {
   const start = b * BATCH_SIZE;
-  const end = Math.min(records.length, start + BATCH_SIZE);
-  const slice = records.slice(start, end);
+  const end = Math.min(finalRecords.length, start + BATCH_SIZE);
+  const slice = finalRecords.slice(start, end);
   const head = `-- ============================================================
--- Batch ${b+1} / ${totalBatches} — Record MCU ${start+1} s/d ${end} (total ${records.length})
+-- Batch ${b+1} / ${totalBatches} — Record MCU ${start+1} s/d ${end} (total ${finalRecords.length})
 -- Generated : ${new Date().toISOString()}
 -- Paste ke SQL Editor Supabase — klik RUN — lanjut ke batch berikutnya
 -- ============================================================
@@ -430,7 +486,11 @@ INSERT INTO public.mcu_records (
   ).join(',\n');
   const tail = `
 
-ON CONFLICT DO NOTHING;
+ON CONFLICT (nik_karyawan_hash, tgl_mcu) DO UPDATE SET
+  ${INSERT_COLS
+    .filter((c) => c !== 'id' && c !== 'created_at' && c !== 'nik_karyawan_hash' && c !== 'tgl_mcu')
+    .map((c) => `${c} = EXCLUDED.${c}`)
+    .join(',\n  ')};
 
 COMMIT;
 `;
@@ -440,7 +500,11 @@ COMMIT;
 console.log(`   ✔ ${totalBatches} file batch SQL disimpan di folder scripts/mcu-import-batches/`);
 
 // ============================================================
-// 3. GENERATE: SATU CSV LENGKAP (1361 baris) untuk Import CSV
+// 3. GENERATE: SATU CSV LENGKAP untuk Import CSV
+//
+// PENTING: kolom id / created_at / updated_at TIDAK boleh ikut.
+// Supabase CSV import mengirim string kosong ke kolom uuid/timestamptz
+// → SQLSTATE 22P02 (invalid input syntax). Biarkan DEFAULT yang berlaku.
 // ============================================================
 console.log('📝 Generate CSV bulk upload (semua 1 record = 1 baris)...');
 
@@ -451,10 +515,10 @@ function csvEscape(v) {
   return s;
 }
 const csvLines = [];
-csvLines.push(ALL_COLUMNS_ORDERED.join(','));
-for (const rec of records) {
-  // Supabase Import CSV — accept no id/created_at/updated_at, DEFAULT values apply
-  csvLines.push(ALL_COLUMNS_ORDERED.map(col => csvEscape(rec[col])).join(','));
+csvLines.push(INSERT_COLS.join(','));
+for (const rec of finalRecords) {
+  // id / created_at / updated_at tidak disertakan → DEFAULT / gen_random_uuid() berlaku
+  csvLines.push(INSERT_COLS.map(col => csvEscape(rec[col])).join(','));
 }
 fs.writeFileSync(OUT_CSV, csvLines.join('\n'), 'utf8');
 console.log(`   ✔ CSV file tersimpan: ${path.basename(OUT_CSV)} (${csvLines.length-1} baris data, ${(fs.statSync(OUT_CSV).size/1024/1024).toFixed(2)} MB)`);
@@ -469,7 +533,8 @@ const instr = `============================================================
 ============================================================
 
 📦 File yang dihasilkan:
-   • Total data masuk: ${records.length} baris
+   • Total data masuk: ${finalRecords.length} baris
+   • Duplikat dibuang : ${dropped.length} baris (NIK + Tanggal MCU sama → lihat mcu-import-duplicates.txt)
    • Total batch SQL : ${totalBatches} (folder scripts/mcu-import-batches/)
    • File CSV        : scripts/mcu-import-bulk-upload.csv
 
@@ -494,35 +559,42 @@ const instr = `============================================================
     (Gunakan jika CSV import tidak bekerja, atau ingin
      transactional per 50 baris — rollback friendly)
 ═══════════════════════════════════════════════════════════════
- List file (urut):
+List file (urut):
+    00. scripts/mcu-import-batches/batch-00-prasyarat.sql   ← WAJIB, jalankan pertama
 ${Array.from({length: totalBatches}, (_, b) => `   ${String(b+1).padStart(2,'0')}. scripts/mcu-import-batches/batch-${String(b+1).padStart(2,'0')}-of-${totalBatches}.sql`).join('\n')}
 
  Cara:
-   1. Buka SQL Editor → New Query
-   2. Buka file → paste content batch-01 → RUN
-   3. Tunggu sampai selesai (success)
-   4. Lanjut batch-02 → RUN → ulangi sampai selesai semua ${totalBatches} batch
+    1. Jalankan supabase/migrations/2026-10-02_std006_ptm_ess_mental_health.sql
+       DULU. Migrasi itu menambah 17 kolom baru ke mcu_records. Tanpa migrasi
+       ini semua INSERT akan gagal dengan "column does not exist".
+    2. Jalankan batch-00-prasyarat.sql. File ini menambah constraint unik
+       (nik_karyawan_hash, tgl_mcu) supaya batch aman dijalankan ulang tanpa
+       menyalin data. Tanpa ini, setiap batch yang dijalankan dua kali akan
+       memasukkan 50 baris kembar.
+    3. Buka SQL Editor → New Query
+    4. Buka file → paste content batch-01 → RUN
+    5. Tunggu sampai selesai (success)
+    6. Lanjut batch-02 → RUN → ulangi sampai selesai semua ${totalBatches} batch
 
  Setiap batch = 50 records, tidak akan melebihi limit SQL Editor Supabase.
 
 ═══════════════════════════════════════════════════════════════
  ⚠️  SETELAH IMPORT SELESAI (A / B)
 ═══════════════════════════════════════════════════════════════
- Jalankan QUERY INI SEKALI untuk memaksa re-calculate FRS
- & ZONASI RISIKO (yang tidak terisi karena input sebagian)
- -- (opsional, jika zonasi/framingham masih null di beberapa row)
+  Jalankan QUERY INI untuk memverifikasi hasil import.
+  Kolom kalkulasi (diagnosa_medis, item_fu, zonasi, fram_*)
+  sudah dihitung oleh engine aplikasi yang SAMA dengan
+  src/lib/mcu-calculations.ts, jadi tidak perlu re-calculate manual.
 
- DO $$
- DECLARE r RECORD;
- BEGIN
-   FOR r IN SELECT id FROM public.mcu_records
-       WHERE zonasi IS NULL OR trigger_zona IS NULL
-       ORDER BY created_at DESC LOOP
-     -- Anda bisa call save API / trigger script jika perlu
-     -- Atau isi manual jika data sudah cukup
-     RAISE NOTICE 'Row butuh zonasi: %', r.id;
-   END LOOP;
- END $$;
+  SELECT count(*)                                  AS total,
+         count(DISTINCT national_id_hash)          AS unik,
+         count(zonasi)                             AS ada_zonasi,
+         count(diagnosa_medis)                     AS ada_diagnosa,
+         count(*) FILTER (WHERE hasil_fu1 IS NOT NULL) AS ada_fu1
+  FROM public.mcu_records;
+
+  Harap: total = ${finalRecords.length}, unik = ${expectedUniqueNik}.
+  (unik boleh < total: ${finalRecords.length - expectedUniqueNik} karyawan punya 2 MCU di tanggal berbeda.)
 
 ============================================================
  SEMUA HASH MENGGUNAKAN ENCRYPTION_KEY LIVE DARI .env.local

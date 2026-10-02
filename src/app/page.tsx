@@ -18,6 +18,8 @@ import KunjunganBerobatForm from '@/components/administrator/KunjunganBerobatFor
 import HealthCampaignForm from '@/components/administrator/HealthCampaignForm';
 import UserManagement from '@/components/administrator/UserManagement';
 import InputJadwalMCU from '@/components/administrator/InputJadwalMCUModern';
+import GangguanTidurPage from '@/components/administrator/GangguanTidurPage';
+import InputMentalHealthPage from '@/components/administrator/InputMentalHealthPage';
 import InventoryAdmin from '@/components/administrator/InventoryAdmin';
 import HomeView from '@/components/home/HomeView';
 import DataKesehatanTable from '@/components/dashboard/DataKesehatanTable';
@@ -102,6 +104,17 @@ function IconReviewMCU() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+function IconQuestionnaire() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="8" y1="13" x2="9" y2="13" /><line x1="12" y1="13" x2="13" y2="13" />
+      <line x1="16" y1="13" x2="17" y2="13" /><line x1="8" y1="17" x2="9" y2="17" />
+      <line x1="12" y1="17" x2="13" y2="17" />
     </svg>
   );
 }
@@ -206,6 +219,8 @@ const ADMIN_SIDEBAR: SidebarItem[] = [
 ];
 const DATA_ENTRY_SIDEBAR: SidebarItem[] = [
   { key: 'input-jadwal-mcu', label: 'Input Jadwal MCU', icon: <IconReviewMCU /> },
+  { key: 'gangguan-tidur', label: 'Gangguan Tidur', icon: <IconQuestionnaire /> },
+  { key: 'kesehatan-mental', label: 'Kesehatan Mental', icon: <IconQuestionnaire /> },
 ];
 
 /*   Content Routers */
@@ -217,6 +232,12 @@ function HomeContent() {
 
 function DataEntryContent() {
   const activeDataEntrySidebar = useMCUStore((s) => s.activeDataEntrySidebar);
+  if (activeDataEntrySidebar === 'gangguan-tidur') {
+    return <div className="admin-form-container"><GangguanTidurPage /></div>;
+  }
+  if (activeDataEntrySidebar === 'kesehatan-mental') {
+    return <div className="admin-form-container"><InputMentalHealthPage /></div>;
+  }
   return activeDataEntrySidebar === 'input-jadwal-mcu'
     ? <div className="admin-form-container"><InputJadwalMCU /></div>
     : null;

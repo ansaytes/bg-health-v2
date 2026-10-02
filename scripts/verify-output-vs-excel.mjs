@@ -6,19 +6,18 @@
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
-import crypto from 'crypto';
 import XLSX from 'xlsx';
 import { parseExcelDate } from './lib/excel-date.mjs';
+import { readCsvFile } from './lib/csv.mjs';
+import { hashField as hashFieldShared } from './lib/encryption.mjs';
 
 dotenv.config({ path: '.env.local' });
 
 const EXCEL_PATH = 'C:/Users/bagon/Downloads/Record MCU 2026.xlsx';
 const CSV_PATH = 'scripts/mcu-import-bulk-upload.csv';
 
-const key = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
-function hashField(plain) {
-  return crypto.createHmac('sha256', key).update(String(plain), 'utf8').digest('hex');
-}
+// Hash NIK harus identik dengan yang dipakai pipeline import dan aplikasi.
+const hashField = hashFieldShared;
 
 // --- Excel ---
 const wb = XLSX.read(fs.readFileSync(EXCEL_PATH), { type: 'buffer', cellDates: true });
@@ -26,24 +25,7 @@ const rows = XLSX.utils.sheet_to_json(wb.Sheets.RAW_DATA, { header: 1, defval: n
 const excelRows = rows.slice(1);
 
 // --- CSV ---
-function parseCsv(text) {
-  const out = []; let f = '', rec = [], q = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (q) {
-      if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; }
-      else f += c;
-    } else if (c === '"') q = true;
-    else if (c === ',') { rec.push(f); f = ''; }
-    else if (c === '\n') { rec.push(f); out.push(rec); rec = []; f = ''; }
-    else if (c !== '\r') f += c;
-  }
-  if (f || rec.length) { rec.push(f); out.push(rec); }
-  return out;
-}
-const csv = parseCsv(fs.readFileSync(CSV_PATH, 'utf8'));
-const hdr = csv[0];
-const data = csv.slice(1);
+const { header: hdr, rows: data } = readCsvFile(CSV_PATH);
 const ci = Object.fromEntries(hdr.map((h, i) => [h, i]));
 
 console.log(`CSV: ${data.length} baris, ${hdr.length} kolom`);
@@ -132,8 +114,13 @@ for (let ri = 0; ri < data.length; ri++) {
     if (!xs.some((s) => s !== '')) continue;      // semua kandidat kosong
     const cv = rec[ci[db]];
     const isDate = db.startsWith('tgl_');
-    const same = xs.some((s) => isDate ? dateEq(s, cv) : s === cv.replace(/\s+/g, ' '));
-    if (same) { checked++; continue; }
+    // CSV kosong → harus ada kandidat Excel yang juga kosong (bukan terisi)
+    if (cv === '') {
+      if (xs.some((s) => s === '')) { checked++; continue; }
+    } else {
+      const same = xs.some((s) => (isDate ? dateEq(s, cv) : s === cv.replace(/\s+/g, ' ')));
+      if (same) { checked++; continue; }
+    }
     mismatch++;
     if (!problems.has(db)) problems.set(db, { n: 0, sample: null });
     const p = problems.get(db);
@@ -159,21 +146,38 @@ if (mismatch === 0) {
 // --- Fokus: kolom FU & diagnosa ---
 console.log('\n=== SPOT CHECK kolom kunci (FU1) ===');
 const FOCUS = ['diagnosa_medis', 'perlu_fu', 'tgl_fu1', 'lokasi_fu1', 'hasil_fu1', 'kesimpulan_fu1'];
+const letterOf = Object.fromEntries(Object.entries(MAP).map(([l, db]) => [db, l]));
 let shown = 0;
 for (const rec of data) {
   if (shown >= 3) break;
-  const xr = byHash.get(rec[ci.national_id_hash]);
-  if (!xr) continue;
-  const hasFu = String(xr[124] ?? '').trim() !== '' || String(xr[123] ?? '').trim() !== '';
+  const cands = byHash.get(rec[ci.national_id_hash]);
+  if (!cands || !cands.length) continue;
+  // baris Excel yang paling cocok dengan record CSV ini
+  let xr = cands[0], best = -1;
+  for (const c of cands) {
+    let score = 0;
+    for (const db of FOCUS) {
+      const letter = letterOf[db];
+      const xv = c[colIdx(letter)];
+      if (xv == null || isBlankish(String(xv).trim())) continue;
+      const cv = rec[ci[db]];
+      const ok = db === 'tgl_fu1' ? parseExcelDate(xv) === cv : String(xv).trim() === String(cv).trim();
+      if (ok) score++;
+    }
+    if (score > best) { best = score; xr = c; }
+  }
+  const hasFu = [123, 124].some((i) => xr[i] != null && String(xr[i]).trim() !== '');
   if (!hasFu) continue;
   shown++;
-  console.log(`\nBaris Excel dengan FU1:`);
+  console.log(`\nBaris Excel dengan FU1 (NIK hash ${rec[ci.national_id_hash].slice(0, 12)}…):`);
   for (const db of FOCUS) {
-    const letter = Object.keys(MAP).find((l) => MAP[l] === db);
-    const xv = xr[colIdx(letter)];
+    const xv = xr[colIdx(letterOf[db])];
     const cv = rec[ci[db]];
-    const same = String(xv ?? '').trim() === String(cv ?? '').trim();
+    const same = db === 'tgl_fu1'
+      ? parseExcelDate(xv) === cv
+      : String(xv ?? '').trim() === String(cv ?? '').trim();
     console.log(`  ${same ? '✅' : '❌'} ${db.padEnd(16)} excel=${JSON.stringify(String(xv ?? '')).slice(0, 55)}`);
     console.log(`     ${''.padEnd(16)} csv  =${JSON.stringify(String(cv ?? '')).slice(0, 55)}`);
   }
 }
+if (!shown) console.log('  (tidak ada record dengan FU1 — kolom FU1 di Excel memang kosong)');

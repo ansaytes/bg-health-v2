@@ -1,13 +1,13 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
 import { MCU_FIELDS, TOTAL_COLS, TEXT_NA_INDICES } from './mcu-fields';
-import { assessZonasi, calcBMI, calcMCHC, calcPct, calcDiabetes, calcPerluFU, calcFramingham } from './zonasi-engine';
+import { getMissingZonasiInputs } from './zonasi-engine';
 import { applyMCUCalculations, buildAutomaticFollowUpRecommendations } from './mcu-calculations';
 
 export type PageTab = 'home' | 'dashboard' | 'data-entry' | 'administrator';
 export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan' | 'inventory-dashboard';
 export type AdminSidebar = 'lagging-indicator' | 'review-mcu' | 'input-jadwal-mcu' | 'kunjungan-admin' | 'health-campaign' | 'kelola-pengguna';
-export type DataEntrySidebar = 'input-jadwal-mcu';
+export type DataEntrySidebar = 'gangguan-tidur' | 'kesehatan-mental' | 'input-jadwal-mcu';
 export type HomeSidebar = 'semua-feed' | 'health-campaign' | 'health-talk' | 'podcast' | 'news';
 export type ReviewStep = 'search' | 'ocr' | 'form';
 
@@ -60,6 +60,13 @@ interface MCUStore {
   // MCU form data
   formData: Record<string, string>;
   autoRekFU: string;
+  /** Zona hasil kalkulasi terakhir, untuk tampilan ringkasan. */
+  zonasi: string;
+  /**
+   * Parameter objektif zonasi yang belum terisi. Kolom kuesioner dan
+   * riwayat TIDAK ada di sini karena kosong diartikan normal.
+   */
+  parameterBelumDinilai: string[];
   setFieldValue: (id: string, value: string) => void;
   setFormBatch: (data: Record<string, string>) => void;
   resetForm: () => void;
@@ -119,6 +126,8 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
 
   formData: initialFormData(),
   autoRekFU: '',
+  zonasi: '',
+  parameterBelumDinilai: [],
   setFieldValue: (id, value) => {
     set(state => ({
       formData: { ...state.formData, [id]: value },
@@ -134,7 +143,7 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
     }));
     setTimeout(() => get().runAutoCalcs(), 0);
   },
-  resetForm: () => set({ formData: initialFormData(), autoRekFU: '', employee: null, reviewStep: 'search' }),
+  resetForm: () => set({ formData: initialFormData(), autoRekFU: '', zonasi: '', parameterBelumDinilai: [], employee: null, reviewStep: 'search' }),
 
   searchingEmployee: false,
   setSearchingEmployee: (v) => set({ searchingEmployee: v }),
@@ -161,88 +170,33 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
   runAutoCalcs: () => {
     const currentState = get();
     const fd = currentState.formData;
+
+    // Seluruh kolom kalkulasi dihitung oleh engine yang SAMA dengan yang
+    // dipakai server saat menyimpan (applyMCUCalculations). Menyalin
+    // rumusnya di sini pernah menyebabkan hasil form berbeda dengan
+    // hasil tersimpan, jadi salinan itu dihapus.
+    const calculated = applyMCUCalculations({ ...fd }) as Record<string, unknown>;
+
+    // Kolom yang boleh ditulis balik ke formstate.
+    const CALCULATED_KEYS = [
+      'bmi', 'mchc', 'pta',
+      'fvcPct', 'fev1Pct', 'fev1FvcAct', 'fev1FvcPct',
+      'diabetes', 'egfr', 'tglExpired',
+      'diagnosaMedis', 'ringkasanKuesioner', 'hasilKebugaran',
+      'itemFU', 'perluFU',
+      'framScore', 'framProb', 'framKat',
+      'zonasi', 'triggerZona', 'pengendalian',
+    ] as const;
+
     const updates: Record<string, string> = {};
-
-    // BMI
-    const bb = parseFloat(fd.bb);
-    const tb = parseFloat(fd.tb);
-    const bmiVal = calcBMI(isNaN(bb) ? null : bb, isNaN(tb) ? null : tb);
-    if (bmiVal !== null) updates.bmi = String(bmiVal);
-
-    // MCHC
-    const hbVal = parseFloat(fd.hb);
-    const hctVal = parseFloat(fd.hematokrit);
-    const mchcVal = calcMCHC(isNaN(hbVal) ? null : hbVal, isNaN(hctVal) ? null : hctVal);
-    if (mchcVal !== null) updates.mchc = String(mchcVal);
-
-    // Spirometry percentages
-    const fvcAct = parseFloat(fd.fvcAct);
-    const fvcPred = parseFloat(fd.fvcPred);
-    const fvcPctVal = calcPct(isNaN(fvcAct) ? null : fvcAct, isNaN(fvcPred) ? null : fvcPred);
-    if (fvcPctVal !== null) updates.fvcPct = String(fvcPctVal);
-
-    const fev1Act = parseFloat(fd.fev1Act);
-    const fev1Pred = parseFloat(fd.fev1Pred);
-    const fev1PctVal = calcPct(isNaN(fev1Act) ? null : fev1Act, isNaN(fev1Pred) ? null : fev1Pred);
-    if (fev1PctVal !== null) updates.fev1Pct = String(fev1PctVal);
-
-    // FEV1/FVC
-    const fev1FvcPred = parseFloat(fd.fev1FvcPred);
-    const fev1FvcActVal = (fvcAct > 0 && fev1Act > 0) ? fev1Act / fvcAct : null;
-    if (fev1FvcActVal !== null) updates.fev1FvcAct = String(parseFloat(fev1FvcActVal.toFixed(2)));
-
-    const fev1FvcPctVal = calcPct(
-      fev1FvcActVal,
-      isNaN(fev1FvcPred) ? null : fev1FvcPred
-    );
-    if (fev1FvcPctVal !== null) updates.fev1FvcPct = String(fev1FvcPctVal);
-
-    // Diabetes
-    updates.diabetes = calcDiabetes(
-      isNaN(parseFloat(fd.gdp)) ? null : parseFloat(fd.gdp),
-      isNaN(parseFloat(fd.gd2pp)) ? null : parseFloat(fd.gd2pp),
-      isNaN(parseFloat(fd.hba1c)) ? null : parseFloat(fd.hba1c),
-    );
-
-    // Perlu FU
-    const kesVendor = fd.kesVendor;
-    const hasAbnormal = Object.entries(fd).some(([key, val]) => {
-      if (!val || val === 'N/A' || val === 'DBN') return false;
-      const field = MCU_FIELDS.find(f => f.id === key);
-      if (!field || field.autoCalc || field.id === 'kesVendor' || field.id === 'rekQSHE' || field.id === 'catatan') return false;
-      return true;
-    });
-    if (!fd.perluFU) updates.perluFU = calcPerluFU(kesVendor, hasAbnormal);
-    if (fd.tglMCU) {
-      const mcuDate = new Date(`${fd.tglMCU}T00:00:00`);
-      if (!Number.isNaN(mcuDate.getTime())) {
-        mcuDate.setFullYear(mcuDate.getFullYear() + 1);
-        updates.tglExpired = mcuDate.toISOString().slice(0, 10);
-      }
+    for (const key of CALCULATED_KEYS) {
+      const value = calculated[key];
+      if (value === null || value === undefined) continue;
+      updates[key] = String(value);
     }
 
-    // Framingham
-    const fram = calcFramingham(fd);
-    updates.framScore = String(fram.score);
-    updates.framProb = String(fram.prob).replace(/%+/g, '%');
-    updates.framKat = fram.kat;
-
-    // Zonasi
-    const zResult = assessZonasi(fd, fd.jenisKelamin);
-    updates.zonasi = zResult.zona;
-    updates.triggerZona = zResult.triggers.join(' | ');
-    updates.pengendalian = zResult.pengendalian;
-
-    const formulaValues = applyMCUCalculations({ ...fd, ...updates });
-    for (const key of ['diagnosaMedis', 'itemFU', 'tglExpired']) {
-      const value = formulaValues[key];
-      if (value !== null && value !== undefined) updates[key] = String(value);
-    }
-    const automaticRecommendations = buildAutomaticFollowUpRecommendations({
-      ...formulaValues,
-      ...updates,
-      bmi: updates.bmi || formulaValues.bmi,
-    }).join(' | ');
+    // Rekomendasi follow up: pertahankan pilihan manual QSHE Medic.
+    const automaticRecommendations = buildAutomaticFollowUpRecommendations(calculated as Record<string, string>).join(' | ');
     const currentRecommendations = fd.rekFU || '';
     if (!currentRecommendations || (currentState.autoRekFU && currentRecommendations === currentState.autoRekFU)) {
       updates.rekFU = automaticRecommendations;
@@ -258,8 +212,19 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
         changed = true;
       }
     }
-    if (changed || nextAutoRekFU !== currentState.autoRekFU) {
-      set({ formData: newFd, autoRekFU: nextAutoRekFU });
+    const zonasi = String(calculated.zonasi ?? '');
+    const missing = getMissingZonasiInputs(fd as Record<string, string | number | undefined>);
+    const missingKey = missing.join('|');
+    if (changed
+      || nextAutoRekFU !== currentState.autoRekFU
+      || zonasi !== currentState.zonasi
+      || missingKey !== currentState.parameterBelumDinilai.join('|')) {
+      set({
+        formData: newFd,
+        autoRekFU: nextAutoRekFU,
+        zonasi,
+        parameterBelumDinilai: missing,
+      });
     }
   },
 

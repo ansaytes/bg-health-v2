@@ -34,12 +34,21 @@ yarn-error.log*
 .env.*.local
 !.env.example
 
-# supabase migrations
+# Backup SQL lokal tidak ikut masuk. Yang di-version-control hanya berkas
+# migrasi yang benar-benar dibutuhkan aplikasi.
 supabase-migrations/
 *.sql
 supabase/
 supabase/migrations/
 supabase/migrations/*.sql
+
+# Pengecualian untuk migrasi STD-006 Rev001. Tanpa ini, database di lingkungan
+# lain tidak bisa disiapkan dan kolom mcu_ess / mcu_mental_health tidak akan
+# pernah ada. Berkas lain di folder ini tetap TIDAK ikut: 006, 007, dan
+# kunjungan_klinik_2026.sql memuat data kesehatan karyawan dalam plaintext.
+!supabase/
+!supabase/migrations/
+!supabase/migrations/2026-10-02_std006_ptm_ess_mental_health.sql
 
 # database
 dev.db
@@ -51,6 +60,38 @@ dev.db-journal
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# hasil kompilasi engine kalkulasi MCU untuk script import
+scripts/.build/
+scripts/.build.staging/
+
+# artefak import MCU: memuat NIK terenkripsi, hash, dan hasil laboratorium
+scripts/mcu-import-bulk-upload.csv
+scripts/mcu-import-instructions.txt
+scripts/mcu-import-batches/
+scripts/mcu-import-generated.sql
+scripts/mcu-import-duplicates.txt
+scripts/mcu-duplicate-report.json
+
+# laporan baris yang ditolak import: memuat NIK KTP dan nama dalam bentuk
+# plaintext, jadi tidak boleh masuk ke repository sama sekali
+scripts/mcu-import-report-rejected.csv
+scripts/mcu-import-report-rejected.txt
+
+# script sekali pakai untuk import historis MCU 2026.
+# Tidak dipakai aplikasi dan tidak perlu di-push; hapus setelah import selesai.
+scripts/audit-formula-drift.mjs
+scripts/audit-duplicates.mjs
+scripts/confirm-tglmcu.mjs
+scripts/scan-bad-dates.mjs
+scripts/test-insert.mjs
+scripts/test-insert-all.mjs
+scripts/verify-view-ranking.mjs
+scripts/tmp-derive-cols.mjs
+
+# pembaca DOCX untuk menyinkronkan ulang naskah SOP. Bergantung pada path
+# absolut dokumen di mesin developer, jadi tidak berguna di repo.
+scripts/tmp-read-sop.mjs
 
 # misc
 local-*

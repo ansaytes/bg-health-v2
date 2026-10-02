@@ -5,8 +5,12 @@ import {
   calcFramingham,
   calcMCHC,
   calcPct,
+  calcPTA,
   calcEgfrCkdEpi2021,
 } from '@/lib/zonasi-engine';
+import { buildDiagnosisList, formatDiagnosis } from '@/lib/mcu-diagnosis';
+import { summariseQuestionnaires } from '@/lib/questionnaire-scores';
+import { classifyFitnessTest } from '@/lib/clinical-classification';
 
 type MCUValues = Record<string, string | number | null | undefined>;
 
@@ -144,94 +148,10 @@ export function buildAutomaticFollowUpRecommendations(values: MCUValues): string
   return [...recommendations];
 }
 
-function buildClinicalSummary(values: MCUValues) {
-  const findings: string[] = [];
-  const systolic = numberValue(values.tdS);
-  const diastolic = numberValue(values.tdD);
-  const bmi = numberValue(values.bmi);
-  const hb = numberValue(values.hb);
-  const leukosit = numberValue(values.leukosit);
-  const eritrosit = numberValue(values.eritrosit);
-  const hematokrit = numberValue(values.hematokrit);
-  const trombosit = numberValue(values.trombosit);
-  const chol = numberValue(values.chol);
-  const tg = numberValue(values.tg);
-  const ldl = numberValue(values.ldl);
-  const hdl = numberValue(values.hdl);
-  const gdp = numberValue(values.gdp);
-  const au = numberValue(values.au);
-  const ureum = numberValue(values.ureum);
-  const kreatinin = numberValue(values.kreatinin);
-  const ggt = numberValue(values.ggt);
-  const alp = numberValue(values.alp);
-  const billirubin = numberValue(values.billirubin);
-  const psa = numberValue(values.psa);
-  const gd2pp = numberValue(values.gd2pp);
-  const hba1c = numberValue(values.hba1c);
-  const gender = text(values.jenisKelamin);
-
-  if (abnormal(values.gigiMulut)) findings.push(text(values.gigiMulut));
-  if (abnormal(values.fisikHeadToToe)) findings.push(text(values.fisikHeadToToe));
-  if (abnormal(values.hemoroid)) findings.push(text(values.hemoroid).match(/Menolak RT|N\/A/) ? 'Pemeriksaan Hemoroid Belum Dilakukan' : text(values.hemoroid));
-  if (abnormal(values.fisikMata)) findings.push(text(values.fisikMata));
-  if (abnormal(values.visusJauh, ['N/A']) && !/6\/6|5\/5|20\/20|Koreksi/i.test(text(values.visusJauh))) findings.push('Visual Impairment');
-  if (abnormal(values.visusDekat, ['N/A']) && !/6\/6|5\/5|20\/20|J1|Koreksi/i.test(text(values.visusDekat))) findings.push('Visual Impairment (Near)');
-  if (text(values.defWarna) && !['Normal', 'N/A'].includes(text(values.defWarna))) findings.push('Color Vision Deficiency');
-  if (abnormal(values.lapangPandang)) findings.push('Visual Field Defect');
-  if (systolic !== null && diastolic !== null) {
-    if (systolic >= 180 || diastolic >= 120) findings.push('Hypertensive Crisis');
-    else if (systolic >= 160 || diastolic >= 100) findings.push('Uncontrolled Hypertension');
-    else if (systolic >= 140 || diastolic >= 90) findings.push('Hypertension Stage 2');
-    else if (systolic >= 130 || diastolic >= 80) findings.push('Hypertension Stage 1');
-    else if (systolic >= 120 && systolic <= 129 && diastolic < 80) findings.push('Elevated Blood Pressure');
-  }
-
-  if (bmi !== null && bmi >= 25) findings.push(bmi >= 35 ? 'Obesitas II' : bmi >= 30 ? 'Obesitas I' : 'Overweight');
-  if (hb !== null && (hb > 16.5 || hb < 12)) findings.push(hb > 16.5 ? 'Polisitemia (Hb High)' : 'Anemia');
-  if (leukosit !== null && (leukosit > 11 || leukosit < 4)) findings.push(leukosit > 11 ? 'Leukositosis' : 'Leukopenia');
-  if (eritrosit !== null && hematokrit !== null && (eritrosit > 6.2 || hematokrit > 54)) findings.push('Polisitemia');
-  if (trombosit !== null && (trombosit > 400 || trombosit < 150)) findings.push(trombosit > 400 ? 'Trombositosis' : 'Trombositopenia');
-  if (chol !== null && chol >= 200) findings.push('Hypercholesterolemia');
-  if (tg !== null && tg >= 150) findings.push('Hypertriglyceridemia');
-  if (ldl !== null && ldl >= 100) findings.push('Elevated LDL');
-  if (hdl !== null && ((gender.includes('Laki') && hdl < 40) || (gender.includes('Perempuan') && hdl < 50))) findings.push('Low HDL');
-  if ((gdp !== null && gdp >= 126) || (gd2pp !== null && gd2pp >= 200) || (hba1c !== null && hba1c >= 6.5)) findings.push('Diabetes Mellitus');
-  if (gdp !== null && gdp >= 100 && gdp <= 125) findings.push('Prediabetes');
-  if (au !== null && ((gender.includes('Laki') && au > 7) || (gender.includes('Perempuan') && au > 6))) findings.push('Hyperuricemia');
-  if (ureum !== null && ureum > 48.5) findings.push('Azotemia');
-  // DH follows the workbook's literal threshold (>=40); DK uses >=1.4 separately.
-  if (kreatinin !== null && kreatinin >= 40) findings.push('Renal Impairment');
-  const sgot = numberValue(values.sgot);
-  const sgpt = numberValue(values.sgpt);
-  if (sgot !== null && sgpt !== null && sgot >= 40 && sgpt >= 41) findings.push('Transaminitis (AST & ALT High)');
-  else if (sgot !== null && sgot >= 40) findings.push('Transaminitis (AST High)');
-  else if (sgpt !== null && sgpt >= 41) findings.push('Transaminitis (ALT High)');
-  if (ggt !== null && ggt >= 61) findings.push('Cholestasis (GGT High)');
-  if (alp !== null && alp >= 147) findings.push('Cholestasis (ALP High)');
-  if (billirubin !== null && billirubin > 1.2) findings.push('Hyperbilirubinemia');
-  if (psa !== null && psa >= 4) findings.push(psa >= 10 ? 'High PSA' : 'Elevated PSA');
-  if (abnormal(values.hbsag, ['N/A', 'Non - Reaktif'])) findings.push('Hepatitis B');
-  if (abnormal(values.vdrl, ['N/A', 'Non - Reaktif'])) findings.push('Syphilis');
-  if (abnormal(values.tpha, ['N/A', 'Non - Reaktif'])) findings.push('Syphilis (TPHA+)');
-  if (abnormal(values.hiv, ['N/A', 'Non - Reaktif'])) findings.push('HIV Infection');
-  if (abnormal(values.chestXR)) findings.push(`CXR : Kesan ${text(values.chestXR)}`);
-  if (abnormal(values.lumboXR)) findings.push(`Lumbosacral XR : ${text(values.lumboXR)}`);
-  if (abnormal(values.ecgHasil)) findings.push(`ECG : ${text(values.ecgHasil)}`);
-  if (abnormal(values.tmHasil)) findings.push(`Treadmill test : ${text(values.tmHasil)}`);
-  if (abnormal(values.usg)) findings.push(`USG (${text(values.usg)})`);
-  if (abnormal(values.ul)) findings.push(`UL : ${text(values.ul)}`);
-  if (abnormal(values.spiInterp, ['N/A', 'Normal'])) findings.push(`${text(values.spiInterp)} Lung Disease`);
-  if (abnormal(values.audInterp, ['N/A', 'Normal', 'Normal Audiometry'])) findings.push(text(values.audInterp));
-  if (abnormal(values.tesKebugaran, ['N/A', 'DBN', 'Normal']) &&
-      /Kurang|Buruk/i.test(text(values.tesKebugaran))) {
-    findings.push(text(values.tesKebugaran));
-  }
-  return findings.filter(Boolean);
-}
-
 /**
- * Applies the calculated columns before persistence. These are the database-side
- * equivalents of the formula columns maintained by the Excel/Google Sheet.
+ * Applies the calculated columns before persistence. These are the
+ * database-side equivalents of the formula columns maintained by the
+ * Excel/Google Sheet.
  */
 export function applyMCUCalculations(values: MCUValues): MCUValues {
   const result = { ...values };
@@ -259,16 +179,32 @@ export function applyMCUCalculations(values: MCUValues): MCUValues {
   const fev1FvcPct = calcPct(fev1FvcAct, fev1FvcPred);
   if (fev1FvcPct !== null) result.fev1FvcPct = fev1FvcPct;
 
+  // PTA = rata-rata ambang dengar 500/1000/2000/4000 Hz (rumus WHO).
+  // Angka inilah yang dipakai klasifikasi NIHL pada STD-006, sehingga zona
+  // tidak lagi bergantung pada teks interpretasi audiometri.
+  const pta = calcPTA([
+    numberValue(result.acr_500), numberValue(result.acr_1k),
+    numberValue(result.acr_2k), numberValue(result.acr_4k),
+  ]);
+  if (pta !== null) result.pta = pta;
+
   result.diabetes = calcDiabetes(
     numberValue(result.gdp),
     numberValue(result.gd2pp),
     numberValue(result.hba1c),
   );
   result.tglExpired = addOneYear(result.tglMCU);
-  const findings = buildClinicalSummary(result);
+
+  // Diagnosa medis dihitung otomatis dari seluruh temuan, memakai istilah
+  // diagnosis bahasa Inggris hasil klasifikasi SOP (tanpa kode ICD-10).
+  // Nilai lama dari Excel sengaja dikosongkan oleh pipeline import agar
+  // tidak ikut dipertahankan (lihat scripts/lib/mcu-calc-bridge.mjs).
+  const diagnosisEntries = buildDiagnosisList(result);
   if (!text(result.diagnosaMedis)) {
-    result.diagnosaMedis = findings.join(', ');
+    result.diagnosaMedis = formatDiagnosis(diagnosisEntries);
   }
+  const findings = diagnosisEntries.map((entry) => entry.diagnosis);
+
   // DK is formula-driven in the spreadsheet. It remains empty for Fit To Work.
   result.itemFU = buildFormulaFollowUp(result);
   // DI is a Ya/Tidak dropdown in the workbook, so preserve an extracted/manual value.
@@ -276,12 +212,20 @@ export function applyMCUCalculations(values: MCUValues): MCUValues {
     result.perluFU = text(result.kesVendor) && text(result.kesVendor) !== 'Fit To Work' && findings.length > 0 ? 'Ya' : 'Tidak';
   }
 
-  const calculationInput: Record<string, string | number | undefined> = Object.fromEntries(
-    Object.entries(result).map(([key, value]) => [key, value === null ? undefined : value]),
-  );
-  calculationInput.egfr = numberValue(result.egfr)
-    ?? calcEgfrCkdEpi2021(result.kreatinin, result.usia, String(result.jenisKelamin || ''))
-    ?? undefined;
+  // eGFR: pakai nilai laboratorium bila tersedia, kalau kosong hitung sendiri
+  // dengan CKD-EPI 2021 (src/lib/zonasi-engine.ts). Tanpa ini, zonasi akan
+  // berbalik ke "Belum Lengkap" padahal kreatinin dan usia sudah tersedia.
+  const egfr = numberValue(result.egfr)
+    ?? calcEgfrCkdEpi2021(result.kreatinin ?? undefined, result.usia ?? undefined, String(result.jenisKelamin || ''));
+  if (egfr !== null) result.egfr = egfr;
+
+  const calculationInput: Record<string, string | number | undefined> = {};
+  for (const [key, value] of Object.entries(result)) {
+    if (typeof value === 'string' || typeof value === 'number') {
+      calculationInput[key] = value;
+    }
+  }
+  calculationInput.egfr = egfr ?? undefined;
   const framingham = calcFramingham(calculationInput);
   result.framScore = framingham.score;
   result.framProb = String(framingham.prob).replace(/%+/g, '%');
@@ -291,6 +235,25 @@ export function applyMCUCalculations(values: MCUValues): MCUValues {
   result.zonasi = zonasi.zona;
   result.triggerZona = zonasi.triggers.join(' | ');
   result.pengendalian = zonasi.pengendalian;
+  result.frekuensiEvaluasi = zonasi.frekuensiEvaluasi;
+  result.catatanSOP = zonasi.catatanSOP.join(' | ');
+
+  // Ringkasan parameter kuesioner, ditulis ke kolom catatan agar mudah
+  // dibaca QSHE Medic tanpa membuka tabel kuesioner.
+  const questionnaire = summariseQuestionnaires({
+    essScore: numberValue(result.essScore),
+    srq20Score: numberValue(result.srq20Score),
+    dassDepresi: numberValue(result.dassDepresi),
+    dassCemas: numberValue(result.dassCemas),
+    dassStres: numberValue(result.dassStres),
+    sdsScore: numberValue(result.sdsScore),
+  });
+  if (questionnaire) result.ringkasanKuesioner = questionnaire;
+
+  // Uji kebugaran fisik (6MWT / Harvard Step Test) BUKAN parameter zonasi
+  // menurut SOP, tapi tetap perlu tercatat pada diagnosis.
+  const fitness = classifyFitnessTest(text(result.tesKebugaran));
+  if (fitness) result.hasilKebugaran = `${fitness.label} (${fitness.detail})`;
 
   return result;
 }
