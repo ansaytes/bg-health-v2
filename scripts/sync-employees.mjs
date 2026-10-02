@@ -27,14 +27,13 @@ if (FORCE_FRESH) {
 
 const COLUMN_MAP = {
   0: 'nik', 1: 'nama', 2: 'gender', 3: 'department', 4: 'division',
-  5: 'client',
+  5: 'client', // USER column - represents client name
   6: 'level_golongan', 7: 'job_position', 8: 'tanggal_pkwt', 9: 'masa_kerja',
   10: 'employee_status', 11: 'employment_status', 12: 'tanggal_resign',
   13: 'national_id', 14: 'phone_number', 15: 'place_of_birth',
   16: 'birth_date', 17: 'age', 18: 'last_education', 19: 'place_of_hire',
-  20: 'site_name', 21: 'address', 22: 'religion', 23: 'grading',
-  24: 'marital_status', 25: 'child', 26: 'specification_job',
-  27: 'area', 28: 'spesification',
+  20: 'site_name', 21: 'address', 22: 'religion',
+  27: 'area', // AB column - area from spreadsheet
 };
 
 const DATE_COLUMNS = new Set(['tanggal_pkwt', 'tanggal_resign', 'birth_date']);
