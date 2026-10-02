@@ -294,6 +294,11 @@ tebakan.
 
 > Database saat dokumen ini ditulis masih **kosong** (0 record), jadi import
 > belum pernah dijalankan.
+>
+> **Untuk panduan langkah demi langkah beserta hasil verifikasi yang harus
+> muncul di setiap langkah, lihat
+> [`TUTORIAL-IMPORT-MCU.md`](./TUTORIAL-IMPORT-MCU.md).** Bagian di bawah
+> hanya rujukan ringkas.
 
 ### Langkah 1 — Terapkan migrasi
 
