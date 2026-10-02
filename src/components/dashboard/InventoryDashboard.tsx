@@ -131,6 +131,7 @@ export default function InventoryDashboard() {
   const [actionTab, setActionTab] = useState<'semua' | 'habis' | 'kritis' | 'fast' | 'fefo'>('semua');
   const [isDashboardView, setIsDashboardView] = useState(true);
   const [arrowRotation, setArrowRotation] = useState(0);
+  const [chartRenderKey, setChartRenderKey] = useState(0);
 
   const handleToggleView = useCallback(() => {
     setArrowRotation((r) => r + 180);
@@ -139,6 +140,13 @@ export default function InventoryDashboard() {
       return !prev;
     });
   }, []);
+
+  // Trigger chart re-render when switching to dashboard view
+  useEffect(() => {
+    if (isDashboardView) {
+      setChartRenderKey(prev => prev + 1);
+    }
+  }, [isDashboardView]);
 
   const openTableTab = useCallback((tab: 'semua' | 'habis' | 'kritis' | 'fast' | 'fefo') => {
     setActionTab(tab);
@@ -562,7 +570,7 @@ export default function InventoryDashboard() {
       topExpSoonChart.current?.destroy();
       fastMovingChart.current?.destroy();
     };
-  }, [items, loading, isAuthorized]);
+  }, [items, loading, isAuthorized, chartRenderKey]);
 
   // Access guard
   if (!isAuthorized) {
@@ -780,7 +788,7 @@ export default function InventoryDashboard() {
               </div>
 
               {/* 4 Charts Grid */}
-              <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+              <div key="charts-grid" style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
         {/* Chart 1: Top Sudah Expired */}
         <div className="card glow-coral" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Stok Obat/BHP Expired</h3>
