@@ -562,7 +562,7 @@ export default function InventoryDashboard() {
       topExpSoonChart.current?.destroy();
       fastMovingChart.current?.destroy();
     };
-  }, [items, loading, isAuthorized, isDashboardView]);
+  }, [items, loading, isAuthorized]);
 
   // Access guard
   if (!isAuthorized) {
