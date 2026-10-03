@@ -11,6 +11,7 @@ import dotenv from 'dotenv';
 import { parseExcelDate } from './lib/excel-date.mjs';
 import { encrypt, hashField } from './lib/encryption.mjs';
 import { calculateRecord } from './lib/mcu-calc-bridge.mjs';
+import { kanonik } from './lib/ecg-treadmill-canonical.mjs';
 
 const __f = fileURLToPath(import.meta.url);
 const __d = path.dirname(__f);
@@ -390,6 +391,17 @@ if (dropped.length) {
 
 // Kolom turunan (zonasi, diagnosa_medis, item_fu, fram_*) dihitung SETELAH
 // dedupe, karena gabungan kolom di atas bisa mengubah nilai acunya.
+//
+// EKG dan treadmill diseragamkan lebih dulu. Excel sumber ditulis bebas
+// dan penuh salah eja ("Sinus Bradicardia", "Synus Rythm"), yang
+// tidak ada di dropdown MCU dan tidak bisa diklasifikasi dengan andal.
+// Pemetaan dilakukan sebelum calculateRecord supaya diagnosa_medis di
+// CSV memakai nilai yang sama dengan yang dipakai aplikasi.
+for (const record of byKey.values()) {
+  record.raw.ecg_hasil = kanonik('ecg_hasil', record.raw.ecg_hasil);
+  record.raw.tm_hasil = kanonik('tm_hasil', record.raw.tm_hasil);
+}
+
 const finalRecords = [...byKey.values()].map((r) => encryptMCURecord(calculateRecord(r.raw)));
 console.log(`✅ Total record final: ${finalRecords.length}`);
 

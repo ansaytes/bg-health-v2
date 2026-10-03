@@ -36,6 +36,8 @@ export interface MCUFieldDef {
   max?: number;
   options?: string[];
   multiple?: boolean;
+  /** Select ini menyediakan opsi "Lainnya" dengan input teks bebas. */
+  allowCustom?: boolean;
   autoCalc?: boolean;
   autoCalcFrom?: string[];
   textNA?: boolean;
@@ -150,6 +152,11 @@ const ECG_OPTIONS = [
   'Left Ventricular Hypertrophy',
   'Right Ventricular Hypertrophy',
   'Premature Ventricular Contraction',
+  // Puncak T menjunjai hiperkalemia. Tidak ada kategori khusus untuk ini
+// pada STD-006 Rev001, jadi hanya ditandai "kuning" (perlu konfirmasi),
+// bukan "merah". Sumber data memuat satu bacaan seperti ini dan tidak
+// ada opsi lain yang tepat untuk memetanya.
+  'Peaked T Waves',
   // Merah
   'Atrioventricular Block',
   'Atrial Fibrillation',
@@ -272,8 +279,8 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   // tetap ditampilkan sebagai opsi "(nilai lama)" oleh ReviewMCU, sehingga
   // operator tidak mengira field kosong lalu menimpanya. Lihat
   // opsiDenganNilaiLama di ReviewMCU.tsx.
-  f('ecgHasil', 'ECG', 'imaging', 'select', select(ECG_OPTIONS)),
-  f('tmHasil', 'Treadmill', 'imaging', 'select', select(TREADMILL_OPTIONS)),
+  f('ecgHasil', 'ECG', 'imaging', 'select', { ...select(ECG_OPTIONS), allowCustom: true }),
+  f('tmHasil', 'Treadmill', 'imaging', 'select', { ...select(TREADMILL_OPTIONS), allowCustom: true }),
   f('chestXR', 'Chest X-Ray', 'imaging', 'textarea'),
   f('lumboXR', 'Lumbosacral X-Ray', 'imaging', 'textarea'),
   f('usg', 'USG', 'imaging', 'textarea'),

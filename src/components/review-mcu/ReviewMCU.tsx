@@ -73,6 +73,32 @@ function opsiDenganNilaiLama(options: string[] | undefined, value: string): { li
   return { list: [current, ...list], nilaiLama: current };
 }
 
+// Nilai sentinel untuk opsi "isi manual", mengikuti pola yang sudah dipakai
+// InputLaggingIndicator. Nilai ini tidak pernah ikut disimpan; isinya
+// diambil dari input teks dan dibuang sebelum submit.
+const OPSI_MANUAL = '__custom__';
+
+/**
+ * Menentukan apa yang harus ditampilkan di select.
+ *
+ * Kalau nilai saat ini bukan pilihan dropdown — termasuk ketika operator
+ * sedang mengisi manual — select diarahkan ke opsi "Lainnya" supaya
+ * input teksnya terlihat. Tanpa ini, mengisi teks manual tidak akan
+ * menampilkan apa pun di select dan operator mengira tidak tersimpan.
+ */
+function selectMenampilkanNilai(
+  opsi: { list: string[]; nilaiLama: string | null },
+  value: string,
+  modeManual: boolean,
+): string {
+  if (modeManual) return OPSI_MANUAL;
+  const current = value?.trim();
+  if (!current) return '';
+  if (opsi.list.includes(current)) return current;
+  if (opsi.nilaiLama === current) return current;
+  return OPSI_MANUAL;
+}
+
 function detectSearchBy(query: string): SearchBy {
   const trimmed = query.trim();
   if (/[a-zA-Z]/.test(trimmed)) return 'nama';
@@ -809,6 +835,10 @@ function FieldRenderer({
   const normalRange = getNormalRangeText(field, gender);
   const selectedValues = field.multiple ? value.split(' | ').filter(Boolean) : [];
   const opsiSelect = opsiDenganNilaiLama(field.options, value);
+  // Input manual hanya muncul setelah operator memilih "Lainnya". Nilai
+  // lama yang tidak ada di dropdown ditampilkan sebagai opsi biasa, bukan
+  // lewat input manual, supaya tidak harus disalin ulang.
+  const [modeManual, setModeManual] = useState(false);
   const egfrEstimate = field.id === 'egfr' && (!value || value.toLowerCase() === 'n/a')
     ? calcEgfrCkdEpi2021(creatinine, age, gender)
     : null;
@@ -869,9 +899,20 @@ function FieldRenderer({
             </div>
           </details>
         ) : (
+          <>
           <select
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
+            value={selectMenampilkanNilai(opsiSelect, value, modeManual)}
+            onChange={(e) => {
+              const picked = e.target.value;
+              if (picked === OPSI_MANUAL) {
+                // Jangan langsung menimpa nilai lama: operator mungkin
+                // sedang menyalinnya ke input manual.
+                setModeManual(true);
+                return;
+              }
+              setModeManual(false);
+              onChange(picked);
+            }}
             className={`iOS-select h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground ${abnormal ? 'border-red-500/60 dark:border-red-500/50' : ''}`}
           >
             <option value="">Pilih...</option>
@@ -881,7 +922,17 @@ function FieldRenderer({
             {opsiSelect.list.map((opt) => (
               <option key={opt} value={opt}>{opt}</option>
             ))}
+            {field.allowCustom && <option value={OPSI_MANUAL}>Lainnya (isi manual)...</option>}
           </select>
+          {field.allowCustom && modeManual && (
+            <Input
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder="Tulis hasil bacaan, mis. Sinus Rythm dg Peaked T Waves"
+              className="mt-2 h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground"
+            />
+          )}
+          </>
         )
       ) : field.type === 'date' ? (
         <Input

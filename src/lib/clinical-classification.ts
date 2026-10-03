@@ -603,6 +603,13 @@ function classifyTemuanEcg(frasa: string): Temuan | null {
     return { severity: 'kuning', label: 'Low Atrial Rhythm' };
   }
 
+  // Puncak T menjunjai (hiperkalemia). Tidak ada kategori khusus untuk ini
+  // pada STD-006 Rev001, jadi hanya "kuning" — perlu konfirmasi, bukan
+  // langsung zona merah.
+  if (/peaked\s*t|t\s*wave|gelombang t tinggi|t\. wave/.test(frasa)) {
+    return { severity: 'kuning', label: 'Peaked T Waves (Suspect Hyperkalemia)' };
+  }
+
   // Incomplete RBBB dicek SEBELUM RBBB lengkap, karena "Incomplete RBBB"
   // juga mengandung frasa "rbbb".
   const incomplete = /incomplete|incomplate|incomplet|\birbbb\b/.test(frasa);

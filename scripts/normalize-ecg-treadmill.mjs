@@ -26,6 +26,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import { loadMCUFields } from './lib/mcu-calc-bridge.mjs';
+import { PETA_ECG, PETA_TMT } from './lib/ecg-treadmill-canonical.mjs';
 
 const { MCU_FIELD_DEFINITION } = loadMCUFields();
 
@@ -53,62 +54,7 @@ const db = createClient(
 // salah. Nilai itu dibiarkan apa adanya dan dilaporkan.
 // ────────────────────────────────────────────────────────────
 
-const PETA_ECG = new Map(Object.entries({
-  // Normal
-  'Normal Resting ECG': 'Normal Sinus Rhythm',
-  'normal Resting ECG': 'Normal Sinus Rhythm',
-  'Normal Variations of Resting ECG': 'Normal Variant of Resting ECG',
-  'Normal Variations of Resting ECG (Sinus Bradikardi )': 'Normal Variant of Resting ECG',
-  'Normal Variations of Resting ECG (Synus Bradichardia)': 'Normal Variant of Resting ECG',
-  'Sinus Bradycardia (Normal Variant)': 'Normal Variant of Resting ECG',
-  'Sinus Bradicardy (Normal Variant)': 'Normal Variant of Resting ECG',
-  'Synus Bradicardia (Normal Variant)': 'Normal Variant of Resting ECG',
-  'RAD Normal Variant': 'Normal Variant of Resting ECG',
-
-  // Sinus
-  'Sinus Bradycardia': 'Sinus Bradycardia',
-  'Sinus Bradicardia': 'Sinus Bradycardia',
-  'Synus Bradicardia': 'Sinus Bradycardia',
-  'Sinus Bradikardia': 'Sinus Bradycardia',
-  'Sinus Arhytmia': 'Sinus Arrhythmia',
-  'Sinus Arhytmia + LVH': 'Sinus Arrhythmia',
-  'Sinus Bradikardia with Arhytmia': 'Sinus Bradycardia',
-  'Sinus Tachicardi 108 bpm': 'Sinus Tachycardia',
-  'Sinus Tachicardi 107 bpm': 'Sinus Tachycardia',
-  'Sinus Tachycardia (HR 115 bpm)': 'Sinus Tachycardia',
-  'Sinus Takikardi (110x/mnt)': 'Sinus Tachycardia',
-
-  // Bundle branch block dan sumbu
-  'IRBBB': 'Incomplete Right Bundle Branch Block',
-  'Incomplete RBBB': 'Incomplete Right Bundle Branch Block',
-  'RBBB': 'Right Bundle Branch Block',
-  'Synus Rythm w/ RBBB w/o RVH': 'Right Bundle Branch Block',
-  'RBBB Incomplate + Right Axis Deviation': 'Right Axis Deviation',
-  'RAD': 'Right Axis Deviation',
-  'Deviasi Sumbu Kanan': 'Right Axis Deviation',
-  'LAD': 'Left Axis Deviation',
-  'Susp. LAD': 'Left Axis Deviation',
-
-  // Hipertrofi dan ritme atrium
-  'LVH': 'Left Ventricular Hypertrophy',
-  'Low Atrial Rythm': 'Low Atrial Rhythm',
-
-  // Lograd dan abnormal
-  'PVC': 'Premature Ventricular Contraction',
-  'ST Abnormal': 'ST Segment Abnormal',
-  'AMI Anteroseptal': 'Acute Myocardial Infarction',
-  'Sinus dengan OMI Inferior': 'Acute Myocardial Infarction',
-  'Atrial Fibrillation with moderate and RVH': 'Atrial Fibrillation',
-  'AV Block': 'Atrioventricular Block',
-  'Sinus rhythm, first degree atrioventricular block': 'Atrioventricular Block',
-  'Susp. LBBB': 'Left Bundle Branch Block',
-}));
-
-const PETA_TMT = new Map(Object.entries({
-  'Inconclusive (HR<85% Target)': 'Non-Diagnostic Test (Target Heart Rate Not Achieved)',
-  'Inconclusive (HR < 85% Target HR)': 'Non-Diagnostic Test (Target Heart Rate Not Achieved)',
-  'PVC Occasional LV Apex': 'Ventricular Ectopy during Exercise',
-}));
+const PETA = { ecg_hasil: PETA_ECG, tm_hasil: PETA_TMT };
 
 const Halaman = 1000;
 
@@ -129,7 +75,7 @@ async function bacaKolom(kolom) {
 console.log(APPLY ? 'MODE: TULIS' : 'MODE: LAPORAN (--apply untuk menulis)');
 
 const temuan = [];
-for (const [kolom, peta] of [['ecg_hasil', PETA_ECG], ['tm_hasil', PETA_TMT]]) {
+for (const [kolom, peta] of Object.entries(PETA)) {
   const baris = await bacaKolom(kolom);
   const perubahan = new Map();
   for (const row of baris) {
