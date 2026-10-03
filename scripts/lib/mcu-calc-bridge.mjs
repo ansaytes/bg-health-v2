@@ -194,4 +194,15 @@ export function loadClinicalClassification() {
   return require(path.join(OUT_DIR, 'clinical-classification.js'));
 }
 
+/**
+ * Memuat definisi field MCU, termasuk daftar opsi select.
+ *
+ * Dipakai untuk mengunci daftar opsi dengan kamus temuan: opsi dropdown
+ * dan klasifikasi otomatis harus menghasilkan severity yang sama.
+ */
+export function loadMCUFields() {
+  if (needsBuild()) build();
+  return require(path.join(OUT_DIR, 'mcu-fields.js'));
+}
+
 export { OUTPUT_KEYS as CALCULATED_COLUMNS };

@@ -103,8 +103,17 @@ function buildFormulaFollowUp(values: MCUValues) {
   add(abnormal(values.hiv, ['N/A', 'Non - Reaktif']), `HIV : ${text(values.hiv)}`);
   add(abnormal(values.chestXR), `CXR : Kesan ${text(values.chestXR)}`);
   add(abnormal(values.lumboXR), `Lumbosacral XR : ${text(values.lumboXR)}`);
-  add(abnormal(values.ecgHasil), `ECG : ${text(values.ecgHasil)}`);
-  add(abnormal(values.tmHasil), `Treadmill : ${text(values.tmHasil)}`);
+  // EKG dan treadmill memakai dropdown, jadi nilai "normal" di sini
+  // mengikuti daftar opsi, bukan tebakan. "Normal ..." sudah otomatis
+  // tertangani aturan \bNORMAL\b di abnormal(), tapi "Not Performed" dan
+  // "Negative Ischemic Response" tidak mengandung kata itu, sehingga
+  // harus dikecualikan secara eksplisit supaya pemeriksaan yang normal
+  // atau tidak dilakukan tidak masuk daftar follow-up.
+  add(abnormal(values.ecgHasil, ['N/A', 'DBN', 'Not Performed']), `ECG : ${text(values.ecgHasil)}`);
+  add(
+    abnormal(values.tmHasil, ['N/A', 'DBN', 'Not Performed', 'Negative Ischemic Response']),
+    `Treadmill : ${text(values.tmHasil)}`,
+  );
   add(abnormal(values.usg), `USG : ${text(values.usg)}`);
   add(abnormal(values.spiInterp, ['N/A', 'Normal']), `Spirometry : ${text(values.spiInterp)}`);
   add(abnormal(values.audInterp, ['N/A', 'Normal', 'Normal Audiometry']), `Audiometry : ${text(values.audInterp)}`);

@@ -122,6 +122,56 @@ const select = (options: string[]): FieldOptions => ({ options, textNA: true });
 const neurologicalSelect = (options: string[]): FieldOptions => ({ options, textNA: false });
 const kesimpulanOptions = ['Fit To Work', 'Fit With Note', 'Fit With Restriction', 'Currently Unfit', 'Unfit', 'Temporary Unfit'];
 
+/**
+ * Opsi hasil bacaan EKG.
+ *
+ * Urutan mengikuti tingkat keparahan: normal dulu, lalu kuning, lalu
+ * merah, supaya operator yang memilih dari atas melihat temuan ringan
+ * lebih dulu dan tidak salah pilih.
+ *
+ * Istilah diagnosis memakai bahasa Inggris dan penulisan yang sama
+ * dengan label di clinical-classification.ts, supaya diagnosis otomatis
+ * dan pilihan operator tidak berbeda.
+ */
+const ECG_OPTIONS = [
+  // Normal
+  'Normal Sinus Rhythm',
+  'Normal Variant of Resting ECG',
+  // Kuning
+  'Sinus Bradycardia',
+  'Sinus Tachycardia',
+  'Sinus Arrhythmia',
+  'Low Atrial Rhythm',
+  'Right Axis Deviation',
+  'Left Axis Deviation',
+  'Incomplete Right Bundle Branch Block',
+  'Right Bundle Branch Block',
+  'Left Ventricular Hypertrophy',
+  'Right Ventricular Hypertrophy',
+  'Premature Ventricular Contraction',
+  // Merah
+  'Atrioventricular Block',
+  'Atrial Fibrillation',
+  'ST Segment Abnormal',
+  'Acute Myocardial Infarction',
+  'Not Performed',
+];
+
+/**
+ * Opsi hasil Exercise Treadmill Test.
+ *
+ * "Non-Diagnostic Test" sengaja berdiri sendiri dan bukan dianggap
+ * normal: tesnya tidak selesai sehingga wajib diulang.
+ */
+const TREADMILL_OPTIONS = [
+  'Negative Ischemic Response',
+  'Positive Ischemic Response',
+  'Non-Diagnostic Test (Target Heart Rate Not Achieved)',
+  'Ventricular Ectopy during Exercise',
+  'Abnormal Blood Pressure Response',
+  'Not Performed',
+];
+
 export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   // B–J Identitas
   f('nationalId', 'NIK KTP', 'identity', 'text', { textNA: false }),
@@ -209,10 +259,22 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('psa', 'PSA', 'drug', 'number', { unit: 'ng/mL', normalRange: '<4' }),
 
   // BQ–BU Imaging
+  //
+  // EKG dan treadmill memakai dropdown, bukan teks bebas. Tujuannya
+  // menyeragamkan penulisan: data lama filled bebas penuh dengan salah eja
+  // ("Sinus Bradicardia", "Synus Rythm", "Sinus Takikardi") sehingga
+  // pencarian dan laporan tidak bisa diandalkan. Semua opsi ditulis dalam
+  // istilah diagnosis bahasa Inggris yang sama dengan output
+  // clinical-classification.ts.
+  //
+  // Daftar ini TIDAK membatasi data lama. Nilai lama yang tidak ada di sini
+  // tetap ditampilkan sebagai opsi "(nilai lama)" oleh ReviewMCU, sehingga
+  // operator tidak mengira field kosong lalu menimpanya. Lihat
+  // opsiDenganNilaiLama di ReviewMCU.tsx.
+  f('ecgHasil', 'ECG', 'imaging', 'select', select(ECG_OPTIONS)),
+  f('tmHasil', 'Treadmill', 'imaging', 'select', select(TREADMILL_OPTIONS)),
   f('chestXR', 'Chest X-Ray', 'imaging', 'textarea'),
   f('lumboXR', 'Lumbosacral X-Ray', 'imaging', 'textarea'),
-  f('ecgHasil', 'ECG', 'imaging', 'textarea'),
-  f('tmHasil', 'Treadmill', 'imaging', 'textarea'),
   f('usg', 'USG', 'imaging', 'textarea'),
 
   // Riwayat penyakit & skor kuesioner — parameter zonasi menurut

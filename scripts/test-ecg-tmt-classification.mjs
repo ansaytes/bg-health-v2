@@ -12,9 +12,10 @@
 // Choi: null = tidak muncul sebagai diagnosis sama sekali.
 // ============================================================
 
-import { loadClinicalClassification } from './lib/mcu-calc-bridge.mjs';
+import { loadClinicalClassification, loadMCUFields } from './lib/mcu-calc-bridge.mjs';
 
 const { classifyEcg, classifyTreadmill } = loadClinicalClassification();
+const { MCU_FIELD_DEFINITION } = loadMCUFields();
 
 // [nilai di DB, severity yang diharapkan, catatan]
 const ECG = [
@@ -100,4 +101,147 @@ for (const [uji, fn, label] of [
 console.log(
   `\n${gagal === 0 ? 'LULUS' : 'GAGAL'}: ${gagal} ketidakcocokan dari ${ECG.length + TMT.length} kasus.`,
 );
-process.exit(gagal === 0 ? 0 : 1);
+
+// ============================================================
+// KUNCI: setiap opsi dropdown harus mengklasifikasi seperti maksudnya.
+//
+// Field EKG dan treadmill memakai select, jadi operator tidak bisa
+// memilih nilai yang tidak ada di daftar. Konsekuensinya daftar itu
+// menjadi satu-satunya sumber nilai baru — dan kalau satu opsi
+// mengklasifikasi salah, diagnosis otomatis ikut salah untuk semua
+// record yang memakai opsi itu.
+//
+// Contoh jebakan yang dicek di sini: "Incomplete Right Bundle Branch
+// Block" mengandung frasa "Bundle Branch Block", jadi harus tetap
+// normal, bukan naik seperti RBBB lengkap.
+// ============================================================
+
+// Opsi yang memang HARUS normal: tidak boleh jadi diagnosis.
+const OPSI_NORMAL = new Set([
+  'Normal Sinus Rhythm',
+  'Normal Variant of Resting ECG',
+  // Jebakan yang harus dijaga: opsi ini mengandung frasa
+  // "Bundle Branch Block" seperti RBBB lengkap, tapi IRBBB sendirian
+  // tetap normal menurut STD-006.
+  'Incomplete Right Bundle Branch Block',
+  'Negative Ischemic Response',
+  'Not Performed',
+]);
+
+// Opsi yang harus Merah karena kritis per STD-006.
+const OPSI_MERAH = new Set([
+  'Atrioventricular Block',
+  'Atrial Fibrillation',
+  'ST Segment Abnormal',
+  'Acute Myocardial Infarction',
+  'Positive Ischemic Response',
+]);
+
+console.log('\n=== Opsi dropdown -> klasifikasi ===');
+const opsiGagal = [];
+for (const id of ['ecgHasil', 'tmHasil']) {
+  const field = MCU_FIELD_DEFINITION.find((f) => f.id === id);
+  if (!field) { opsiGagal.push(`${id}: field tidak ditemukan`); continue; }
+  if (field.type !== 'select') { opsiGagal.push(`${id}: masih bertipe ${field.type}, seharusnya select`); continue; }
+  const fn = id === 'ecgHasil' ? classifyEcg : classifyTreadmill;
+  for (const opt of field.options ?? []) {
+    const dapat = fn(opt)?.severity ?? null;
+    const harap = OPSI_NORMAL.has(opt) ? null : OPSI_MERAH.has(opt) ? 'merah' : 'kuning';
+    const ok = dapat === harap;
+    if (!ok) opsiGagal.push(`${id} "${opt}": dapat ${dapat ?? 'normal'}, harap ${harap ?? 'normal'}`);
+    console.log(
+      `  ${ok ? 'OK  ' : 'GAGAL'} [${id}] ${opt.padEnd(48)} -> ${dapat ?? 'normal (tanpa diagnosis)'}`,
+    );
+  }
+}
+
+// Nilai legacy di luar dropdown harus tetap diklasifikasi PERSIS seperti
+// sebelum field diubah jadi select. Kalau ini berubah, 1299 record lama
+// ikut salah diagnosis tanpa ada yang menyadarinya.
+//
+// Diuji lewat expectation yang sama, bukan sekadar "harus ada temuan":
+// nilai normal yang memang normal memang tidak menghasilkan diagnosis.
+const LEGACY = [
+  ['ecg', 'Normal Resting ECG', null],
+  ['ecg', 'Normal Variations of Resting ECG (Sinus Bradikardi )', null],
+  ['ecg', 'Sinus Bradicardia', 'kuning'],
+  ['ecg', 'Sinus Arhytmia + LVH', 'kuning'],
+  ['ecg', 'Synus Rythm w/ RBBB w/o RVH', 'kuning'],
+  ['ecg', 'ST Abnormal', 'merah'],
+  ['ecg', 'Sinus dengan OMI Inferior', 'merah'],
+  ['tmt', 'Negative Ischemic Response', null],
+  ['tmt', 'Inconclusive (HR<85% Target)', 'kuning'],
+];
+
+console.log('\n=== Nilai legacy di luar dropdown ===');
+for (const [jenis, nilai, harap] of LEGACY) {
+  const out = jenis === 'tmt' ? classifyTreadmill(nilai) : classifyEcg(nilai);
+  const dapat = out?.severity ?? null;
+  const ok = dapat === harap;
+  if (!ok) opsiGagal.push(`legacy "${nilai}": dapat ${dapat ?? 'normal'}, harap ${harap ?? 'normal'}`);
+  console.log(
+    `  ${ok ? 'OK  ' : 'GAGAL'} ${nilai.padEnd(48)} -> ${dapat ?? 'normal (tanpa diagnosis)'}`,
+  );
+}
+
+// ============================================================
+// KUNCI: opsi normal tidak boleh masuk daftar follow-up.
+//
+// diagnosa_medis sudah dikunci di atas, tapi kolom item_fu /
+// perlu_fu punya jalurnya sendiri (buildFormulaFollowUp di
+// mcu-calculations.ts) dengan daftar normalnya sendiri. Kalau opsi
+// "Not Performed" atau "Negative Ischemic Response" lolos ke sana, hasil
+// MCU yang sebenarnya bersih akan punya daftar tindak lanjut.
+// ============================================================
+
+const { calculateRecord } = await import('./lib/mcu-calc-bridge.mjs');
+
+const NORMAL_HARUS_BERSIH = {
+  ecg_hasil: ['Normal Sinus Rhythm', 'Normal Variant of Resting ECG', 'Not Performed'],
+  tm_hasil: ['Not Performed', 'Negative Ischemic Response'],
+};
+
+console.log('\n=== Opsi normal tidak masuk follow-up ===');
+const fuGagal = [];
+for (const [kolom, nilaiList] of Object.entries(NORMAL_HARUS_BERSIH)) {
+  for (const nilai of nilaiList) {
+    const out = calculateRecord({ [kolom]: nilai, td_s: '120', td_d: '80' });
+    const itemFu = String(out.item_fu ?? '');
+    const perluFu = String(out.perlu_fu ?? '');
+    const tercemar = new RegExp(kolom === 'ecg_hasil' ? 'ECG\\s*:' : 'Treadmill\\s*:').test(itemFu);
+    if (tercemar) fuGagal.push(`${kolom} "${nilai}" masuk follow-up: ${itemFu.slice(0, 60)}`);
+    console.log(
+      `  ${tercemar ? 'GAGAL' : 'OK  '} ${nilai.padEnd(48)} item_fu${tercemar ? ' TERCEMAR' : ' bersih'}`,
+    );
+  }
+}
+
+// Sebaliknya, opsi abnormal HARUS masuk follow-up.
+console.log('\n=== Opsi abnormal masuk follow-up ===');
+for (const [kolom, nilai] of [
+  ['ecg_hasil', 'ST Segment Abnormal'],
+  ['ecg_hasil', 'Atrial Fibrillation'],
+  ['tm_hasil', 'Positive Ischemic Response'],
+  ['tm_hasil', 'Non-Diagnostic Test (Target Heart Rate Not Achieved)'],
+]) {
+  const out = calculateRecord({ [kolom]: nilai, td_s: '120', td_d: '80' });
+  const itemFu = String(out.item_fu ?? '');
+  const ada = new RegExp(kolom === 'ecg_hasil' ? 'ECG\\s*:' : 'Treadmill\\s*:').test(itemFu);
+  if (!ada) fuGagal.push(`${kolom} "${nilai}" TIDAK masuk follow-up padahal abnormal`);
+  console.log(`  ${ada ? 'OK  ' : 'GAGAL'} ${nilai.padEnd(48)} item_fu ada`);
+}
+
+if (opsiGagal.length > 0) {
+  console.log(`\nMASIH SALAH (klasifikasi):`);
+  for (const g of opsiGagal) console.log(`  - ${g}`);
+}
+
+if (fuGagal.length > 0) {
+  console.log(`\nMASIH SALAH (follow-up):`);
+  for (const g of fuGagal) console.log(`  - ${g}`);
+}
+const totalSemua = gagal + opsiGagal.length + fuGagal.length;
+console.log(
+  `\n${totalSemua === 0 ? 'LULUS' : 'GAGAL'}: ${totalSemua} ketidakcocokan total (nilai lama, opsi dropdown, follow-up).`,
+);
+process.exit(totalSemua === 0 ? 0 : 1);

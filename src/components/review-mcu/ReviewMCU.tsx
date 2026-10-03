@@ -49,6 +49,30 @@ function normalizeGender(value?: string | null) {
   return value || '';
 }
 
+/**
+ * Opsi select ditambah nilai lama yang tidak ada di daftar.
+ *
+ * Field EKG dan treadmill tadinya tulis bebas, jadi database sudah
+ * berisi nilai yang tidak akan pernah muncul di daftar kanonis —
+ * termasuk yang salah eja seperti "Sinus Bradicardia" dan "Synus Rythm".
+ *
+ * Tanpa ini, <select> akan menampilkan "Pilih..." untuk nilai yang
+ * sebenarnya berisi data, karena tidak ada <option> yang cocok. Operator
+ * lalu mengira field kosong dan menimpanya saat menyimpan, sehingga
+ * hasil pemeriksaan lama hilang. Nilai lama karena itu tetap
+ * ditampilkan sebagai opsi tersendiri.
+ *
+ * Opsi lama diberi label "(nilai lama)" supaya jelas bahwa itu bacaan
+ * free-text yang belum dimasukkan ke daftar kanonis, sekaligus
+ * memberi arah ke operator untuk memilih versi baku.
+ */
+function opsiDenganNilaiLama(options: string[] | undefined, value: string): { list: string[]; nilaiLama: string | null } {
+  const list = options ?? [];
+  const current = value?.trim();
+  if (!current || list.includes(current)) return { list, nilaiLama: null };
+  return { list: [current, ...list], nilaiLama: current };
+}
+
 function detectSearchBy(query: string): SearchBy {
   const trimmed = query.trim();
   if (/[a-zA-Z]/.test(trimmed)) return 'nama';
@@ -784,6 +808,7 @@ function FieldRenderer({
   const abnormal = isAbnormal(field, value, gender);
   const normalRange = getNormalRangeText(field, gender);
   const selectedValues = field.multiple ? value.split(' | ').filter(Boolean) : [];
+  const opsiSelect = opsiDenganNilaiLama(field.options, value);
   const egfrEstimate = field.id === 'egfr' && (!value || value.toLowerCase() === 'n/a')
     ? calcEgfrCkdEpi2021(creatinine, age, gender)
     : null;
@@ -850,7 +875,10 @@ function FieldRenderer({
             className={`iOS-select h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground ${abnormal ? 'border-red-500/60 dark:border-red-500/50' : ''}`}
           >
             <option value="">Pilih...</option>
-            {field.options?.map((opt) => (
+            {opsiSelect.nilaiLama && (
+              <option value={opsiSelect.nilaiLama}>{opsiSelect.nilaiLama} (nilai lama)</option>
+            )}
+            {opsiSelect.list.map((opt) => (
               <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
