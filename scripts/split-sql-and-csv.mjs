@@ -12,6 +12,7 @@ import { parseExcelDate } from './lib/excel-date.mjs';
 import { encrypt, hashField } from './lib/encryption.mjs';
 import { calculateRecord } from './lib/mcu-calc-bridge.mjs';
 import { kanonik } from './lib/ecg-treadmill-canonical.mjs';
+import { bersihkanPlaceholder } from './lib/placeholder-text.mjs';
 
 const __f = fileURLToPath(import.meta.url);
 const __d = path.dirname(__f);
@@ -397,9 +398,24 @@ if (dropped.length) {
 // tidak ada di dropdown MCU dan tidak bisa diklasifikasi dengan andal.
 // Pemetaan dilakukan sebelum calculateRecord supaya diagnosa_medis di
 // CSV memakai nilai yang sama dengan yang dipakai aplikasi.
+// Sel placeholder Excel ("#N/A") dibuang lebih dulu. Kalau tidak,
+// engine menerimanya sebagai nilai yang sah: satu record punya
+// jenis_kelamin = "#N/A" sehingga Framingham gagal dihitung dan
+// kolomnya berisi "Cek Parameter" — padahal tidak ada data gender
+// sama sekali.
+let placeholderDibuang = 0;
 for (const record of byKey.values()) {
+  for (const [kolom, nilai] of Object.entries(record.raw)) {
+    if (bersihkanPlaceholder(nilai) === null && nilai != null && String(nilai).trim() !== '') {
+      record.raw[kolom] = null;
+      placeholderDibuang += 1;
+    }
+  }
   record.raw.ecg_hasil = kanonik('ecg_hasil', record.raw.ecg_hasil);
   record.raw.tm_hasil = kanonik('tm_hasil', record.raw.tm_hasil);
+}
+if (placeholderDibuang > 0) {
+  console.log(`\n🧹 Placeholder spreadsheet dibuang: ${placeholderDibuang} sel`);
 }
 
 const finalRecords = [...byKey.values()].map((r) => encryptMCURecord(calculateRecord(r.raw)));

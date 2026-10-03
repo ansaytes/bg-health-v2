@@ -149,6 +149,12 @@ const ECG_OPTIONS = [
   'Incomplete Right Bundle Branch Block',
   'Right Bundle Branch Block',
   'Left Bundle Branch Block',
+  // Derajat satu hanya perpanjangan PR dan tidak gawat, jadi tidak
+  // digabung dengan AV block lengkap yang merah di bawah.
+  'First-Degree Atrioventricular Block',
+  // AV block lengkap / derajat tiga: jantung tidak bisa conduct dari
+  // atrium ke ventrikel. Paling gawat di antara FINDINGS AV block.
+  'Complete Atrioventricular Block',
   'Left Ventricular Hypertrophy',
   'Right Ventricular Hypertrophy',
   'Premature Ventricular Contraction',
@@ -359,7 +365,11 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('fev1Act', 'Spirometry FEV1 ACT', 'spirometry', 'number', { unit: 'L' }),
   f('fev1Pct', 'Spirometry FEV1 %', 'spirometry', 'number', { unit: '%', autoCalc: true, autoCalcFrom: ['fev1Act', 'fev1Pred'] }),
   f('fev1FvcPred', 'Spirometry FEV1%G PRED', 'spirometry', 'number', { unit: '%' }),
-  f('fev1FvcAct', 'Spirometry FEV1%G ACT', 'spirometry', 'number', { unit: '%', autoCalc: true, autoCalcFrom: ['fev1Act', 'fvcAct'] }),
+  // fev1FvcAct disimpan sebagai RASIO desimal (0,83), bukan persen, karena
+// engine mcu-calculations menghitungnya sebagai FEV1 aktual / FVC aktual.
+// Label sengaja tidak memakai satuan '%' supaya tidak dibaca 0,83 persen;
+// ambang 70% sudah dinormalisasi di dalam classifyLung.
+f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoCalc: true, autoCalcFrom: ['fev1Act', 'fvcAct'] }),
   f('fev1FvcPct', 'Spirometry FEV1%G %', 'spirometry', 'number', { unit: '%', autoCalc: true, autoCalcFrom: ['fev1FvcAct', 'fev1FvcPred'] }),
   f('spiInterp', 'Spirometry Interpretasi', 'spirometry'),
 

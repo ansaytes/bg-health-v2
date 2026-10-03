@@ -308,12 +308,28 @@ export function classifyLung(
   const interp = String(spiInterpretasi ?? '').toLowerCase();
   if (fev1Pct === null && fev1Fvc === null && fvcPct === null && !interp) return null;
 
+  // FEV1/FVC tersimpan sebagai DESIMAL (hasil bagi FEV1 aktual / FVC aktual,
+  // lihat mcu-calculations.ts), tetapi ambang PDPI ditulis dalam PERSEN.
+  // Tanpa normalisasi ini, 0,83 dianggap lebih kecil dari 70 dan SETIAP
+  // record terbaca sebagai obstruktif — termasuk yang rasionya normal.
+  //
+  // Nilai 1,5 dipakai sebagai batas: rasio paru tidak pernah melebihi 1,0
+  // dalam desimal, sedangkan persentase selalu di atas 1,5. Jadi tidak ada
+  // angka yang bisa salah ditafsirkan.
+  const rasio = fev1Fvc === null ? null : fev1Fvc <= 1.5 ? fev1Fvc * 100 : fev1Fvc;
+
   if (fev1Pct !== null) {
     if (fev1Pct < 50) {
       return { severity: 'merah', label: 'Severe Obstructive Lung Disease', detail: `FEV1 ${fmt(fev1Pct)}% of predicted` };
     }
-    if (fev1Pct < 80 || (fev1Fvc !== null && fev1Fvc < 70)) {
-      return { severity: 'kuning', label: 'Mild to Moderate Obstructive Lung Disease', detail: `FEV1 ${fmt(fev1Pct)}% of predicted, FEV1/FVC ${fmt(fev1Fvc ?? 0)}%` };
+// FEV1/FVC di bawah ambang PDPI menunjukkan obstruction, dan itu
+  // menurunkan ke kuning walaupun FEV1 % prediksi masih di atas 80.
+    if (fev1Pct < 80 || (rasio !== null && rasio < 70)) {
+      return {
+        severity: 'kuning',
+        label: 'Mild to Moderate Obstructive Lung Disease',
+        detail: `FEV1 ${fmt(fev1Pct)}% of predicted, FEV1/FVC ${fmt(rasio ?? 0)}%`,
+      };
     }
     if (fvcPct !== null && fvcPct < 80) {
       return { severity: 'kuning', label: 'Restrictive Lung Disease', detail: `FVC ${fmt(fvcPct)}% of predicted` };
@@ -575,6 +591,19 @@ function classifyTemuanEcg(frasa: string): Temuan | null {
   }
   if (/atrial fibrillation|\bfib\b|\baf\b(?!ter)/.test(frasa)) {
     return { severity: 'merah', label: 'Atrial Fibrillation' };
+  }
+  // AV block derajat SATU (first degree) diperiksa lebih dulu, karena
+  // kondisi ini hanya perpanjangan PR > 200 ms dan biasanya tidak
+  // gawat. Derajat dua dan tiga tetap merah. Kalau tidak dipisah, satu
+  // bacaan "first degree AV block" akan memicu zona merah padahal tidak
+  // gawat.
+  if (/\b(?:first|1st|1)\s*-?\s*degree\b[^,]{0,24}block|block[^,]{0,24}\b(?:first|1st|1)\s*-?\s*degree\b|derajat\s*(?:satu|1)\b[^,]{0,16}blok/.test(frasa)) {
+    return { severity: 'kuning', label: 'First-Degree Atrioventricular Block' };
+  }
+  // AV block LENGKAP / derajat tiga lebih dulu, karena ini yang paling
+  // gawat: jantung tidak bisa conducts dari atrium ke ventrikel.
+  if (/complete\s*(heart|av|atrioventricular)\s*block|third\s*degree|degree\s*(iii|3)\b|block\s*(iii|3)\b|blok\s*(jantung|av|atrioventricular)\s*(lengkap|total)|\b2\s*:\s*1\s*(block|blok)/.test(frasa)) {
+    return { severity: 'merah', label: 'Complete Atrioventricular Block' };
   }
   if (/(av|atrioventricular)\s*block|blok (av|atrioventricular)/.test(frasa)) {
     return { severity: 'merah', label: 'Atrioventricular Block' };

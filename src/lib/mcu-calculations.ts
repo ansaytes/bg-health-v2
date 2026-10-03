@@ -204,6 +204,19 @@ export function applyMCUCalculations(values: MCUValues): MCUValues {
   );
   result.tglExpired = addOneYear(result.tglMCU);
 
+  // eGFR: pakai nilai laboratorium bila tersedia, kalau kosong hitung sendiri
+  // dengan CKD-EPI 2021 (src/lib/zonasi-engine.ts). Tanpa ini, zonasi akan
+  // berbalik ke "Belum Lengkap" padahal kreatinin dan usia sudah tersedia.
+  //
+  // WAJIB DIHITUNG SEBELUM diagnosa. Dulu baris ini berada di bawah
+  // buildDiagnosisList, sehingga record yang eGFR-nya belum ada di Excel
+  // tetap membangun diagnosis tanpa temuan ginjal: CKD Stage G3a/G5
+  // hilang dari diagnosa_medis CSV import, padahal engine yang dijalankan
+  // di atas record yang sama akan menemukannya.
+  const egfr = numberValue(result.egfr)
+    ?? calcEgfrCkdEpi2021(result.kreatinin ?? undefined, result.usia ?? undefined, String(result.jenisKelamin || ''));
+  if (egfr !== null) result.egfr = egfr;
+
   // Diagnosa medis dihitung otomatis dari seluruh temuan, memakai istilah
   // diagnosis bahasa Inggris hasil klasifikasi SOP (tanpa kode ICD-10).
   // Nilai lama dari Excel sengaja dikosongkan oleh pipeline import agar
@@ -220,13 +233,6 @@ export function applyMCUCalculations(values: MCUValues): MCUValues {
   if (!text(result.perluFU)) {
     result.perluFU = text(result.kesVendor) && text(result.kesVendor) !== 'Fit To Work' && findings.length > 0 ? 'Ya' : 'Tidak';
   }
-
-  // eGFR: pakai nilai laboratorium bila tersedia, kalau kosong hitung sendiri
-  // dengan CKD-EPI 2021 (src/lib/zonasi-engine.ts). Tanpa ini, zonasi akan
-  // berbalik ke "Belum Lengkap" padahal kreatinin dan usia sudah tersedia.
-  const egfr = numberValue(result.egfr)
-    ?? calcEgfrCkdEpi2021(result.kreatinin ?? undefined, result.usia ?? undefined, String(result.jenisKelamin || ''));
-  if (egfr !== null) result.egfr = egfr;
 
   const calculationInput: Record<string, string | number | undefined> = {};
   for (const [key, value] of Object.entries(result)) {

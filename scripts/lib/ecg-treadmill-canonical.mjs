@@ -83,7 +83,7 @@ export const PETA_ECG = new Map(Object.entries({
   'Sinus dengan OMI Inferior': 'Acute Myocardial Infarction',
   'Atrial Fibrillation with moderate and RVH': 'Atrial Fibrillation',
   'AV Block': 'Atrioventricular Block',
-  'Sinus rhythm, first degree atrioventricular block': 'Atrioventricular Block',
+  'Sinus rhythm, first degree atrioventricular block': 'First-Degree Atrioventricular Block',
   'Susp. LBBB': 'Left Bundle Branch Block',
   // Puncak T menjunjai. Dulu tidak dipetakan karena tidak ada opsi
   // dropdown yang tepat; sekarang opsinya sudah ada.
