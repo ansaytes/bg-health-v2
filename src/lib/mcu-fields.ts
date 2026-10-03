@@ -146,6 +146,7 @@ const ECG_OPTIONS = [
   'Left Axis Deviation',
   'Incomplete Right Bundle Branch Block',
   'Right Bundle Branch Block',
+  'Left Bundle Branch Block',
   'Left Ventricular Hypertrophy',
   'Right Ventricular Hypertrophy',
   'Premature Ventricular Contraction',

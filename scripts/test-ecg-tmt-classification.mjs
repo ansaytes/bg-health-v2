@@ -134,6 +134,7 @@ const OPSI_MERAH = new Set([
   'Atrial Fibrillation',
   'ST Segment Abnormal',
   'Acute Myocardial Infarction',
+  'Left Bundle Branch Block',
   'Positive Ischemic Response',
 ]);
 
@@ -231,6 +232,78 @@ for (const [kolom, nilai] of [
   console.log(`  ${ada ? 'OK  ' : 'GAGAL'} ${nilai.padEnd(48)} item_fu ada`);
 }
 
+// ============================================================
+// KUNCI: daftar migrasi tidak boleh menulis nilai yang tidak ada di
+// dropdown.
+//
+// Script normalize-ecg-treadmill.mjs memetakan nilai lama ke nilai
+// kanonis. Kalau target pemetaan tidak ada di daftar opsi, operator
+// tidak akan pernah bisa memilih ulang nilai itu di form — recordnya
+// jadi memakai nilai yang tidak bisa dipertahankan.
+//
+// Ini sempat terjadi: "Left Bundle Branch Block" terpetakan tapi tidak
+// ada di dropdown, dan tes lama tidak menyadarinya karena hanya
+// mengiterasi opsi yang sudah ada di daftar.
+// ============================================================
+
+const petaMigrasi = {
+  ecgHasil: {
+    'Sinus Bradycardia': 'kuning',
+    'Sinus Tachycardia': 'kuning',
+    'Sinus Arrhythmia': 'kuning',
+    'Low Atrial Rhythm': 'kuning',
+    'Right Axis Deviation': 'kuning',
+    'Left Axis Deviation': 'kuning',
+    'Incomplete Right Bundle Branch Block': null,
+    'Right Bundle Branch Block': 'kuning',
+    'Left Bundle Branch Block': 'merah',
+    'Left Ventricular Hypertrophy': 'kuning',
+    'Right Ventricular Hypertrophy': 'kuning',
+    'Premature Ventricular Contraction': 'kuning',
+    'Atrioventricular Block': 'merah',
+    'Atrial Fibrillation': 'merah',
+    'ST Segment Abnormal': 'merah',
+    'Acute Myocardial Infarction': 'merah',
+    'Normal Sinus Rhythm': null,
+    'Normal Variant of Resting ECG': null,
+    'Not Performed': null,
+  },
+  tmHasil: {
+    'Negative Ischemic Response': null,
+    'Positive Ischemic Response': 'merah',
+    'Non-Diagnostic Test (Target Heart Rate Not Achieved)': 'kuning',
+    'Ventricular Ectopy during Exercise': 'kuning',
+    'Abnormal Blood Pressure Response': 'kuning',
+    'Not Performed': null,
+  },
+};
+
+console.log('\n=== Nilai migrasi ada di dropdown & klasifikasinya benar ===');
+const migrasiGagal = [];
+for (const [id, harusnya] of Object.entries(petaMigrasi)) {
+  const field = MCU_FIELD_DEFINITION.find((f) => f.id === id);
+  const opsi = field?.options ?? [];
+  const fn = id === 'ecgHasil' ? classifyEcg : classifyTreadmill;
+  for (const [nilai, severity] of Object.entries(harusnya)) {
+    const ada = opsi.includes(nilai);
+    const dapat = fn(nilai)?.severity ?? null;
+    const ok = ada && dapat === severity;
+    if (!ok) {
+      migrasiGagal.push(
+        `${id} "${nilai}": ${ada ? 'ada di dropdown' : 'TIDAK ADA DI DROPDOWN'}, klasifikasi ${dapat ?? 'normal'} (harap ${severity ?? 'normal'})`,
+      );
+    }
+    console.log(
+      `  ${ok ? 'OK  ' : 'GAGAL'} [${id}] ${nilai.padEnd(48)} -> ${dapat ?? 'normal'}${ada ? '' : '  TIDAK ADA DI DROPDOWN'}`,
+    );
+  }
+}
+
+if (migrasiGagal.length > 0) {
+  console.log(`\nMASIH SALAH (nilai migrasi):`);
+  for (const g of migrasiGagal) console.log(`  - ${g}`);
+}
+
 if (opsiGagal.length > 0) {
   console.log(`\nMASIH SALAH (klasifikasi):`);
   for (const g of opsiGagal) console.log(`  - ${g}`);
@@ -240,8 +313,8 @@ if (fuGagal.length > 0) {
   console.log(`\nMASIH SALAH (follow-up):`);
   for (const g of fuGagal) console.log(`  - ${g}`);
 }
-const totalSemua = gagal + opsiGagal.length + fuGagal.length;
+const totalSemua = gagal + opsiGagal.length + fuGagal.length + migrasiGagal.length;
 console.log(
-  `\n${totalSemua === 0 ? 'LULUS' : 'GAGAL'}: ${totalSemua} ketidakcocokan total (nilai lama, opsi dropdown, follow-up).`,
+  `\n${totalSemua === 0 ? 'LULUS' : 'GAGAL'}: ${totalSemua} ketidakcocokan total (nilai lama, opsi dropdown, follow-up, nilai migrasi).`,
 );
 process.exit(totalSemua === 0 ? 0 : 1);
