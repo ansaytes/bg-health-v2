@@ -57,7 +57,7 @@ import {
   toNumber,
   type Classification,
 } from '@/lib/clinical-classification';
-import { DRUG_TEST_LABEL } from '@/lib/clinical-classification';
+import { classifyEcg, classifyTreadmill, DRUG_TEST_LABEL } from '@/lib/clinical-classification';
 import { dassBandLabel, dassCategory, essBandLabel, sdsBandLabel, type DassDomain } from '@/lib/questionnaire-scores';
 
 export type MCURaw = Record<string, string | number | null | undefined>;
@@ -81,6 +81,7 @@ function txt(value: string | number | null | undefined): string {
 function isNormalText(value: string | number | null | undefined): boolean {
   const current = txt(value);
   if (!current) return true;
+  if (/normal\s*variation|normal\s*variant|variant\s*normal/.test(current)) return true;
   return /^(n\/a|-|tidak ada|tidak dilakukan|dbn|normal|negatif|non\s*-?\s*reaktif|within normal limit)$/i.test(current);
 }
 
@@ -241,11 +242,26 @@ function buildImagingEntries(values: MCURaw): DiagnosisEntry[] {
   if (isAbnormalFreeText(values.lumboXR)) {
     entries.push({ diagnosis: 'Lumbosacral X-Ray Abnormal', evidence: txt(values.lumboXR), severity: 'normal', system: 'Radiologi' });
   }
-  if (isAbnormalFreeText(values.ecgHasil)) {
-    entries.push({ diagnosis: 'Electrocardiogram Abnormal', evidence: txt(values.ecgHasil), severity: 'normal', system: 'Kardiovaskular' });
+  // EKG dan TMT bertulis bebas. Klasifikasi pakai kamus temuan, bukan
+  // sekadar "teksnya tidak kosong", supaya varian normal dan
+  // "Negative Ischemic Response" tidak muncul sebagai diagnosis.
+  const ekg = classifyEcg(values.ecgHasil);
+  if (ekg) {
+    entries.push({
+      diagnosis: ekg.label,
+      evidence: txt(values.ecgHasil),
+      severity: ekg.severity,
+      system: 'Kardiovaskular',
+    });
   }
-  if (isAbnormalFreeText(values.tmHasil)) {
-    entries.push({ diagnosis: 'Exercise Treadmill Test Abnormal', evidence: txt(values.tmHasil), severity: 'normal', system: 'Kardiovaskular' });
+  const treadmill = classifyTreadmill(values.tmHasil);
+  if (treadmill) {
+    entries.push({
+      diagnosis: treadmill.label,
+      evidence: txt(values.tmHasil),
+      severity: treadmill.severity,
+      system: 'Kardiovaskular',
+    });
   }
   if (isAbnormalFreeText(values.usg)) {
     entries.push({ diagnosis: 'Ultrasonography Abnormal', evidence: txt(values.usg), severity: 'normal', system: 'Radiologi' });

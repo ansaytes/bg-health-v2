@@ -183,4 +183,15 @@ export function loadQuestionnaireConclusion() {
   return require(path.join(OUT_DIR, 'questionnaire-conclusion.js'));
 }
 
+/**
+ * Memuat kamus temuan klinis (EKG, treadmill, audiometri, dan lain-lain).
+ *
+ * Dipisah agar pengujian free-text bertulis bebas menguji kamus yang sama
+ * dengan yang dipakai engine, bukan daftar ekspektasi yang ditulis ulang.
+ */
+export function loadClinicalClassification() {
+  if (needsBuild()) build();
+  return require(path.join(OUT_DIR, 'clinical-classification.js'));
+}
+
 export { OUTPUT_KEYS as CALCULATED_COLUMNS };

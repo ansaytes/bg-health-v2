@@ -462,6 +462,269 @@ export function classifyChestXr(chestXr: string | number | null | undefined): Cl
   return { severity: 'normal', label: 'Chest X-Ray Abnormal (Non-Specific Finding)', detail: raw };
 }
 
+// =============================================================
+// 13. Electrocardiogram (ECG) dan Exercise Treadmill Test
+//     SOP STD-006 Rev001 tidak memuat parameter ini. Klasifikasi
+//     di bawah mengikuti istilah bacaan yang lazim dipakai pada
+//     laporan EKG 12-lead dan Treadmill Bruce.
+// =============================================================
+//
+//  MENAPA KLASIFIKASI INI ADA, BUKAN CUMA "NORMAL / ABNORMAL"
+//
+//  Dua kelemahan fungsi isAbnormalFreeText() lama:
+//
+//  1. "Normal Resting ECG" dianggap abnormal, karena pencocokan dijepit
+//     dengan ^normal$ sehingga frasa yang diawali "Normal" tidak cocok.
+//     Akibatnya 928 record normal menghasilkan diagnosis "Electrocardiogram
+//     Abnormal". Itu membingungkan pembaca laporan.
+//
+//  2. Semua temuan diperlakukan sama. "RBBB Incomplate + Right Axis
+//     Deviation" dan "PVC Occasional LV Apex" sama-sama dianggap sekadar
+//     "abnormal", padahal keduanya berbeda tingkat.
+//
+//  DAN MENGAPA VARIAN NORMAL DIANGGAP NORMAL
+//
+//  "Normal Variations of Resting ECG", "Sinus Bradycardia (Normal Variant)",
+//  dan "IRBBB" adalah bacaan NORMAL. Sinus bradikardia pada orang yang terlatih
+//  adalah adaptasi fisiologis, bukan penyakit. Menandainya abnormal akan
+//  menimbulkan alarm palsu.
+//
+//  IRBBB (incomplete RBBB) sendiri juga varian normal yang sangat umum,
+//  terutama pada orang muda. Tapi IRBBB yang BERKOMBINASI dengan
+//  Right Axis Deviation baru bermakna, karena pola itu mencurigai
+//  hipertrofi ventrikel kanan atau hipertensi paru - relevan pada pekerja
+//  pertambangan yang PAPARAN DEBUNYA tinggi. Karena itu incomplete RBBB
+//  bernilai 'normal' saat sendirian, dan otomatis naik ke 'kuning' bila
+//  digabung temuan lain.
+//
+//  CATATAN KLINIS: ini SKRINING, bukan diagnosis. Dipakai untuk
+//  menentukan zona MCU; keputusan klinis tetap milik dokter.
+export const ECG_OPTIONS = [
+  'Normal Sinus Rhythm',
+  'Normal Variations of Resting ECG',
+  'Sinus Bradycardia (Normal Variant)',
+  'Incomplete Right Bundle Branch Block',
+  'Sinus Bradycardia',
+  'Sinus Tachycardia',
+  'Sinus Arrhythmia',
+  'Left Axis Deviation',
+  'Right Axis Deviation',
+  'Left Ventricular Hypertrophy',
+  'Right Ventricular Hypertrophy',
+  'Premature Ventricular Contraction',
+  'Low Atrial Rhythm',
+  'Incomplete Right Bundle Branch Block with Right Axis Deviation',
+  'Right Bundle Branch Block',
+  'Left Bundle Branch Block',
+  'Atrioventricular Block',
+  'Atrial Fibrillation',
+  'ST Segment Abnormal',
+  'Acute Myocardial Infarction',
+  'Other Finding (Requires Review)',
+  'Not Performed',
+] as const;
+
+export const TMT_OPTIONS = [
+  'Negative Ischemic Response',
+  'Negative Ischemic Response with Normal Blood Pressure Response',
+  'Positive Ischemic Response',
+  'Positive Ischemic Response with Hypotensive Blood Pressure Response',
+  'Exercise-Induced ST Depression',
+  'Abnormal Blood Pressure Response',
+  'Ventricular Ectopy during Exercise',
+  'Non-Diagnostic Test (Target Heart Rate Not Achieved)',
+  'Not Performed',
+] as const;
+
+interface Temuan {
+  severity: Severity;
+  label: string;
+}
+
+const TIDAK_DILAKUKAN = /^(n\/a|na|-|dbn|tidak dilakukan|tidak dilakukan|belum|tidak ada hasil|not performed|nil)$/i;
+
+/** Urutannya: makin ke kanan, makin serius. */
+const TINGKAT: Record<Severity, number> = {
+  'hijau': 0,
+  'normal': 1,
+  'tidak-dinilai': 2,
+  'kuning': 3,
+  'merah': 4,
+};
+
+/**
+ * Mengubah satu frasa hasil bacaan EKG menjadi temuan.
+ *
+ *_input_ sudah lowercase. Mengembalikan null berarti frasa itu tidak
+ * memuat temuan yang dikenali.
+ *
+ * Ejaan dari data lama sengaja ditoleransi: "Sinus Bradicardia",
+ * "Synus Rythm", "Sinus Takikardi", dan "Sinus Arhytmia" semuanya salah
+* eja tapi sudah tersimpan di database, dan classifier tidak boleh
+* berubah karena ejaan.
+*/
+function classifyTemuanEcg(frasa: string): Temuan | null {
+  if (!frasa) return null;
+
+  // ── Merah ──
+  if (/\bami\b|acute myocardial|myocardial infarct|\bomi\b|infark miokard/.test(frasa)) {
+    return { severity: 'merah', label: 'Acute Myocardial Infarction' };
+  }
+  if (/\bst\b[^,]{0,24}(abnormal|elevat|depress|changes|t\s*abnormal)|segment abnormal|\bst abnormal\b/.test(frasa)) {
+    return { severity: 'merah', label: 'ST Segment Abnormal' };
+  }
+  if (/atrial fibrillation|\bfib\b|\baf\b(?!ter)/.test(frasa)) {
+    return { severity: 'merah', label: 'Atrial Fibrillation' };
+  }
+  if (/(av|atrioventricular)\s*block|blok (av|atrioventricular)/.test(frasa)) {
+    return { severity: 'merah', label: 'Atrioventricular Block' };
+  }
+  if (/lbbb|left bundle/.test(frasa)) {
+    return { severity: 'merah', label: 'Left Bundle Branch Block' };
+  }
+
+  // ── Kuning ──
+  if (/brady|bradik|bradicar|bradich|bradic|bradikard/.test(frasa)) {
+    return { severity: 'kuning', label: 'Sinus Bradycardia' };
+  }
+  if (/tach|tachik|takik/.test(frasa)) {
+    return { severity: 'kuning', label: 'Sinus Tachycardia' };
+  }
+  if (/arrh|arhyt|arhythm|\baritmia\b/.test(frasa)) {
+    return { severity: 'kuning', label: 'Sinus Arrhythmia' };
+  }
+  if (/\bpvc\b|premature ventricular|ectopic|ektopik/.test(frasa)) {
+    return { severity: 'kuning', label: 'Premature Ventricular Contraction' };
+  }
+  if (/\blvh\b|\brvh\b|ventricular hypertrophy|hipertrofi ventrikel|hipertrofi ventrikula/.test(frasa)) {
+    return { severity: 'kuning', label: 'Ventricular Hypertrophy' };
+  }
+  if (/low atrial|atrial rhythm|ritme atrial/.test(frasa)) {
+    return { severity: 'kuning', label: 'Low Atrial Rhythm' };
+  }
+
+  // Incomplete RBBB dicek SEBELUM RBBB lengkap, karena "Incomplete RBBB"
+  // juga mengandung frasa "rbbb".
+  const incomplete = /incomplete|incomplate|incomplet|\birbbb\b/.test(frasa);
+  if (/rbbb|right bundle/.test(frasa)) {
+    return incomplete
+      ? { severity: 'normal', label: 'Incomplete Right Bundle Branch Block' }
+      : { severity: 'kuning', label: 'Right Bundle Branch Block' };
+  }
+  if (incomplete) {
+    return { severity: 'normal', label: 'Incomplete Right Bundle Branch Block' };
+  }
+
+  if (/axis deviation|deviasi sumbu|sumbu (kanan|kiri)|\blad\b|left axis|\brad\b|right axis/.test(frasa)) {
+    const kiri = /\blad\b|left axis|sumbu kiri/.test(frasa);
+    const kanan = /\brad\b|right axis|deviasi sumbu|sumbu kanan/.test(frasa);
+    if (kiri && !kanan) return { severity: 'kuning', label: 'Left Axis Deviation' };
+    if (kanan && !kiri) return { severity: 'kuning', label: 'Right Axis Deviation' };
+    return { severity: 'kuning', label: 'Axis Deviation' };
+  }
+
+  return null;
+}
+
+/**
+ * Mengklasifikasikan hasil bacaan EKG.
+ *
+ * Mengembalikan null bila hasilnya NORMAL, supaya tidak muncul di daftar
+ * diagnosis. Daftar diagnosis hanya untuk hal yang perlu ditindak.
+ *
+ * Bacaan gabungan ("Sinus Arhytmia + LVH") dipecah menjadi beberapa temuan,
+ * lalu diambil yang paling serius. Hasilnya bukan sekadar "abnormal", tetapi
+ * nama temuan yang bisa ditindaklanjuti.
+ */
+export function classifyEcg(ecg: string | number | null | undefined): Classification | null {
+  const raw = String(ecg ?? '').trim();
+  if (!raw || TIDAK_DILAKUKAN.test(raw)) return null;
+
+  const lower = raw.toLowerCase();
+
+  // Bacaan varian normal. whole reading ini normal meskipun berisi
+  // kata "bradycardia" di dalam kurung, misalnya:
+  //   "Normal Variations of Resting ECG (Sinus Bradikardi)"
+  // Meyakinkan agar frasa di dalamnya ikut dianggap normal.
+  if (/normal\s*variation|normal\s*variant|variant\s*normal/.test(lower)) return null;
+
+  // Pembaca sesekali menyebut komponen yang justru TIDAK ditemukan,
+  // misalnya "RBBB w/o RVH" atau "Sinus Rhythm without LBBB".
+  // Frasa setelah kata negasi dibuang, kalau tidak "w/o RVH" akan
+  // dilaporkan sebagai "Ventricular Hypertrophy" dan bertentangan
+  // dengan bacaan aslinya.
+  const tanpaNegasi = lower.replace(
+    /\b(?:w\/?o(?:ut)?|withou?ut|tanpa|tak ada|tidak ada|nihil)\s+[a-z]+/g,
+    ' ',
+  );
+
+  const frasa = tanpaNegasi
+    .split(/[+,;]|\bdengan\b|\bw\//)
+    .map((part) => part.replace(/[()]/g, ' ').trim())
+    .filter(Boolean);
+
+  const temuan: Temuan[] = [];
+  for (const bagian of frasa) {
+    const ketemu = classifyTemuanEcg(bagian);
+    if (ketemu) temuan.push(ketemu);
+  }
+
+  // Semua temuan bernilai 'normal' (mis. hanya IRBBB), atau tidak ada
+  // temuan sama sekali dan teksnya mengandung "normal".
+  const serius = temuan.filter((t) => TINGKAT[t.severity] > TINGKAT.normal);
+  if (serius.length === 0) {
+    if (temuan.length === 0 && /\bnormal\b|sinus|nsr/.test(lower)) return null;
+    if (temuan.length === 0) {
+      return { severity: 'normal', label: 'Electrocardiogram Other Finding (Non-Specific)', detail: raw };
+    }
+    return null;
+  }
+
+  const terbaik = serius.reduce((a, b) => (TINGKAT[b.severity] > TINGKAT[a.severity] ? b : a));
+  const label = [...new Set(temuan.map((t) => t.label))].join(' + ');
+  return { severity: terbaik.severity, label, detail: raw };
+}
+
+/**
+ * Mengklasifikasikan hasil Exercise Treadmill Test (protokol Bruce).
+ *
+ * "Negative Ischemic Response" adalah hasil NORMAL dan tidak boleh muncul
+ * di daftar diagnosis. "Inconclusive" atau "Non-Diagnostic" berarti tes
+ * tidak selesai, jadi bukan temuan abnormal — tapi juga tidak boleh
+ * dianggap normal, sebab pemeriksaan wajib diulang.
+ */
+export function classifyTreadmill(tm: string | number | null | undefined): Classification | null {
+  const raw = String(tm ?? '').trim();
+  if (!raw || TIDAK_DILAKUKAN.test(raw)) return null;
+
+  const lower = raw.toLowerCase();
+
+  if (/negative|inconclusive|non\s*-?\s*diagnostic/.test(lower)) {
+    if (/inconclusive|non\s*-?\s*diagnostic|target (heart ?rate|hr)|hr\s*<|tidak tercapai/.test(lower)) {
+      return {
+        severity: 'kuning',
+        label: 'Non-Diagnostic Treadmill Test (Target Heart Rate Not Achieved)',
+        detail: raw,
+      };
+    }
+    return null;
+  }
+
+  if (/positive|st depression|exercise\s*-?\s*induced ischemia|ischemi|ischaemi/.test(lower)) {
+    return { severity: 'merah', label: 'Positive Ischemic Response', detail: raw };
+  }
+
+  if (/blood pressure response|hypotensive|hypertensive response|\bbp response\b|tekanan darah/.test(lower)) {
+    return { severity: 'kuning', label: 'Abnormal Blood Pressure Response', detail: raw };
+  }
+
+  if (/\bpvc\b|premature ventricular|ectop|ventricular ectopy|ektopik/.test(lower)) {
+    return { severity: 'kuning', label: 'Ventricular Ectopy during Exercise', detail: raw };
+  }
+
+  return { severity: 'normal', label: 'Exercise Treadmill Test Other Finding (Non-Specific)', detail: raw };
+}
+
 // ────────────────────────────────────────────────────────────
 // 13. Riwayat penyakit (dropdown multi-pilih di mcu_records)
 //     Nilai kosong = tidak ada (= normal), sesuai instruksi QSHE.
