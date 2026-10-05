@@ -89,6 +89,18 @@ export default function DashboardView() {
   const [loadingSick, setLoadingSick] = useState(false);
   const [loadingAsr, setLoadingAsr] = useState(false);
   const [chartReady, setChartReady] = useState(false);
+  const [isDark, setIsDark] = useState(
+    () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
+  );
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const syncTheme = () => setIsDark(root.classList.contains('dark'));
+    syncTheme();
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   /* ─── Fetch KPI data when site/year changes ─────────────── */
   useEffect(() => {
@@ -290,8 +302,7 @@ export default function DashboardView() {
     const chartW = Math.max(W - pad.left - pad.right, 10);
     const chartH = Math.max(H - pad.top - pad.bottom, 10);
 
-    const isDark = document.documentElement.classList.contains('dark');
-    const textCol = isDark ? '#aaaaaa' : '#666666';
+    const textCol = isDark ? '#F9FAFB' : '#111827';
     const gridCol = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
     const maxVal = Math.max(...asrRank.map(d => d.asr), 1);
 
@@ -306,7 +317,7 @@ export default function DashboardView() {
       const w = (d.asr / maxVal) * chartW;
 
       // Site name on the left
-      ctx.fillStyle = isDark ? '#f0f0f0' : '#1a1a1a';
+      ctx.fillStyle = textCol;
       ctx.font = '10px sans-serif';
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
@@ -342,7 +353,7 @@ export default function DashboardView() {
       ctx.textAlign = 'center';
       ctx.fillText(val.toLocaleString('id-ID'), x, pad.top + chartH + 12);
     }
-  }, [chartReady, asrRank]);
+  }, [chartReady, asrRank, isDark]);
 
   useEffect(() => {
     const t = setTimeout(() => setChartReady(true), 50);

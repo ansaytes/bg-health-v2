@@ -416,11 +416,9 @@ export function SubmitBar({
 /**
  * Jendela hasil yang muncul tepat setelah kuesioner tersimpan.
  *
- * Kuesioner ini diisi karyawan sendiri tanpa login, jadi hasil dan
- * kesimpulannya harus langsung terlihat di layar — bukan berupa pesan kecil
- * yang hilang sendiri di bagian atas formulir. Assessor pun memakai halaman
- * yang sama, sehingga isi jendela ini cukup untuk keduanya: angka skornya,
- * kesimpulan bahasa sehari-hari, dan efeknya terhadap zona MCU.
+ * Hasil ditampilkan dalam dialog setelah penyimpanan berhasil, bukan sebagai
+ * pratinjau saat pengisian. Dialog ini memuat skor, kesimpulan, dan efeknya
+ * terhadap zona MCU untuk karyawan maupun petugas QSHE.
  *
  * Peringatan "bukan diagnosis" disertakan karena ESS, SRQ-20, DASS-21, dan
  * SDS adalah instrumen skrining. Menuduh seseorang memiliki gangguan mental

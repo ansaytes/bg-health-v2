@@ -208,7 +208,7 @@ export default function KunjunganBerobat() {
     if (loading) return;
 
     // Common theme colors
-    const textColor = isDark ? '#e5e7eb' : '#374151';
+    const textColor = isDark ? '#F9FAFB' : '#111827';
     const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
     const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
@@ -278,7 +278,7 @@ export default function KunjunganBerobat() {
             align: 'top',
             anchor: 'end',
             offset: 2,
-            color: '#ff4d00',
+            color: textColor,
             font: { size: 10, weight: 'bold', family: fontFamily },
             formatter: (val) => val,
           },

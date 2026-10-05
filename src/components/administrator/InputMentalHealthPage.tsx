@@ -17,12 +17,10 @@
 import { useState } from 'react';
 
 import { DASS21_ITEMS, DASS21_SECTIONS, SDS_ITEMS, SRQ20_ITEMS } from '@/lib/questionnaire-items';
-import { scoreDass21, scoreSds, scoreSrq20 } from '@/lib/questionnaire-scores';
 import {
   IdentityPanel,
   ItemGroup,
   ResultDialog,
-  ResultPanel,
   StatusBanner,
   SubmitBar,
   questionnaireAuthHeaders,
@@ -110,16 +108,11 @@ export default function InputMentalHealthPage() {
   const [values, setValues] = useState<Record<string, string>>({});
   const [active, setActive] = useState<Section>('srq20');
   const [tglPemeriksaan, setTglPemeriksaan] = useState(today());
-  const [saved, setSaved] = useState<{ ringkasan: string; perluRujukan: boolean; zonasi: string | null; mcuUpdated: number } | null>(null);
   const [resultDialog, setResultDialog] = useState<ResultDialogData | null>(null);
 
   const srqFilled = countFilled(SRQ20_ITEMS, values);
   const dassFilled = countFilled(DASS21_ITEMS, values);
   const sdsFilled = countFilled(SDS_ITEMS, values);
-
-  const srqPreview = scoreSrq20(values);
-  const dassPreview = scoreDass21(values);
-  const sdsPreview = scoreSds(values);
 
   function setAnswer(id: string, value: string) {
     setValues((prev) => ({ ...prev, [id]: value }));
@@ -127,7 +120,6 @@ export default function InputMentalHealthPage() {
 
   function clearForm() {
     setValues({});
-    setSaved(null);
     setResultDialog(null);
     submit.setStatus('idle');
     submit.setMessage('');
@@ -162,12 +154,6 @@ export default function InputMentalHealthPage() {
         return;
       }
 
-      setSaved({
-        ringkasan: body.ringkasan ?? '',
-        perluRujukan: body.perluRujukan,
-        zonasi: body.zonasi ?? null,
-        mcuUpdated: body.mcuUpdated ?? 0,
-      });
       setResultDialog({
         nama: identity.nama,
         tanggal: tglPemeriksaan,
@@ -283,53 +269,6 @@ export default function InputMentalHealthPage() {
           optionLabels={['Tidak pernah', 'Kadang', 'Sering', 'Hampir selalu']}
         />
       )}
-
-      <div className="qh-two-col">
-        <ResultPanel
-          title="Pratinjau Hasil"
-          lines={[
-            { label: 'SRQ-20', value: srqFilled > 0 ? `${srqPreview.score} (${srqFilled}/${SRQ20_ITEMS.length}) — ${srqPreview.label}` : 'Belum diisi', tone: toneFor(srqPreview.category) },
-            {
-              label: 'DASS-21 depresi',
-              value: dassFilled > 0 ? `${dassPreview.depresi.score} (${dassFilled}/${DASS21_ITEMS.length})` : 'Belum diisi',
-              tone: toneFor(dassPreview.depresi.category),
-            },
-            {
-              label: 'DASS-21 ansietas',
-              value: dassFilled > 0 ? `${dassPreview.ansietas.score}` : 'Belum diisi',
-              tone: toneFor(dassPreview.ansietas.category),
-            },
-            {
-              label: 'DASS-21 stres',
-              value: dassFilled > 0 ? `${dassPreview.stres.score}` : 'Belum diisi',
-              tone: toneFor(dassPreview.stres.category),
-            },
-            {
-              label: 'Zung SDS',
-              value: sdsFilled > 0 ? `${sdsPreview.rawIndex} (${sdsFilled}/${SDS_ITEMS.length}) — ${sdsPreview.label}` : 'Belum diisi',
-              tone: toneFor(sdsPreview.category),
-            },
-          ]}
-          footer="Skor parsial hanya pratinjau. DASS-21 dan SDS dinilai penuh setelah semua itemnya terisi."
-        />
-
-        {saved && (
-          <ResultPanel
-            title="Hasil Tersimpan"
-            lines={[
-              { label: 'Ringkasan', value: saved.ringkasan || '—' },
-              {
-                label: 'Perlu rujukan',
-                value: saved.perluRujukan ? 'Ya' : 'Tidak',
-                tone: saved.perluRujukan ? 'bad' : 'good',
-              },
-              { label: 'MCU yang ikut diperbarui', value: String(saved.mcuUpdated) },
-            ]}
-            zonasi={saved.zonasi}
-            footer="MCU yang diperiksa SEBELUM tanggal pemeriksaan ini tidak diubah: zonanya mengunci hasil kuesioner yang berlaku saat pemeriksaannya."
-          />
-        )}
-      </div>
 
       <SubmitBar
         disabled={!canSave}

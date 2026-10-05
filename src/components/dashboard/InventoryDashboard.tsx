@@ -34,6 +34,9 @@ export default function InventoryDashboard() {
 
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isDark, setIsDark] = useState(
+    () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
+  );
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,6 +55,15 @@ export default function InventoryDashboard() {
   const topHabisChart = useRef<ChartJS | null>(null);
   const topExpSoonChart = useRef<ChartJS | null>(null);
   const fastMovingChart = useRef<ChartJS | null>(null);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const syncTheme = () => setIsDark(root.classList.contains('dark'));
+    syncTheme();
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   const loadData = useCallback(async (force = false) => {
     setLoading(true);
@@ -258,8 +270,7 @@ export default function InventoryDashboard() {
   useEffect(() => {
     if (loading || !isAuthorized || items.length === 0) return;
 
-    const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
-    const textColor = isDark ? '#e5e7eb' : '#374151';
+    const textColor = isDark ? '#F9FAFB' : '#111827';
     const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
     const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
@@ -549,7 +560,7 @@ export default function InventoryDashboard() {
       topExpSoonChart.current?.destroy();
       fastMovingChart.current?.destroy();
     };
-  }, [items, loading, isAuthorized, chartRenderKey]);
+  }, [items, loading, isAuthorized, chartRenderKey, isDark]);
 
   // Access guard
   if (!isAuthorized) {

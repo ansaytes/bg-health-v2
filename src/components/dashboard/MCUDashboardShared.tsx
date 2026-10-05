@@ -13,6 +13,37 @@ import { supabase } from '@/lib/supabase';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
+function contrastColor(background: unknown, fallback: string): string {
+  if (typeof background !== 'string') return fallback;
+  let red: number;
+  let green: number;
+  let blue: number;
+  const hex = background.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)?.[1];
+  const rgb = background.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+
+  if (hex) {
+    const full = hex.length === 3 ? [...hex].map((part) => part + part).join('') : hex;
+    red = parseInt(full.slice(0, 2), 16);
+    green = parseInt(full.slice(2, 4), 16);
+    blue = parseInt(full.slice(4, 6), 16);
+  } else if (rgb) {
+    red = Number(rgb[1]);
+    green = Number(rgb[2]);
+    blue = Number(rgb[3]);
+  } else {
+    return fallback;
+  }
+
+  const luminance = [red, green, blue]
+    .map((value) => {
+      const channel = value / 255;
+      return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+    })
+    .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+
+  return luminance > 0.179 ? '#111827' : '#FFFFFF';
+}
+
 export interface MCUDashboardRow {
   employee_id: string;
   site: string | null;
@@ -255,7 +286,7 @@ export function MCUChart({
     if (!canvasRef.current) return;
     chartRef.current?.destroy();
 
-    const textColor = isDark ? '#e5e7eb' : '#374151';
+    const textColor = isDark ? '#F9FAFB' : '#111827';
     const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
     const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     const total = values.reduce((sum, value) => sum + value, 0);
@@ -313,7 +344,14 @@ export function MCUChart({
               if (value <= 0) return '';
               return percentLabels && total ? `${(value / total * 100).toFixed(1)}%` : `${value}`;
             },
-            color: textColor,
+            color: context => {
+              if (type !== 'doughnut') return textColor;
+              const backgrounds = context.dataset.backgroundColor;
+              const background = Array.isArray(backgrounds)
+                ? backgrounds[context.dataIndex]
+                : backgrounds;
+              return contrastColor(background, textColor);
+            },
             font: { size: 10, weight: 'bold', family: fontFamily },
             offset: 4,
             clamp: true,

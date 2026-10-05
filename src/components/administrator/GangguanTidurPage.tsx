@@ -21,12 +21,10 @@
 import { useState } from 'react';
 
 import { ESS_ITEMS } from '@/lib/questionnaire-items';
-import { scoreEss } from '@/lib/questionnaire-scores';
 import {
   IdentityPanel,
   ItemGroup,
   ResultDialog,
-  ResultPanel,
   StatusBanner,
   SubmitBar,
   questionnaireAuthHeaders,
@@ -46,11 +44,9 @@ export default function GangguanTidurPage() {
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [tglEss, setTglEss] = useState(today());
-  const [saved, setSaved] = useState<{ score: number; category: string; label: string; zonasi: string | null; mcuUpdated: number } | null>(null);
   const [resultDialog, setResultDialog] = useState<ResultDialogData | null>(null);
 
   const filled = ESS_ITEMS.filter((item) => values[item.id] !== undefined && values[item.id] !== '').length;
-  const preview = scoreEss(values);
 
   function setAnswer(id: string, value: string) {
     setValues((prev) => ({ ...prev, [id]: value }));
@@ -58,7 +54,6 @@ export default function GangguanTidurPage() {
 
   function clearForm() {
     setValues({});
-    setSaved(null);
     setResultDialog(null);
     submit.setStatus('idle');
     submit.setMessage('');
@@ -89,13 +84,6 @@ export default function GangguanTidurPage() {
         return;
       }
 
-      setSaved({
-        score: body.result.score,
-        category: body.result.category,
-        label: body.result.label,
-        zonasi: body.zonasi ?? null,
-        mcuUpdated: body.mcuUpdated ?? 0,
-      });
       setValues({});
       setResultDialog({
         nama: identity.nama,
@@ -163,33 +151,6 @@ export default function GangguanTidurPage() {
         columns={5}
         optionLabels={['Tidak pernah', 'Jarang', 'Kadang', 'Sering', 'Hampir setiap hari']}
       />
-
-      <div className="qh-two-col">
-        <ResultPanel
-          title="Pratinjau Hasil"
-          lines={[
-            { label: 'Item terisi', value: `${filled} / ${ESS_ITEMS.length}` },
-            { label: 'Skor ESS', value: filled > 0 ? String(preview.score) : '—', tone: toneFor(preview.category) },
-            { label: 'Kategori', value: filled > 0 ? preview.label : '—' },
-          ]}
-          footer={filled > 0 && filled < ESS_ITEMS.length
-            ? 'Skor dihitung dengan prorata dari item yang terisi. Simpan setelah semua delapan item dijawab.'
-            : 'Normal di bawah 11, kantuk berlebihan ringan–sedang 11–15, berat di atas 15.'}
-        />
-
-        {saved && (
-          <ResultPanel
-            title="Hasil Tersimpan"
-            lines={[
-              { label: 'Skor ESS', value: String(saved.score) },
-              { label: 'Kategori', value: saved.label, tone: toneFor(saved.category) },
-              { label: 'MCU yang ikut diperbarui', value: String(saved.mcuUpdated) },
-            ]}
-            zonasi={saved.zonasi}
-            footer="MCU yang diperiksa SEBELUM tanggal ESS ini tidak diubah: zonanya mengunci hasil kuesioner yang berlaku saat pemeriksaannya."
-          />
-        )}
-      </div>
 
       <SubmitBar
         disabled={!canSave}

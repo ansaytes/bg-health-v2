@@ -387,8 +387,6 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
   const [selectedItem, setSelectedItem] = useState<FeedItem | null>(null);
   const handleOpenItem = useCallback((item: FeedItem) => setSelectedItem(item), []);
   const handleCloseItem = useCallback(() => setSelectedItem(null), []);
-  const latestFeed = [...campaignData, ...talkData, ...podcastData, ...newsData];
-
   useEffect(() => {
     async function fetchData() {
       try {
@@ -492,8 +490,11 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
 
   if (activeTab === 'semua-feed') {
     return (
-      <div className="home-feed home-feed-compact">
-        <FeedSection title="Konten Terbaru" data={latestFeed} defaultCount={8} onOpen={handleOpenItem} compact />
+      <div className="home-feed">
+        <FeedSection title="Health Campaign" data={campaignData} onOpen={handleOpenItem} />
+        <FeedSection title="Health Talk" data={talkData} onOpen={handleOpenItem} />
+        <FeedSection title="Podcast" data={podcastData} onOpen={handleOpenItem} />
+        <FeedSection title="News" data={newsData} onOpen={handleOpenItem} />
         <ContentModal item={selectedItem} onClose={handleCloseItem} />
       </div>
     );
