@@ -229,7 +229,22 @@ const DATA_ENTRY_SIDEBAR: SidebarItem[] = [
 
 function HomeContent() {
   const activeHomeSidebar = useMCUStore((s) => s.activeHomeSidebar);
-  return <HomeView activeTab={activeHomeSidebar} />;
+  const { role } = useAuth();
+  return (
+    <>
+      {role === 'employee' && (
+        <div style={{ flexShrink: 0, padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
+          <a
+            href="/kuesioner"
+            style={{ color: '#ff4d00', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}
+          >
+            Buka Kuesioner →
+          </a>
+        </div>
+      )}
+      <HomeView activeTab={activeHomeSidebar} />
+    </>
+  );
 }
 
 function DataEntryContent() {
@@ -425,7 +440,6 @@ function AdminContent() {
 /*   Login Popup (Apple-style) */
 
 function LoginPopup({ onClose }: { onClose: () => void }) {
-  const { refreshProfile } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -530,24 +544,34 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
     setLoading(true);
 
     try {
-      const { data, error: supabaseError } = await supabase.auth.signInWithPassword({
-        email: username,
-        password,
+      const response = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'login', username, password }),
       });
-
-      if (supabaseError) {
-        setError(supabaseError.message);
+      const payload = await response.json();
+      if (!response.ok || !payload.session) {
+        setError(payload.error || 'Login gagal.');
         return;
       }
-
-      if (data.session) {
-        await refreshProfile();
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: payload.session.access_token,
+        refresh_token: payload.session.refresh_token,
+      });
+      if (sessionError) {
+        setError(sessionError.message);
+        return;
+      }
+      const returnTo = new URLSearchParams(window.location.search).get('returnTo');
+      if (returnTo?.startsWith('/kuesioner')) {
+        window.location.assign(returnTo);
+      } else {
         setUsername('');
         setPassword('');
         onClose();
       }
-    } catch {
-      setError('Terjadi kesalahan. Coba lagi.');
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : 'Terjadi kesalahan. Coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -581,17 +605,17 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
 
         <div className="login-card-body">
           <h2>{mode === 'login' ? 'Masuk' : 'Daftar'}</h2>
-          <p className="login-card-subtitle">{mode === 'login' ? 'Masuk ke BG-Health untuk mengakses dashboard' : 'Daftar akun baru'}</p>
+          <p className="login-card-subtitle">{mode === 'login' ? 'Masuk dengan email atau identitas karyawan' : 'Daftar akun baru'}</p>
 
           {mode === 'login' ? (
           <>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
             <div className="login-input-group">
-              <label className="login-input-label">Username / Email</label>
+              <label className="login-input-label">NIK Karyawan / National ID / Email</label>
               <input
                 type="text"
                 className="login-input"
-                placeholder="username@email.com"
+                placeholder="NIK Karyawan, NIK KTP, atau email"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
@@ -636,18 +660,14 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
           </form>
 
           <p className="login-footer-text">
-            Belum punya akun?{' '}
+            Perlu akses petugas?{' '}
             <button type="button" onClick={() => { setMode('register'); setError(''); }} style={{ background: 'none', border: 'none', color: '#ff4d00', fontWeight: 600, cursor: 'pointer', fontSize: 12, padding: 0 }}>
               Daftar di sini
             </button>
           </p>
           <p className="login-footer-text" style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-            Hanya ingin mengisi kuesioner?{' '}
-            <a href="/kuesioner" style={{ color: '#ff4d00', fontWeight: 600, fontSize: 12 }}>
-              Gangguan Tidur dan Kesehatan Mental
-            </a>
-            <br />
-            <span style={{ fontSize: 11, opacity: 0.75 }}>Kuesioner tidak memerlukan akun.</span>
+            Employee dapat login dengan NIK Karyawan atau National ID. Akun dibuat otomatis pada login pertama;
+            gunakan password awal <strong>bagong1994</strong> lalu ganti password untuk melanjutkan.
           </p>
           </>
           ) : (
@@ -666,7 +686,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
                   password: regPassword,
                   full_name: regNama,
                   role: 'viewer',
-                  employee_lookup_token: regEmployee.lookupToken,
+                  employee_lookup_token: regEmployee?.lookupToken,
                 }),
               });
               const json = await res.json();
@@ -803,13 +823,24 @@ export default function Home() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const activePage = store.activePage;
+  const activePage = role === 'employee' ? 'home' : store.activePage;
 
   const isLoggedIn = !!user && !!profile;
 
-  // Redirect non-admin away from administrator page
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('login') === '1') {
+      const timer = setTimeout(() => setShowLogin(true), 0);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // Employee accounts are limited to Home and questionnaire routes.
   useEffect(() => {
     if (authLoading) return;
+    if (role === 'employee' && store.activePage !== 'home') {
+      store.setActivePage('home');
+      return;
+    }
     if (activePage === 'administrator' && !['administrator', 'superuser'].includes(role || '')) {
       store.setActivePage('home');
     }
@@ -839,6 +870,7 @@ export default function Home() {
 
   // Role-based header nav
   const headerNav = ALL_HEADER_NAV.filter((item) => {
+    if (role === 'employee') return item.key === 'home';
     if (item.key === 'administrator') return ['administrator', 'superuser'].includes(role || '');
     if (item.key === 'data-entry') return ['pic', 'administrator', 'superuser'].includes(role || '');
     return true;
@@ -871,6 +903,7 @@ export default function Home() {
     store.activeAdminSidebar;
 
   const handleNav = (tab: PageTab) => {
+    if (role === 'employee' && tab !== 'home') return;
     // Prevent non-admins from going to administrator
     if (tab === 'administrator' && !['administrator', 'superuser'].includes(role || '')) return;
     if (tab === 'data-entry' && !['pic', 'administrator', 'superuser'].includes(role || '')) return;
@@ -898,7 +931,10 @@ export default function Home() {
   // Get user display name and initials
   const displayName = profile?.full_name || profile?.username || 'User';
   const initials = displayName.charAt(0).toUpperCase();
-  const roleLabel = profile?.role === 'superuser' ? 'Superuser' : profile?.role === 'administrator' ? 'Administrator' : profile?.role === 'pic' ? 'PIC' : 'Viewer';
+  const roleLabel = profile?.role === 'superuser' ? 'Superuser'
+    : profile?.role === 'administrator' ? 'Administrator'
+      : profile?.role === 'pic' ? 'PIC'
+        : profile?.role === 'employee' ? 'Employee' : 'Viewer';
 
   return (
     <div className="app-shell">

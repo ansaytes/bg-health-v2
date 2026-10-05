@@ -35,6 +35,7 @@ const ROLE_STYLES: Record<string, { bg: string; color: string }> = {
   administrator: { bg: 'rgba(255,77,0,0.12)', color: '#ff4d00' },
   viewer: { bg: 'var(--muted)', color: 'var(--muted-foreground)' },
   pic: { bg: 'rgba(0,184,148,0.12)', color: '#00a884' },
+  employee: { bg: 'rgba(59,130,246,0.12)', color: '#2563eb' },
 };
 
 export default function UserManagement() {
@@ -114,7 +115,7 @@ export default function UserManagement() {
       });
       const data = await res.json();
       if (!res.ok) { setRegError(data.error || 'Gagal mendaftarkan pengguna'); return; }
-      setRegSuccess('Pengguna berhasil didaftarkan!');
+      setRegSuccess(data.message || 'Pengguna berhasil didaftarkan!');
       setRegForm({ username: '', password: '', full_name: '', role: 'viewer', employee_nik: '', national_id: '', site: '' });
       fetchUsers();
     } catch { setRegError('Gagal terhubung ke server'); } finally { setRegLoading(false); }
@@ -208,6 +209,7 @@ export default function UserManagement() {
                 className="admin-input" style={{ appearance: 'none', cursor: 'pointer' }}
               >
                 <option value="viewer">Viewer</option>
+                <option value="employee">Employee</option>
                 <option value="administrator">Administrator</option>
                 <option value="pic">PIC</option>
                 <option value="superuser">Superuser</option>
@@ -222,7 +224,6 @@ export default function UserManagement() {
                     ...prev,
                     employee_nik: emp.nik ? String(emp.nik) : prev.employee_nik,
                     full_name: emp.nama || prev.full_name,
-                    username: emp.nik ? String(emp.nik) : prev.username,
                     national_id: emp.national_id || prev.national_id,
                     site: emp.site_name || prev.site,
                   }));
@@ -347,6 +348,7 @@ export default function UserManagement() {
                             style={{ padding: '3px 8px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--input)', color: 'var(--foreground)', fontSize: 10, fontWeight: 600 }}
                           >
                             <option value="viewer">Viewer</option>
+                            <option value="employee">Employee</option>
                             <option value="administrator">Administrator</option>
                             <option value="superuser">Superuser</option>
                           </select>

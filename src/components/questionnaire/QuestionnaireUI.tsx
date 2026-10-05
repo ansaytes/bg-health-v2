@@ -13,6 +13,15 @@
 import { useEffect, useState } from 'react';
 
 import type { QuestionnaireItem, ScaleOption } from '@/lib/questionnaire-items';
+import { supabase } from '@/lib/supabase';
+
+export async function questionnaireAuthHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error('Sesi login tidak ditemukan. Silakan masuk kembali.');
+  }
+  return { Authorization: `Bearer ${session.access_token}` };
+}
 
 /* ------------------------------------------------------------------ */
 /*  Panel status                                                       */
@@ -553,7 +562,8 @@ export function useEmployeeLookup(endpoint: string) {
     setSearching(true);
     setError('');
     try {
-      const res = await fetch(`${endpoint}?query=${encodeURIComponent(term)}`);
+      const headers = await questionnaireAuthHeaders();
+      const res = await fetch(`${endpoint}?query=${encodeURIComponent(term)}`, { headers });
       const body = await res.json();
       if (!res.ok) {
         setError(body.error ?? 'Karyawan tidak ditemukan.');

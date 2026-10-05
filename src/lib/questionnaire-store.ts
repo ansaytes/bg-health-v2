@@ -34,9 +34,13 @@ export function adminClient() {
 
 export interface CallerProfile {
   role: string;
+  userId: string;
+  employeeNikHash: string | null;
+  mustChangePassword: boolean;
 }
 
 const ALLOWED_ROLES = ['pic', 'superuser', 'administrator'];
+const QUESTIONNAIRE_ROLES = [...ALLOWED_ROLES, 'employee', 'viewer'];
 
 /** Mengambil peran pemanggil, atau null bila tidak terautentikasi. */
 export async function getCaller(req: NextRequest): Promise<CallerProfile | null> {
@@ -45,74 +49,52 @@ export async function getCaller(req: NextRequest): Promise<CallerProfile | null>
     || req.cookies.get('sb-access-token')?.value;
   if (!token) return null;
   if (token === 'preview-access-token' && process.env.NEXT_PUBLIC_PREVIEW_ROLE) {
-    return { role: process.env.NEXT_PUBLIC_PREVIEW_ROLE };
+    return {
+      role: process.env.NEXT_PUBLIC_PREVIEW_ROLE,
+      userId: 'preview-0000-0000-0000-000000000001',
+      employeeNikHash: null,
+      mustChangePassword: false,
+    };
   }
   const { data: { user } } = await client.auth.getUser(token);
   if (!user) return null;
   const { data: profile } = await client
     .from('user_profiles')
-    .select('role')
+    .select('role,employee_nik_hash')
     .eq('user_id', user.id)
     .single();
-  return profile ? { role: profile.role } : null;
+  return profile ? {
+    role: profile.role,
+    userId: user.id,
+    employeeNikHash: profile.employee_nik_hash || null,
+    mustChangePassword: user.app_metadata?.must_change_password === true,
+  } : null;
 }
 
 export function canWriteQuestionnaires(caller: CallerProfile | null): boolean {
   return !!caller && ALLOWED_ROLES.includes(caller.role);
 }
 
-/**
- * Gerbang akses endpoint kuesioner.
- *
- * Kuesioner Gangguan Tidur dan Kesehatan Mental dibuka sebagai pengisian
- * mandiri: karyawan boleh mengisinya tanpa masuk ke aplikasi, cukup dengan
- * identitasnya (nama, NIK Karyawan, atau NIK KTP) ditemukan. Hasil skrining
- * ini memang harus diisi oleh orang yang mengalaminya, sehingga mewajibkan
- * login hanya membuat kuesioner dilewati.
- *
- * Dua lapis pelamar ada di sini:
- *   1. Petugas yang sudah masuk (PIC/administrator/superuser) tetap boleh,
- *      supaya bisa mengoreksi hasil atau melihat riwayat.
- *   2. Pengunjung tanpa sesi tetap boleh, tetapi dibatasi jumlah permintaan per
- *      alamat IP. Tanpa batas ini, endpoint terbuka bisa dipakai menebak NIK
- *      KTP orang satu per satu dan menimpa baris pada tanggal yang sama.
- *
- * SECURITY NOTE. This does open up writing mental health data without
- * authentication, as requested. The consequence: anyone who knows an employee's
- * NIK KTP can write a questionnaire result in that person's name. The rate
- * limit below holds off bulk abuse, but does NOT hold off targeted abuse. If
- * this questionnaire ever feeds an employment action, this gate must go back
- * to mandatory login with a single-use token.
- */
-const RATE_LIMIT = { windowMs: 60_000, max: 30 };
-const rateBuckets = new Map<string, { count: number; resetAt: number }>();
-
-function clientAddress(req: NextRequest): string {
-  const forwarded = req.headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim();
-  return req.headers.get('x-real-ip') ?? 'lokal';
+export function denyUnlessQuestionnaireAccess(caller: CallerProfile | null): NextResponse | null {
+  if (!caller) {
+    return NextResponse.json({ error: 'Sesi tidak ditemukan. Silakan masuk untuk mengisi kuesioner.' }, { status: 401 });
+  }
+  if (caller.mustChangePassword) {
+    return NextResponse.json({ error: 'Ganti password awal sebelum menggunakan kuesioner.' }, { status: 403 });
+  }
+  if (!QUESTIONNAIRE_ROLES.includes(caller.role)) {
+    return NextResponse.json({ error: 'Akses kuesioner ditolak untuk role akun ini.' }, { status: 403 });
+  }
+  return null;
 }
 
-export function denyUnlessSelfService(req: NextRequest, caller: CallerProfile | null): NextResponse | null {
-  // Petugas yang sudah masuk tidak dibatasi — jumlah pemakaiannya normal dan
-  // tercatat di log aplikasi.
-  if (caller && ALLOWED_ROLES.includes(caller.role)) return null;
-
-  const key = clientAddress(req);
-  const now = Date.now();
-  const bucket = rateBuckets.get(key);
-
-  if (!bucket || now > bucket.resetAt) {
-    rateBuckets.set(key, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
-    return null;
-  }
-
-  bucket.count += 1;
-  if (bucket.count > RATE_LIMIT.max) {
-    return NextResponse.json(
-      { error: `Terlalu banyak permintaan. Coba lagi dalam ${Math.ceil(RATE_LIMIT.windowMs / 1000)} detik.` },
-      { status: 429 },
-    );
+export function denyUnlessOwnEmployee(
+  caller: CallerProfile,
+  identity: EmployeeIdentity,
+): NextResponse | null {
+  if (canWriteQuestionnaires(caller)) return null;
+  if (!caller.employeeNikHash || caller.employeeNikHash !== identity.nikKaryawanHash) {
+    return NextResponse.json({ error: 'Akun ini hanya dapat mengakses kuesioner milik sendiri.' }, { status: 403 });
   }
   return null;
 }

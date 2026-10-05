@@ -30,6 +30,7 @@ import {
   ResultPanel,
   StatusBanner,
   SubmitBar,
+  questionnaireAuthHeaders,
   toneFor,
   useEmployeeLookup,
   useSubmitStatus,
@@ -71,7 +72,8 @@ export default function GangguanTidurPage() {
 
   async function refreshHistory() {
     if (!identity) return;
-    const res = await fetch(`/api/ess?query=${encodeURIComponent(identity.nikKaryawan)}`);
+    const headers = await questionnaireAuthHeaders();
+    const res = await fetch(`/api/ess?query=${encodeURIComponent(identity.nikKaryawan)}`, { headers });
     const body = await res.json();
     if (res.ok) setHistory(body.history ?? []);
   }
@@ -98,9 +100,10 @@ export default function GangguanTidurPage() {
     submit.setStatus('saving');
     submit.setMessage('');
     try {
+      const headers = await questionnaireAuthHeaders();
       const res = await fetch('/api/ess', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify({ query, tglEss, lokasiEss, petugas, catatan, ...values }),
       });
       const body = await res.json();
@@ -253,7 +256,7 @@ export default function GangguanTidurPage() {
         {!identity ? (
           <p className="qh-description">Cari karyawan lebih dulu untuk melihat riwayat.</p>
         ) : !historyAvailable ? (
-          <p className="qh-description">Riwayat hasil hanya tersedia bagi petugas yang sudah masuk. Kuesioner tetap dapat diisi tanpa login.</p>
+          <p className="qh-description">Login Employee menampilkan riwayat kuesioner milik sendiri. Riwayat karyawan lain hanya dapat dibuka petugas berwenang.</p>
         ) : (
           <HistoryTable
             rows={(history as EssHistoryRow[]).map((row) => ({

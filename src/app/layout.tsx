@@ -9,6 +9,7 @@ const inter = Inter({
 });
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/lib/auth-context";
+import PasswordChangeGate from "@/components/auth/PasswordChangeGate";
 import Script from "next/script";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -68,7 +69,7 @@ export default function RootLayout({
       >
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <AuthProvider>
-            {children}
+            <PasswordChangeGate>{children}</PasswordChangeGate>
             <Toaster position="top-center" richColors />
           </AuthProvider>
         </ThemeProvider>

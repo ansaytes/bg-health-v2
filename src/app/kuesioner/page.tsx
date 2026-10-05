@@ -1,20 +1,13 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import QuestionnaireRouteGuard from '@/components/questionnaire/QuestionnaireRouteGuard';
 
 // ============================================================
-// Halaman pengantiaan kuesioner mandiri
+// Halaman daftar kuesioner karyawan
 // ============================================================
 //
-// Kuesioner Gangguan Tidur dan Kesehatan Mental dibuka tanpa login.
-// Alasannya, kuesioner ini adalah skrining yang harus diisi oleh orang yang
-// mengalaminya. Memaksa login tidak membuat data lebih valid — hanya membuat
-// orang melewatinya dan mengisi naskah secara membuta.
-//
-// Satu-satunya syarat untuk bisa mengisi adalah identitasnya ditemukan di
-// data karyawan: NIK KTP, NIK Karyawan, atau sebagian nama. Setelah itu
-// halaman kuesioner mengisi nama, jabatan, dan unit kerja secara otomatis, dan
-// field itu tidak dapat diketik ulang sehingga hasil tidak mungkin tersimpan
-// ke karyawan yang keliru.
+// Halaman ini hanya tersedia untuk pengguna yang sudah masuk. Akun Employee
+// hanya dapat melihat Home dan halaman kuesioner.
 // ============================================================
 
 export const metadata: Metadata = {
@@ -43,13 +36,13 @@ const KUESIONER = [
 
 export default function KuesionerLandingPage() {
   return (
+    <QuestionnaireRouteGuard>
     <div className="qh-page">
       <header className="qh-page-head">
         <h2>Kuesioner Mandiri</h2>
         <p>
-          Kuesioner ini untuk dipakai sendiri, tanpa perlu masuk ke aplikasi. Isi identitasmu
-          lebih dulu, lalu jawab pertanyaannya. Setelah tersimpan, skor dan kesimpulannya langsung
-          muncul di layar.
+          Kuesioner ini wajib diisi setelah login. Akun Employee hanya dapat mengisi kuesioner
+          untuk dirinya sendiri; identitas karyawan akan diverifikasi otomatis.
         </p>
         <p className="qh-warn">
           Kuesioner adalah <strong>skrining</strong>, bukan pemeriksaan dokter. Hasilnya tidak
@@ -61,7 +54,7 @@ export default function KuesionerLandingPage() {
       <div className="qh-card">
         <h3 className="qh-card-title">Yang perlu disiapkan</h3>
         <ul className="qh-description" style={{ paddingLeft: 20, margin: 0, display: 'grid', gap: 6 }}>
-          <li>NIK KTP kamu. NIK Karyawan atau nama juga bisa dipakai sebagai kata kunci.</li>
+          <li>Gunakan akun Employee dan pilih kuesioner yang ingin diisi.</li>
           <li>Tanggal pengisian — biarkan apa adanya bila memakai tanggal hari ini.</li>
           <li>
             Ingat kembali kondisimu dalam dua minggu terakhir, karena sebagian besar pertanyaan
@@ -98,5 +91,6 @@ export default function KuesionerLandingPage() {
         </p>
       </div>
     </div>
+    </QuestionnaireRouteGuard>
   );
 }

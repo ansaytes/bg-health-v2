@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { readRegistrationLookupToken } from '@/lib/registration-lookup-token';
+import { decryptEmployee, hashField } from '@/lib/encryption';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
@@ -88,6 +89,81 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (action === 'approve') {
+      const employeeHash = hashField(String(approval.nik || '').trim());
+      if (!employeeHash) {
+        return NextResponse.json({ error: 'NIK Karyawan pada permintaan ini tidak valid' }, { status: 400 });
+      }
+      const { data: employee, error: employeeError } = await supabaseAdmin
+        .from('employees')
+        .select('nik,national_id,nama,site_name,nik_hash')
+        .eq('nik_hash', employeeHash)
+        .eq('employment_status', 'Aktif')
+        .maybeSingle();
+      if (employeeError || !employee) {
+        return NextResponse.json({ error: 'Karyawan aktif tidak ditemukan. Request tidak dapat disetujui.' }, { status: 400 });
+      }
+      const employeeData = decryptEmployee(employee);
+      const requestedRole = approval.role || 'viewer';
+      const { data: linkedProfile, error: linkedProfileError } = await supabaseAdmin
+        .from('user_profiles')
+        .select('id,user_id,role,username,full_name,national_id,employee_nik_hash,site')
+        .eq('employee_nik_hash', employeeHash)
+        .maybeSingle();
+      if (linkedProfileError) {
+        return NextResponse.json({ error: 'Gagal memeriksa akun karyawan' }, { status: 500 });
+      }
+
+      if (linkedProfile) {
+        if (linkedProfile.role !== 'employee') {
+          return NextResponse.json({ error: 'Karyawan ini sudah memiliki akun dengan role lebih tinggi.' }, { status: 409 });
+        }
+        const oldProfile = {
+          username: linkedProfile.username,
+          full_name: linkedProfile.full_name,
+          role: linkedProfile.role,
+          national_id: linkedProfile.national_id,
+          employee_nik_hash: linkedProfile.employee_nik_hash,
+          site: linkedProfile.site,
+        };
+        const { error: updateProfileError } = await supabaseAdmin
+          .from('user_profiles')
+          .update({
+            username: approval.username || approval.email,
+            full_name: employeeData.nama || approval.full_name,
+            role: requestedRole,
+            national_id: employeeData.national_id || approval.national_id,
+            employee_nik_hash: employeeHash,
+            site: employeeData.site_name || null,
+          })
+          .eq('id', linkedProfile.id);
+        if (updateProfileError) {
+          return NextResponse.json({ error: updateProfileError.message }, { status: 500 });
+        }
+        const { data: existingAuthUser, error: existingAuthError } = await supabaseAdmin.auth.admin.getUserById(linkedProfile.user_id);
+        if (existingAuthError || !existingAuthUser.user) {
+          await supabaseAdmin.from('user_profiles').update(oldProfile).eq('id', linkedProfile.id);
+          return NextResponse.json({ error: 'Akun karyawan tidak dapat diverifikasi' }, { status: 500 });
+        }
+        const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(linkedProfile.user_id, {
+          email: approval.email,
+          password: approval.password,
+          email_confirm: true,
+          app_metadata: { ...existingAuthUser.user.app_metadata, must_change_password: false },
+        });
+        if (updateAuthError) {
+          await supabaseAdmin.from('user_profiles').update(oldProfile).eq('id', linkedProfile.id);
+          return NextResponse.json({ error: updateAuthError.message }, { status: 500 });
+        }
+        const { error: approvalUpdateError } = await client.from('user_approvals')
+          .update({ status: 'approved', reviewed_at: new Date().toISOString(), reviewed_by: caller.userId })
+          .eq('id', id);
+        if (approvalUpdateError) {
+          console.error('Failed to mark approved user request:', approvalUpdateError);
+          return NextResponse.json({ error: 'Akun diperbarui, tetapi status request gagal diperbarui.' }, { status: 500 });
+        }
+        return NextResponse.json({ success: true, message: 'Akun Employee berhasil ditingkatkan. Role lama telah diganti.' });
+      }
+
       // Create auth user via admin API
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email: approval.email,
@@ -100,14 +176,16 @@ export async function PATCH(req: NextRequest) {
       }
 
       // Insert profile
-      const { error: profileError } = await client
+      const { error: profileError } = await supabaseAdmin
         .from('user_profiles')
         .insert({
           user_id: newUser.user.id,
           username: approval.username || approval.email,
-          full_name: approval.full_name,
-          role: approval.role || 'viewer',
-          national_id: approval.national_id || approval.nik,
+          full_name: employeeData.nama || approval.full_name,
+          role: requestedRole,
+          national_id: employeeData.national_id || approval.national_id || approval.nik,
+          employee_nik_hash: employeeHash,
+          site: employeeData.site_name || null,
         });
 
       if (profileError) {
@@ -116,10 +194,14 @@ export async function PATCH(req: NextRequest) {
       }
 
       // Update approval status
-      await client
+      const { error: approvalUpdateError } = await client
         .from('user_approvals')
         .update({ status: 'approved', reviewed_at: new Date().toISOString(), reviewed_by: caller.userId })
         .eq('id', id);
+      if (approvalUpdateError) {
+        console.error('Failed to mark approved user request:', approvalUpdateError);
+        return NextResponse.json({ error: 'Akun dibuat, tetapi status request gagal diperbarui.' }, { status: 500 });
+      }
 
       return NextResponse.json({ success: true, message: 'User berhasil disetujui dan dibuat' });
     }

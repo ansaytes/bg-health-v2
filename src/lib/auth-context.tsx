@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { supabase } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
-export type UserRole = 'superuser' | 'administrator' | 'pic' | 'viewer';
+export type UserRole = 'superuser' | 'administrator' | 'pic' | 'viewer' | 'employee';
 
 export interface UserProfile {
   id: string;
@@ -87,6 +87,7 @@ function buildMockProfile(role: UserRole): UserProfile {
     administrator: { username: 'admin.preview', fullName: 'Preview Administrator' },
     pic: { username: 'pic.preview', fullName: 'Preview PIC' },
     viewer: { username: 'viewer.preview', fullName: 'Preview Viewer' },
+    employee: { username: 'employee.preview', fullName: 'Preview Employee' },
   };
   const label = labelMap[role];
   return {

@@ -6,7 +6,8 @@ import { kesimpulanEss } from '@/lib/questionnaire-conclusion';
 import {
   adminClient,
   canWriteQuestionnaires,
-  denyUnlessSelfService,
+  denyUnlessQuestionnaireAccess,
+  denyUnlessOwnEmployee,
   findEmployeeIdentity,
   getCaller,
   pesanGalat,
@@ -19,19 +20,18 @@ import {
 /**
  * GET /api/ess?query=<nama|nik>
  *   Tanpa query → mengembalikan definisi item + skala jawaban.
- *   Dengan query  → mengembalikan identitas karyawan untuk autofill; riwayat
- *                   hanya dikembalikan kepada petugas yang sudah masuk.
+ *   Dengan query  → mengembalikan identitas dan riwayat milik pemanggil.
  *
  * POST /api/ess
  *   Menyimpan hasil ESS. Memakai aturan satu baris per karyawan per tanggal,
  *   jadi pengukuran ulang pada tanggal yang sama menimpa baris lama.
  *
- * Pengisian tetap mendukung self-service tanpa login. Riwayat hasil tidak
- * diberikan kepada pemanggil anonim.
+ * Pengisian wajib memakai sesi yang valid. Akun Employee hanya boleh membuka
+ * dan menyimpan kuesioner untuk NIK Karyawannya sendiri.
  */
 export async function GET(req: NextRequest) {
   const caller = await getCaller(req);
-  const denied = denyUnlessSelfService(req, caller);
+  const denied = denyUnlessQuestionnaireAccess(caller);
   if (denied) return denied;
 
   const query = new URL(req.url).searchParams.get('query')?.trim() ?? '';
@@ -55,9 +55,11 @@ export async function GET(req: NextRequest) {
   if (!identity) {
     return NextResponse.json({ error: 'Karyawan tidak ditemukan. Gunakan NIK KTP, NIK Karyawan, atau nama.' }, { status: 404 });
   }
+  const identityDenied = denyUnlessOwnEmployee(caller!, identity);
+  if (identityDenied) return identityDenied;
 
   const client = adminClient();
-  if (!canWriteQuestionnaires(caller)) {
+  if (!canWriteQuestionnaires(caller) && !caller?.employeeNikHash) {
     return NextResponse.json({ identity, history: [], historyAvailable: false });
   }
 
@@ -94,7 +96,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const caller = await getCaller(req);
-  const denied = denyUnlessSelfService(req, caller);
+  const denied = denyUnlessQuestionnaireAccess(caller);
   if (denied) return denied;
 
   let body: Record<string, unknown>;
@@ -117,6 +119,8 @@ export async function POST(req: NextRequest) {
   if (!identity) {
     return NextResponse.json({ error: 'Karyawan tidak ditemukan. Gunakan NIK KTP, NIK Karyawan, atau nama.' }, { status: 404 });
   }
+  const identityDenied = denyUnlessOwnEmployee(caller!, identity);
+  if (identityDenied) return identityDenied;
 
   // Skala ESS 0-4. Nilai di luar rentang ditolak, bukan dibulatkan diam-diam.
   const answers: Record<string, string | number | null> = {};

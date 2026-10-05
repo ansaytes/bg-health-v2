@@ -141,9 +141,21 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'ID dan role wajib diisi' }, { status: 400 });
     }
 
-    const validRoles = ['superuser', 'administrator', 'pic', 'viewer'];
+    const validRoles = ['superuser', 'administrator', 'pic', 'viewer', 'employee'];
     if (!validRoles.includes(role)) {
       return NextResponse.json({ error: 'Role tidak valid' }, { status: 400 });
+    }
+
+    const { data: targetProfile } = await supabaseAdmin
+      .from('user_profiles')
+      .select('role')
+      .eq('id', id)
+      .maybeSingle();
+    if (!targetProfile) {
+      return NextResponse.json({ error: 'Pengguna tidak ditemukan' }, { status: 404 });
+    }
+    if (targetProfile.role === 'employee' && role !== 'employee') {
+      return NextResponse.json({ error: 'Gunakan pendaftaran role baru agar akun Employee diperbarui dengan password pribadi.' }, { status: 400 });
     }
 
     // Prevent self-demotion
