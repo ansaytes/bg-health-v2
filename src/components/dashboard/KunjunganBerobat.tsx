@@ -93,6 +93,9 @@ export default function KunjunganBerobat() {
   const [rujukVisible, setRujukVisible] = useState(false);
   const [records, setRecords] = useState<KunjunganRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isDark, setIsDark] = useState(
+    () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
+  );
 
   // Filters
   const [selectedBulan, setSelectedBulan] = useState<string>('all');
@@ -112,6 +115,14 @@ export default function KunjunganBerobat() {
   const diagChartInst = useRef<ChartJS | null>(null);
   const obatChartInst = useRef<ChartJS | null>(null);
   const deptChartInst = useRef<ChartJS | null>(null);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const syncTheme = () => setIsDark(root.classList.contains('dark'));
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   // Scroll detection for Rujuk RS section
   useEffect(() => {
@@ -197,7 +208,6 @@ export default function KunjunganBerobat() {
     if (loading) return;
 
     // Common theme colors
-    const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
     const textColor = isDark ? '#e5e7eb' : '#374151';
     const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
     const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
@@ -321,7 +331,7 @@ export default function KunjunganBerobat() {
         .sort((a, b) => b.count - a.count)
         .slice(0, 10);
 
-      const labels = repeatPatients.map(p => p.dept ? `${p.nama} (${p.dept})` : p.nama);
+      const labels = repeatPatients.map(p => p.nama);
       const dataValues = repeatPatients.map(p => p.count);
 
       const ulangData: ChartData<'bar'> = {
@@ -357,9 +367,11 @@ export default function KunjunganBerobat() {
             display: labels.length > 0,
             anchor: 'end',
             align: 'right',
-            color: '#FF9800',
+            color: textColor,
             font: { size: 10, weight: 'bold', family: fontFamily },
             formatter: (val) => `${val}x`,
+            clamp: true,
+            clip: false,
           },
         },
         scales: {
@@ -372,11 +384,8 @@ export default function KunjunganBerobat() {
             grid: { display: false },
             ticks: {
               color: textColor,
-              font: { size: 10, family: fontFamily },
-              callback: function(val, index) {
-                const label = this.getLabelForValue(Number(val));
-                return label.length > 25 ? label.slice(0, 23) + '...' : label;
-              },
+              font: { size: 9, family: fontFamily },
+              autoSkip: false,
             },
           },
         },
@@ -448,9 +457,11 @@ export default function KunjunganBerobat() {
             display: diagLabels.length > 0,
             anchor: 'end',
             align: 'right',
-            color: '#E91E63',
+            color: textColor,
             font: { size: 10, weight: 'bold', family: fontFamily },
             formatter: (val) => `${val}`,
+            clamp: true,
+            clip: false,
           },
         },
         scales: {
@@ -540,9 +551,11 @@ export default function KunjunganBerobat() {
             display: obatLabels.length > 0,
             anchor: 'end',
             align: 'right',
-            color: '#00BCD4',
+            color: textColor,
             font: { size: 10, weight: 'bold', family: fontFamily },
             formatter: (val) => `${val}`,
+            clamp: true,
+            clip: false,
           },
         },
         scales: {
@@ -626,9 +639,11 @@ export default function KunjunganBerobat() {
             display: deptLabels.length > 0,
             anchor: 'end',
             align: 'right',
-            color: '#9B59B6',
+            color: textColor,
             font: { size: 10, weight: 'bold', family: fontFamily },
             formatter: (val) => `${val}`,
+            clamp: true,
+            clip: false,
           },
         },
         scales: {
@@ -665,7 +680,7 @@ export default function KunjunganBerobat() {
       obatChartInst.current?.destroy();
       deptChartInst.current?.destroy();
     };
-  }, [filteredRecords, records, selectedDept, loading]);
+  }, [filteredRecords, records, selectedDept, loading, isDark]);
 
   return (
     <div className="dashboard" ref={containerRef} style={{ overflowY: 'auto', overflowX: 'hidden' }}>

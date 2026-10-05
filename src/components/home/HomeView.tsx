@@ -81,7 +81,7 @@ function normalizeImageUrl(raw: string | null | undefined): string | null {
 const LONG_CAPTION_THRESHOLD = 120;
 
 /* ── Feed Card Component ── */
-function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOpen: (item: FeedItem) => void }) {
+function FeedCard({ item, index, onOpen, compact = false }: { item: FeedItem; index: number; onOpen: (item: FeedItem) => void; compact?: boolean }) {
   const placeholder = PLACEHOLDER_BG[index % PLACEHOLDER_BG.length];
   const isVideo = item.source === 'youtube' || item.type === 'talk' || item.type === 'podcast' || !!item.video_url;
   const isIgStyle = item.type === 'campaign' || item.type === 'news';
@@ -102,7 +102,7 @@ function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOp
 
   return (
     <div
-      className="home-feed-card"
+      className={`home-feed-card${compact ? ' home-feed-card-compact' : ''}`}
       role="button"
       tabIndex={0}
       onClick={handleClick}
@@ -113,7 +113,7 @@ function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOp
         className="home-feed-card-media"
         style={{
           background: showImage ? '#0a0b0e' : placeholder.bg,
-          aspectRatio: '4 / 3',
+          aspectRatio: compact ? '16 / 9' : '4 / 3',
         }}
       >
         {showImage ? (
@@ -154,7 +154,7 @@ function FeedCard({ item, index, onOpen }: { item: FeedItem; index: number; onOp
       </div>
       <div className="home-feed-card-body" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {item.title && (
-          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--foreground)', marginBottom: 4, lineHeight: 1.3 }}>{item.title}</p>
+          <p style={{ fontSize: compact ? 11 : 12, fontWeight: 700, color: 'var(--foreground)', marginBottom: 4, lineHeight: 1.3 }}>{item.title}</p>
         )}
         <p
           className="home-feed-card-caption"
@@ -199,11 +199,13 @@ function FeedSection({
   data,
   defaultCount = 3,
   onOpen,
+  compact = false,
 }: {
   title: string;
   data: FeedItem[];
   defaultCount?: number;
   onOpen: (item: FeedItem) => void;
+  compact?: boolean;
 }) {
   const [visibleCount, setVisibleCount] = useState(defaultCount);
   const visible = data.slice(0, visibleCount);
@@ -211,14 +213,14 @@ function FeedSection({
   const remainingCount = data.length - visibleCount;
 
   return (
-    <div className="home-feed-section">
+    <div className={`home-feed-section${compact ? ' home-feed-section-compact' : ''}`}>
       <div className="home-feed-section-head">
         <h3 className="home-feed-section-title">{title}</h3>
       </div>
       {visible.length > 0 ? (
-        <div className="home-feed-grid">
+        <div className={`home-feed-grid${compact ? ' home-feed-grid-compact' : ''}`}>
           {visible.map((item, i) => (
-            <FeedCard key={item.id} item={item} index={i} onOpen={onOpen} />
+            <FeedCard key={item.id} item={item} index={i} onOpen={onOpen} compact={compact} />
           ))}
         </div>
       ) : (
@@ -385,6 +387,7 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
   const [selectedItem, setSelectedItem] = useState<FeedItem | null>(null);
   const handleOpenItem = useCallback((item: FeedItem) => setSelectedItem(item), []);
   const handleCloseItem = useCallback(() => setSelectedItem(null), []);
+  const latestFeed = [...campaignData, ...talkData, ...podcastData, ...newsData];
 
   useEffect(() => {
     async function fetchData() {
@@ -489,11 +492,8 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
 
   if (activeTab === 'semua-feed') {
     return (
-      <div className="home-feed">
-        <FeedSection title="Health Campaign" data={campaignData} onOpen={handleOpenItem} />
-        <FeedSection title="Health Talk" data={talkData} onOpen={handleOpenItem} />
-        <FeedSection title="Podcast" data={podcastData} onOpen={handleOpenItem} />
-        <FeedSection title="News" data={newsData} onOpen={handleOpenItem} />
+      <div className="home-feed home-feed-compact">
+        <FeedSection title="Konten Terbaru" data={latestFeed} defaultCount={8} onOpen={handleOpenItem} compact />
         <ContentModal item={selectedItem} onClose={handleCloseItem} />
       </div>
     );

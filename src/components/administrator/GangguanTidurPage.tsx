@@ -21,9 +21,8 @@
 import { useState } from 'react';
 
 import { ESS_ITEMS } from '@/lib/questionnaire-items';
-import { essBandLabel, scoreEss } from '@/lib/questionnaire-scores';
+import { scoreEss } from '@/lib/questionnaire-scores';
 import {
-  HistoryTable,
   IdentityPanel,
   ItemGroup,
   ResultDialog,
@@ -41,25 +40,12 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-interface EssHistoryRow {
-  tanggal: string;
-  skor: number | null;
-  kategori: string;
-  interpretasi: string;
-  jumlah_terisi: number | null;
-  catatan: string | null;
-  dipakaiMCU: boolean;
-}
-
 export default function GangguanTidurPage() {
-  const { query, setQuery, identity, history, historyAvailable, setHistory, searching, error, search } = useEmployeeLookup('/api/ess');
+  const { query, setQuery, identity, searching, error, search } = useEmployeeLookup('/api/ess');
   const submit = useSubmitStatus();
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [tglEss, setTglEss] = useState(today());
-  const [lokasiEss, setLokasiEss] = useState('');
-  const [petugas, setPetugas] = useState('');
-  const [catatan, setCatatan] = useState('');
   const [saved, setSaved] = useState<{ score: number; category: string; label: string; zonasi: string | null; mcuUpdated: number } | null>(null);
   const [resultDialog, setResultDialog] = useState<ResultDialogData | null>(null);
 
@@ -70,17 +56,8 @@ export default function GangguanTidurPage() {
     setValues((prev) => ({ ...prev, [id]: value }));
   }
 
-  async function refreshHistory() {
-    if (!identity) return;
-    const headers = await questionnaireAuthHeaders();
-    const res = await fetch(`/api/ess?query=${encodeURIComponent(identity.nikKaryawan)}`, { headers });
-    const body = await res.json();
-    if (res.ok) setHistory(body.history ?? []);
-  }
-
   function clearForm() {
     setValues({});
-    setCatatan('');
     setSaved(null);
     setResultDialog(null);
     submit.setStatus('idle');
@@ -104,7 +81,7 @@ export default function GangguanTidurPage() {
       const res = await fetch('/api/ess', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ query, tglEss, lokasiEss, petugas, catatan, ...values }),
+        body: JSON.stringify({ query, tglEss, ...values }),
       });
       const body = await res.json();
       if (!res.ok) {
@@ -132,7 +109,6 @@ export default function GangguanTidurPage() {
         zonaMCU: body.zonasi ?? null,
         mcuUpdated: body.mcuUpdated ?? 0,
       });
-      await refreshHistory();
     } catch {
       submit.failure('Gagal menghubungi server. Coba lagi.');
     }
@@ -172,26 +148,6 @@ export default function GangguanTidurPage() {
               className="qh-input"
               value={tglEss}
               onChange={(e) => setTglEss(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="qh-label" htmlFor="qh-ess-location">Lokasi</label>
-            <input
-              id="qh-ess-location"
-              className="qh-input"
-              value={lokasiEss}
-              onChange={(e) => setLokasiEss(e.target.value)}
-              placeholder="Opsional"
-            />
-          </div>
-          <div>
-            <label className="qh-label" htmlFor="qh-ess-petugas">Petugas</label>
-            <input
-              id="qh-ess-petugas"
-              className="qh-input"
-              value={petugas}
-              onChange={(e) => setPetugas(e.target.value)}
-              placeholder="Opsional"
             />
           </div>
         </div>
@@ -235,50 +191,11 @@ export default function GangguanTidurPage() {
         )}
       </div>
 
-      <div className="qh-card">
-        <label className="qh-label" htmlFor="qh-ess-note">Catatan</label>
-        <textarea
-          id="qh-ess-note"
-          className="qh-textarea"
-          rows={3}
-          value={catatan}
-          onChange={(e) => setCatatan(e.target.value)}
-          placeholder="Opsional, misalnya jam tidur, keluhan kantuk di siang hari, jam kerja shift malam, atau catatan rujukan."
-        />
-      </div>
-
-      <div className="qh-card">
-        <h3 className="qh-card-title">Riwayat Gangguan Tidur</h3>
-        <p className="qh-description">
-          Satu baris per tanggal pengukuran. Baris bertanda <strong>dipakai MCU</strong> adalah skor
-          yang mengunci zona pada record MCU tersebut.
-        </p>
-        {!identity ? (
-          <p className="qh-description">Cari karyawan lebih dulu untuk melihat riwayat.</p>
-        ) : !historyAvailable ? (
-          <p className="qh-description">Login Employee menampilkan riwayat kuesioner milik sendiri. Riwayat karyawan lain hanya dapat dibuka petugas berwenang.</p>
-        ) : (
-          <HistoryTable
-            rows={(history as EssHistoryRow[]).map((row) => ({
-              tanggal: row.tanggal,
-              ringkasan: row.skor !== null ? `ESS ${row.skor} — ${row.interpretasi || essBandLabel(Number(row.skor))}` : 'Normal (tanpa angka)',
-              detail: [
-                row.jumlah_terisi !== null ? `${row.jumlah_terisi}/8 item` : null,
-                row.catatan,
-              ].filter(Boolean).join(' · ') || null,
-              dipakaiMCU: row.dipakaiMCU,
-            }))}
-            empty="Belum ada hasil ESS untuk karyawan ini."
-          />
-        )}
-      </div>
-
       <SubmitBar
         disabled={!canSave}
         saving={submit.status === 'saving'}
         onSubmit={handleSave}
         onReset={clearForm}
-        hint="ESS untuk tanggal yang sama menimpa hasil sebelumnya. Tanggal berbeda menjadi riwayat baru."
       />
 
       <ResultDialog data={resultDialog} onClose={() => setResultDialog(null)} />

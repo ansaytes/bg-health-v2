@@ -282,7 +282,7 @@ export function MCUChart({
           duration: type === 'doughnut' ? 600 : 500,
           easing: 'easeOutQuart',
         },
-        ...(type === 'doughnut' ? { cutout: '62%', radius: '70%' } : {}),
+        ...(type === 'doughnut' ? { cutout: '62%', radius: '82%' } : {}),
         plugins: {
           legend: {
             display: type === 'doughnut',
@@ -313,13 +313,20 @@ export function MCUChart({
               if (value <= 0) return '';
               return percentLabels && total ? `${(value / total * 100).toFixed(1)}%` : `${value}`;
             },
-            color: type === 'doughnut' ? '#ffffff' : textColor,
+            color: textColor,
             font: { size: 10, weight: 'bold', family: fontFamily },
             offset: 4,
+            clamp: true,
+            clip: false,
           },
         },
         scales: type === 'bar' ? {
-          x: { beginAtZero: true, grid: { color: horizontal ? gridColor : 'transparent' }, ticks: { color: textColor, font: { size: 10, family: fontFamily }, padding: 4 } },
+          x: {
+            beginAtZero: true,
+            grace: horizontal ? '15%' : undefined,
+            grid: { color: horizontal ? gridColor : 'transparent' },
+            ticks: { color: textColor, font: { size: 10, family: fontFamily }, padding: 4 },
+          },
           y: {
             beginAtZero: true,
             grid: { color: horizontal ? 'transparent' : gridColor },

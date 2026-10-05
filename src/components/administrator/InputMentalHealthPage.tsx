@@ -12,8 +12,6 @@
 // Pengukuran ulang pada tanggal yang sama menimpa baris lama. Setelah
 // tersimpan, skor terakhir disalin ke MCU terbaru dan zonasi dihitung ulang.
 //
-// CATATAN: naskah item di src/lib/questionnaire-items.ts masih berstatus DRAF
-// dan WAJIB diganti dengan naskah resmi PT-BK sebelum dipakai produksi.
 // ============================================================
 
 import { useState } from 'react';
@@ -21,7 +19,6 @@ import { useState } from 'react';
 import { DASS21_ITEMS, DASS21_SECTIONS, SDS_ITEMS, SRQ20_ITEMS } from '@/lib/questionnaire-items';
 import { scoreDass21, scoreSds, scoreSrq20 } from '@/lib/questionnaire-scores';
 import {
-  HistoryTable,
   IdentityPanel,
   ItemGroup,
   ResultDialog,
@@ -50,18 +47,6 @@ function today(): string {
 
 function countFilled(items: { id: string }[], values: Record<string, string>): number {
   return items.filter((item) => values[item.id] !== undefined && values[item.id] !== '').length;
-}
-
-interface MhHistoryRow {
-  tanggal: string;
-  skor_srq20: number | null;
-  dass_depresi: number | null;
-  dass_ansietas: number | null;
-  dass_stres: number | null;
-  indeks_sds: number | null;
-  ringkasan: string;
-  perlu_rujukan: boolean;
-  dipakaiMCU: boolean;
 }
 
 /**
@@ -119,15 +104,12 @@ function barisHasil(body: any): ScoreLine[] {
 }
 
 export default function InputMentalHealthPage() {
-  const { query, setQuery, identity, history, historyAvailable, setHistory, searching, error, search } = useEmployeeLookup('/api/mental-health');
+  const { query, setQuery, identity, searching, error, search } = useEmployeeLookup('/api/mental-health');
   const submit = useSubmitStatus();
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [active, setActive] = useState<Section>('srq20');
   const [tglPemeriksaan, setTglPemeriksaan] = useState(today());
-  const [lokasi, setLokasi] = useState('');
-  const [petugas, setPetugas] = useState('');
-  const [catatan, setCatatan] = useState('');
   const [saved, setSaved] = useState<{ ringkasan: string; perluRujukan: boolean; zonasi: string | null; mcuUpdated: number } | null>(null);
   const [resultDialog, setResultDialog] = useState<ResultDialogData | null>(null);
 
@@ -143,19 +125,8 @@ export default function InputMentalHealthPage() {
     setValues((prev) => ({ ...prev, [id]: value }));
   }
 
-  async function refreshHistory() {
-    if (!identity) return;
-    const headers = await questionnaireAuthHeaders();
-    const res = await fetch(`/api/mental-health?query=${encodeURIComponent(identity.nikKaryawan)}`, { headers });
-    const body = await res.json();
-    if (res.ok) setHistory(body.history ?? []);
-  }
-
   function clearForm() {
     setValues({});
-    setCatatan('');
-    setLokasi('');
-    setPetugas('');
     setSaved(null);
     setResultDialog(null);
     submit.setStatus('idle');
@@ -182,9 +153,6 @@ export default function InputMentalHealthPage() {
         body: JSON.stringify({
           query,
           tglPemeriksaan,
-          lokasiPemeriksaan: lokasi,
-          petugas,
-          catatan,
           ...values,
         }),
       });
@@ -208,7 +176,6 @@ export default function InputMentalHealthPage() {
         zonaMCU: body.zonasi ?? null,
         mcuUpdated: body.mcuUpdated ?? 0,
       });
-      await refreshHistory();
     } catch {
       submit.failure('Gagal menghubungi server. Coba lagi.');
     }
@@ -223,10 +190,6 @@ export default function InputMentalHealthPage() {
         <h2>Input Kesehatan Mental</h2>
         <p>
           SRQ-20, DASS-21, dan Zung SDS — parameter MENTAL HEALTH pada STD-006 Rev001.
-          Ketiganya boleh diisi sebagian saja; yang dikosongkan tidak ikut dihitung.
-        </p>
-        <p className="qh-warn">
-          Naskah item masih DRAF. Ganti dengan naskah resmi PT-BK sebelum penggunaan produksi.
         </p>
       </header>
 
@@ -248,26 +211,6 @@ export default function InputMentalHealthPage() {
               className="qh-input"
               value={tglPemeriksaan}
               onChange={(e) => setTglPemeriksaan(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="qh-label" htmlFor="qh-mh-location">Lokasi</label>
-            <input
-              id="qh-mh-location"
-              className="qh-input"
-              value={lokasi}
-              onChange={(e) => setLokasi(e.target.value)}
-              placeholder="Opsional"
-            />
-          </div>
-          <div>
-            <label className="qh-label" htmlFor="qh-mh-petugas">Petugas</label>
-            <input
-              id="qh-mh-petugas"
-              className="qh-input"
-              value={petugas}
-              onChange={(e) => setPetugas(e.target.value)}
-              placeholder="Opsional"
             />
           </div>
         </div>
@@ -388,54 +331,11 @@ export default function InputMentalHealthPage() {
         )}
       </div>
 
-      <div className="qh-card">
-        <label className="qh-label" htmlFor="qh-mh-note">Catatan</label>
-        <textarea
-          id="qh-mh-note"
-          className="qh-textarea"
-          rows={3}
-          value={catatan}
-          onChange={(e) => setCatatan(e.target.value)}
-          placeholder="Opsional, misalnya hasil rujukan ke psikolog atau konseling."
-        />
-      </div>
-
-      <div className="qh-card">
-        <h3 className="qh-card-title">Riwayat Kesehatan Mental</h3>
-        <p className="qh-description">
-          Satu baris per tanggal pemeriksaan. Baris bertanda <strong>dipakai MCU</strong> adalah skor
-          yang mengunci zona pada record MCU tersebut.
-        </p>
-        {!identity ? (
-          <p className="qh-description">Cari karyawan lebih dulu untuk melihat riwayat.</p>
-        ) : !historyAvailable ? (
-          <p className="qh-description">Login Employee menampilkan riwayat kuesioner milik sendiri. Riwayat karyawan lain hanya dapat dibuka petugas berwenang.</p>
-        ) : (
-          <HistoryTable
-            rows={(history as MhHistoryRow[]).map((row) => ({
-              tanggal: row.tanggal,
-              ringkasan: row.ringkasan || 'Tidak ada instrumen yang diisi',
-              detail: [
-                row.skor_srq20 !== null ? `SRQ-20 ${row.skor_srq20}` : null,
-                row.dass_depresi !== null ? `Depresi ${row.dass_depresi}` : null,
-                row.dass_ansietas !== null ? `Ansietas ${row.dass_ansietas}` : null,
-                row.dass_stres !== null ? `Stres ${row.dass_stres}` : null,
-                row.indeks_sds !== null ? `SDS ${row.indeks_sds}` : null,
-                row.perlu_rujukan ? 'Perlu rujukan' : null,
-              ].filter(Boolean).join(' · ') || null,
-              dipakaiMCU: row.dipakaiMCU,
-            }))}
-            empty="Belum ada hasil kesehatan mental untuk karyawan ini."
-          />
-        )}
-      </div>
-
       <SubmitBar
         disabled={!canSave}
         saving={submit.status === 'saving'}
         onSubmit={handleSave}
         onReset={clearForm}
-        hint="Pemeriksaan pada tanggal yang sama akan menimpa hasil sebelumnya. Tanggal berbeda menjadi riwayat baru."
       />
 
       <ResultDialog data={resultDialog} onClose={() => setResultDialog(null)} />
