@@ -21,6 +21,8 @@ import InputJadwalMCU from '@/components/administrator/InputJadwalMCUModern';
 import GangguanTidurPage from '@/components/administrator/GangguanTidurPage';
 import InputMentalHealthPage from '@/components/administrator/InputMentalHealthPage';
 import InventoryAdmin from '@/components/administrator/InventoryAdmin';
+import { clearDashboardDataCache, preloadDashboardData } from '@/lib/dashboard-data';
+import { clearMCUDashboardData } from '@/components/dashboard/MCUDashboardShared';
 import HomeView from '@/components/home/HomeView';
 import DataKesehatanTable from '@/components/dashboard/DataKesehatanTable';
 import DataKunjunganTable from '@/components/dashboard/DataKunjunganTable';
@@ -245,7 +247,24 @@ function DataEntryContent() {
 
 function DashContent() {
   const activeDashSidebar = useMCUStore((s) => s.activeDashSidebar);
-  const isLoggedIn = !!useAuth().user && !!useAuth().profile;
+  const { user, profile } = useAuth();
+  const isLoggedIn = !!user && !!profile;
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      clearDashboardDataCache();
+      clearMCUDashboardData();
+      return;
+    }
+
+    const role = profile?.role || '';
+    void preloadDashboardData({
+      canViewMCU: ['pic', 'administrator', 'superuser'].includes(role),
+      canViewInventory: ['administrator', 'superuser'].includes(role),
+    }).catch(error => {
+      console.error('Gagal memuat data awal dashboard:', error);
+    });
+  }, [isLoggedIn, profile?.role]);
 
   if (!isLoggedIn) {
     return (
@@ -895,9 +914,9 @@ export default function Home() {
             ) : activePage === 'dashboard' ? (
               <motion.div
                 key={store.activeDashSidebar}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
                 style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100%' }}
               >

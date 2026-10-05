@@ -8,6 +8,7 @@ import {
   type ChartOptions,
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
+import { fetchDashboardData } from '@/lib/dashboard-data';
 
 // Register Chart.js plugins and all controllers/scales/elements
 ChartJS.register(...registerables, ChartDataLabels);
@@ -128,11 +129,10 @@ export default function KunjunganBerobat() {
   }, []);
 
   // Fetch visit records
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (force = false) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/kunjungan');
-      const json = await res.json();
+      const json = await fetchDashboardData<{ success: boolean; data?: KunjunganRecord[] }>('/api/kunjungan', force);
       if (json.success && Array.isArray(json.data)) {
         setRecords(json.data);
       }
@@ -723,7 +723,7 @@ export default function KunjunganBerobat() {
 
           <button
             type="button"
-            onClick={loadData}
+            onClick={() => loadData(true)}
             title="Refresh Data"
             style={{
               background: 'none',

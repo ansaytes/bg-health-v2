@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { MONTHS, JOBSITES } from '@/lib/lagging-data';
-import { useAuth } from '@/lib/auth-context';
-import { preloadMCUDashboardData } from '@/components/dashboard/MCUDashboardShared';
+import { fetchDashboardData } from '@/lib/dashboard-data';
 
 /* ──────────────────────────────────────────────────────────────
    Types
@@ -78,8 +77,6 @@ function getSickPeriodRange(bulan: number, tahun: number) {
    ────────────────────────────────────────────────────────────── */
 
 export default function DashboardView() {
-  const { profile } = useAuth();
-  const canViewMCU = ['pic', 'administrator', 'superuser'].includes(profile?.role || '');
   const [selectedSite, setSelectedSite] = useState<string>('All Site');
   // Default: current year + current month (Statistik Kesehatan)
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -93,13 +90,6 @@ export default function DashboardView() {
   const [loadingAsr, setLoadingAsr] = useState(false);
   const [chartReady, setChartReady] = useState(false);
 
-  useEffect(() => {
-    if (!canViewMCU) return;
-    void preloadMCUDashboardData().catch(error => {
-      console.error('Gagal memuat awal data dashboard MCU:', error);
-    });
-  }, [canViewMCU]);
-
   /* ─── Fetch KPI data when site/year changes ─────────────── */
   useEffect(() => {
     let cancelled = false;
@@ -109,8 +99,7 @@ export default function DashboardView() {
         const view = selectedSite === 'All Site' ? 'view=all_site&' : '';
         const siteParam = selectedSite === 'All Site' ? '' : `jobsite=${encodeURIComponent(selectedSite)}&`;
         const url = `/api/health-indicators?${view}${siteParam}tahun=${selectedYear || ''}`;
-        const res = await fetch(url);
-        const json = await res.json();
+        const json = await fetchDashboardData<{ success: boolean; data?: KpiRow[] }>(url);
         if (!cancelled && json.success && Array.isArray(json.data)) {
           setKpiData(json.data);
         } else if (!cancelled) {
@@ -187,8 +176,7 @@ export default function DashboardView() {
         const url = isYTD
           ? `/api/health-indicators?asr_ranking=true&tahun=${selectedYear || ''}`
           : `/api/health-indicators?asr_ranking=true&tahun=${selectedYear || ''}&bulan=${bulanNum}`;
-        const res = await fetch(url);
-        const json = await res.json();
+        const json = await fetchDashboardData<{ success: boolean; data?: AsrRankRow[] }>(url);
         if (!cancelled && json.success) {
           let rows: AsrRankRow[] = json.data || [];
           if (isYTD) {
@@ -237,8 +225,7 @@ export default function DashboardView() {
         const url = `/api/sick-employees?bulan=${bulanNum}&tahun=${selectedYear || ''}` +
           (selectedSite !== 'All Site' ? `&jobsite=${encodeURIComponent(selectedSite)}` : '') +
           `&period_start=${period.start}&period_end=${period.end}`;
-        const res = await fetch(url);
-        const json = await res.json();
+        const json = await fetchDashboardData<{ success: boolean; data?: SickEmployee[] }>(url);
         if (!cancelled && json.success) {
           setSickList(json.data || []);
         } else if (!cancelled) {

@@ -12,6 +12,7 @@ import {
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import DownloadButton from '@/components/ui/download-button';
 import { AlertTriangle, Clock, PackageCheck, AlertCircle, RefreshCw, ShieldAlert, Boxes } from 'lucide-react';
+import { fetchDashboardData } from '@/lib/dashboard-data';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -27,7 +28,7 @@ interface InventoryItem {
 }
 
 export default function InventoryDashboard() {
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
   const role = profile?.role || 'guest';
   const isAuthorized = ['superuser', 'administrator'].includes(role);
 
@@ -52,11 +53,10 @@ export default function InventoryDashboard() {
   const topExpSoonChart = useRef<ChartJS | null>(null);
   const fastMovingChart = useRef<ChartJS | null>(null);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (force = false) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/inventory');
-      const json = await res.json();
+      const json = await fetchDashboardData<{ success: boolean; data?: InventoryItem[] }>('/api/inventory', force);
       if (json.success && Array.isArray(json.data)) {
         setItems(json.data);
       }
@@ -638,7 +638,7 @@ export default function InventoryDashboard() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <button
                     type="button"
-                    onClick={loadData}
+                    onClick={() => loadData(true)}
                     title="Refresh Data"
                     style={{
                       height: 34,

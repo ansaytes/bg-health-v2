@@ -44,47 +44,29 @@ export interface MCUDashboardRow {
   jadwal_mcu_selanjutnya: string | null;
 }
 
-// Kedua halaman MCU memakai dataset yang sama.
-// Cache tingkat modul dan sessionStorage membuat perpindahan antarhalaman instan (0ms) tanpa reload.
+// Kedua halaman MCU memakai dataset yang sama; simpan hanya di memori aplikasi.
 const DASHBOARD_CACHE_MS = 5 * 60 * 1000;
-const SESSION_CACHE_KEY = 'bg_health_mcu_dashboard_cache_v2';
 
 let dashboardCache: { rows: MCUDashboardRow[]; savedAt: number } | null = null;
 let dashboardRequest: Promise<MCUDashboardRow[]> | null = null;
+let dashboardGeneration = 0;
 
-function getStoredCache(): { rows: MCUDashboardRow[]; savedAt: number } | null {
+function getCachedRows(): { rows: MCUDashboardRow[]; savedAt: number } | null {
   if (dashboardCache && Date.now() - dashboardCache.savedAt < DASHBOARD_CACHE_MS) {
     return dashboardCache;
-  }
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.sessionStorage.getItem(SESSION_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed && Array.isArray(parsed.rows) && Date.now() - parsed.savedAt < DASHBOARD_CACHE_MS) {
-      dashboardCache = parsed;
-      return parsed;
-    }
-  } catch {
-    // Abaikan kegagalan baca sessionStorage
   }
   return null;
 }
 
-function saveStoredCache(rows: MCUDashboardRow[]) {
+function saveCachedRows(rows: MCUDashboardRow[], generation: number) {
+  if (generation !== dashboardGeneration) return;
   const entry = { rows, savedAt: Date.now() };
   dashboardCache = entry;
-  if (typeof window !== 'undefined') {
-    try {
-      window.sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(entry));
-    } catch {
-      // Abaikan kegagalan tulis sessionStorage
-    }
-  }
 }
 
 async function fetchDashboardRows(force = false) {
   if (!force && dashboardRequest) return dashboardRequest;
+  const generation = dashboardGeneration;
   const runner = (async () => {
     const { data: { session } } = await supabase.auth.getSession();
     const url = force ? '/api/mcu/dashboard?refresh=true' : '/api/mcu/dashboard';
@@ -94,25 +76,31 @@ async function fetchDashboardRows(force = false) {
     const json = await response.json();
     if (!response.ok) throw new Error(json.error || 'Gagal memuat data dashboard MCU');
     const rows = Array.isArray(json.employees) ? json.employees : [];
-    saveStoredCache(rows);
+    saveCachedRows(rows, generation);
     return rows;
   })();
   if (!force) dashboardRequest = runner;
   try {
     return await runner;
   } finally {
-    if (!force) dashboardRequest = null;
+    if (!force && dashboardRequest === runner) dashboardRequest = null;
   }
 }
 
 export function preloadMCUDashboardData(): Promise<MCUDashboardRow[]> {
-  const cached = getStoredCache();
+  const cached = getCachedRows();
   if (cached) return Promise.resolve(cached.rows);
   return fetchDashboardRows();
 }
 
+export function clearMCUDashboardData() {
+  dashboardGeneration += 1;
+  dashboardCache = null;
+  dashboardRequest = null;
+}
+
 export function useMCUDashboardData() {
-  const initialCache = getStoredCache();
+  const initialCache = getCachedRows();
   const [rows, setRows] = useState<MCUDashboardRow[]>(() => initialCache?.rows ?? []);
   const [loading, setLoading] = useState(!initialCache);
   const [error, setError] = useState('');
@@ -120,7 +108,7 @@ export function useMCUDashboardData() {
 
   useEffect(() => {
     let active = true;
-    const cache = getStoredCache();
+    const cache = getCachedRows();
 
     const load = async () => {
       if (cache && reloadToken === 0) {
@@ -149,10 +137,7 @@ export function useMCUDashboardData() {
     loading,
     error,
     refresh: () => {
-      dashboardCache = null;
-      if (typeof window !== 'undefined') {
-        try { window.sessionStorage.removeItem(SESSION_CACHE_KEY); } catch {}
-      }
+      clearMCUDashboardData();
       setReloadToken(value => value + 1);
     },
   };
@@ -299,9 +284,7 @@ export function MCUChart({
         ...(type === 'doughnut' ? { cutout: '58%' } : {}),
         plugins: {
           legend: {
-            display: true,
-            position: type === 'doughnut' ? 'right' : 'bottom',
-            labels: { color: textColor, font: { size: 11, weight: 'bold' }, boxWidth: 12, usePointStyle: true },
+            display: false,
           },
           tooltip: {
             callbacks: {
@@ -359,7 +342,23 @@ export function MCUChart({
     };
   }, [type, labels, values, colors, legendLabel, horizontal, centerText, percentLabels, isDark]);
 
-  return <div className="mcu-dashboard-chart"><canvas ref={canvasRef} /></div>;
+  const legendItems = type === 'doughnut'
+    ? labels.map((label, index) => ({ label, color: colors[index] || '#64748b' }))
+    : [{ label: legendLabel, color: colors[0] || '#64748b' }];
+
+  return (
+    <div className={`mcu-dashboard-chart${type === 'doughnut' ? ' has-category-legend' : ''}`}>
+      <canvas ref={canvasRef} />
+      <div className="mcu-chart-legend" role="list" aria-label={`Legenda ${legendLabel}`}>
+        {legendItems.map((item, index) => (
+          <span className="mcu-chart-legend-item" role="listitem" key={`${item.label}-${index}`}>
+            <span className="mcu-chart-legend-swatch" style={{ backgroundColor: item.color }} aria-hidden="true" />
+            {item.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function MCUChartCard({
