@@ -230,7 +230,7 @@ export function applyMCUCalculations(values: MCUValues): MCUValues {
   // Diagnosa medis dihitung otomatis dari seluruh temuan, memakai istilah
   // diagnosis bahasa Inggris hasil klasifikasi SOP (tanpa kode ICD-10).
   // Nilai lama dari Excel sengaja dikosongkan oleh pipeline import agar
-  // tidak ikut dipertahankan (lihat scripts/lib/mcu-calc-bridge.mjs).
+  // tidak ikut dipertahankan.
   const diagnosisEntries = buildDiagnosisList(result);
   if (!text(result.diagnosaMedis)) {
     result.diagnosaMedis = formatDiagnosis(diagnosisEntries);

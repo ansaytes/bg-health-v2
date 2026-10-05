@@ -141,8 +141,7 @@ export function pesanGalat(error: unknown, konteks: string): string {
   if (/Could not find the table|schema cache|PGRST205|42P01/i.test(mentah)) {
     const tabel = (/table '([^']+)'/i.exec(mentah) ?? [])[1] ?? 'tabel kuesioner';
     return `${konteks} gagal karena tabel ${tabel} belum ada di database. `
-      + 'Jalankan supabase/migrations/2026-10-02_std006_ptm_ess_mental_health.sql '
-      + 'lewat Supabase SQL Editor lebih dulu.';
+      + 'Hubungi administrator untuk menerapkan skrip database yang diperlukan.';
   }
   return mentah;
 }
