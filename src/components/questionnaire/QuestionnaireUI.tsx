@@ -539,6 +539,7 @@ export function useEmployeeLookup(endpoint: string) {
   const [query, setQuery] = useState('');
   const [identity, setIdentity] = useState<EmployeeIdentityView | null>(null);
   const [history, setHistory] = useState<any[]>([]);
+  const [historyAvailable, setHistoryAvailable] = useState(true);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
 
@@ -558,16 +559,19 @@ export function useEmployeeLookup(endpoint: string) {
         setError(body.error ?? 'Karyawan tidak ditemukan.');
         setIdentity(null);
         setHistory([]);
+        setHistoryAvailable(false);
         return null;
       }
       setIdentity(body.identity as EmployeeIdentityView);
       setHistory(Array.isArray(body.history) ? body.history : []);
+      setHistoryAvailable(body.historyAvailable !== false);
       setQuery(term);
       return body.identity as EmployeeIdentityView;
     } catch {
       setError('Gagal menghubungi server. Coba lagi.');
       setIdentity(null);
       setHistory([]);
+      setHistoryAvailable(false);
       return null;
     } finally {
       setSearching(false);
@@ -578,10 +582,11 @@ export function useEmployeeLookup(endpoint: string) {
     setQuery('');
     setIdentity(null);
     setHistory([]);
+    setHistoryAvailable(true);
     setError('');
   }
 
-  return { query, setQuery, identity, history, setHistory, searching, error, search, reset };
+  return { query, setQuery, identity, history, historyAvailable, setHistory, searching, error, search, reset };
 }
 
 /** Pesan sukses atau galat yang otomatis hilang setelah beberapa detik. */

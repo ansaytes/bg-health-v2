@@ -5,6 +5,7 @@ import { scoreEss } from '@/lib/questionnaire-scores';
 import { kesimpulanEss } from '@/lib/questionnaire-conclusion';
 import {
   adminClient,
+  canWriteQuestionnaires,
   denyUnlessSelfService,
   findEmployeeIdentity,
   getCaller,
@@ -18,16 +19,15 @@ import {
 /**
  * GET /api/ess?query=<nama|nik>
  *   Tanpa query → mengembalikan definisi item + skala jawaban.
- *   Dengan query  → mengembalikan identitas karyawan untuk autofill beserta
- *                   hasil ESS terakhir bila ada.
+ *   Dengan query  → mengembalikan identitas karyawan untuk autofill; riwayat
+ *                   hanya dikembalikan kepada petugas yang sudah masuk.
  *
  * POST /api/ess
  *   Menyimpan hasil ESS. Memakai aturan satu baris per karyawan per tanggal,
  *   jadi pengukuran ulang pada tanggal yang sama menimpa baris lama.
  *
- * Kedua verb terbuka tanpa login: kuesioner ini diisi karyawan sendiri, dan
- * mewajibkan sesi hanya membuat pengisiannya dilewati. Petugas yang sudah
- * masuk tetap boleh, dan tidak ikut dihitung oleh batas laju.
+ * Pengisian tetap mendukung self-service tanpa login. Riwayat hasil tidak
+ * diberikan kepada pemanggil anonim.
  */
 export async function GET(req: NextRequest) {
   const caller = await getCaller(req);
@@ -57,6 +57,9 @@ export async function GET(req: NextRequest) {
   }
 
   const client = adminClient();
+  if (!canWriteQuestionnaires(caller)) {
+    return NextResponse.json({ identity, history: [], historyAvailable: false });
+  }
 
   // Riwayat lengkap, bukan cuma hasil terakhir. Kuesioner diisi setiap 3 atau
   // 6 bulan, jadi assessor butuh melihat perubahannya dari waktu ke waktu.
@@ -76,6 +79,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     identity,
+    historyAvailable: true,
     history: (rows ?? []).map((row) => ({
       tanggal: String(row.tgl_ess ?? ''),
       skor: row.skor_ess,

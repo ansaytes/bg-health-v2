@@ -284,7 +284,9 @@ export function MCUChart({
         ...(type === 'doughnut' ? { cutout: '58%' } : {}),
         plugins: {
           legend: {
-            display: false,
+            display: true,
+            position: type === 'doughnut' ? 'right' : 'bottom',
+            labels: { color: textColor, font: { size: 11, weight: 'bold' }, boxWidth: 12, usePointStyle: true },
           },
           tooltip: {
             callbacks: {
@@ -315,7 +317,22 @@ export function MCUChart({
         },
         scales: type === 'bar' ? {
           x: { beginAtZero: true, grid: { color: horizontal ? gridColor : 'transparent' }, ticks: { color: textColor, font: { size: 10 }, padding: 4 } },
-          y: { beginAtZero: true, grid: { color: horizontal ? 'transparent' : gridColor }, ticks: { color: textColor, font: { size: 10 }, padding: 4, callback: (value: string | number) => { const label = String(value); return label.length > 26 ? `${label.slice(0, 24)}…` : label; } } },
+          y: {
+            beginAtZero: true,
+            grid: { color: horizontal ? 'transparent' : gridColor },
+            ticks: {
+              color: textColor,
+              font: { size: 10 },
+              padding: 4,
+              callback: (value: string | number) => {
+                const categoryIndex = Number(value);
+                const label = horizontal
+                  ? (labels[categoryIndex] ?? String(value))
+                  : String(value);
+                return label.length > 26 ? `${label.slice(0, 24)}…` : label;
+              },
+            },
+          },
         } : undefined,
       },
       plugins: centerText ? [{
@@ -342,23 +359,7 @@ export function MCUChart({
     };
   }, [type, labels, values, colors, legendLabel, horizontal, centerText, percentLabels, isDark]);
 
-  const legendItems = type === 'doughnut'
-    ? labels.map((label, index) => ({ label, color: colors[index] || '#64748b' }))
-    : [{ label: legendLabel, color: colors[0] || '#64748b' }];
-
-  return (
-    <div className={`mcu-dashboard-chart${type === 'doughnut' ? ' has-category-legend' : ''}`}>
-      <canvas ref={canvasRef} />
-      <div className="mcu-chart-legend" role="list" aria-label={`Legenda ${legendLabel}`}>
-        {legendItems.map((item, index) => (
-          <span className="mcu-chart-legend-item" role="listitem" key={`${item.label}-${index}`}>
-            <span className="mcu-chart-legend-swatch" style={{ backgroundColor: item.color }} aria-hidden="true" />
-            {item.label}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
+  return <div className="mcu-dashboard-chart"><canvas ref={canvasRef} /></div>;
 }
 
 export function MCUChartCard({

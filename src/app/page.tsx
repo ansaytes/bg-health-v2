@@ -435,14 +435,98 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
   const [regNama, setRegNama] = useState("");
   const [regJabatan, setRegJabatan] = useState("");
   const [regJobsite, setRegJobsite] = useState("");
+  const [regEmployee, setRegEmployee] = useState<{
+    nama: string;
+    job_position: string;
+    site_name: string;
+    lookupToken: string;
+  } | null>(null);
+  const [regCandidates, setRegCandidates] = useState<NonNullable<typeof regEmployee>[]>([]);
+  const [regLookupStatus, setRegLookupStatus] = useState<'idle' | 'searching' | 'found' | 'select' | 'not_found' | 'error'>('idle');
+  const [regLookupError, setRegLookupError] = useState('');
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegPassword, setShowRegPassword] = useState(false);
 
+  useEffect(() => {
+    const query = regNik.trim();
+    const searchBy = /^\d{16}$/.test(query)
+      ? 'national_id'
+      : /^\d+$/.test(query)
+        ? 'nik'
+        : 'nama';
+    const isSearchable = searchBy === 'national_id'
+      || (searchBy === 'nik' && /^\d{4,15}$/.test(query))
+      || (searchBy === 'nama' && query.length >= 3);
+
+    setRegEmployee(null);
+    setRegCandidates([]);
+    if (!isSearchable) {
+      setRegLookupStatus('idle');
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setRegLookupStatus('searching');
+      setRegLookupError('');
+      try {
+        const response = await fetch('/api/employee/register-lookup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query, searchBy }),
+          signal: controller.signal,
+        });
+        const payload = await response.json();
+        if (response.status === 404) {
+          setRegLookupStatus('not_found');
+          setRegLookupError(payload.error || 'Karyawan tidak ditemukan.');
+          return;
+        }
+        if (!response.ok || !payload.success || !Array.isArray(payload.data)) {
+          throw new Error(payload.error || 'Karyawan tidak ditemukan.');
+        }
+        if (controller.signal.aborted) return;
+        const employees = payload.data.filter((employee: NonNullable<typeof regEmployee>) =>
+          employee.lookupToken && employee.nama,
+        );
+        if (employees.length === 0) {
+          setRegLookupStatus('not_found');
+          setRegLookupError('Data karyawan belum lengkap untuk pendaftaran.');
+          return;
+        }
+        if (employees.length === 1) {
+          const employee = employees[0];
+          setRegEmployee(employee);
+          setRegNama(employee.nama);
+          setRegJabatan(employee.job_position || '');
+          setRegJobsite(employee.site_name || '');
+          setRegLookupStatus('found');
+        } else {
+          setRegCandidates(employees);
+          setRegLookupStatus('select');
+        }
+      } catch (lookupError) {
+        if (controller.signal.aborted) return;
+        setRegLookupStatus('error');
+        setRegLookupError(lookupError instanceof Error ? lookupError.message : 'Lookup karyawan gagal.');
+      }
+    }, 350);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [regNik]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (regLookupStatus !== 'found' || !regEmployee) {
+      setError('Pastikan data karyawan berhasil ditemukan sebelum mendaftar.');
+      return;
+    }
     setLoading(true);
 
     try {
@@ -582,8 +666,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
                   password: regPassword,
                   full_name: regNama,
                   role: 'viewer',
-                  national_id: regNik,
-                  username: regNik,
+                  employee_lookup_token: regEmployee.lookupToken,
                 }),
               });
               const json = await res.json();
@@ -598,38 +681,67 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
             }
           }} style={{ display: 'flex', flexDirection: 'column' }}>
             <div className="login-input-group">
-              <label className="login-input-label">NIK KTP *</label>
+              <label className="login-input-label">Cari NIK KTP, NIK Karyawan, atau Nama *</label>
               <input
                 type="text"
                 className="login-input"
-                placeholder="NIK KTP"
+                placeholder="NIK KTP, NIK Karyawan, atau Nama"
                 value={regNik}
-                onChange={async (e) => {
+                onChange={(e) => {
                   const val = e.target.value;
                   setRegNik(val);
-                  if (val.length >= 6) {
-                    try {
-                      const res = await fetch('/api/employee', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ query: val }),
-                      });
-                      const json = await res.json();
-                      if (json.success && json.data && json.data.length > 0) {
-                        const emp = json.data[0];
-                        setRegNama(emp.nama || '');
-                        setRegJabatan(emp.job_position || '');
-                        setRegJobsite(emp.site_name || '');
-                        setRegEmail(emp.nik ? `${String(emp.nik)}@bg-health.local` : '');
-                      }
-                    } catch {}
-                  }
+                  setRegEmployee(null);
+                  setRegCandidates([]);
+                  setRegNama('');
+                  setRegJabatan('');
+                  setRegJobsite('');
+                  setRegLookupStatus('idle');
+                  setRegLookupError('');
                 }}
               />
+              {regLookupStatus === 'searching' && (
+                <div style={{ marginTop: 6, fontSize: 11, color: 'var(--muted-foreground)' }}>Memeriksa data karyawan…</div>
+              )}
+              {regLookupStatus === 'select' && (
+                <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+                  <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>Beberapa karyawan cocok. Pilih yang sesuai:</span>
+                  {regCandidates.map((employee) => (
+                    <button
+                      key={employee.lookupToken}
+                      type="button"
+                      onClick={() => {
+                        setRegEmployee(employee);
+                        setRegNama(employee.nama);
+                        setRegJabatan(employee.job_position || '');
+                        setRegJobsite(employee.site_name || '');
+                        setRegLookupStatus('found');
+                        setRegLookupError('');
+                      }}
+                      style={{
+                        padding: '8px 10px',
+                        border: '1px solid var(--border)',
+                        borderRadius: 7,
+                        background: 'var(--background)',
+                        color: 'var(--foreground)',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <strong>{employee.nama}</strong>
+                      <span style={{ display: 'block', fontSize: 11, color: 'var(--muted-foreground)' }}>
+                        {employee.job_position} · {employee.site_name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
               {regNama && (
                 <div style={{ marginTop: 6, fontSize: 11, color: 'var(--muted-foreground)', background: 'var(--muted)', padding: '4px 8px', borderRadius: 6 }}>
                   ✓ {regNama} — {regJabatan} — {regJobsite}
                 </div>
+              )}
+              {regLookupError && (
+                <div role="status" style={{ marginTop: 6, fontSize: 11, color: '#dc2626' }}>{regLookupError}</div>
               )}
             </div>
             <div className="login-input-group">

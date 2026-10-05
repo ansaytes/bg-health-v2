@@ -118,7 +118,7 @@ function barisHasil(body: any): ScoreLine[] {
 }
 
 export default function InputMentalHealthPage() {
-  const { query, setQuery, identity, history, setHistory, searching, error, search } = useEmployeeLookup('/api/mental-health');
+  const { query, setQuery, identity, history, historyAvailable, setHistory, searching, error, search } = useEmployeeLookup('/api/mental-health');
   const submit = useSubmitStatus();
 
   const [values, setValues] = useState<Record<string, string>>({});
@@ -405,6 +405,8 @@ export default function InputMentalHealthPage() {
         </p>
         {!identity ? (
           <p className="qh-description">Cari karyawan lebih dulu untuk melihat riwayat.</p>
+        ) : !historyAvailable ? (
+          <p className="qh-description">Riwayat hasil hanya tersedia bagi petugas yang sudah masuk. Kuesioner tetap dapat diisi tanpa login.</p>
         ) : (
           <HistoryTable
             rows={(history as MhHistoryRow[]).map((row) => ({

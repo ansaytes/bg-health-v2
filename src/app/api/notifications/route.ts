@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { readRegistrationLookupToken } from '@/lib/registration-lookup-token';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
@@ -142,10 +143,11 @@ export async function PATCH(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email, password, full_name, national_id, nik, jabatan, jobsite } = body;
+    const { email, password, employee_lookup_token } = body;
+    const employee = readRegistrationLookupToken(employee_lookup_token);
 
-    if (!email || !password || !nik) {
-      return NextResponse.json({ error: 'Email, password, dan NIK wajib diisi' }, { status: 400 });
+    if (!email || !password || !employee) {
+      return NextResponse.json({ error: 'Email, password, dan hasil lookup karyawan yang masih berlaku wajib diisi.' }, { status: 400 });
     }
 
     const client = supabaseServiceKey ? supabaseAdmin : createClient(supabaseUrl, supabaseAnonKey);
@@ -166,12 +168,12 @@ export async function POST(req: NextRequest) {
       .insert({
         email,
         password,
-        full_name: full_name || null,
-        national_id: national_id || nik,
-        nik,
-        jabatan: jabatan || null,
-        jobsite: jobsite || null,
-        username: nik,
+        full_name: employee.nama,
+        national_id: employee.nationalId,
+        nik: employee.nik,
+        jabatan: employee.jabatan || null,
+        jobsite: employee.jobsite || null,
+        username: employee.nik,
         role: 'viewer',
         status: 'pending',
       })

@@ -5,6 +5,7 @@ import { isDassActionable, scoreDass21, scoreSrq20, scoreSds } from '@/lib/quest
 import { kesimpulanSrqDass } from '@/lib/questionnaire-conclusion';
 import {
   adminClient,
+  canWriteQuestionnaires,
   denyUnlessSelfService,
   findEmployeeIdentity,
   getCaller,
@@ -21,15 +22,15 @@ const DATE_COLUMN = 'tgl_pemeriksaan';
 /**
  * GET /api/mental-health?query=<nama|nik>
  *   Tanpa query  → definisi item ketiga instrumen.
- *   Dengan query → identitas karyawan untuk autofill dan hasil terakhir.
+ *   Dengan query → identitas karyawan untuk autofill; riwayat hanya untuk
+ *                  petugas yang sudah masuk.
  *
  * POST /api/mental-health
  *   Menyimpan SRQ-20, DASS-21, dan Zung SDS sekaligus dalam satu baris.
  *   Pengukuran ulang pada tanggal yang sama menimpa baris lama.
  *
- * Kedua verb terbuka tanpa login: kuesioner ini diisi karyawan sendiri, dan
- * mewajibkan sesi hanya membuat pengisiannya dilewati. Petugas yang sudah
- * masuk tetap boleh, dan tidak ikut dihitung oleh batas laju.
+ * Pengisian tetap mendukung self-service tanpa login. Riwayat hasil tidak
+ * diberikan kepada pemanggil anonim.
  */
 export async function GET(req: NextRequest) {
   const caller = await getCaller(req);
@@ -79,6 +80,9 @@ export async function GET(req: NextRequest) {
   }
 
   const client = adminClient();
+  if (!canWriteQuestionnaires(caller)) {
+    return NextResponse.json({ identity, history: [], historyAvailable: false });
+  }
 
   // Riwayat lengkap per tanggal. Kuesioner diisi lebih sering daripada MCU,
   // jadi hasil yang lama tidak boleh hilang ketika yang baru masuk.
@@ -97,6 +101,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     identity,
+    historyAvailable: true,
     history: (rows ?? []).map((row) => ({
       tanggal: String(row.tgl_pemeriksaan ?? ''),
       skor_srq20: row.skor_srq20 ?? null,

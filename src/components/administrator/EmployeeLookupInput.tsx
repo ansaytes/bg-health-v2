@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { getEmployeeLookupAccessToken } from '@/lib/employee-lookup-client';
 
 export interface EmployeeData {
   nik: string;
@@ -31,7 +32,7 @@ interface EmployeeLookupInputProps {
   inputStyle?: React.CSSProperties;
 }
 
-type LookupStatus = 'idle' | 'searching' | 'found' | 'not_found';
+type LookupStatus = 'idle' | 'searching' | 'found' | 'not_found' | 'error';
 
 const SPINNER_COLOR = '#ff4d00';
 const FOUND_COLOR = '#00B894';
@@ -78,7 +79,9 @@ export default function EmployeeLookupInput({
   const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSearchedValue = useRef<string>('');
+  const lookupRequestId = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [lookupError, setLookupError] = useState('');
 
   // Auto-detect search type
   const searchBy = autoDetectSearchBy(value);
@@ -109,17 +112,24 @@ export default function EmployeeLookupInput({
     async (searchValue: string) => {
       if (searchValue.length < minLength || searchValue === lastSearchedValue.current) return;
       lastSearchedValue.current = searchValue;
+      const requestId = ++lookupRequestId.current;
       const detectedType = autoDetectSearchBy(searchValue);
 
       setStatus('searching');
+      setLookupError('');
       setShowSuggestions(true);
       try {
+        const accessToken = await getEmployeeLookupAccessToken();
         const res = await fetch('/api/employee', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
           body: JSON.stringify({ query: searchValue, searchBy: detectedType }),
         });
         const json = await res.json();
+        if (requestId !== lookupRequestId.current) return;
         if (json.success && json.data && json.data.length > 0) {
           const results = json.data as EmployeeData[];
           setSuggestions(results);
@@ -139,11 +149,18 @@ export default function EmployeeLookupInput({
           }
         } else {
           setSuggestions([]);
-          setStatus('not_found');
+          if (res.status === 401 || res.status === 403 || res.status >= 500) {
+            setLookupError(json.error || 'Pencarian karyawan gagal.');
+            setStatus('error');
+          } else {
+            setStatus('not_found');
+          }
         }
-      } catch (_err) {
-        setStatus('not_found');
+      } catch (error) {
+        if (requestId !== lookupRequestId.current) return;
+        setStatus('error');
         setSuggestions([]);
+        setLookupError(error instanceof Error ? error.message : 'Gagal mencari data karyawan.');
       }
     },
     [autoFill, onAutoFill, onEmployeeFound, minLength]
@@ -153,7 +170,9 @@ export default function EmployeeLookupInput({
     const v = e.target.value;
     onChange(v);
     if (v !== lastSearchedValue.current) {
+      lookupRequestId.current += 1;
       setStatus('idle');
+      setLookupError('');
       setSuggestions([]);
       setShowSuggestions(false);
     }
@@ -220,7 +239,7 @@ export default function EmployeeLookupInput({
     ...(inputStyle || {}),
     ...(status === 'found'
       ? { borderColor: FOUND_COLOR, boxShadow: '0 0 0 2px rgba(0,184,148,0.15)' }
-      : status === 'not_found'
+      : status === 'not_found' || status === 'error'
         ? (required === false ? { borderColor: '#f59e0b' } : { borderColor: NOT_FOUND_COLOR })
         : {}),
     paddingRight: 36,
@@ -241,7 +260,7 @@ export default function EmployeeLookupInput({
         </svg>
       );
     }
-    if (status === 'not_found') {
+    if (status === 'not_found' || status === 'error') {
       return (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={required === false ? '#f59e0b' : NOT_FOUND_COLOR} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <line x1="18" y1="6" x2="6" y2="18" />
@@ -299,7 +318,7 @@ export default function EmployeeLookupInput({
         </span>
       </div>
 
-      {status === 'not_found' && (
+      {(status === 'not_found' || status === 'error') && (
         <div style={{
           marginTop: 6,
           fontSize: 11,
@@ -313,11 +332,13 @@ export default function EmployeeLookupInput({
           border: required === false ? '1px solid rgba(245,158,11,0.2)' : '1px solid rgba(239,68,68,0.2)',
         }}>
           <span style={{ lineHeight: 1.3 }}>
-            {required === false
-              ? 'Data tidak ditemukan di master employee.'
-              : 'Karyawan tidak ditemukan di master data.'}
+            {status === 'error'
+              ? lookupError
+              : required === false
+                ? 'Data tidak ditemukan di master employee.'
+                : 'Karyawan tidak ditemukan di master data.'}
           </span>
-          {onNewIdentity && (
+          {status === 'not_found' && onNewIdentity && (
             <button
               type="button"
               onClick={onNewIdentity}

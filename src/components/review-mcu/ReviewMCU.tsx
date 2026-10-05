@@ -20,6 +20,7 @@ import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from '@/components/ui/accordion';
 import { useMCUStore, type EmployeeData as MCUEmployeeData } from '@/lib/store';
+import { getEmployeeLookupAccessToken } from '@/lib/employee-lookup-client';
 import { MCU_FIELDS, MCU_SECTIONS, getFieldsBySection, type MCUFieldDef } from '@/lib/mcu-fields';
 import {
   DEFAULT_GEMINI_OCR_MODEL,
@@ -253,9 +254,13 @@ export default function ReviewMCU() {
     const searchBy = detectSearchBy(nikInput);
     store.setSearchingEmployee(true);
     try {
+      const accessToken = await getEmployeeLookupAccessToken();
       const res = await fetch('/api/employee', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({ query: nikInput.trim(), searchBy }),
       });
       const json = await res.json();
@@ -269,8 +274,8 @@ export default function ReviewMCU() {
       } else {
         store.showToast(json.error || 'Karyawan tidak ditemukan', 'error');
       }
-    } catch {
-      store.showToast('Gagal menghubungi server', 'error');
+    } catch (error) {
+      store.showToast(error instanceof Error ? error.message : 'Gagal menghubungi server', 'error');
     } finally {
       store.setSearchingEmployee(false);
     }
