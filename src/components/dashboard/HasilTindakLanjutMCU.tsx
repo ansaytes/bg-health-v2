@@ -179,6 +179,7 @@ export default function HasilTindakLanjutMCU() {
   const resultColors = resultDistribution.map(([label]) => RESULT_COLORS[label.toLowerCase()] || '#616161');
   const frsColors = frsDistribution.map(([label]) => {
     const normalized = label.toLowerCase();
+    if (normalized.includes('cek parameter')) return '#F39C12';
     if (normalized.includes('no data') || normalized.includes('tidak ada data') || normalized.includes('belum')) return '#616161';
     if (normalized.includes('high')) return '#E74C3C';
     if (normalized.includes('intermediate')) return '#F39C12';
@@ -187,6 +188,7 @@ export default function HasilTindakLanjutMCU() {
   });
   const riskColors = riskDistribution.map(([label], index) => {
     const normalized = label.toLowerCase();
+    if (normalized.includes('belum lengkap')) return '#F39C12';
     if (normalized.includes('no data') || normalized.includes('tidak ada data') || normalized.includes('belum')) return '#616161';
     if (normalized === 'merah') return '#FF4444';
     if (normalized === 'kuning') return '#FFD700';

@@ -113,7 +113,7 @@ function FeedCard({ item, index, onOpen, compact = false }: { item: FeedItem; in
         className="home-feed-card-media"
         style={{
           background: showImage ? '#0a0b0e' : placeholder.bg,
-          aspectRatio: compact ? '16 / 9' : '4 / 3',
+          aspectRatio: '16 / 9',
         }}
       >
         {showImage ? (
@@ -153,8 +153,8 @@ function FeedCard({ item, index, onOpen, compact = false }: { item: FeedItem; in
         )}
       </div>
       <div className="home-feed-card-body" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {item.title && (
-          <p style={{ fontSize: compact ? 11 : 12, fontWeight: 700, color: 'var(--foreground)', marginBottom: 4, lineHeight: 1.3 }}>{item.title}</p>
+        {(item.title || compact) && (
+          <p className="home-feed-card-title" style={{ fontSize: compact ? 11 : 12, fontWeight: 700, color: 'var(--foreground)', marginBottom: 4, lineHeight: 1.3 }}>{item.title || '\u00a0'}</p>
         )}
         <p
           className="home-feed-card-caption"
@@ -162,7 +162,7 @@ function FeedCard({ item, index, onOpen, compact = false }: { item: FeedItem; in
         >
           {captionText}
         </p>
-        {isCaptionLong && (
+        {isCaptionLong && !compact && (
           <button
             type="button"
             className="caption-toggle-btn"
@@ -490,11 +490,11 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
 
   if (activeTab === 'semua-feed') {
     return (
-      <div className="home-feed">
-        <FeedSection title="Health Campaign" data={campaignData} onOpen={handleOpenItem} />
-        <FeedSection title="Health Talk" data={talkData} onOpen={handleOpenItem} />
-        <FeedSection title="Podcast" data={podcastData} onOpen={handleOpenItem} />
-        <FeedSection title="News" data={newsData} onOpen={handleOpenItem} />
+      <div className="home-feed home-feed-compact">
+        <FeedSection title="Health Campaign" data={campaignData} onOpen={handleOpenItem} compact />
+        <FeedSection title="Health Talk" data={talkData} onOpen={handleOpenItem} compact />
+        <FeedSection title="Podcast" data={podcastData} onOpen={handleOpenItem} compact />
+        <FeedSection title="News" data={newsData} onOpen={handleOpenItem} compact />
         <ContentModal item={selectedItem} onClose={handleCloseItem} />
       </div>
     );

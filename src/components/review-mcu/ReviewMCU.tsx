@@ -998,7 +998,9 @@ function ZonasiCard({
         ? 'bg-zona-kuning'
         : zona === 'Merah'
           ? 'bg-zona-merah'
-          : 'bg-muted';
+            : zona === 'Belum Lengkap'
+              ? 'bg-orange-500'
+            : 'bg-muted';
 
   const textColor =
     zona === 'Hijau'
@@ -1007,7 +1009,9 @@ function ZonasiCard({
         ? 'text-amber-950 dark:text-amber-100'
         : zona === 'Merah'
           ? 'text-white'
-          : 'text-muted-foreground';
+            : zona === 'Belum Lengkap'
+              ? 'text-orange-950 dark:text-orange-950'
+            : 'text-muted-foreground';
 
   const ZonaIcon =
     zona === 'Hijau'
