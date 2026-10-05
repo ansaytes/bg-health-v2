@@ -182,7 +182,7 @@ export default function HasilTindakLanjutMCU() {
     if (normalized.includes('cek parameter')) return '#F39C12';
     if (normalized.includes('no data') || normalized.includes('tidak ada data') || normalized.includes('belum')) return '#616161';
     if (normalized.includes('high')) return '#E74C3C';
-    if (normalized.includes('intermediate')) return '#F39C12';
+    if (normalized.includes('intermediate')) return '#FFD700';
     if (normalized.includes('low')) return '#00B894';
     return '#616161';
   });
