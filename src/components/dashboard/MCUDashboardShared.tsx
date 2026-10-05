@@ -282,7 +282,7 @@ export function MCUChart({
           duration: type === 'doughnut' ? 600 : 500,
           easing: 'easeOutQuart',
         },
-        ...(type === 'doughnut' ? { cutout: '62%', radius: '78%' } : {}),
+        ...(type === 'doughnut' ? { cutout: '62%', radius: '70%' } : {}),
         plugins: {
           legend: {
             display: true,

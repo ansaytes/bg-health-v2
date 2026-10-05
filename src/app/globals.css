@@ -2029,8 +2029,8 @@ select.admin-input.compact-input {
 }
 .mcu-dashboard-refresh:disabled { cursor: wait; opacity: .65; }
 .mcu-live-chart-row {
-  flex: 1 1 0;
-  min-height: 225px;
+  flex: 0 0 auto;
+  min-height: 270px;
 }
 .mcu-dashboard-card {
   min-width: 0;
@@ -2039,9 +2039,13 @@ select.admin-input.compact-input {
 }
 .mcu-dashboard-card .card-head h2 {
   color: var(--foreground);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.3;
+  letter-spacing: .035em;
+}
+.mcu-dashboard-card .card-head {
+  min-height: 34px;
 }
 .mcu-dashboard-chart {
   position: relative;
@@ -2072,6 +2076,20 @@ select.admin-input.compact-input {
   color: var(--foreground);
   opacity: 1;
   text-shadow: none;
+}
+.kunjungan-scroll-content .card-head h2 {
+  color: var(--foreground);
+  font-family: var(--font-inter), Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .035em;
+  line-height: 1.3;
+}
+.kunjungan-scroll-content .card-head p {
+  color: var(--muted-foreground);
+  font-family: var(--font-inter), Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 9px;
+  line-height: 1.35;
 }
 .mcu-coverage-filter {
   display: flex;
@@ -2698,11 +2716,16 @@ select.admin-input.compact-input {
    Responsive — Phone <=900px
    ═══════════════════════════════════ */
 @media (max-width: 900px) {
-  .mcu-grid-3 { grid-template-columns: 1fr; }
-  .mcu-row1 { grid-template-columns: 1fr; }
-  .mcu-row2 { grid-template-columns: 1fr; }
-  
-  
+  .mcu-grid-3,
+  .mcu-row1,
+  .mcu-row2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mcu-live-chart-row {
+    flex: 0 0 auto;
+    min-height: 0;
+    grid-auto-rows: minmax(270px, auto);
+  }
 }
 
 /* ═══════════════════════════════════
@@ -4123,6 +4146,17 @@ select.admin-input.compact-input {
 .kunjungan-row-charts .chart-box {
   flex: 1;
   min-height: 0;
+}
+@media (max-width: 900px) {
+  .kunjungan-scroll-content > div:first-child {
+    min-height: 0 !important;
+  }
+  .kunjungan-trend-row,
+  .kunjungan-row-charts {
+    grid-template-columns: minmax(0, 1fr);
+    flex: 0 0 auto;
+    grid-auto-rows: minmax(270px, auto);
+  }
 }
 .kunjungan-rujuk-section {
   opacity: 0;
