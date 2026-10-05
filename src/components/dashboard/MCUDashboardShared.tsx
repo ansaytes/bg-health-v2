@@ -257,6 +257,7 @@ export function MCUChart({
 
     const textColor = isDark ? '#e5e7eb' : '#374151';
     const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+    const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     const total = values.reduce((sum, value) => sum + value, 0);
     const config: ChartConfiguration = {
       type,
@@ -281,14 +282,16 @@ export function MCUChart({
           duration: type === 'doughnut' ? 600 : 500,
           easing: 'easeOutQuart',
         },
-        ...(type === 'doughnut' ? { cutout: '58%' } : {}),
+        ...(type === 'doughnut' ? { cutout: '62%', radius: '78%' } : {}),
         plugins: {
           legend: {
             display: true,
             position: type === 'doughnut' ? 'right' : 'bottom',
-            labels: { color: textColor, font: { size: 11, weight: 'bold' }, boxWidth: 12, usePointStyle: true },
+            labels: { color: textColor, font: { size: 10, weight: 'bold', family: fontFamily }, boxWidth: 12, usePointStyle: true },
           },
           tooltip: {
+            titleFont: { size: 11, family: fontFamily },
+            bodyFont: { size: 12, family: fontFamily },
             callbacks: {
               label: context => {
                 // Pada bar horizontal parsed.y adalah indeks kategori (0,1,...),
@@ -311,18 +314,18 @@ export function MCUChart({
               return percentLabels && total ? `${(value / total * 100).toFixed(1)}%` : `${value}`;
             },
             color: type === 'doughnut' ? '#ffffff' : textColor,
-            font: { size: 11, weight: 'bold' },
+            font: { size: 10, weight: 'bold', family: fontFamily },
             offset: 4,
           },
         },
         scales: type === 'bar' ? {
-          x: { beginAtZero: true, grid: { color: horizontal ? gridColor : 'transparent' }, ticks: { color: textColor, font: { size: 10 }, padding: 4 } },
+          x: { beginAtZero: true, grid: { color: horizontal ? gridColor : 'transparent' }, ticks: { color: textColor, font: { size: 10, family: fontFamily }, padding: 4 } },
           y: {
             beginAtZero: true,
             grid: { color: horizontal ? 'transparent' : gridColor },
             ticks: {
               color: textColor,
-              font: { size: 10 },
+              font: { size: 10, family: fontFamily },
               padding: 4,
               callback: (value: string | number) => {
                 const categoryIndex = Number(value);

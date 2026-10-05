@@ -152,7 +152,13 @@ export default function HasilTindakLanjutMCU() {
     const counts = new Map<string, number>();
     filtered.filter(row => !row.exempt).forEach(row => {
       splitValues(row.rekomendasi_fu).filter(value => /dokter/i.test(value)).forEach(value => {
-        counts.set(value, (counts.get(value) || 0) + 1);
+        const specialty = value.match(/dokter\s+sp\.?\s*([a-z]{1,4})/i)?.[1];
+        const label = specialty
+          ? `Dokter Sp. ${specialty.toUpperCase()}`
+          : value.match(/dokter\s+umum/i)
+            ? 'Dokter Umum'
+            : value;
+        counts.set(label, (counts.get(label) || 0) + 1);
       });
     });
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);

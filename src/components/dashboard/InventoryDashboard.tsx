@@ -283,8 +283,7 @@ export default function InventoryDashboard() {
           {
             data: values,
             backgroundColor: 'rgba(220, 38, 38, 0.85)',
-            borderColor: '#dc2626',
-            borderWidth: 1.5,
+            borderWidth: 0,
             borderRadius: 6,
             barThickness: 13,
           },
@@ -307,7 +306,7 @@ export default function InventoryDashboard() {
             anchor: 'end',
             align: 'right',
             color: textColor,
-            font: { size: 9, weight: 'bold', family: fontFamily },
+            font: { size: 10, weight: 'bold', family: fontFamily },
             formatter: (v) => (v > 0 ? `${v}` : ''),
           },
         },
@@ -315,11 +314,11 @@ export default function InventoryDashboard() {
           x: {
             beginAtZero: true,
             grid: { color: gridColor },
-            ticks: { color: textColor, font: { size: 8, family: fontFamily } },
+            ticks: { color: textColor, font: { size: 10, family: fontFamily } },
           },
           y: {
             grid: { display: false },
-            ticks: { color: textColor, font: { size: 8.5, family: fontFamily } },
+            ticks: { color: textColor, font: { size: 10, family: fontFamily } },
           },
         },
       };
@@ -351,8 +350,7 @@ export default function InventoryDashboard() {
           {
             data: values,
             backgroundColor: 'rgba(255, 68, 68, 0.85)',
-            borderColor: '#FF4444',
-            borderWidth: 1.5,
+            borderWidth: 0,
             borderRadius: 6,
             barThickness: 13,
           },
@@ -375,7 +373,7 @@ export default function InventoryDashboard() {
             anchor: 'end',
             align: 'right',
             color: textColor,
-            font: { size: 9, weight: 'bold', family: fontFamily },
+            font: { size: 10, weight: 'bold', family: fontFamily },
             formatter: (v) => (v > 0 ? `${v}` : ''),
           },
         },
@@ -383,11 +381,11 @@ export default function InventoryDashboard() {
           x: {
             beginAtZero: true,
             grid: { color: gridColor },
-            ticks: { color: textColor, font: { size: 8, family: fontFamily } },
+            ticks: { color: textColor, font: { size: 10, family: fontFamily } },
           },
           y: {
             grid: { display: false },
-            ticks: { color: textColor, font: { size: 8.5, family: fontFamily } },
+            ticks: { color: textColor, font: { size: 10, family: fontFamily } },
           },
         },
       };
@@ -420,8 +418,7 @@ export default function InventoryDashboard() {
           {
             data: values,
             backgroundColor: 'rgba(230, 126, 34, 0.85)',
-            borderColor: '#E67E22',
-            borderWidth: 1.5,
+            borderWidth: 0,
             borderRadius: 6,
             barThickness: 13,
           },
@@ -444,7 +441,7 @@ export default function InventoryDashboard() {
             anchor: 'end',
             align: 'right',
             color: textColor,
-            font: { size: 9, weight: 'bold', family: fontFamily },
+            font: { size: 10, weight: 'bold', family: fontFamily },
             formatter: (v) => (v > 0 ? `${v}` : ''),
           },
         },
@@ -452,11 +449,11 @@ export default function InventoryDashboard() {
           x: {
             beginAtZero: true,
             grid: { color: gridColor },
-            ticks: { color: textColor, font: { size: 8, family: fontFamily } },
+            ticks: { color: textColor, font: { size: 10, family: fontFamily } },
           },
           y: {
             grid: { display: false },
-            ticks: { color: textColor, font: { size: 8.5, family: fontFamily } },
+            ticks: { color: textColor, font: { size: 10, family: fontFamily } },
           },
         },
       };
@@ -493,27 +490,13 @@ export default function InventoryDashboard() {
         'rgba(26, 188, 156, 0.85)',  // #9 Graxine: Teal
         'rgba(230, 126, 34, 0.85)',  // #10 Paracetamol: Terracotta
       ];
-      const paletteBorders = [
-        '#ff4d00',
-        '#00BCD4',
-        '#9B59B6',
-        '#00B894',
-        '#FF9800',
-        '#E91E63',
-        '#3498DB',
-        '#F39C12',
-        '#1ABC9C',
-        '#E67E22',
-      ];
-
       const data: ChartData<'bar'> = {
         labels,
         datasets: [
           {
             data: values,
             backgroundColor: paletteColors.slice(0, values.length),
-            borderColor: paletteBorders.slice(0, values.length),
-            borderWidth: 1.5,
+            borderWidth: 0,
             borderRadius: 6,
             barThickness: 13,
           },
@@ -536,7 +519,7 @@ export default function InventoryDashboard() {
             anchor: 'end',
             align: 'right',
             color: textColor,
-            font: { size: 9, weight: 'bold', family: fontFamily },
+            font: { size: 10, weight: 'bold', family: fontFamily },
             formatter: (v) => `${v}`,
           },
         },
@@ -544,11 +527,11 @@ export default function InventoryDashboard() {
           x: {
             beginAtZero: true,
             grid: { color: gridColor },
-            ticks: { color: textColor, font: { size: 8, family: fontFamily } },
+            ticks: { color: textColor, font: { size: 10, family: fontFamily } },
           },
           y: {
             grid: { display: false },
-            ticks: { color: textColor, font: { size: 8.5, family: fontFamily } },
+            ticks: { color: textColor, font: { size: 10, family: fontFamily } },
           },
         },
       };
@@ -790,7 +773,7 @@ export default function InventoryDashboard() {
         <div className="card glow-coral" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Stok Obat/BHP Expired</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-            <canvas ref={topExpiredCanvasRef} />
+            <canvas ref={topExpiredCanvasRef} className="inventory-chart-canvas" />
           </div>
         </div>
 
@@ -798,7 +781,7 @@ export default function InventoryDashboard() {
         <div className="card glow-orange" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Stok Habis (kebutuhan/bln)</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-            <canvas ref={topHabisCanvasRef} />
+            <canvas ref={topHabisCanvasRef} className="inventory-chart-canvas" />
           </div>
         </div>
 
@@ -806,7 +789,7 @@ export default function InventoryDashboard() {
         <div className="card glow-amber" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Stok Akan Expired &lt; 3 Bln</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-            <canvas ref={topExpSoonCanvasRef} />
+            <canvas ref={topExpSoonCanvasRef} className="inventory-chart-canvas" />
           </div>
         </div>
 
@@ -814,7 +797,7 @@ export default function InventoryDashboard() {
         <div className="card glow-teal" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Pemakaian per Bulan</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-            <canvas ref={fastMovingCanvasRef} />
+            <canvas ref={fastMovingCanvasRef} className="inventory-chart-canvas" />
           </div>
         </div>
               </div>

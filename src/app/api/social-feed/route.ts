@@ -27,7 +27,7 @@ function isCacheValid(): boolean {
  */
 async function fetchYouTubeVideos(): Promise<FeedItem[]> {
   try {
-    const channelId = 'UCmwnNhvM3VomoVkAkjR5AoQ';
+    const channelId = 'UCtTDlDNQNYH3jv97LD9cuJg';
     const rssRes = await fetch(
       `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`,
       {
@@ -35,7 +35,10 @@ async function fetchYouTubeVideos(): Promise<FeedItem[]> {
         signal: AbortSignal.timeout(10000),
       }
     );
-    if (!rssRes.ok) return [];
+    if (!rssRes.ok) {
+      console.error('YouTube RSS request failed with status:', rssRes.status);
+      return [];
+    }
     const xml = await rssRes.text();
     
     const items: FeedItem[] = [];

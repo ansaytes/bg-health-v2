@@ -269,21 +269,21 @@ export default function KunjunganBerobat() {
             anchor: 'end',
             offset: 2,
             color: '#ff4d00',
-            font: { size: 9, weight: 'bold', family: fontFamily },
+            font: { size: 10, weight: 'bold', family: fontFamily },
             formatter: (val) => val,
           },
         },
         scales: {
           x: {
             grid: { color: gridColor },
-            ticks: { color: textColor, font: { size: 9, family: fontFamily } },
+            ticks: { color: textColor, font: { size: 10, family: fontFamily } },
           },
           y: {
             beginAtZero: true,
             grid: { color: gridColor },
             ticks: {
               color: textColor,
-              font: { size: 9, family: fontFamily },
+              font: { size: 10, family: fontFamily },
               precision: 0,
             },
           },
@@ -358,7 +358,7 @@ export default function KunjunganBerobat() {
             anchor: 'end',
             align: 'right',
             color: '#FF9800',
-            font: { size: 9, weight: 'bold', family: fontFamily },
+            font: { size: 10, weight: 'bold', family: fontFamily },
             formatter: (val) => `${val}x`,
           },
         },
@@ -366,13 +366,13 @@ export default function KunjunganBerobat() {
           x: {
             beginAtZero: true,
             grid: { color: gridColor },
-            ticks: { color: textColor, font: { size: 8, family: fontFamily }, precision: 0 },
+            ticks: { color: textColor, font: { size: 10, family: fontFamily }, precision: 0 },
           },
           y: {
             grid: { display: false },
             ticks: {
               color: textColor,
-              font: { size: 8.5, family: fontFamily },
+              font: { size: 10, family: fontFamily },
               callback: function(val, index) {
                 const label = this.getLabelForValue(Number(val));
                 return label.length > 25 ? label.slice(0, 23) + '...' : label;
@@ -449,7 +449,7 @@ export default function KunjunganBerobat() {
             anchor: 'end',
             align: 'right',
             color: '#E91E63',
-            font: { size: 9, weight: 'bold', family: fontFamily },
+            font: { size: 10, weight: 'bold', family: fontFamily },
             formatter: (val) => `${val}`,
           },
         },
@@ -457,13 +457,13 @@ export default function KunjunganBerobat() {
           x: {
             beginAtZero: true,
             grid: { color: gridColor },
-            ticks: { color: textColor, font: { size: 8, family: fontFamily }, precision: 0 },
+            ticks: { color: textColor, font: { size: 10, family: fontFamily }, precision: 0 },
           },
           y: {
             grid: { display: false },
             ticks: {
               color: textColor,
-              font: { size: 8.5, family: fontFamily },
+              font: { size: 10, family: fontFamily },
               callback: function(val) {
                 const label = this.getLabelForValue(Number(val));
                 return label.length > 22 ? label.slice(0, 20) + '...' : label;
@@ -541,7 +541,7 @@ export default function KunjunganBerobat() {
             anchor: 'end',
             align: 'right',
             color: '#00BCD4',
-            font: { size: 9, weight: 'bold', family: fontFamily },
+            font: { size: 10, weight: 'bold', family: fontFamily },
             formatter: (val) => `${val}`,
           },
         },
@@ -549,13 +549,13 @@ export default function KunjunganBerobat() {
           x: {
             beginAtZero: true,
             grid: { color: gridColor },
-            ticks: { color: textColor, font: { size: 8, family: fontFamily }, precision: 0 },
+            ticks: { color: textColor, font: { size: 10, family: fontFamily }, precision: 0 },
           },
           y: {
             grid: { display: false },
             ticks: {
               color: textColor,
-              font: { size: 8.5, family: fontFamily },
+              font: { size: 10, family: fontFamily },
               callback: function(val) {
                 const label = this.getLabelForValue(Number(val));
                 return label.length > 22 ? label.slice(0, 20) + '...' : label;
@@ -627,7 +627,7 @@ export default function KunjunganBerobat() {
             anchor: 'end',
             align: 'right',
             color: '#9B59B6',
-            font: { size: 9, weight: 'bold', family: fontFamily },
+            font: { size: 10, weight: 'bold', family: fontFamily },
             formatter: (val) => `${val}`,
           },
         },
@@ -635,13 +635,13 @@ export default function KunjunganBerobat() {
           x: {
             beginAtZero: true,
             grid: { color: gridColor },
-            ticks: { color: textColor, font: { size: 8, family: fontFamily }, precision: 0 },
+            ticks: { color: textColor, font: { size: 10, family: fontFamily }, precision: 0 },
           },
           y: {
             grid: { display: false },
             ticks: {
               color: textColor,
-              font: { size: 8.5, family: fontFamily },
+              font: { size: 10, family: fontFamily },
               callback: function(val) {
                 const label = this.getLabelForValue(Number(val));
                 return label.length > 22 ? label.slice(0, 20) + '...' : label;

@@ -2054,8 +2054,17 @@ select.admin-input.compact-input {
 }
 .mcu-dashboard-chart canvas {
   flex: 1 1 auto;
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
   min-height: 120px;
   max-width: 100%;
+}
+.chart-box > canvas,
+.inventory-chart-canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
 }
 .mcu-dashboard-card,
 .mcu-dashboard-card .card-head,
