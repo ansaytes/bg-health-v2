@@ -1,0 +1,344 @@
+'use client';
+
+import { Fragment, useEffect, useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, Search, Eye, Pin, SlidersHorizontal, Edit, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { supabase } from '@/lib/supabase';
+import { MCU_FIELDS } from '@/lib/mcu-fields';
+import { useAuth } from '@/lib/auth-context';
+import { useMCUStore } from '@/lib/store';
+
+type RecordRow = Record<string, any>;
+
+function short(val: any) {
+  if (val == null || val === '') return '-';
+  return String(val);
+}
+
+export default function RecordMCUTableModern() {
+  const { isSuperuser, isAdmin } = useAuth();
+  const store = useMCUStore();
+  const [rows, setRows] = useState<RecordRow[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [frozenColumns, setFrozenColumns] = useState<string[]>(['nik_karyawan', 'nama']);
+  const [showFrozenPicker, setShowFrozenPicker] = useState(false);
+  const [editingRow, setEditingRow] = useState<RecordRow | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus data MCU untuk ${name}?`)) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/mcu/records/${id}`, {
+        method: 'DELETE',
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Gagal menghapus data');
+      store.showToast('Data MCU berhasil dihapus', 'success');
+      load();
+    } catch (err) {
+      store.showToast(err instanceof Error ? err.message : 'Gagal menghapus data', 'error');
+    }
+  };
+
+  const handleEdit = (row: RecordRow) => setEditingRow({ ...row });
+  const saveEdit = async () => {
+    if (!editingRow) return;
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const formData: Record<string, string> = { id: String(editingRow.id) };
+      MCU_FIELDS.forEach(field => {
+        const key = field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase();
+        formData[field.id] = editingRow[key] == null ? '' : String(editingRow[key]);
+      });
+      const response = await fetch('/api/mcu/save', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) }, body: JSON.stringify({ formData }) });
+      const json = await response.json();
+      if (!response.ok || !json.success) throw new Error(json.error || 'Gagal menyimpan perubahan');
+      setEditingRow(null);
+      store.showToast('Data MCU berhasil diperbarui', 'success');
+      await load();
+    } catch (err) { store.showToast(err instanceof Error ? err.message : 'Gagal menyimpan perubahan', 'error'); }
+    finally { setSaving(false); }
+  };
+
+  const load = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const params = new URLSearchParams({ page: String(page) });
+      if (search.trim()) params.set('search', search.trim());
+      const response = await fetch(`/api/mcu/records?${params.toString()}`, {
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+      });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.error || 'Gagal memuat record MCU');
+      setRows(json.records || []);
+      setTotal(json.total || 0);
+      setTotalPages(json.totalPages || 0);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal memuat record MCU');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const t = window.setTimeout(() => { void load(); }, 180);
+    return () => window.clearTimeout(t);
+  }, [page, search]);
+
+  const EXCLUDED_COLUMNS = useMemo(() => new Set([
+    'id',
+    'created_at',
+    'updated_at',
+    'nik_karyawan_hash',
+    'national_id_hash',
+    'national_id',
+    'nationalid',
+  ]), []);
+
+  const COLUMN_WIDTHS: Record<string, number> = useMemo(() => ({
+    nik_karyawan: 130,
+    nama: 180,
+    usia: 55,
+    jenis_kelamin: 95,
+    jabatan: 140,
+    site: 110,
+    status_mcu: 115,
+    tgl_mcu: 95,
+    tempat_mcu: 135,
+    gol_darah: 80,
+    gigi_mulut: 150,
+    fisik_head_to_toe: 150,
+    hemoroid: 90,
+    visus_jauh: 90,
+    visus_dekat: 90,
+    def_warna: 95,
+    lapang_pandang: 110,
+    fisik_mata: 130,
+    merokok: 80,
+    td_s: 70,
+    td_d: 70,
+    nadi: 70,
+    bb: 65,
+    tb: 65,
+    bmi: 70,
+    lp: 70,
+    hb: 70,
+    leukosit: 80,
+    eritrosit: 80,
+    hematokrit: 80,
+    trombosit: 85,
+    mcv: 70,
+    mch: 70,
+    mchc: 70,
+    led: 70,
+    chol: 75,
+    tg: 75,
+    hdl: 75,
+    ldl: 75,
+    gdp: 75,
+    gd2pp: 75,
+    hba1c: 75,
+    diabetes: 80,
+    au: 70,
+    ureum: 75,
+    kreatinin: 75,
+    egfr: 75,
+    sgot: 70,
+    sgpt: 70,
+    ggt: 70,
+    alp: 70,
+    billirubin: 75,
+    ul: 100,
+    zonasi: 95,
+    kes_vendor: 120,
+    perlu_fu: 80,
+    link_mcu: 90,
+  }), []);
+
+  const getColWidth = (key: string): number => COLUMN_WIDTHS[key] || 110;
+
+  const columns = useMemo(() => MCU_FIELDS
+    .map(field => ({
+      key: field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase(),
+      label: field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase(),
+    }))
+    .filter(col => !EXCLUDED_COLUMNS.has(col.key)), [EXCLUDED_COLUMNS]);
+
+  const frozenOffsets = useMemo(() => {
+    let offset = 48; // index column width
+    const offsets: Record<string, number> = {};
+    for (const col of columns) {
+      if (frozenColumns.includes(col.key)) {
+        offsets[col.key] = offset;
+        offset += getColWidth(col.key);
+      }
+    }
+    return offsets;
+  }, [columns, frozenColumns, COLUMN_WIDTHS]);
+
+  const toggleFrozenColumn = (key: string) => {
+    setFrozenColumns(current => current.includes(key)
+      ? current.filter(column => column !== key)
+      : [...current, key]);
+  };
+
+  return (
+    <div className="mcu-records-modern">
+      <div className="mcu-records-card">
+        <div className="mcu-records-header">
+          <div>
+            <div className="mcu-records-kicker">DATABASE MCU</div>
+            <h3>Tabel MCU Karyawan</h3>
+          </div>
+          <div className="mcu-records-actions">
+            <div className="mcu-records-search">
+              <Search size={14} />
+              <input aria-label="Cari record MCU" placeholder="Cari NIK Karyawan..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+            </div>
+            <div className="mcu-records-count">{total} record</div>
+          </div>
+        </div>
+
+        <div className="mcu-records-toolbar">
+          <div className="mcu-records-toolbar-title"><Pin size={14} /> Bekukan kolom</div>
+          <div className="mcu-frozen-picker-wrap">
+            <button type="button" className={`mcu-frozen-picker-button${showFrozenPicker ? ' is-open' : ''}`} onClick={() => setShowFrozenPicker(current => !current)} aria-expanded={showFrozenPicker}>
+              <SlidersHorizontal size={14} /> {frozenColumns.length ? `${frozenColumns.length} kolom dipilih` : 'Pilih kolom'} 
+            </button>
+            {showFrozenPicker && (
+              <div className="mcu-frozen-picker" role="group" aria-label="Pilih kolom frozen">
+                {columns.map(column => (
+                  <label key={column.key}>
+                    <input type="checkbox" checked={frozenColumns.includes(column.key)} onChange={() => toggleFrozenColumn(column.key)} />
+                    <span>{column.label}</span>
+                  </label>
+                ))}
+                <button type="button" className="mcu-frozen-reset" onClick={() => setFrozenColumns([])}>Lepas semua</button>
+              </div>
+            )}
+          </div>
+          <span className="mcu-records-hint">Kolom terpilih tetap terlihat saat tabel digeser horizontal.</span>
+        </div>
+
+        <div className="mcu-records-table-wrap">
+          <table className="mcu-records-table">
+            <thead>
+              <tr>
+                <th className="mcu-records-index">#</th>
+                {columns.map(c => {
+                  const isFrozen = frozenColumns.includes(c.key);
+                  const w = getColWidth(c.key);
+                  const style: React.CSSProperties = {
+                    width: `${w}px`,
+                    minWidth: `${w}px`,
+                    maxWidth: `${Math.max(w, 160)}px`,
+                    ...(isFrozen ? { left: `${frozenOffsets[c.key]}px` } : {}),
+                  };
+                  return (
+                    <th key={c.key} className={isFrozen ? 'is-frozen' : ''} style={style}>
+                      {c.label}{isFrozen && <Pin size={12} />}
+                    </th>
+                  );
+                })}
+                <th className="mcu-records-action-head">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={columns.length + 2} style={{ padding: 40, textAlign: 'center' }}>
+                    <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat record MCU">
+                      <div className="bm-loading-spinner">
+                        <div className="bm-loading-ring" aria-hidden="true" />
+                        <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr><td colSpan={columns.length + 2} style={{ padding: 36, textAlign: 'center' }}>Belum ada record MCU.</td></tr>
+              ) : rows.map((row, idx) => {
+                const id = String(row.id || `${page}-${idx}`);
+                const isExp = !!expanded[id];
+                return (
+                  <Fragment key={id}>
+                    <tr className={`mcu-zone-${String(row.zonasi || 'belum-lengkap').toLowerCase().replace(/\s+/g, '-')}`}>
+                      <td className="mcu-records-index">{(page - 1) * 100 + idx + 1}</td>
+                      {columns.map(c => {
+                        const isFrozen = frozenColumns.includes(c.key);
+                        const w = getColWidth(c.key);
+                        const style: React.CSSProperties = {
+                          width: `${w}px`,
+                          minWidth: `${w}px`,
+                          maxWidth: `${Math.max(w, 160)}px`,
+                          ...(isFrozen ? { left: `${frozenOffsets[c.key]}px` } : {}),
+                        };
+                        return (
+                          <td key={c.key} className={isFrozen ? 'is-frozen' : ''} style={style} title={short(row[c.key])}>
+                            {c.key === 'link_mcu' && row[c.key] ? (
+                              <a href={String(row[c.key])} target="_blank" rel="noreferrer" className="mcu-record-link">Buka link</a>
+                            ) : short(row[c.key])}
+                          </td>
+                        );
+                      })}
+                      <td className="mcu-records-action" style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                        <Button size="sm" variant="ghost" onClick={() => setExpanded(s => ({ ...s, [id]: !s[id] }))} title={isExp ? 'Tutup detail' : 'Lihat detail'}><Eye size={14} /></Button>
+                        {(isSuperuser || isAdmin) && (
+                          <>
+                            <Button size="sm" variant="ghost" onClick={() => handleEdit(row)} title="Edit data"><Edit size={14} /></Button>
+                            <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => handleDelete(String(row.id), row.nama)} title="Hapus data"><Trash2 size={14} /></Button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                    {isExp && (
+                      <tr>
+                        <td colSpan={columns.length + 2} className="mcu-records-detail-cell">
+                          <div className="mcu-records-detail">
+                            <pre>{JSON.stringify(Object.fromEntries(Object.entries(row).filter(([key]) => !EXCLUDED_COLUMNS.has(key))), null, 2)}</pre>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {totalPages > 1 && (
+          <div className="mcu-records-pagination">
+            <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}><ChevronLeft size={14} /> Sebelumnya</Button>
+            <div>Halaman {page} / {totalPages}</div>
+            <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Berikutnya <ChevronRight size={14} /></Button>
+          </div>
+        )}
+        <Dialog open={!!editingRow} onOpenChange={open => !open && setEditingRow(null)}>
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Edit MCU</DialogTitle></DialogHeader>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {MCU_FIELDS.map(field => {
+                const key = field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase();
+                return <label key={field.id} className="text-xs font-medium"><span>{field.label}</span><input className="admin-input w-full mt-1" value={editingRow?.[key] == null ? '' : String(editingRow[key])} onChange={event => setEditingRow(current => current ? { ...current, [key]: event.target.value } : current)} /></label>;
+              })}
+            </div>
+            <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setEditingRow(null)}>Batal</Button><Button onClick={saveEdit} disabled={saving}>{saving ? 'Menyimpan…' : 'Simpan'}</Button></div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
+  );
+}

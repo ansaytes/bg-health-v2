@@ -1,0 +1,83 @@
+import type { Metadata } from "next";
+import { Geist, Geist_Mono, Inter } from "next/font/google";
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+import { ThemeProvider } from "next-themes";
+import { AuthProvider } from "@/lib/auth-context";
+import Script from "next/script";
+import { Toaster } from "@/components/ui/sonner";
+import "./globals.css";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata: Metadata = {
+  title: "BG-Health v2",
+  description: "BG-Health v2 - PT. BAGONG DEKAKA MAKMUR",
+  icons: {
+    icon: [
+      { url: '/favicon-16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-48.png', sizes: '48x48', type: 'image/png' },
+      { url: '/favicon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
+};
+
+/* Production-only devtools deterrent script */
+const devtoolsScript = `
+(function(){
+  if (typeof window === 'undefined') return;
+  var threshold = 160;
+  var check = function(){
+    var widthDiff = window.outerWidth - window.innerWidth;
+    var heightDiff = window.outerHeight - window.innerHeight;
+    if (widthDiff > threshold || heightDiff > threshold) {
+      console.warn('%c⚠ Security Warning: Developer tools detected. Unauthorized debugging is prohibited.', 'color: #ff4d00; font-size: 14px; font-weight: bold;');
+    }
+  };
+  setInterval(check, 3000);
+})();
+`;
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  return (
+    <html lang="id" suppressHydrationWarning>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+      >
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <AuthProvider>
+            {children}
+            <Toaster position="top-center" richColors />
+          </AuthProvider>
+        </ThemeProvider>
+        {isProduction && (
+          <Script id="devtools-deterrent" strategy="afterInteractive">
+            {devtoolsScript}
+          </Script>
+        )}
+      </body>
+    </html>
+  );
+}

@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020"],
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "strict": true,
+    "noImplicitAny": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": false,
+    "declaration": false,
+    "sourceMap": false,
+    "outDir": "./.build/mcu-calc",
+    "rootDir": "../src/lib",
+    "baseUrl": "../src",
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": [
+    "./../src/lib/mcu-calculations.ts",
+    "./../src/lib/zonasi-engine.ts",
+    "./../src/lib/mcu-fields.ts",
+    "./../src/lib/mcu-diagnosis.ts",
+    "./../src/lib/clinical-classification.ts",
+    "./../src/lib/questionnaire-items.ts",
+    "./../src/lib/questionnaire-scores.ts",
+    "./../src/lib/questionnaire-conclusion.ts"
+  ]
+}
