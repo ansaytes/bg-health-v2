@@ -285,7 +285,7 @@ export function MCUChart({
         ...(type === 'doughnut' ? { cutout: '62%', radius: '70%' } : {}),
         plugins: {
           legend: {
-            display: true,
+            display: type === 'doughnut',
             position: type === 'doughnut' ? 'right' : 'bottom',
             labels: { color: textColor, font: { size: 10, weight: 'bold', family: fontFamily }, boxWidth: 12, usePointStyle: true },
           },

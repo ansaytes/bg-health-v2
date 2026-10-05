@@ -1929,7 +1929,7 @@ select.admin-input.compact-input {
   text-rendering: optimizeLegibility;
 }
 .mcu-live-dashboard {
-  overflow-y: auto !important;
+  overflow-y: hidden !important;
   overflow-x: hidden !important;
   gap: 8px;
 }
@@ -2029,8 +2029,8 @@ select.admin-input.compact-input {
 }
 .mcu-dashboard-refresh:disabled { cursor: wait; opacity: .65; }
 .mcu-live-chart-row {
-  flex: 0 0 auto;
-  min-height: 270px;
+  flex: 1 1 0;
+  min-height: 0;
 }
 .mcu-dashboard-card {
   min-width: 0;
@@ -2045,7 +2045,7 @@ select.admin-input.compact-input {
   letter-spacing: .035em;
 }
 .mcu-dashboard-card .card-head {
-  min-height: 34px;
+  min-height: 28px;
 }
 .mcu-dashboard-chart {
   position: relative;
@@ -2061,7 +2061,7 @@ select.admin-input.compact-input {
   display: block;
   width: 100% !important;
   height: 100% !important;
-  min-height: 120px;
+  min-height: 0;
   max-width: 100%;
 }
 .chart-box > canvas,
@@ -2716,6 +2716,9 @@ select.admin-input.compact-input {
    Responsive — Phone <=900px
    ═══════════════════════════════════ */
 @media (max-width: 900px) {
+  .mcu-live-dashboard {
+    overflow-y: auto !important;
+  }
   .mcu-grid-3,
   .mcu-row1,
   .mcu-row2 {
@@ -2724,7 +2727,7 @@ select.admin-input.compact-input {
   .mcu-live-chart-row {
     flex: 0 0 auto;
     min-height: 0;
-    grid-auto-rows: minmax(270px, auto);
+    grid-auto-rows: minmax(225px, auto);
   }
 }
 
@@ -4112,8 +4115,15 @@ select.admin-input.compact-input {
 .kunjungan-scroll-content {
   display: flex;
   flex-direction: column;
+  flex: 1 1 0;
   gap: 8px;
+  min-height: 0;
   padding-bottom: 20px;
+}
+.kunjungan-chart-layout {
+  flex: 0 0 100%;
+  height: 100%;
+  min-height: 0;
 }
 .kunjungan-trend-row {
   display: grid;
@@ -4151,11 +4161,15 @@ select.admin-input.compact-input {
   .kunjungan-scroll-content > div:first-child {
     min-height: 0 !important;
   }
+  .kunjungan-chart-layout {
+    flex: 0 0 auto;
+    height: auto;
+  }
   .kunjungan-trend-row,
   .kunjungan-row-charts {
     grid-template-columns: minmax(0, 1fr);
     flex: 0 0 auto;
-    grid-auto-rows: minmax(270px, auto);
+    grid-auto-rows: minmax(225px, auto);
   }
 }
 .kunjungan-rujuk-section {

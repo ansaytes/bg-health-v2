@@ -760,7 +760,7 @@ export default function KunjunganBerobat() {
       {/* Main Content Area */}
       <div className="kunjungan-scroll-content">
         {/* Fill wrapper — 2 rows of charts */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: 'calc(100vh - 120px)', flexShrink: 0 }}>
+        <div className="kunjungan-chart-layout" style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: 0 }}>
           {/* Row 1 — 2 cards: Tren & Pasien Berulang */}
           <div className="kunjungan-trend-row">
             <div className="card glow-orange">

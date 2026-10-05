@@ -155,6 +155,8 @@ export default function HasilTindakLanjutMCU() {
         const specialty = value.match(/dokter\s+sp\.?\s*([a-z]{1,4})/i)?.[1];
         const label = specialty
           ? `Dokter Sp. ${specialty.toUpperCase()}`
+          : /dokter\s+gigi/i.test(value)
+            ? 'Dokter Gigi'
           : value.match(/dokter\s+umum/i)
             ? 'Dokter Umum'
             : value;
@@ -240,7 +242,7 @@ export default function HasilTindakLanjutMCU() {
                 <MCUChart type="bar" labels={resultDistribution.map(([name]) => name)} values={resultDistribution.map(([, count]) => count)} colors={resultColors} legendLabel="Jumlah karyawan" />
               </MCUChartCard>
               <MCUChartCard title="10 Peringkat Konsultasi Dokter" className="glow-teal">
-                <MCUChart type="bar" horizontal labels={doctorTypes.map(([name]) => name)} values={doctorTypes.map(([, count]) => count)} colors={Array(10).fill('#2ECC71')} legendLabel="Jumlah konsultasi" percentLabels />
+                <MCUChart type="bar" horizontal labels={doctorTypes.map(([name]) => name)} values={doctorTypes.map(([, count]) => count)} colors={Array(10).fill('#2ECC71')} legendLabel="Jumlah konsultasi" />
               </MCUChartCard>
               <MCUChartCard title="Profil Zona Risiko" className="glow-steel">
                 <MCUChart type="doughnut" labels={riskDistribution.map(([name]) => name)} values={riskDistribution.map(([, count]) => count)} colors={riskColors} centerText={`${riskDistribution.reduce((sum, [, count]) => sum + count, 0)}`} percentLabels />
