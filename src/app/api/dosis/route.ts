@@ -5,6 +5,9 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// INITIAL_DOSIS is used ONLY as a fallback when the dosis_obat table is empty
+// or unreachable. Do NOT add entries here that have been intentionally deleted
+// from the database — deletions in Supabase must be reflected here too.
 const INITIAL_DOSIS = [
   '3DD1',
   '2DD1',
@@ -15,7 +18,6 @@ const INITIAL_DOSIS = [
   'Q4H',
   '4QH',
   '1x1 Sesudah Makan',
-  '2x1 Sesudah Makan',
   '3x1 Sesudah Makan',
 ];
 
@@ -31,9 +33,12 @@ export async function GET() {
     }
 
     const dbCodes = (data || []).map((d: { kode: string }) => d.kode).filter(Boolean);
-    const combined = Array.from(new Set([...INITIAL_DOSIS, ...dbCodes]));
+    // Use DB values as the source of truth. INITIAL_DOSIS is only a fallback
+    // when the table is genuinely empty — this ensures deletions in Supabase
+    // are reflected immediately without needing a code deployment.
+    const result = dbCodes.length > 0 ? dbCodes : INITIAL_DOSIS;
 
-    return NextResponse.json({ success: true, data: combined });
+    return NextResponse.json({ success: true, data: result });
   } catch (_err) {
     return NextResponse.json({ success: true, data: INITIAL_DOSIS });
   }

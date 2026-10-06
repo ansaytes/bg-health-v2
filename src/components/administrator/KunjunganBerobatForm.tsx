@@ -51,7 +51,6 @@ const DEFAULT_DOSIS = [
   'Q4H',
   '4QH',
   '1x1 Sesudah Makan',
-  '2x1 Sesudah Makan',
   '3x1 Sesudah Makan',
 ];
 
@@ -719,7 +718,7 @@ export default function KunjunganBerobatForm() {
                             gap: 4,
                           }}
                         >
-                          ➕ Simpan &quot;{med.aturan}&quot; ke Master Dosis (Database)
+                          ➕ Simpan &quot;{med.aturan}&quot; ke master dosis
                         </button>
                       </div>
                     )}

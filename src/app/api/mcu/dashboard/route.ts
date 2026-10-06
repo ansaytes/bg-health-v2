@@ -99,7 +99,7 @@ async function getCaller(request: NextRequest): Promise<{ role: string; site: st
 }
 
 async function fetchAllMonitorMcuRows(): Promise<Record<string, unknown>[]> {
-  const SELECT_FIELDS = 'employee_id,nama,site,area_raw,client,jabatan,exempt,total_mcu,mcu_terakhir,kategori_mcu_terakhir,hasil_mcu,perlu_fu,rekomendasi_fu,item_fu,diagnosa,fram_score,fram_prob,frs_kategori,zona_risiko,masa_berlaku_mcu,status_mcu,status_follow_up,jadwal_mcu_selanjutnya';
+  const SELECT_FIELDS = 'employee_id,nik_karyawan,nama,site,area_raw,client,jabatan,exempt,total_mcu,mcu_terakhir,kategori_mcu_terakhir,hasil_mcu,perlu_fu,rekomendasi_fu,item_fu,diagnosa,fram_score,fram_prob,frs_kategori,zona_risiko,masa_berlaku_mcu,status_mcu,status_follow_up,jadwal_mcu_selanjutnya';
   const PAGE_SIZE = 1000;
   const rows: Record<string, unknown>[] = [];
 

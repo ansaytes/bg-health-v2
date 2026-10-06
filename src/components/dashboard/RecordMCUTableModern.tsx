@@ -29,7 +29,7 @@ export default function RecordMCUTableModern() {
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [frozenColumns, setFrozenColumns] = useState<string[]>(['nik_karyawan', 'nama']);
-  const [frozenColumnsMonitor, setFrozenColumnsMonitor] = useState<string[]>(['employee_id', 'nama']);
+  const [frozenColumnsMonitor, setFrozenColumnsMonitor] = useState<string[]>(['nik_karyawan', 'nama']);
   const [showFrozenPicker, setShowFrozenPicker] = useState(false);
   const [editingRow, setEditingRow] = useState<RecordRow | null>(null);
   const [saving, setSaving] = useState(false);
@@ -39,6 +39,11 @@ export default function RecordMCUTableModern() {
   const [monitorLoading, setMonitorLoading] = useState(false);
   const [monitorSearch, setMonitorSearch] = useState('');
   const [monitorPage, setMonitorPage] = useState(1);
+  // Column filters: map of column key → filter value string
+  const [monitorFilters, setMonitorFilters] = useState<Record<string, string>>({});
+  const [showMonitorFilters, setShowMonitorFilters] = useState(false);
+  const [recordFilters, setRecordFilters] = useState<Record<string, string>>({});
+  const [showRecordFilters, setShowRecordFilters] = useState(false);
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Apakah Anda yakin ingin menghapus data MCU untuk ${name}?`)) return;
@@ -197,7 +202,6 @@ export default function RecordMCUTableModern() {
     perlu_fu: 80,
     link_mcu: 90,
     // --- monitor MCU columns ---
-    employee_id: 130,
     area_raw: 80,
     client: 120,
     total_mcu: 80,
@@ -226,7 +230,7 @@ export default function RecordMCUTableModern() {
     .filter(col => !EXCLUDED_COLUMNS.has(col.key)), [EXCLUDED_COLUMNS]);
 
   const monitorColumns = useMemo(() => [
-    { key: 'employee_id', label: 'nik_karyawan' },
+    { key: 'nik_karyawan', label: 'nik_karyawan' },
     { key: 'nama', label: 'nama' },
     { key: 'site', label: 'site' },
     { key: 'area_raw', label: 'area' },
@@ -273,19 +277,69 @@ export default function RecordMCUTableModern() {
   };
 
   const filteredMonitorRows = useMemo(() => {
-    if (!monitorSearch.trim()) return monitorRows;
-    const lower = monitorSearch.toLowerCase();
-    return monitorRows.filter(r => String(r.employee_id || '').toLowerCase().includes(lower) || String(r.nama || '').toLowerCase().includes(lower));
-  }, [monitorRows, monitorSearch]);
+    let result = monitorRows;
+    if (monitorSearch.trim()) {
+      const lower = monitorSearch.toLowerCase();
+      result = result.filter(r =>
+        String(r.nik_karyawan || '').toLowerCase().includes(lower) ||
+        String(r.nama || '').toLowerCase().includes(lower)
+      );
+    }
+    for (const [key, value] of Object.entries(monitorFilters)) {
+      if (!value.trim()) continue;
+      const lower = value.trim().toLowerCase();
+      result = result.filter(r => String(r[key] || '').toLowerCase().includes(lower));
+    }
+    return result;
+  }, [monitorRows, monitorSearch, monitorFilters]);
+
+  // Derive unique values for enum-like monitor columns (for <select> filter options)
+  const monitorFilterOptions = useMemo(() => {
+    const enumCols = ['site', 'area_raw', 'client', 'jabatan', 'zona_risiko', 'status_mcu', 'status_follow_up', 'hasil_mcu', 'kategori_mcu_terakhir', 'frs_kategori'];
+    const opts: Record<string, string[]> = {};
+    for (const col of enumCols) {
+      const vals = [...new Set(monitorRows.map(r => String(r[col] || '')).filter(Boolean))].sort();
+      if (vals.length > 0) opts[col] = vals;
+    }
+    return opts;
+  }, [monitorRows]);
+
+  // Columns available for filtering on the Record tab (subset — server-side paginated)
+  const recordFilterCols = useMemo(() => [
+    { key: 'site', label: 'site' },
+    { key: 'jabatan', label: 'jabatan' },
+    { key: 'zonasi', label: 'zonasi' },
+    { key: 'kes_vendor', label: 'kes_vendor' },
+    { key: 'status_mcu', label: 'status_mcu' },
+    { key: 'perlu_fu', label: 'perlu_fu' },
+  ], []);
+
+  // Client-side record filter (applies to current page only — full server filter would need API extension)
+  const filteredRecordRows = useMemo(() => {
+    if (Object.values(recordFilters).every(v => !v.trim())) return rows;
+    return rows.filter(row => {
+      for (const [key, value] of Object.entries(recordFilters)) {
+        if (!value.trim()) continue;
+        if (!String(row[key] || '').toLowerCase().includes(value.trim().toLowerCase())) return false;
+      }
+      return true;
+    });
+  }, [rows, recordFilters]);
 
   const pagedMonitorRows = useMemo(() => filteredMonitorRows.slice((monitorPage - 1) * 100, monitorPage * 100), [filteredMonitorRows, monitorPage]);
   const monitorTotalPages = Math.max(1, Math.ceil(filteredMonitorRows.length / 100));
 
-  const displayRows = activeTab === 'record' ? rows : pagedMonitorRows;
+  const displayRows = activeTab === 'record' ? filteredRecordRows : pagedMonitorRows;
   const displayTotal = activeTab === 'record' ? total : filteredMonitorRows.length;
   const displayPage = activeTab === 'record' ? page : monitorPage;
   const displayTotalPages = activeTab === 'record' ? totalPages : monitorTotalPages;
   const displayLoading = activeTab === 'record' ? loading : monitorLoading;
+  const activeFilters = activeTab === 'record' ? recordFilters : monitorFilters;
+  const setActiveFilters = activeTab === 'record' ? setRecordFilters : setMonitorFilters;
+  const showFilters = activeTab === 'record' ? showRecordFilters : showMonitorFilters;
+  const setShowFilters = activeTab === 'record' ? setShowRecordFilters : setShowMonitorFilters;
+  const filterableCols = activeTab === 'record' ? recordFilterCols : monitorColumns;
+  const activeFilterCount = Object.values(activeFilters).filter(v => v.trim()).length;
 
   return (
     <div className="mcu-records-modern">
@@ -327,6 +381,68 @@ export default function RecordMCUTableModern() {
             )}
           </div>
           <span className="mcu-records-hint">Kolom terpilih tetap terlihat saat tabel digeser horizontal.</span>
+        </div>
+
+        {/* Column Filter Panel */}
+        <div className="mcu-records-toolbar" style={{ alignItems: 'flex-start', gap: 8 }}>
+          <div className="mcu-records-toolbar-title" style={{ paddingTop: 2 }}><SlidersHorizontal size={14} /> Filter kolom</div>
+          <button
+            type="button"
+            className={`mcu-frozen-picker-button${showFilters ? ' is-open' : ''}`}
+            onClick={() => setShowFilters(v => !v)}
+            aria-expanded={showFilters}
+          >
+            <Search size={14} />
+            {activeFilterCount > 0 ? `${activeFilterCount} filter aktif` : 'Tambah filter'}
+          </button>
+          {activeFilterCount > 0 && (
+            <button type="button" className="mcu-frozen-reset" style={{ marginLeft: 4, fontSize: 11 }} onClick={() => setActiveFilters({})}>
+              Hapus semua filter
+            </button>
+          )}
+          {showFilters && (
+            <div className="mcu-frozen-picker" role="group" aria-label="Filter kolom" style={{ minWidth: 320, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {filterableCols.map(col => {
+                const enumOpts = activeTab === 'monitor' ? (monitorFilterOptions[col.key] || null) : null;
+                return (
+                  <label key={col.key} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 140 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600 }}>{col.label}</span>
+                    {enumOpts ? (
+                      <select
+                        className="admin-input"
+                        style={{ fontSize: 12, padding: '2px 6px', height: 28 }}
+                        value={activeFilters[col.key] || ''}
+                        onChange={e => {
+                          setActiveFilters(prev => ({ ...prev, [col.key]: e.target.value }));
+                          if (activeTab === 'monitor') setMonitorPage(1);
+                        }}
+                      >
+                        <option value="">Semua</option>
+                        {enumOpts.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                      </select>
+                    ) : (
+                      <input
+                        className="admin-input"
+                        style={{ fontSize: 12, padding: '2px 6px', height: 28, minWidth: 120 }}
+                        type="text"
+                        placeholder={`Filter ${col.label}...`}
+                        value={activeFilters[col.key] || ''}
+                        onChange={e => {
+                          setActiveFilters(prev => ({ ...prev, [col.key]: e.target.value }));
+                          if (activeTab === 'monitor') setMonitorPage(1);
+                        }}
+                      />
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+          )}
+          {activeTab === 'record' && activeFilterCount > 0 && (
+            <span className="mcu-records-hint" style={{ color: 'var(--color-warning, #d97706)' }}>
+              Filter berlaku pada halaman saat ini saja. Gunakan fitur search NIK untuk pencarian lintas halaman.
+            </span>
+          )}
         </div>
 
         <div className="mcu-records-table-wrap">
