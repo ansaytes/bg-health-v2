@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { hashField } from '@/lib/encryption';
+import { decryptMCURecord, hashField } from '@/lib/encryption';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
@@ -99,20 +99,34 @@ async function getCaller(request: NextRequest): Promise<{ role: string; site: st
 }
 
 async function fetchAllMonitorMcuRows(): Promise<Record<string, unknown>[]> {
-  const SELECT_FIELDS = 'employee_id,site,area_raw,client,jabatan,exempt,total_mcu,mcu_2024_count,mcu_2025_count,mcu_2026_count,mcu_2024,mcu_2025,mcu_2026,mcu_terakhir,kategori_mcu_terakhir,hasil_mcu,perlu_fu,rekomendasi_fu,item_fu,diagnosa,fram_score,fram_prob,frs_kategori,zona_risiko,masa_berlaku_mcu,status_mcu,status_follow_up,jadwal_mcu_selanjutnya';
+  const SELECT_FIELDS = 'employee_id,nama,site,area_raw,client,jabatan,exempt,total_mcu,mcu_terakhir,kategori_mcu_terakhir,hasil_mcu,perlu_fu,rekomendasi_fu,item_fu,diagnosa,fram_score,fram_prob,frs_kategori,zona_risiko,masa_berlaku_mcu,status_mcu,status_follow_up,jadwal_mcu_selanjutnya';
   const PAGE_SIZE = 1000;
+  
+  const { count, error: countError } = await client
+    .from('monitor_mcu')
+    .select('employee_id', { count: 'exact', head: true });
+
+  if (countError) throw countError;
+  const total = count || 0;
+  if (total === 0) return [];
+
+  const promises = [];
+  for (let from = 0; from < total; from += PAGE_SIZE) {
+    promises.push(
+      client
+        .from('monitor_mcu')
+        .select(SELECT_FIELDS)
+        .order('site', { ascending: true })
+        .range(from, from + PAGE_SIZE - 1)
+    );
+  }
+
+  const results = await Promise.all(promises);
   const rows: Record<string, unknown>[] = [];
-
-  for (let from = 0; ; from += PAGE_SIZE) {
-    const { data, error } = await client
-      .from('monitor_mcu')
-      .select(SELECT_FIELDS)
-      .order('site', { ascending: true })
-      .range(from, from + PAGE_SIZE - 1);
-
+  
+  for (const { data, error } of results) {
     if (error) throw error;
     if (data) rows.push(...data);
-    if (!data || data.length < PAGE_SIZE) break;
   }
 
   return rows;
@@ -150,7 +164,8 @@ export async function GET(request: NextRequest) {
     if (!forceRefresh && serverCache && (now - serverCache.timestamp < CACHE_TTL_MS)) {
       rawRows = serverCache.rows;
     } else {
-      rawRows = await fetchAllMonitorMcuRows();
+      const fetched = await fetchAllMonitorMcuRows();
+      rawRows = fetched.map(decryptMCURecord);
       serverCache = { rows: rawRows, timestamp: now };
     }
 

@@ -362,10 +362,10 @@ export function assessZonasi(d: MCUDraft, gender?: string): ZonasiResult {
   }
 
   if (kuning.length > 0) {
-    // Poin 6.2.2: bila hanya Prediabetes, kontrol 6 bulan. Parameter lain
-    // selalu 3 bulan, dan bila ada lebih dari satu, yang terpendek berlaku.
-    const onlyPrediabetes = kuning.every((f) => /Prediabetes/i.test(f.label));
-    const interval = onlyPrediabetes ? '6 bulan' : '3 bulan';
+    // Poin 6.2.2: bila hanya Prediabetes atau Obesitas ringan/sedang, kontrol 6 bulan. 
+    // Parameter lain selalu 3 bulan, dan bila ada lebih dari satu, yang terpendek berlaku.
+    const onlyLongInterval = kuning.every((f) => /Prediabetes/i.test(f.label) || /Obesity/i.test(f.label) || /Overweight/i.test(f.label));
+    const interval = onlyLongInterval ? '6 bulan' : '3 bulan';
     return {
       zona: 'Kuning',
       triggers: kuning.map((f) => (f.detail ? `${f.label} — ${f.detail}` : f.label)),
@@ -405,7 +405,9 @@ function hasComorbidity(d: MCUDraft, gender: string | number | undefined): strin
   if ((tdS !== null && tdS >= 140) || (tdD !== null && tdD >= 90)) reasons.push('hipertensi');
 
   const glucose = classifyGlucose(toNumber(d.gdp), toNumber(d.gd2pp), toNumber(d.hba1c));
-  if (glucose && (glucose.severity === 'merah' || glucose.severity === 'kuning')) reasons.push('diabetes');
+  if (glucose && (glucose.severity === 'merah' || (glucose.severity === 'kuning' && !/prediabetes/i.test(glucose.label)))) {
+    reasons.push('diabetes');
+  }
 
   if (hasAsthma(d.riwayatAsma)) reasons.push('asma');
   if (hasSleepApnea(d.riwayatSleepApnea)) reasons.push('sleep apnea');

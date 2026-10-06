@@ -28,9 +28,16 @@ export default function RecordMCUTableModern() {
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [frozenColumns, setFrozenColumns] = useState<string[]>(['nik_karyawan', 'nama']);
+  const [frozenColumnsMonitor, setFrozenColumnsMonitor] = useState<string[]>(['employee_id', 'nama']);
   const [showFrozenPicker, setShowFrozenPicker] = useState(false);
   const [editingRow, setEditingRow] = useState<RecordRow | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<'record' | 'monitor'>('record');
+  const [monitorRows, setMonitorRows] = useState<RecordRow[]>([]);
+  const [monitorLoading, setMonitorLoading] = useState(false);
+  const [monitorSearch, setMonitorSearch] = useState('');
+  const [monitorPage, setMonitorPage] = useState(1);
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Apakah Anda yakin ingin menghapus data MCU untuk ${name}?`)) return;
@@ -97,6 +104,27 @@ export default function RecordMCUTableModern() {
     return () => window.clearTimeout(t);
   }, [page, search]);
 
+  const loadMonitor = async () => {
+    setMonitorLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch('/api/mcu/dashboard', { headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {} });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.error || 'Gagal memuat data');
+      setMonitorRows(json.employees || []);
+    } catch (err) {
+      store.showToast(err instanceof Error ? err.message : 'Gagal memuat monitor', 'error');
+    } finally {
+      setMonitorLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'monitor' && monitorRows.length === 0) {
+      loadMonitor();
+    }
+  }, [activeTab]);
+
   const EXCLUDED_COLUMNS = useMemo(() => new Set([
     'id',
     'created_at',
@@ -108,6 +136,7 @@ export default function RecordMCUTableModern() {
   ]), []);
 
   const COLUMN_WIDTHS: Record<string, number> = useMemo(() => ({
+    // --- record MCU columns ---
     nik_karyawan: 130,
     nama: 180,
     usia: 55,
@@ -165,49 +194,115 @@ export default function RecordMCUTableModern() {
     kes_vendor: 120,
     perlu_fu: 80,
     link_mcu: 90,
+    // --- monitor MCU columns ---
+    employee_id: 130,
+    area_raw: 80,
+    client: 120,
+    total_mcu: 80,
+    mcu_terakhir: 115,
+    masa_berlaku_mcu: 130,
+    kategori_mcu_terakhir: 140,
+    hasil_mcu: 120,
+    diagnosa: 200,
+    fram_score: 95,
+    fram_prob: 95,
+    frs_kategori: 115,
+    zona_risiko: 95,
+    rekomendasi_fu: 200,
+    item_fu: 200,
+    status_follow_up: 120,
+    jadwal_mcu_selanjutnya: 145,
   }), []);
 
   const getColWidth = (key: string): number => COLUMN_WIDTHS[key] || 110;
 
-  const columns = useMemo(() => MCU_FIELDS
+  const recordColumns = useMemo(() => MCU_FIELDS
     .map(field => ({
       key: field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase(),
       label: field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase(),
     }))
     .filter(col => !EXCLUDED_COLUMNS.has(col.key)), [EXCLUDED_COLUMNS]);
 
+  const monitorColumns = useMemo(() => [
+    { key: 'employee_id', label: 'nik_karyawan' },
+    { key: 'nama', label: 'nama' },
+    { key: 'site', label: 'site' },
+    { key: 'area_raw', label: 'area' },
+    { key: 'client', label: 'client' },
+    { key: 'jabatan', label: 'jabatan' },
+    { key: 'total_mcu', label: 'total_mcu' },
+    { key: 'mcu_terakhir', label: 'tgl_mcu_terakhir' },
+    { key: 'masa_berlaku_mcu', label: 'masa_berlaku_mcu' },
+    { key: 'kategori_mcu_terakhir', label: 'kategori_mcu' },
+    { key: 'hasil_mcu', label: 'kes_vendor' },
+    { key: 'zona_risiko', label: 'zonasi' },
+    { key: 'diagnosa', label: 'diagnosa_medis' },
+    { key: 'fram_score', label: 'fram_score' },
+    { key: 'fram_prob', label: 'fram_prob' },
+    { key: 'frs_kategori', label: 'frs_kategori' },
+    { key: 'perlu_fu', label: 'perlu_fu' },
+    { key: 'rekomendasi_fu', label: 'rekomendasi_fu' },
+    { key: 'item_fu', label: 'item_fu' },
+    { key: 'status_mcu', label: 'status_mcu' },
+    { key: 'status_follow_up', label: 'status_fu' },
+    { key: 'jadwal_mcu_selanjutnya', label: 'jadwal_mcu_selanjutnya' },
+  ], []);
+
+  const columns = activeTab === 'record' ? recordColumns : monitorColumns;
+  const activeFrozenColumns = activeTab === 'record' ? frozenColumns : frozenColumnsMonitor;
+  const setActiveFrozenColumns = activeTab === 'record' ? setFrozenColumns : setFrozenColumnsMonitor;
+
   const frozenOffsets = useMemo(() => {
     let offset = 48; // index column width
     const offsets: Record<string, number> = {};
     for (const col of columns) {
-      if (frozenColumns.includes(col.key)) {
+      if (activeFrozenColumns.includes(col.key)) {
         offsets[col.key] = offset;
         offset += getColWidth(col.key);
       }
     }
     return offsets;
-  }, [columns, frozenColumns, COLUMN_WIDTHS]);
+  }, [columns, activeFrozenColumns, COLUMN_WIDTHS]);
 
   const toggleFrozenColumn = (key: string) => {
-    setFrozenColumns(current => current.includes(key)
+    setActiveFrozenColumns(current => current.includes(key)
       ? current.filter(column => column !== key)
       : [...current, key]);
   };
 
+  const filteredMonitorRows = useMemo(() => {
+    if (!monitorSearch.trim()) return monitorRows;
+    const lower = monitorSearch.toLowerCase();
+    return monitorRows.filter(r => String(r.employee_id || '').toLowerCase().includes(lower) || String(r.nama || '').toLowerCase().includes(lower));
+  }, [monitorRows, monitorSearch]);
+
+  const pagedMonitorRows = useMemo(() => filteredMonitorRows.slice((monitorPage - 1) * 100, monitorPage * 100), [filteredMonitorRows, monitorPage]);
+  const monitorTotalPages = Math.max(1, Math.ceil(filteredMonitorRows.length / 100));
+
+  const displayRows = activeTab === 'record' ? rows : pagedMonitorRows;
+  const displayTotal = activeTab === 'record' ? total : filteredMonitorRows.length;
+  const displayPage = activeTab === 'record' ? page : monitorPage;
+  const displayTotalPages = activeTab === 'record' ? totalPages : monitorTotalPages;
+  const displayLoading = activeTab === 'record' ? loading : monitorLoading;
+
   return (
     <div className="mcu-records-modern">
       <div className="mcu-records-card">
+        <div className="flex border-b border-gray-200 dark:border-gray-800 mb-4">
+          <button className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'record' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('record')}>Record MCU</button>
+          <button className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'monitor' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('monitor')}>Tabel Monitor</button>
+        </div>
         <div className="mcu-records-header">
           <div>
             <div className="mcu-records-kicker">DATABASE MCU</div>
-            <h3>Tabel MCU Karyawan</h3>
+            <h3>{activeTab === 'record' ? 'Tabel Record MCU Karyawan' : 'Tabel Monitor MCU (View)'}</h3>
           </div>
           <div className="mcu-records-actions">
             <div className="mcu-records-search">
               <Search size={14} />
-              <input aria-label="Cari record MCU" placeholder="Cari NIK Karyawan..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+              <input aria-label="Cari record MCU" placeholder={activeTab === 'record' ? "Cari NIK Karyawan..." : "Cari NIK atau Nama..."} value={activeTab === 'record' ? search : monitorSearch} onChange={e => { activeTab === 'record' ? (setSearch(e.target.value), setPage(1)) : (setMonitorSearch(e.target.value), setMonitorPage(1)); }} />
             </div>
-            <div className="mcu-records-count">{total} record</div>
+            <div className="mcu-records-count">{displayTotal} record</div>
           </div>
         </div>
 
@@ -215,17 +310,17 @@ export default function RecordMCUTableModern() {
           <div className="mcu-records-toolbar-title"><Pin size={14} /> Bekukan kolom</div>
           <div className="mcu-frozen-picker-wrap">
             <button type="button" className={`mcu-frozen-picker-button${showFrozenPicker ? ' is-open' : ''}`} onClick={() => setShowFrozenPicker(current => !current)} aria-expanded={showFrozenPicker}>
-              <SlidersHorizontal size={14} /> {frozenColumns.length ? `${frozenColumns.length} kolom dipilih` : 'Pilih kolom'} 
+              <SlidersHorizontal size={14} /> {activeFrozenColumns.length ? `${activeFrozenColumns.length} kolom dipilih` : 'Pilih kolom'} 
             </button>
             {showFrozenPicker && (
               <div className="mcu-frozen-picker" role="group" aria-label="Pilih kolom frozen">
                 {columns.map(column => (
                   <label key={column.key}>
-                    <input type="checkbox" checked={frozenColumns.includes(column.key)} onChange={() => toggleFrozenColumn(column.key)} />
+                    <input type="checkbox" checked={activeFrozenColumns.includes(column.key)} onChange={() => toggleFrozenColumn(column.key)} />
                     <span>{column.label}</span>
                   </label>
                 ))}
-                <button type="button" className="mcu-frozen-reset" onClick={() => setFrozenColumns([])}>Lepas semua</button>
+                <button type="button" className="mcu-frozen-reset" onClick={() => setActiveFrozenColumns([])}>Lepas semua</button>
               </div>
             )}
           </div>
@@ -238,7 +333,7 @@ export default function RecordMCUTableModern() {
               <tr>
                 <th className="mcu-records-index">#</th>
                 {columns.map(c => {
-                  const isFrozen = frozenColumns.includes(c.key);
+                  const isFrozen = activeFrozenColumns.includes(c.key);
                   const w = getColWidth(c.key);
                   const style: React.CSSProperties = {
                     width: `${w}px`,
@@ -256,10 +351,10 @@ export default function RecordMCUTableModern() {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
+              {displayLoading ? (
                 <tr>
                   <td colSpan={columns.length + 2} style={{ padding: 40, textAlign: 'center' }}>
-                    <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat record MCU">
+                    <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data">
                       <div className="bm-loading-spinner">
                         <div className="bm-loading-ring" aria-hidden="true" />
                         <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
@@ -267,17 +362,17 @@ export default function RecordMCUTableModern() {
                     </div>
                   </td>
                 </tr>
-              ) : rows.length === 0 ? (
-                <tr><td colSpan={columns.length + 2} style={{ padding: 36, textAlign: 'center' }}>Belum ada record MCU.</td></tr>
-              ) : rows.map((row, idx) => {
-                const id = String(row.id || `${page}-${idx}`);
+              ) : displayRows.length === 0 ? (
+                <tr><td colSpan={columns.length + 2} style={{ padding: 36, textAlign: 'center' }}>Belum ada data.</td></tr>
+              ) : displayRows.map((row, idx) => {
+                const id = String(row.id || `${displayPage}-${idx}`);
                 const isExp = !!expanded[id];
                 return (
                   <Fragment key={id}>
-                    <tr className={`mcu-zone-${String(row.zonasi || 'belum-lengkap').toLowerCase().replace(/\s+/g, '-')}`}>
-                      <td className="mcu-records-index">{(page - 1) * 100 + idx + 1}</td>
+                    <tr className={activeTab === 'record' ? `mcu-zone-${String(row.zonasi || 'belum-lengkap').toLowerCase().replace(/\s+/g, '-')}` : `mcu-zone-${String(row.zona_risiko || 'belum-lengkap').toLowerCase().replace(/\s+/g, '-')}`}>
+                      <td className="mcu-records-index">{(displayPage - 1) * 100 + idx + 1}</td>
                       {columns.map(c => {
-                        const isFrozen = frozenColumns.includes(c.key);
+                        const isFrozen = activeFrozenColumns.includes(c.key);
                         const w = getColWidth(c.key);
                         const style: React.CSSProperties = {
                           width: `${w}px`,
@@ -295,7 +390,7 @@ export default function RecordMCUTableModern() {
                       })}
                       <td className="mcu-records-action" style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
                         <Button size="sm" variant="ghost" onClick={() => setExpanded(s => ({ ...s, [id]: !s[id] }))} title={isExp ? 'Tutup detail' : 'Lihat detail'}><Eye size={14} /></Button>
-                        {(isSuperuser || isAdmin) && (
+                        {activeTab === 'record' && (isSuperuser || isAdmin) && (
                           <>
                             <Button size="sm" variant="ghost" onClick={() => handleEdit(row)} title="Edit data"><Edit size={14} /></Button>
                             <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => handleDelete(String(row.id), row.nama)} title="Hapus data"><Trash2 size={14} /></Button>
@@ -319,11 +414,11 @@ export default function RecordMCUTableModern() {
           </table>
         </div>
 
-        {totalPages > 1 && (
+        {displayTotalPages > 1 && (
           <div className="mcu-records-pagination">
-            <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}><ChevronLeft size={14} /> Sebelumnya</Button>
-            <div>Halaman {page} / {totalPages}</div>
-            <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Berikutnya <ChevronRight size={14} /></Button>
+            <Button size="sm" variant="outline" disabled={displayPage === 1} onClick={() => activeTab === 'record' ? setPage(p => p - 1) : setMonitorPage(p => p - 1)}><ChevronLeft size={14} /> Sebelumnya</Button>
+            <div>Halaman {displayPage} / {displayTotalPages}</div>
+            <Button size="sm" variant="outline" disabled={displayPage >= displayTotalPages} onClick={() => activeTab === 'record' ? setPage(p => p + 1) : setMonitorPage(p => p + 1)}>Berikutnya <ChevronRight size={14} /></Button>
           </div>
         )}
         <Dialog open={!!editingRow} onOpenChange={open => !open && setEditingRow(null)}>
