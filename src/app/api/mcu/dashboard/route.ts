@@ -101,32 +101,21 @@ async function getCaller(request: NextRequest): Promise<{ role: string; site: st
 async function fetchAllMonitorMcuRows(): Promise<Record<string, unknown>[]> {
   const SELECT_FIELDS = 'employee_id,nama,site,area_raw,client,jabatan,exempt,total_mcu,mcu_terakhir,kategori_mcu_terakhir,hasil_mcu,perlu_fu,rekomendasi_fu,item_fu,diagnosa,fram_score,fram_prob,frs_kategori,zona_risiko,masa_berlaku_mcu,status_mcu,status_follow_up,jadwal_mcu_selanjutnya';
   const PAGE_SIZE = 1000;
-  
-  const { count, error: countError } = await client
-    .from('monitor_mcu')
-    .select('employee_id', { count: 'exact', head: true });
-
-  if (countError) throw countError;
-  const total = count || 0;
-  if (total === 0) return [];
-
-  const promises = [];
-  for (let from = 0; from < total; from += PAGE_SIZE) {
-    promises.push(
-      client
-        .from('monitor_mcu')
-        .select(SELECT_FIELDS)
-        .order('site', { ascending: true })
-        .range(from, from + PAGE_SIZE - 1)
-    );
-  }
-
-  const results = await Promise.all(promises);
   const rows: Record<string, unknown>[] = [];
-  
-  for (const { data, error } of results) {
+
+  // Sequential pagination — avoids firing multiple concurrent queries against
+  // the heavy 3-table CTE VIEW, which reliably caused statement timeouts.
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await client
+      .from('monitor_mcu')
+      .select(SELECT_FIELDS)
+      .order('site', { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+
     if (error) throw error;
-    if (data) rows.push(...data);
+    if (!data || data.length === 0) break;
+    rows.push(...(data as Record<string, unknown>[]));
+    if (data.length < PAGE_SIZE) break; // last page — no more rows
   }
 
   return rows;

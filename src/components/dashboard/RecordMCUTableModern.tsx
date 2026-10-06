@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Search, Eye, Pin, SlidersHorizontal, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { preloadMCUDashboardData } from '@/components/dashboard/MCUDashboardShared';
 import { supabase } from '@/lib/supabase';
 import { MCU_FIELDS } from '@/lib/mcu-fields';
 import { useAuth } from '@/lib/auth-context';
@@ -107,11 +108,12 @@ export default function RecordMCUTableModern() {
   const loadMonitor = async () => {
     setMonitorLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch('/api/mcu/dashboard', { headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {} });
-      const json = await response.json();
-      if (!response.ok) throw new Error(json.error || 'Gagal memuat data');
-      setMonitorRows(json.employees || []);
+      // Use the shared module-level cache from MCUDashboardShared.
+      // If charts on the same page already fetched the data, this costs zero
+      // extra API calls. If not, it fires one request and populates the cache
+      // for any other component that needs it.
+      const rows = await preloadMCUDashboardData();
+      setMonitorRows(rows as RecordRow[]);
     } catch (err) {
       store.showToast(err instanceof Error ? err.message : 'Gagal memuat monitor', 'error');
     } finally {
