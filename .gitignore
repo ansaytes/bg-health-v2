@@ -66,3 +66,12 @@ server.log
 
 # skills directory
 /skills/
+
+# AI agent working directories (investigation reports, task files)
+/.agents/
+
+# Kiro/Kilo IDE worktrees and agent config
+/.kilo/
+
+# VS Code workspace settings
+.vscode/

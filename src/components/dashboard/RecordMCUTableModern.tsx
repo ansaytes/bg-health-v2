@@ -1,7 +1,7 @@
 'use client';
 
-import { Fragment, useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Search, Eye, Pin, SlidersHorizontal, Edit, Trash2 } from 'lucide-react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, Search, Eye, Pin, SlidersHorizontal, Edit, Trash2, ChevronDown, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { preloadMCUDashboardData } from '@/components/dashboard/MCUDashboardShared';
@@ -17,6 +17,180 @@ function short(val: any) {
   return String(val);
 }
 
+// ---------------------------------------------------------------------------
+// Spreadsheet-style column filter dropdown
+// ---------------------------------------------------------------------------
+interface ColFilterDropdownProps {
+  colKey: string;
+  label: string;
+  options: string[] | null; // null = free-text input
+  value: string;
+  onChange: (v: string) => void;
+  anchorRef: React.RefObject<HTMLTableCellElement | null>;
+}
+
+function ColFilterDropdown({ colKey, label, options, value, onChange, anchorRef }: ColFilterDropdownProps) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        panelRef.current && !panelRef.current.contains(e.target as Node) &&
+        anchorRef.current && !anchorRef.current.contains(e.target as Node)
+      ) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    if (!options) return null;
+    if (!search.trim()) return options;
+    return options.filter(o => o.toLowerCase().includes(search.toLowerCase()));
+  }, [options, search]);
+
+  const hasValue = value.trim() !== '';
+
+  return (
+    <div className="col-filter-wrap" style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+      <button
+        type="button"
+        className={`col-filter-btn${hasValue ? ' col-filter-btn--active' : ''}${open ? ' col-filter-btn--open' : ''}`}
+        onClick={() => setOpen(v => !v)}
+        title={hasValue ? `Filter: ${value}` : `Filter ${label}`}
+        aria-label={`Filter ${label}`}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 2,
+          padding: '1px 3px',
+          marginLeft: 4,
+          borderRadius: 3,
+          border: hasValue ? '1px solid var(--primary, #0ea5e9)' : '1px solid transparent',
+          background: hasValue ? 'rgba(14,165,233,0.10)' : 'transparent',
+          color: hasValue ? 'var(--primary, #0ea5e9)' : 'inherit',
+          cursor: 'pointer',
+          fontSize: 10,
+          lineHeight: 1,
+          opacity: open ? 1 : 0.55,
+          transition: 'opacity .15s, background .15s',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+        onMouseLeave={e => { if (!hasValue && !open) e.currentTarget.style.opacity = '0.55'; }}
+      >
+        <ChevronDown size={10} strokeWidth={2.5} />
+      </button>
+
+      {open && (
+        <div
+          ref={panelRef}
+          className="col-filter-panel"
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            zIndex: 1000,
+            minWidth: 180,
+            maxWidth: 260,
+            background: 'var(--popover, #fff)',
+            border: '1px solid var(--border, #e5e7eb)',
+            borderRadius: 6,
+            boxShadow: '0 4px 16px rgba(0,0,0,.12)',
+            padding: '6px 0',
+            marginTop: 2,
+          }}
+        >
+          {/* Search within options */}
+          <div style={{ padding: '4px 8px 6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, border: '1px solid var(--border, #e5e7eb)', borderRadius: 4, padding: '3px 6px' }}>
+              <Search size={11} style={{ opacity: 0.5, flexShrink: 0 }} />
+              <input
+                autoFocus
+                type="text"
+                value={options ? search : value}
+                onChange={e => options ? setSearch(e.target.value) : onChange(e.target.value)}
+                placeholder={options ? 'Cari...' : `Filter ${label}...`}
+                style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 12, width: '100%' }}
+              />
+              {(options ? search : value) && (
+                <button type="button" onClick={() => { options ? setSearch('') : onChange(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', opacity: 0.5 }}>
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {options ? (
+            <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+              {/* "Semua" option */}
+              <button
+                type="button"
+                onClick={() => { onChange(''); setOpen(false); }}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'left',
+                  padding: '5px 12px', fontSize: 12, cursor: 'pointer',
+                  background: value === '' ? 'var(--accent, #f1f5f9)' : 'transparent',
+                  border: 'none', fontStyle: 'italic', opacity: 0.7,
+                }}
+              >
+                Semua
+              </button>
+              {(filtered || []).map(opt => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => { onChange(opt); setOpen(false); setSearch(''); }}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left',
+                    padding: '5px 12px', fontSize: 12, cursor: 'pointer',
+                    background: value === opt ? 'var(--accent, #f1f5f9)' : 'transparent',
+                    border: 'none', fontWeight: value === opt ? 600 : 400,
+                    color: value === opt ? 'var(--primary, #0ea5e9)' : 'inherit',
+                  }}
+                >
+                  {opt || '(kosong)'}
+                </button>
+              ))}
+              {filtered && filtered.length === 0 && (
+                <div style={{ padding: '6px 12px', fontSize: 11, opacity: 0.5 }}>Tidak ditemukan</div>
+              )}
+            </div>
+          ) : (
+            <div style={{ padding: '2px 8px 6px' }}>
+              <button
+                type="button"
+                onClick={() => { onChange(''); setOpen(false); }}
+                style={{ fontSize: 11, color: 'var(--primary, #0ea5e9)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}
+              >
+                Hapus filter
+              </button>
+            </div>
+          )}
+
+          {options && value && (
+            <div style={{ borderTop: '1px solid var(--border, #e5e7eb)', padding: '4px 8px 2px' }}>
+              <button
+                type="button"
+                onClick={() => { onChange(''); setSearch(''); setOpen(false); }}
+                style={{ fontSize: 11, color: 'var(--primary, #0ea5e9)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}
+              >
+                Hapus filter
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
 export default function RecordMCUTableModern() {
   const { isSuperuser, isAdmin } = useAuth();
   const store = useMCUStore();
@@ -39,11 +213,17 @@ export default function RecordMCUTableModern() {
   const [monitorLoading, setMonitorLoading] = useState(false);
   const [monitorSearch, setMonitorSearch] = useState('');
   const [monitorPage, setMonitorPage] = useState(1);
-  // Column filters: map of column key → filter value string
+
+  // Spreadsheet-style per-column filters
   const [monitorFilters, setMonitorFilters] = useState<Record<string, string>>({});
-  const [showMonitorFilters, setShowMonitorFilters] = useState(false);
   const [recordFilters, setRecordFilters] = useState<Record<string, string>>({});
-  const [showRecordFilters, setShowRecordFilters] = useState(false);
+
+  // Refs for each th cell (used to position filter dropdowns)
+  const thRefs = useRef<Record<string, React.RefObject<HTMLTableCellElement | null>>>({});
+  const getThRef = (key: string) => {
+    if (!thRefs.current[key]) thRefs.current[key] = { current: null };
+    return thRefs.current[key] as React.RefObject<HTMLTableCellElement | null>;
+  };
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Apakah Anda yakin ingin menghapus data MCU untuk ${name}?`)) return;
@@ -73,14 +253,21 @@ export default function RecordMCUTableModern() {
         const key = field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase();
         formData[field.id] = editingRow[key] == null ? '' : String(editingRow[key]);
       });
-      const response = await fetch('/api/mcu/save', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) }, body: JSON.stringify({ formData }) });
+      const response = await fetch('/api/mcu/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) },
+        body: JSON.stringify({ formData }),
+      });
       const json = await response.json();
       if (!response.ok || !json.success) throw new Error(json.error || 'Gagal menyimpan perubahan');
       setEditingRow(null);
       store.showToast('Data MCU berhasil diperbarui', 'success');
       await load();
-    } catch (err) { store.showToast(err instanceof Error ? err.message : 'Gagal menyimpan perubahan', 'error'); }
-    finally { setSaving(false); }
+    } catch (err) {
+      store.showToast(err instanceof Error ? err.message : 'Gagal menyimpan perubahan', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const load = async () => {
@@ -113,12 +300,8 @@ export default function RecordMCUTableModern() {
   const loadMonitor = async () => {
     setMonitorLoading(true);
     try {
-      // Use the shared module-level cache from MCUDashboardShared.
-      // If charts on the same page already fetched the data, this costs zero
-      // extra API calls. If not, it fires one request and populates the cache
-      // for any other component that needs it.
-      const rows = await preloadMCUDashboardData();
-      setMonitorRows(rows as RecordRow[]);
+      const loadedRows = await preloadMCUDashboardData();
+      setMonitorRows(loadedRows as RecordRow[]);
     } catch (err) {
       store.showToast(err instanceof Error ? err.message : 'Gagal memuat monitor', 'error');
     } finally {
@@ -133,101 +316,35 @@ export default function RecordMCUTableModern() {
   }, [activeTab]);
 
   const EXCLUDED_COLUMNS = useMemo(() => new Set([
-    'id',
-    'created_at',
-    'updated_at',
-    'nik_karyawan_hash',
-    'national_id_hash',
-    'national_id',
-    'nationalid',
+    'id', 'created_at', 'updated_at',
+    'nik_karyawan_hash', 'national_id_hash', 'national_id', 'nationalid',
   ]), []);
 
   const COLUMN_WIDTHS: Record<string, number> = useMemo(() => ({
-    // --- record MCU columns ---
-    nik_karyawan: 130,
-    nama: 180,
-    usia: 55,
-    jenis_kelamin: 95,
-    jabatan: 140,
-    site: 110,
-    status_mcu: 115,
-    tgl_mcu: 95,
-    tempat_mcu: 135,
-    gol_darah: 80,
-    gigi_mulut: 150,
-    fisik_head_to_toe: 150,
-    hemoroid: 90,
-    visus_jauh: 90,
-    visus_dekat: 90,
-    def_warna: 95,
-    lapang_pandang: 110,
-    fisik_mata: 130,
-    merokok: 80,
-    td_s: 70,
-    td_d: 70,
-    nadi: 70,
-    bb: 65,
-    tb: 65,
-    bmi: 70,
-    lp: 70,
-    hb: 70,
-    leukosit: 80,
-    eritrosit: 80,
-    hematokrit: 80,
-    trombosit: 85,
-    mcv: 70,
-    mch: 70,
-    mchc: 70,
-    led: 70,
-    chol: 75,
-    tg: 75,
-    hdl: 75,
-    ldl: 75,
-    gdp: 75,
-    gd2pp: 75,
-    hba1c: 75,
-    diabetes: 80,
-    au: 70,
-    ureum: 75,
-    kreatinin: 75,
-    egfr: 75,
-    sgot: 70,
-    sgpt: 70,
-    ggt: 70,
-    alp: 70,
-    billirubin: 75,
-    ul: 100,
-    zonasi: 95,
-    kes_vendor: 120,
-    perlu_fu: 80,
-    link_mcu: 90,
-    // --- monitor MCU columns ---
-    area_raw: 80,
-    client: 120,
-    total_mcu: 80,
-    mcu_terakhir: 115,
-    masa_berlaku_mcu: 130,
-    kategori_mcu_terakhir: 140,
-    hasil_mcu: 120,
-    diagnosa: 200,
-    fram_score: 95,
-    fram_prob: 95,
-    frs_kategori: 115,
-    zona_risiko: 95,
-    rekomendasi_fu: 200,
-    item_fu: 200,
-    status_follow_up: 120,
-    jadwal_mcu_selanjutnya: 145,
+    // record MCU
+    nik_karyawan: 130, nama: 180, usia: 55, jenis_kelamin: 95, jabatan: 140,
+    site: 110, status_mcu: 115, tgl_mcu: 95, tempat_mcu: 135, gol_darah: 80,
+    gigi_mulut: 150, fisik_head_to_toe: 150, hemoroid: 90, visus_jauh: 90,
+    visus_dekat: 90, def_warna: 95, lapang_pandang: 110, fisik_mata: 130,
+    merokok: 80, td_s: 70, td_d: 70, nadi: 70, bb: 65, tb: 65, bmi: 70,
+    lp: 70, hb: 70, leukosit: 80, eritrosit: 80, hematokrit: 80, trombosit: 85,
+    mcv: 70, mch: 70, mchc: 70, led: 70, chol: 75, tg: 75, hdl: 75, ldl: 75,
+    gdp: 75, gd2pp: 75, hba1c: 75, diabetes: 80, au: 70, ureum: 75,
+    kreatinin: 75, egfr: 75, sgot: 70, sgpt: 70, ggt: 70, alp: 70,
+    billirubin: 75, ul: 100, zonasi: 95, kes_vendor: 120, perlu_fu: 80, link_mcu: 90,
+    // monitor MCU
+    area_raw: 80, client: 120, total_mcu: 80, mcu_terakhir: 115,
+    masa_berlaku_mcu: 130, kategori_mcu_terakhir: 140, hasil_mcu: 120,
+    diagnosa: 200, fram_score: 95, fram_prob: 95, frs_kategori: 115,
+    zona_risiko: 95, rekomendasi_fu: 200, item_fu: 200,
+    status_follow_up: 120, jadwal_mcu_selanjutnya: 145,
   }), []);
 
   const getColWidth = (key: string): number => COLUMN_WIDTHS[key] || 110;
 
   const recordColumns = useMemo(() => MCU_FIELDS
-    .map(field => ({
-      key: field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase(),
-      label: field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase(),
-    }))
-    .filter(col => !EXCLUDED_COLUMNS.has(col.key)), [EXCLUDED_COLUMNS]);
+    .map(f => ({ key: f.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase(), label: f.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase() }))
+    .filter(c => !EXCLUDED_COLUMNS.has(c.key)), [EXCLUDED_COLUMNS]);
 
   const monitorColumns = useMemo(() => [
     { key: 'nik_karyawan', label: 'nik_karyawan' },
@@ -257,9 +374,36 @@ export default function RecordMCUTableModern() {
   const columns = activeTab === 'record' ? recordColumns : monitorColumns;
   const activeFrozenColumns = activeTab === 'record' ? frozenColumns : frozenColumnsMonitor;
   const setActiveFrozenColumns = activeTab === 'record' ? setFrozenColumns : setFrozenColumnsMonitor;
+  const activeFilters = activeTab === 'record' ? recordFilters : monitorFilters;
+  const setActiveFilters = activeTab === 'record' ? setRecordFilters : setMonitorFilters;
+
+  // Columns that get enum-style dropdowns (derive options from loaded data)
+  const ENUM_COLS_MONITOR = new Set([
+    'site', 'area_raw', 'client', 'jabatan', 'zona_risiko',
+    'status_mcu', 'status_follow_up', 'hasil_mcu',
+    'kategori_mcu_terakhir', 'frs_kategori', 'perlu_fu',
+  ]);
+  const ENUM_COLS_RECORD = new Set([
+    'site', 'jabatan', 'jenis_kelamin', 'zonasi', 'kes_vendor',
+    'status_mcu', 'perlu_fu', 'merokok', 'gol_darah',
+  ]);
+
+  // Unique values for each filterable column
+  const filterOptions = useMemo(() => {
+    const opts: Record<string, string[]> = {};
+    const srcRows = activeTab === 'monitor' ? monitorRows : rows;
+    const enumSet = activeTab === 'monitor' ? ENUM_COLS_MONITOR : ENUM_COLS_RECORD;
+    for (const col of columns) {
+      if (enumSet.has(col.key)) {
+        const vals = [...new Set(srcRows.map(r => String(r[col.key] ?? '')).filter(Boolean))].sort();
+        if (vals.length > 0) opts[col.key] = vals;
+      }
+    }
+    return opts;
+  }, [activeTab, monitorRows, rows, columns]);
 
   const frozenOffsets = useMemo(() => {
-    let offset = 48; // index column width
+    let offset = 48;
     const offsets: Record<string, number> = {};
     for (const col of columns) {
       if (activeFrozenColumns.includes(col.key)) {
@@ -271,9 +415,7 @@ export default function RecordMCUTableModern() {
   }, [columns, activeFrozenColumns, COLUMN_WIDTHS]);
 
   const toggleFrozenColumn = (key: string) => {
-    setActiveFrozenColumns(current => current.includes(key)
-      ? current.filter(column => column !== key)
-      : [...current, key]);
+    setActiveFrozenColumns(c => c.includes(key) ? c.filter(x => x !== key) : [...c, key]);
   };
 
   const filteredMonitorRows = useMemo(() => {
@@ -282,51 +424,26 @@ export default function RecordMCUTableModern() {
       const lower = monitorSearch.toLowerCase();
       result = result.filter(r =>
         String(r.nik_karyawan || '').toLowerCase().includes(lower) ||
-        String(r.nama || '').toLowerCase().includes(lower)
+        String(r.nama || '').toLowerCase().includes(lower),
       );
     }
     for (const [key, value] of Object.entries(monitorFilters)) {
       if (!value.trim()) continue;
-      const lower = value.trim().toLowerCase();
-      result = result.filter(r => String(r[key] || '').toLowerCase().includes(lower));
+      result = result.filter(r => String(r[key] ?? '').toLowerCase().includes(value.toLowerCase()));
     }
     return result;
   }, [monitorRows, monitorSearch, monitorFilters]);
 
-  // Derive unique values for enum-like monitor columns (for <select> filter options)
-  const monitorFilterOptions = useMemo(() => {
-    const enumCols = ['site', 'area_raw', 'client', 'jabatan', 'zona_risiko', 'status_mcu', 'status_follow_up', 'hasil_mcu', 'kategori_mcu_terakhir', 'frs_kategori'];
-    const opts: Record<string, string[]> = {};
-    for (const col of enumCols) {
-      const vals = [...new Set(monitorRows.map(r => String(r[col] || '')).filter(Boolean))].sort();
-      if (vals.length > 0) opts[col] = vals;
-    }
-    return opts;
-  }, [monitorRows]);
-
-  // Columns available for filtering on the Record tab (subset — server-side paginated)
-  const recordFilterCols = useMemo(() => [
-    { key: 'site', label: 'site' },
-    { key: 'jabatan', label: 'jabatan' },
-    { key: 'zonasi', label: 'zonasi' },
-    { key: 'kes_vendor', label: 'kes_vendor' },
-    { key: 'status_mcu', label: 'status_mcu' },
-    { key: 'perlu_fu', label: 'perlu_fu' },
-  ], []);
-
-  // Client-side record filter (applies to current page only — full server filter would need API extension)
   const filteredRecordRows = useMemo(() => {
     if (Object.values(recordFilters).every(v => !v.trim())) return rows;
-    return rows.filter(row => {
-      for (const [key, value] of Object.entries(recordFilters)) {
-        if (!value.trim()) continue;
-        if (!String(row[key] || '').toLowerCase().includes(value.trim().toLowerCase())) return false;
-      }
-      return true;
-    });
+    return rows.filter(row => Object.entries(recordFilters).every(([k, v]) =>
+      !v.trim() || String(row[k] ?? '').toLowerCase().includes(v.toLowerCase()),
+    ));
   }, [rows, recordFilters]);
 
-  const pagedMonitorRows = useMemo(() => filteredMonitorRows.slice((monitorPage - 1) * 100, monitorPage * 100), [filteredMonitorRows, monitorPage]);
+  const pagedMonitorRows = useMemo(() =>
+    filteredMonitorRows.slice((monitorPage - 1) * 100, monitorPage * 100),
+    [filteredMonitorRows, monitorPage]);
   const monitorTotalPages = Math.max(1, Math.ceil(filteredMonitorRows.length / 100));
 
   const displayRows = activeTab === 'record' ? filteredRecordRows : pagedMonitorRows;
@@ -334,20 +451,24 @@ export default function RecordMCUTableModern() {
   const displayPage = activeTab === 'record' ? page : monitorPage;
   const displayTotalPages = activeTab === 'record' ? totalPages : monitorTotalPages;
   const displayLoading = activeTab === 'record' ? loading : monitorLoading;
-  const activeFilters = activeTab === 'record' ? recordFilters : monitorFilters;
-  const setActiveFilters = activeTab === 'record' ? setRecordFilters : setMonitorFilters;
-  const showFilters = activeTab === 'record' ? showRecordFilters : showMonitorFilters;
-  const setShowFilters = activeTab === 'record' ? setShowRecordFilters : setShowMonitorFilters;
-  const filterableCols = activeTab === 'record' ? recordFilterCols : monitorColumns;
   const activeFilterCount = Object.values(activeFilters).filter(v => v.trim()).length;
 
   return (
     <div className="mcu-records-modern">
       <div className="mcu-records-card">
+        {/* Tab nav */}
         <div className="flex border-b border-gray-200 dark:border-gray-800 mb-4">
-          <button className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'record' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('record')}>Record MCU</button>
-          <button className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'monitor' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveTab('monitor')}>Tabel Monitor</button>
+          <button
+            className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'record' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            onClick={() => setActiveTab('record')}
+          >Record MCU</button>
+          <button
+            className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'monitor' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            onClick={() => setActiveTab('monitor')}
+          >Tabel Monitor</button>
         </div>
+
+        {/* Header */}
         <div className="mcu-records-header">
           <div>
             <div className="mcu-records-kicker">DATABASE MCU</div>
@@ -356,24 +477,51 @@ export default function RecordMCUTableModern() {
           <div className="mcu-records-actions">
             <div className="mcu-records-search">
               <Search size={14} />
-              <input aria-label="Cari record MCU" placeholder={activeTab === 'record' ? "Cari NIK Karyawan..." : "Cari NIK atau Nama..."} value={activeTab === 'record' ? search : monitorSearch} onChange={e => { activeTab === 'record' ? (setSearch(e.target.value), setPage(1)) : (setMonitorSearch(e.target.value), setMonitorPage(1)); }} />
+              <input
+                aria-label="Cari record MCU"
+                placeholder={activeTab === 'record' ? 'Cari NIK Karyawan...' : 'Cari NIK atau Nama...'}
+                value={activeTab === 'record' ? search : monitorSearch}
+                onChange={e => {
+                  if (activeTab === 'record') { setSearch(e.target.value); setPage(1); }
+                  else { setMonitorSearch(e.target.value); setMonitorPage(1); }
+                }}
+              />
             </div>
-            <div className="mcu-records-count">{displayTotal} record</div>
+            <div className="mcu-records-count">
+              {displayTotal} record
+              {activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveFilters({})}
+                  title="Hapus semua filter"
+                  style={{ marginLeft: 6, fontSize: 10, color: 'var(--primary,#0ea5e9)', background: 'none', border: '1px solid var(--primary,#0ea5e9)', cursor: 'pointer', padding: '1px 4px', borderRadius: 3 }}
+                >
+                  {activeFilterCount} filter ✕
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
+        {/* Freeze toolbar */}
         <div className="mcu-records-toolbar">
           <div className="mcu-records-toolbar-title"><Pin size={14} /> Bekukan kolom</div>
           <div className="mcu-frozen-picker-wrap">
-            <button type="button" className={`mcu-frozen-picker-button${showFrozenPicker ? ' is-open' : ''}`} onClick={() => setShowFrozenPicker(current => !current)} aria-expanded={showFrozenPicker}>
-              <SlidersHorizontal size={14} /> {activeFrozenColumns.length ? `${activeFrozenColumns.length} kolom dipilih` : 'Pilih kolom'} 
+            <button
+              type="button"
+              className={`mcu-frozen-picker-button${showFrozenPicker ? ' is-open' : ''}`}
+              onClick={() => setShowFrozenPicker(v => !v)}
+              aria-expanded={showFrozenPicker}
+            >
+              <SlidersHorizontal size={14} />
+              {activeFrozenColumns.length ? `${activeFrozenColumns.length} kolom dipilih` : 'Pilih kolom'}
             </button>
             {showFrozenPicker && (
               <div className="mcu-frozen-picker" role="group" aria-label="Pilih kolom frozen">
-                {columns.map(column => (
-                  <label key={column.key}>
-                    <input type="checkbox" checked={activeFrozenColumns.includes(column.key)} onChange={() => toggleFrozenColumn(column.key)} />
-                    <span>{column.label}</span>
+                {columns.map(col => (
+                  <label key={col.key}>
+                    <input type="checkbox" checked={activeFrozenColumns.includes(col.key)} onChange={() => toggleFrozenColumn(col.key)} />
+                    <span>{col.label}</span>
                   </label>
                 ))}
                 <button type="button" className="mcu-frozen-reset" onClick={() => setActiveFrozenColumns([])}>Lepas semua</button>
@@ -381,70 +529,14 @@ export default function RecordMCUTableModern() {
             )}
           </div>
           <span className="mcu-records-hint">Kolom terpilih tetap terlihat saat tabel digeser horizontal.</span>
-        </div>
-
-        {/* Column Filter Panel */}
-        <div className="mcu-records-toolbar" style={{ alignItems: 'flex-start', gap: 8 }}>
-          <div className="mcu-records-toolbar-title" style={{ paddingTop: 2 }}><SlidersHorizontal size={14} /> Filter kolom</div>
-          <button
-            type="button"
-            className={`mcu-frozen-picker-button${showFilters ? ' is-open' : ''}`}
-            onClick={() => setShowFilters(v => !v)}
-            aria-expanded={showFilters}
-          >
-            <Search size={14} />
-            {activeFilterCount > 0 ? `${activeFilterCount} filter aktif` : 'Tambah filter'}
-          </button>
-          {activeFilterCount > 0 && (
-            <button type="button" className="mcu-frozen-reset" style={{ marginLeft: 4, fontSize: 11 }} onClick={() => setActiveFilters({})}>
-              Hapus semua filter
-            </button>
-          )}
-          {showFilters && (
-            <div className="mcu-frozen-picker" role="group" aria-label="Filter kolom" style={{ minWidth: 320, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {filterableCols.map(col => {
-                const enumOpts = activeTab === 'monitor' ? (monitorFilterOptions[col.key] || null) : null;
-                return (
-                  <label key={col.key} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 140 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600 }}>{col.label}</span>
-                    {enumOpts ? (
-                      <select
-                        className="admin-input"
-                        style={{ fontSize: 12, padding: '2px 6px', height: 28 }}
-                        value={activeFilters[col.key] || ''}
-                        onChange={e => {
-                          setActiveFilters(prev => ({ ...prev, [col.key]: e.target.value }));
-                          if (activeTab === 'monitor') setMonitorPage(1);
-                        }}
-                      >
-                        <option value="">Semua</option>
-                        {enumOpts.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                      </select>
-                    ) : (
-                      <input
-                        className="admin-input"
-                        style={{ fontSize: 12, padding: '2px 6px', height: 28, minWidth: 120 }}
-                        type="text"
-                        placeholder={`Filter ${col.label}...`}
-                        value={activeFilters[col.key] || ''}
-                        onChange={e => {
-                          setActiveFilters(prev => ({ ...prev, [col.key]: e.target.value }));
-                          if (activeTab === 'monitor') setMonitorPage(1);
-                        }}
-                      />
-                    )}
-                  </label>
-                );
-              })}
-            </div>
-          )}
           {activeTab === 'record' && activeFilterCount > 0 && (
-            <span className="mcu-records-hint" style={{ color: 'var(--color-warning, #d97706)' }}>
-              Filter berlaku pada halaman saat ini saja. Gunakan fitur search NIK untuk pencarian lintas halaman.
+            <span className="mcu-records-hint" style={{ color: 'var(--color-warning,#d97706)', marginLeft: 8 }}>
+              Filter kolom berlaku pada halaman saat ini.
             </span>
           )}
         </div>
 
+        {/* Table */}
         <div className="mcu-records-table-wrap">
           <table className="mcu-records-table">
             <thead>
@@ -453,15 +545,38 @@ export default function RecordMCUTableModern() {
                 {columns.map(c => {
                   const isFrozen = activeFrozenColumns.includes(c.key);
                   const w = getColWidth(c.key);
-                  const style: React.CSSProperties = {
-                    width: `${w}px`,
-                    minWidth: `${w}px`,
-                    maxWidth: `${Math.max(w, 160)}px`,
+                  const hasFilter = !!(activeFilters[c.key]?.trim());
+                  const thStyle: React.CSSProperties = {
+                    width: `${w}px`, minWidth: `${w}px`, maxWidth: `${Math.max(w, 160)}px`,
                     ...(isFrozen ? { left: `${frozenOffsets[c.key]}px` } : {}),
                   };
+                  // Enum columns get dropdown options; others get free-text input in dropdown
+                  const enumOpts = filterOptions[c.key] ?? null;
+
                   return (
-                    <th key={c.key} className={isFrozen ? 'is-frozen' : ''} style={style}>
-                      {c.label}{isFrozen && <Pin size={12} />}
+                    <th
+                      key={c.key}
+                      ref={getThRef(c.key) as React.Ref<HTMLTableCellElement>}
+                      className={isFrozen ? 'is-frozen' : ''}
+                      style={thStyle}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                        <span style={hasFilter ? { color: 'var(--primary,#0ea5e9)', fontWeight: 700 } : undefined}>
+                          {c.label}
+                        </span>
+                        {isFrozen && <Pin size={12} />}
+                        <ColFilterDropdown
+                          colKey={c.key}
+                          label={c.label}
+                          options={enumOpts}
+                          value={activeFilters[c.key] || ''}
+                          onChange={v => {
+                            setActiveFilters(prev => ({ ...prev, [c.key]: v }));
+                            if (activeTab === 'monitor') setMonitorPage(1);
+                          }}
+                          anchorRef={getThRef(c.key)}
+                        />
+                      </span>
                     </th>
                   );
                 })}
@@ -485,28 +600,27 @@ export default function RecordMCUTableModern() {
               ) : displayRows.map((row, idx) => {
                 const id = String(row.id || `${displayPage}-${idx}`);
                 const isExp = !!expanded[id];
+                const zoneKey = activeTab === 'record' ? row.zonasi : row.zona_risiko;
                 return (
                   <Fragment key={id}>
-                    <tr className={activeTab === 'record' ? `mcu-zone-${String(row.zonasi || 'belum-lengkap').toLowerCase().replace(/\s+/g, '-')}` : `mcu-zone-${String(row.zona_risiko || 'belum-lengkap').toLowerCase().replace(/\s+/g, '-')}`}>
+                    <tr className={`mcu-zone-${String(zoneKey || 'belum-lengkap').toLowerCase().replace(/\s+/g, '-')}`}>
                       <td className="mcu-records-index">{(displayPage - 1) * 100 + idx + 1}</td>
                       {columns.map(c => {
                         const isFrozen = activeFrozenColumns.includes(c.key);
                         const w = getColWidth(c.key);
-                        const style: React.CSSProperties = {
-                          width: `${w}px`,
-                          minWidth: `${w}px`,
-                          maxWidth: `${Math.max(w, 160)}px`,
+                        const cellStyle: React.CSSProperties = {
+                          width: `${w}px`, minWidth: `${w}px`, maxWidth: `${Math.max(w, 160)}px`,
                           ...(isFrozen ? { left: `${frozenOffsets[c.key]}px` } : {}),
                         };
                         return (
-                          <td key={c.key} className={isFrozen ? 'is-frozen' : ''} style={style} title={short(row[c.key])}>
-                            {c.key === 'link_mcu' && row[c.key] ? (
-                              <a href={String(row[c.key])} target="_blank" rel="noreferrer" className="mcu-record-link">Buka link</a>
-                            ) : short(row[c.key])}
+                          <td key={c.key} className={isFrozen ? 'is-frozen' : ''} style={cellStyle} title={short(row[c.key])}>
+                            {c.key === 'link_mcu' && row[c.key]
+                              ? <a href={String(row[c.key])} target="_blank" rel="noreferrer" className="mcu-record-link">Buka link</a>
+                              : short(row[c.key])}
                           </td>
                         );
                       })}
-                      <td className="mcu-records-action" style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                      <td className="mcu-records-action" style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                         <Button size="sm" variant="ghost" onClick={() => setExpanded(s => ({ ...s, [id]: !s[id] }))} title={isExp ? 'Tutup detail' : 'Lihat detail'}><Eye size={14} /></Button>
                         {activeTab === 'record' && (isSuperuser || isAdmin) && (
                           <>
@@ -520,7 +634,7 @@ export default function RecordMCUTableModern() {
                       <tr>
                         <td colSpan={columns.length + 2} className="mcu-records-detail-cell">
                           <div className="mcu-records-detail">
-                            <pre>{JSON.stringify(Object.fromEntries(Object.entries(row).filter(([key]) => !EXCLUDED_COLUMNS.has(key))), null, 2)}</pre>
+                            <pre>{JSON.stringify(Object.fromEntries(Object.entries(row).filter(([k]) => !EXCLUDED_COLUMNS.has(k))), null, 2)}</pre>
                           </div>
                         </td>
                       </tr>
@@ -532,23 +646,42 @@ export default function RecordMCUTableModern() {
           </table>
         </div>
 
+        {/* Pagination */}
         {displayTotalPages > 1 && (
           <div className="mcu-records-pagination">
-            <Button size="sm" variant="outline" disabled={displayPage === 1} onClick={() => activeTab === 'record' ? setPage(p => p - 1) : setMonitorPage(p => p - 1)}><ChevronLeft size={14} /> Sebelumnya</Button>
+            <Button size="sm" variant="outline" disabled={displayPage === 1} onClick={() => activeTab === 'record' ? setPage(p => p - 1) : setMonitorPage(p => p - 1)}>
+              <ChevronLeft size={14} /> Sebelumnya
+            </Button>
             <div>Halaman {displayPage} / {displayTotalPages}</div>
-            <Button size="sm" variant="outline" disabled={displayPage >= displayTotalPages} onClick={() => activeTab === 'record' ? setPage(p => p + 1) : setMonitorPage(p => p + 1)}>Berikutnya <ChevronRight size={14} /></Button>
+            <Button size="sm" variant="outline" disabled={displayPage >= displayTotalPages} onClick={() => activeTab === 'record' ? setPage(p => p + 1) : setMonitorPage(p => p + 1)}>
+              Berikutnya <ChevronRight size={14} />
+            </Button>
           </div>
         )}
+
+        {/* Edit dialog */}
         <Dialog open={!!editingRow} onOpenChange={open => !open && setEditingRow(null)}>
           <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Edit MCU</DialogTitle></DialogHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {MCU_FIELDS.map(field => {
                 const key = field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase();
-                return <label key={field.id} className="text-xs font-medium"><span>{field.label}</span><input className="admin-input w-full mt-1" value={editingRow?.[key] == null ? '' : String(editingRow[key])} onChange={event => setEditingRow(current => current ? { ...current, [key]: event.target.value } : current)} /></label>;
+                return (
+                  <label key={field.id} className="text-xs font-medium">
+                    <span>{field.label}</span>
+                    <input
+                      className="admin-input w-full mt-1"
+                      value={editingRow?.[key] == null ? '' : String(editingRow[key])}
+                      onChange={e => setEditingRow(cur => cur ? { ...cur, [key]: e.target.value } : cur)}
+                    />
+                  </label>
+                );
               })}
             </div>
-            <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setEditingRow(null)}>Batal</Button><Button onClick={saveEdit} disabled={saving}>{saving ? 'Menyimpan…' : 'Simpan'}</Button></div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditingRow(null)}>Batal</Button>
+              <Button onClick={saveEdit} disabled={saving}>{saving ? 'Menyimpan…' : 'Simpan'}</Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
