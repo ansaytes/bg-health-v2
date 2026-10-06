@@ -374,19 +374,17 @@ export default function RecordMCUTableModern() {
   const columns = activeTab === 'record' ? recordColumns : monitorColumns;
   const activeFrozenColumns = activeTab === 'record' ? frozenColumns : frozenColumnsMonitor;
   const setActiveFrozenColumns = activeTab === 'record' ? setFrozenColumns : setFrozenColumnsMonitor;
-  const activeFilters = activeTab === 'record' ? recordFilters : monitorFilters;
-  const setActiveFilters = activeTab === 'record' ? setRecordFilters : setMonitorFilters;
 
   // Columns that get enum-style dropdowns (derive options from loaded data)
-  const ENUM_COLS_MONITOR = new Set([
+  const ENUM_COLS_MONITOR = useMemo(() => new Set([
     'site', 'area_raw', 'client', 'jabatan', 'zona_risiko',
     'status_mcu', 'status_follow_up', 'hasil_mcu',
     'kategori_mcu_terakhir', 'frs_kategori', 'perlu_fu',
-  ]);
-  const ENUM_COLS_RECORD = new Set([
+  ]), []);
+  const ENUM_COLS_RECORD = useMemo(() => new Set([
     'site', 'jabatan', 'jenis_kelamin', 'zonasi', 'kes_vendor',
     'status_mcu', 'perlu_fu', 'merokok', 'gol_darah',
-  ]);
+  ]), []);
 
   // Unique values for each filterable column
   const filterOptions = useMemo(() => {
@@ -400,7 +398,24 @@ export default function RecordMCUTableModern() {
       }
     }
     return opts;
-  }, [activeTab, monitorRows, rows, columns]);
+  }, [activeTab, monitorRows, rows, columns, ENUM_COLS_MONITOR, ENUM_COLS_RECORD]);
+
+  // Stable per-tab filter setters — avoids stale closure on alias
+  const setFilterValue = (colKey: string, value: string) => {
+    if (activeTab === 'monitor') {
+      setMonitorFilters(prev => ({ ...prev, [colKey]: value }));
+      setMonitorPage(1);
+    } else {
+      setRecordFilters(prev => ({ ...prev, [colKey]: value }));
+    }
+  };
+  const clearAllFilters = () => {
+    if (activeTab === 'monitor') setMonitorFilters({});
+    else setRecordFilters({});
+  };
+
+  const activeFilters = activeTab === 'record' ? recordFilters : monitorFilters;
+  const activeFilterCount = Object.values(activeFilters).filter(v => v.trim()).length;
 
   const frozenOffsets = useMemo(() => {
     let offset = 48;
@@ -451,7 +466,6 @@ export default function RecordMCUTableModern() {
   const displayPage = activeTab === 'record' ? page : monitorPage;
   const displayTotalPages = activeTab === 'record' ? totalPages : monitorTotalPages;
   const displayLoading = activeTab === 'record' ? loading : monitorLoading;
-  const activeFilterCount = Object.values(activeFilters).filter(v => v.trim()).length;
 
   return (
     <div className="mcu-records-modern">
@@ -492,7 +506,7 @@ export default function RecordMCUTableModern() {
               {activeFilterCount > 0 && (
                 <button
                   type="button"
-                  onClick={() => setActiveFilters({})}
+                  onClick={() => clearAllFilters()}
                   title="Hapus semua filter"
                   style={{ marginLeft: 6, fontSize: 10, color: 'var(--primary,#0ea5e9)', background: 'none', border: '1px solid var(--primary,#0ea5e9)', cursor: 'pointer', padding: '1px 4px', borderRadius: 3 }}
                 >
@@ -570,10 +584,7 @@ export default function RecordMCUTableModern() {
                           label={c.label}
                           options={enumOpts}
                           value={activeFilters[c.key] || ''}
-                          onChange={v => {
-                            setActiveFilters(prev => ({ ...prev, [c.key]: v }));
-                            if (activeTab === 'monitor') setMonitorPage(1);
-                          }}
+                          onChange={v => setFilterValue(c.key, v)}
                           anchorRef={getThRef(c.key)}
                         />
                       </span>
