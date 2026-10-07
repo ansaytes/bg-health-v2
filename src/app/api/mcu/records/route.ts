@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { decryptEmployee, decryptMCURecord, hashField } from '@/lib/encryption';
+import { decryptEmployee, decryptMCURecord, hashField, isEncryptedValue } from '@/lib/encryption';
 import { MCU_FIELDS } from '@/lib/mcu-fields';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
@@ -43,8 +43,16 @@ export async function GET(req: NextRequest) {
     const { data: records, count, error: listError } = await listQuery;
     if (listError) return NextResponse.json({ error: listError.message }, { status: 500 });
 
+    // NIK Karyawan perlu dicari dari tabel employees bila:
+    //  1) kolom NIK Karyawan sebenarnya berisi NIK KTP (hash sama), atau
+    //  2) hasil dekripsi masih berupa ciphertext (gagal terbaca).
+    const needsEmployeeNik = (record: Record<string, any>) => {
+      if (!record.national_id_hash) return false;
+      if (record.national_id_hash === record.nik_karyawan_hash) return true;
+      return isEncryptedValue(decryptMCURecord(record).nik_karyawan);
+    };
     const nationalIdHashes = [...new Set((records || [])
-      .filter(record => record.national_id_hash && record.national_id_hash === record.nik_karyawan_hash)
+      .filter(needsEmployeeNik)
       .map(record => String(record.national_id_hash)))];
     const employeeNikByNationalId = new Map<string, string>();
     if (nationalIdHashes.length) {
@@ -67,8 +75,12 @@ export async function GET(req: NextRequest) {
       records: (records || []).map(record => {
         const decrypted = decryptMCURecord(record);
         delete decrypted.national_id;
-        if (record.national_id_hash && record.national_id_hash === record.nik_karyawan_hash) {
+        if (needsEmployeeNik(record)) {
           decrypted.nik_karyawan = employeeNikByNationalId.get(record.national_id_hash) || '';
+        }
+        // Jangan pernah mengirim ciphertext mentah ke tampilan
+        for (const field of ['nik_karyawan', 'nama', 'link_mcu']) {
+          if (isEncryptedValue(decrypted[field])) decrypted[field] = '';
         }
         return {
           ...decrypted,

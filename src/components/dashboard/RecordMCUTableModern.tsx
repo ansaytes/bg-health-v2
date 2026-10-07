@@ -1,10 +1,9 @@
 'use client';
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Search, Eye, Pin, SlidersHorizontal, Edit, Trash2, ChevronDown, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Eye, Pin, SlidersHorizontal, Edit, Trash2, ChevronDown, X, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { preloadMCUDashboardData } from '@/components/dashboard/MCUDashboardShared';
 import { supabase } from '@/lib/supabase';
 import { MCU_FIELDS } from '@/lib/mcu-fields';
 import { useAuth } from '@/lib/auth-context';
@@ -12,9 +11,13 @@ import { useMCUStore } from '@/lib/store';
 
 type RecordRow = Record<string, any>;
 
+// Ciphertext AES-256-GCM (hex panjang) tidak boleh pernah tampil di tabel.
+const CIPHERTEXT_PATTERN = /^[0-9a-f]{58,}$/i;
+
 function short(val: any) {
   if (val == null || val === '') return '-';
-  return String(val);
+  const text = String(val);
+  return CIPHERTEXT_PATTERN.test(text) ? '-' : text;
 }
 
 // ---------------------------------------------------------------------------
@@ -297,11 +300,17 @@ export default function RecordMCUTableModern() {
     return () => window.clearTimeout(t);
   }, [page, search]);
 
-  const loadMonitor = async () => {
+  const loadMonitor = async (forceRefresh = false) => {
     setMonitorLoading(true);
     try {
-      const loadedRows = await preloadMCUDashboardData();
-      setMonitorRows(loadedRows as RecordRow[]);
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`/api/mcu/monitor-table${forceRefresh ? '?refresh=true' : ''}`, {
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+      });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.error || 'Gagal memuat tabel monitor MCU');
+      setMonitorRows(Array.isArray(json.rows) ? json.rows : []);
+      setMonitorPage(1);
     } catch (err) {
       store.showToast(err instanceof Error ? err.message : 'Gagal memuat monitor', 'error');
     } finally {
@@ -333,11 +342,11 @@ export default function RecordMCUTableModern() {
     kreatinin: 75, egfr: 75, sgot: 70, sgpt: 70, ggt: 70, alp: 70,
     billirubin: 75, ul: 100, zonasi: 95, kes_vendor: 120, perlu_fu: 80, link_mcu: 90,
     // monitor MCU
-    area_raw: 80, client: 120, total_mcu: 80, mcu_terakhir: 115,
-    masa_berlaku_mcu: 130, kategori_mcu_terakhir: 140, hasil_mcu: 120,
-    diagnosa: 200, fram_score: 95, fram_prob: 95, frs_kategori: 115,
-    zona_risiko: 95, rekomendasi_fu: 200, item_fu: 200,
-    status_follow_up: 120, jadwal_mcu_selanjutnya: 145,
+    area: 85, client: 130, masa_kerja: 175, total_mcu: 90, pre_employee: 110,
+    annual: 80, mcu_terakhir: 120, kategori_mcu_terakhir: 140, kesimpulan_mcu: 150,
+    status_follow_up: 190, kesimpulan_fu: 150, masa_berlaku_mcu: 150,
+    kategori_masa_berlaku: 150, jadwal_mcu_selanjutnya: 150, notifikasi_jadwal: 330,
+    zona_status_kesehatan: 150, catatan: 220, diagnosa: 240, frs: 150,
   }), []);
 
   const getColWidth = (key: string): number => COLUMN_WIDTHS[key] || 110;
@@ -346,29 +355,33 @@ export default function RecordMCUTableModern() {
     .map(f => ({ key: f.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase(), label: f.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase() }))
     .filter(c => !EXCLUDED_COLUMNS.has(c.key)), [EXCLUDED_COLUMNS]);
 
+  // Urutan kolom Tabel Monitor MCU
   const monitorColumns = useMemo(() => [
-    { key: 'nik_karyawan', label: 'nik_karyawan' },
-    { key: 'nama', label: 'nama' },
-    { key: 'site', label: 'site' },
-    { key: 'area_raw', label: 'area' },
-    { key: 'client', label: 'client' },
-    { key: 'jabatan', label: 'jabatan' },
-    { key: 'total_mcu', label: 'total_mcu' },
-    { key: 'mcu_terakhir', label: 'tgl_mcu_terakhir' },
-    { key: 'masa_berlaku_mcu', label: 'masa_berlaku_mcu' },
-    { key: 'kategori_mcu_terakhir', label: 'kategori_mcu' },
-    { key: 'hasil_mcu', label: 'kes_vendor' },
-    { key: 'zona_risiko', label: 'zonasi' },
-    { key: 'diagnosa', label: 'diagnosa_medis' },
-    { key: 'fram_score', label: 'fram_score' },
-    { key: 'fram_prob', label: 'fram_prob' },
-    { key: 'frs_kategori', label: 'frs_kategori' },
-    { key: 'perlu_fu', label: 'perlu_fu' },
-    { key: 'rekomendasi_fu', label: 'rekomendasi_fu' },
-    { key: 'item_fu', label: 'item_fu' },
-    { key: 'status_mcu', label: 'status_mcu' },
-    { key: 'status_follow_up', label: 'status_fu' },
-    { key: 'jadwal_mcu_selanjutnya', label: 'jadwal_mcu_selanjutnya' },
+    { key: 'nik_karyawan', label: 'NIK Karyawan' },
+    { key: 'nama', label: 'Nama' },
+    { key: 'jenis_kelamin', label: 'Jenis Kelamin' },
+    { key: 'usia', label: 'Usia' },
+    { key: 'jabatan', label: 'Jabatan' },
+    { key: 'client', label: 'User' },
+    { key: 'site', label: 'Site' },
+    { key: 'area', label: 'Area' },
+    { key: 'masa_kerja', label: 'Masa Kerja' },
+    { key: 'total_mcu', label: 'Total MCU' },
+    { key: 'pre_employee', label: 'Pre Employee' },
+    { key: 'annual', label: 'Annual' },
+    { key: 'mcu_terakhir', label: 'MCU Terakhir' },
+    { key: 'kategori_mcu_terakhir', label: 'Kategori MCU Terakhir' },
+    { key: 'kesimpulan_mcu', label: 'Kesimpulan MCU' },
+    { key: 'status_follow_up', label: 'Status Follow Up Terakhir' },
+    { key: 'kesimpulan_fu', label: 'Kesimpulan FU Terakhir' },
+    { key: 'masa_berlaku_mcu', label: 'Masa Berlaku MCU' },
+    { key: 'kategori_masa_berlaku', label: 'Kategori' },
+    { key: 'jadwal_mcu_selanjutnya', label: 'Jadwal MCU Selanjutnya' },
+    { key: 'notifikasi_jadwal', label: 'Notifikasi Jadwal MCU' },
+    { key: 'zona_status_kesehatan', label: 'Kategori Zona Status Kesehatan' },
+    { key: 'catatan', label: 'Catatan' },
+    { key: 'diagnosa', label: 'Diagnosa' },
+    { key: 'frs', label: 'FRS' },
   ], []);
 
   const columns = activeTab === 'record' ? recordColumns : monitorColumns;
@@ -377,9 +390,9 @@ export default function RecordMCUTableModern() {
 
   // Columns that get enum-style dropdowns (derive options from loaded data)
   const ENUM_COLS_MONITOR = useMemo(() => new Set([
-    'site', 'area_raw', 'client', 'jabatan', 'zona_risiko',
-    'status_mcu', 'status_follow_up', 'hasil_mcu',
-    'kategori_mcu_terakhir', 'frs_kategori', 'perlu_fu',
+    'jenis_kelamin', 'jabatan', 'client', 'site', 'area',
+    'kategori_mcu_terakhir', 'kesimpulan_mcu', 'status_follow_up', 'kesimpulan_fu',
+    'kategori_masa_berlaku', 'zona_status_kesehatan', 'frs',
   ]), []);
   const ENUM_COLS_RECORD = useMemo(() => new Set([
     'site', 'jabatan', 'jenis_kelamin', 'zonasi', 'kes_vendor',
@@ -470,13 +483,19 @@ export default function RecordMCUTableModern() {
   return (
     <div className="mcu-records-modern">
       <div className="mcu-records-card">
-        {/* Tab nav */}
-        <div className="flex border-b border-gray-200 dark:border-gray-800 mb-4">
+        {/* Tab nav — Monitor MCU di kiri, Record MCU di kanan */}
+        <div className="flex border-b border-gray-200 dark:border-gray-800 mb-4" role="tablist">
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'monitor'}
             className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'monitor' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
             onClick={() => setActiveTab('monitor')}
-          >Tabel Monitor</button>
+          >Monitor MCU</button>
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'record'}
             className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'record' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
             onClick={() => setActiveTab('record')}
           >Record MCU</button>
@@ -486,7 +505,7 @@ export default function RecordMCUTableModern() {
         <div className="mcu-records-header">
           <div>
             <div className="mcu-records-kicker">DATABASE MCU</div>
-            <h3>{activeTab === 'record' ? 'Tabel Record MCU Karyawan' : 'Tabel Monitor MCU (View)'}</h3>
+            <h3>{activeTab === 'record' ? 'Tabel Record MCU Karyawan' : 'Tabel Monitor MCU Karyawan'}</h3>
           </div>
           <div className="mcu-records-actions">
             <div className="mcu-records-search">
@@ -501,6 +520,18 @@ export default function RecordMCUTableModern() {
                 }}
               />
             </div>
+            {activeTab === 'monitor' && (
+              <button
+                type="button"
+                className="mcu-dashboard-refresh"
+                onClick={() => { void loadMonitor(true); }}
+                disabled={monitorLoading}
+                title="Muat ulang data Monitor MCU"
+              >
+                <RefreshCw size={14} className={monitorLoading ? 'animate-spin' : ''} />
+                Refresh
+              </button>
+            )}
             <div className="mcu-records-count">
               {displayTotal} record
               {activeFilterCount > 0 && (
@@ -611,7 +642,7 @@ export default function RecordMCUTableModern() {
               ) : displayRows.map((row, idx) => {
                 const id = String(row.id || `${displayPage}-${idx}`);
                 const isExp = !!expanded[id];
-                const zoneKey = activeTab === 'record' ? row.zonasi : row.zona_risiko;
+                const zoneKey = activeTab === 'record' ? row.zonasi : row.zona_status_kesehatan;
                 return (
                   <Fragment key={id}>
                     <tr className={`mcu-zone-${String(zoneKey || 'belum-lengkap').toLowerCase().replace(/\s+/g, '-')}`}>

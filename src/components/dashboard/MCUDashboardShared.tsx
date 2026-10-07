@@ -268,6 +268,12 @@ export function MCUChart({
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const chartRef = useRef<ChartInstance | null>(null);
+  // Prop array (labels/values/colors) dibuat ulang di setiap render induk. Memakai
+  // identitas array sebagai dependency membuat chart dihancurkan lalu digambar ulang
+  // (dengan animasi dari nol) tiap kali induk render -> layar berkedip. Karena itu
+  // chart hanya dibangun ulang bila ISI datanya benar-benar berubah.
+  const dataSignature = JSON.stringify([type, labels, values, colors, legendLabel, horizontal, centerText, percentLabels]);
+  const hasAnimatedRef = useRef(false);
   const [isDark, setIsDark] = useState(
     () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
   );
@@ -309,8 +315,9 @@ export function MCUChart({
         indexAxis: horizontal ? 'y' : 'x',
         responsive: true,
         maintainAspectRatio: false,
-        animation: {
-          duration: type === 'doughnut' ? 600 : 500,
+        // Animasi hanya pada gambar pertama; redraw berikutnya (tema/data) langsung tampil.
+        animation: hasAnimatedRef.current ? false : {
+          duration: type === 'doughnut' ? 450 : 400,
           easing: 'easeOutQuart',
         },
         ...(type === 'doughnut' ? { cutout: '62%', radius: '82%' } : {}),
@@ -400,12 +407,14 @@ export function MCUChart({
     };
 
     chartRef.current = new ChartJS(canvasRef.current, config);
+    hasAnimatedRef.current = true;
     return () => {
       chartRef.current?.stop();
       chartRef.current?.destroy();
       chartRef.current = null;
     };
-  }, [type, labels, values, colors, legendLabel, horizontal, centerText, percentLabels, isDark]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataSignature, isDark]);
 
   return <div className="mcu-dashboard-chart"><canvas ref={canvasRef} /></div>;
 }

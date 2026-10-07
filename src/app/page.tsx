@@ -895,6 +895,9 @@ export default function Home() {
     activePage === 'data-entry' ? store.activeDataEntrySidebar :
     store.activeAdminSidebar;
 
+  // Konten di-remount hanya saat halaman/menu sidebar berganti. Home mengatur tab-nya sendiri.
+  const pageTransitionKey = activePage === 'home' ? 'home' : `${activePage}:${activeSidebarKey}`;
+
   const handleNav = (tab: PageTab) => {
     if (role === 'employee' && tab !== 'home') return;
     // Prevent non-admins from going to administrator
@@ -1032,53 +1035,22 @@ export default function Home() {
         </div>
 
         <div className="page-content has-content" style={{ position: 'relative' }}>
-          <AnimatePresence mode="wait">
-            {activePage === 'home' ? (
-              <motion.div
-                key="home"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100%' }}
-              >
-                <HomeContent />
-              </motion.div>
-            ) : activePage === 'dashboard' ? (
-              <motion.div
-                key={store.activeDashSidebar}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100%' }}
-              >
-                <DashContent />
-              </motion.div>
-            ) : activePage === 'data-entry' ? (
-              <motion.div
-                key={store.activeDataEntrySidebar}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100%' }}
-              >
-                <DataEntryContent />
-              </motion.div>
-            ) : activePage === 'administrator' ? (
-              <motion.div
-                key={store.activeAdminSidebar}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100%' }}
-              >
-                <AdminContent />
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
+          {/*
+            Transisi halaman tanpa kedip: konten lama diganti langsung oleh konten baru
+            (tidak ada fase "kosong" seperti AnimatePresence mode="wait"), lalu konten baru
+            hanya melakukan fade/slide masuk yang sangat singkat lewat CSS.
+          */}
+          <div
+            key={pageTransitionKey}
+            className="page-transition"
+            style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100%' }}
+          >
+            {activePage === 'home' ? <HomeContent />
+              : activePage === 'dashboard' ? <DashContent />
+              : activePage === 'data-entry' ? <DataEntryContent />
+              : activePage === 'administrator' ? <AdminContent />
+              : null}
+          </div>
         </div>
       </div>
 

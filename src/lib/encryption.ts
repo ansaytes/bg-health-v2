@@ -123,6 +123,10 @@ export function decryptMCURecord(record: Record<string, any>): Record<string, an
 }
 
 /** Check if a string looks like AES-256-GCM encrypted data (hex, min 58 chars = 12+16+1 bytes) */
+export function isEncryptedValue(value: unknown): boolean {
+  return typeof value === 'string' && looksEncrypted(value);
+}
+
 function looksEncrypted(value: string): boolean {
   if (typeof value !== 'string') return false;
   // Encrypted format: IV(12) + TAG(16) + ciphertext(min 1) = min 29 bytes = 58 hex chars
