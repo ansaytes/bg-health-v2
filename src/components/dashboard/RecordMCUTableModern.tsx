@@ -208,7 +208,7 @@ export default function RecordMCUTableModern() {
   const [editingRow, setEditingRow] = useState<RecordRow | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<'record' | 'monitor'>('record');
+  const [activeTab, setActiveTab] = useState<'record' | 'monitor'>('monitor');
   const [monitorRows, setMonitorRows] = useState<RecordRow[]>([]);
   const [monitorLoading, setMonitorLoading] = useState(false);
   const [monitorSearch, setMonitorSearch] = useState('');
@@ -473,13 +473,13 @@ export default function RecordMCUTableModern() {
         {/* Tab nav */}
         <div className="flex border-b border-gray-200 dark:border-gray-800 mb-4">
           <button
-            className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'record' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-            onClick={() => setActiveTab('record')}
-          >Record MCU</button>
-          <button
             className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'monitor' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
             onClick={() => setActiveTab('monitor')}
           >Tabel Monitor</button>
+          <button
+            className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'record' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            onClick={() => setActiveTab('record')}
+          >Record MCU</button>
         </div>
 
         {/* Header */}

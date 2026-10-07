@@ -1051,10 +1051,10 @@ export default function Home() {
             {activePage === 'home' ? (
               <motion.div
                 key="home"
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.2 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
                 style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100%' }}
               >
                 <HomeContent />
@@ -1065,7 +1065,7 @@ export default function Home() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.15 }}
                 style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100%' }}
               >
                 <DashContent />
@@ -1073,10 +1073,10 @@ export default function Home() {
             ) : activePage === 'data-entry' ? (
               <motion.div
                 key={store.activeDataEntrySidebar}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.2 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
                 style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100%' }}
               >
                 <DataEntryContent />
@@ -1084,10 +1084,10 @@ export default function Home() {
             ) : activePage === 'administrator' ? (
               <motion.div
                 key={store.activeAdminSidebar}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.2 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
                 style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100%' }}
               >
                 <AdminContent />
