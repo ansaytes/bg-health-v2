@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, Search, Eye, Pin, SlidersHorizontal, Edit, Trash2, ChevronDown, X, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -21,173 +22,156 @@ function short(val: any) {
 }
 
 // ---------------------------------------------------------------------------
-// Spreadsheet-style column filter dropdown
+// Filter kolom ala spreadsheet: daftar nilai unik + checkbox + pencarian.
+// Panel dirender lewat portal (position: fixed) supaya tidak terpotong oleh
+// area scroll tabel.
 // ---------------------------------------------------------------------------
+interface FilterOption { value: string; count: number }
+
 interface ColFilterDropdownProps {
-  colKey: string;
   label: string;
-  options: string[] | null; // null = free-text input
-  value: string;
-  onChange: (v: string) => void;
-  anchorRef: React.RefObject<HTMLTableCellElement | null>;
+  /** undefined = semua nilai tampil (tidak ada filter) */
+  selected: string[] | undefined;
+  getOptions: () => FilterOption[];
+  onChange: (next: string[] | undefined) => void;
 }
 
-function ColFilterDropdown({ colKey, label, options, value, onChange, anchorRef }: ColFilterDropdownProps) {
+const MAX_RENDERED_OPTIONS = 400;
+
+function ColFilterDropdown({ label, selected, getOptions, onChange }: ColFilterDropdownProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [options, setOptions] = useState<FilterOption[]>([]);
+  const [pos, setPos] = useState({ top: 0, left: 0, maxHeight: 360 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click
+  const openPanel = () => {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (rect) {
+      const width = 290;
+      const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+      const top = rect.bottom + 4;
+      setPos({ top, left, maxHeight: Math.max(220, window.innerHeight - top - 12) });
+    }
+    // Opsi dihitung saat dibuka dari data yang lolos filter kolom LAIN (seperti spreadsheet).
+    setOptions(getOptions());
+    setSearch('');
+    setOpen(true);
+  };
+
   useEffect(() => {
     if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (
-        panelRef.current && !panelRef.current.contains(e.target as Node) &&
-        anchorRef.current && !anchorRef.current.contains(e.target as Node)
-      ) setOpen(false);
+    const onMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (panelRef.current?.contains(target) || buttonRef.current?.contains(target)) return;
+      setOpen(false);
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const onScroll = (e: Event) => {
+      if (panelRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+    const onResize = () => setOpen(false);
+    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onResize);
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onResize);
+    };
   }, [open]);
 
-  const filtered = useMemo(() => {
-    if (!options) return null;
-    if (!search.trim()) return options;
-    return options.filter(o => o.toLowerCase().includes(search.toLowerCase()));
+  const hasFilter = selected !== undefined;
+  const allValues = useMemo(() => options.map(o => o.value), [options]);
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return q ? options.filter(o => o.value.toLowerCase().includes(q)) : options;
   }, [options, search]);
+  const rendered = visible.slice(0, MAX_RENDERED_OPTIONS);
+  const selectedSet = useMemo(() => new Set(selected ?? allValues), [selected, allValues]);
 
-  const hasValue = value.trim() !== '';
+  const commit = (next: Set<string>) => {
+    onChange(next.size >= allValues.length && allValues.every(v => next.has(v)) ? undefined : [...next]);
+  };
+  const toggle = (value: string) => {
+    const next = new Set(selectedSet);
+    if (next.has(value)) next.delete(value); else next.add(value);
+    commit(next);
+  };
+  const selectAll = () => {
+    if (!search.trim()) { onChange(undefined); return; }
+    commit(new Set(visible.map(o => o.value)));
+  };
+  const clearVisible = () => {
+    const next = new Set(selectedSet);
+    visible.forEach(o => next.delete(o.value));
+    commit(next);
+  };
 
   return (
-    <div className="col-filter-wrap" style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+    <>
       <button
+        ref={buttonRef}
         type="button"
-        className={`col-filter-btn${hasValue ? ' col-filter-btn--active' : ''}${open ? ' col-filter-btn--open' : ''}`}
-        onClick={() => setOpen(v => !v)}
-        title={hasValue ? `Filter: ${value}` : `Filter ${label}`}
+        className={`col-filter-btn${hasFilter ? ' is-active' : ''}${open ? ' is-open' : ''}`}
+        onClick={() => (open ? setOpen(false) : openPanel())}
+        title={hasFilter ? `Filter aktif: ${label}` : `Filter ${label}`}
         aria-label={`Filter ${label}`}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 2,
-          padding: '1px 3px',
-          marginLeft: 4,
-          borderRadius: 3,
-          border: hasValue ? '1px solid var(--primary, #0ea5e9)' : '1px solid transparent',
-          background: hasValue ? 'rgba(14,165,233,0.10)' : 'transparent',
-          color: hasValue ? 'var(--primary, #0ea5e9)' : 'inherit',
-          cursor: 'pointer',
-          fontSize: 10,
-          lineHeight: 1,
-          opacity: open ? 1 : 0.55,
-          transition: 'opacity .15s, background .15s',
-        }}
-        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-        onMouseLeave={e => { if (!hasValue && !open) e.currentTarget.style.opacity = '0.55'; }}
+        aria-expanded={open}
       >
-        <ChevronDown size={10} strokeWidth={2.5} />
+        <ChevronDown size={11} strokeWidth={2.6} />
       </button>
-
-      {open && (
+      {open && createPortal(
         <div
           ref={panelRef}
           className="col-filter-panel"
-          style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            zIndex: 1000,
-            minWidth: 180,
-            maxWidth: 260,
-            background: 'var(--popover, #fff)',
-            border: '1px solid var(--border, #e5e7eb)',
-            borderRadius: 6,
-            boxShadow: '0 4px 16px rgba(0,0,0,.12)',
-            padding: '6px 0',
-            marginTop: 2,
-          }}
+          style={{ top: pos.top, left: pos.left, maxHeight: pos.maxHeight }}
+          role="dialog"
+          aria-label={`Filter ${label}`}
         >
-          {/* Search within options */}
-          <div style={{ padding: '4px 8px 6px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, border: '1px solid var(--border, #e5e7eb)', borderRadius: 4, padding: '3px 6px' }}>
-              <Search size={11} style={{ opacity: 0.5, flexShrink: 0 }} />
-              <input
-                autoFocus
-                type="text"
-                value={options ? search : value}
-                onChange={e => options ? setSearch(e.target.value) : onChange(e.target.value)}
-                placeholder={options ? 'Cari...' : `Filter ${label}...`}
-                style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 12, width: '100%' }}
-              />
-              {(options ? search : value) && (
-                <button type="button" onClick={() => { options ? setSearch('') : onChange(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', opacity: 0.5 }}>
-                  <X size={11} />
-                </button>
-              )}
-            </div>
+          <div className="col-filter-search">
+            <Search size={12} />
+            <input
+              autoFocus
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Cari nilai..."
+            />
+            {search && (
+              <button type="button" onClick={() => setSearch('')} aria-label="Hapus pencarian"><X size={12} /></button>
+            )}
           </div>
-
-          {options ? (
-            <div style={{ maxHeight: 220, overflowY: 'auto' }}>
-              {/* "Semua" option */}
-              <button
-                type="button"
-                onClick={() => { onChange(''); setOpen(false); }}
-                style={{
-                  display: 'block', width: '100%', textAlign: 'left',
-                  padding: '5px 12px', fontSize: 12, cursor: 'pointer',
-                  background: value === '' ? 'var(--accent, #f1f5f9)' : 'transparent',
-                  border: 'none', fontStyle: 'italic', opacity: 0.7,
-                }}
-              >
-                Semua
-              </button>
-              {(filtered || []).map(opt => (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => { onChange(opt); setOpen(false); setSearch(''); }}
-                  style={{
-                    display: 'block', width: '100%', textAlign: 'left',
-                    padding: '5px 12px', fontSize: 12, cursor: 'pointer',
-                    background: value === opt ? 'var(--accent, #f1f5f9)' : 'transparent',
-                    border: 'none', fontWeight: value === opt ? 600 : 400,
-                    color: value === opt ? 'var(--primary, #0ea5e9)' : 'inherit',
-                  }}
-                >
-                  {opt || '(kosong)'}
-                </button>
-              ))}
-              {filtered && filtered.length === 0 && (
-                <div style={{ padding: '6px 12px', fontSize: 11, opacity: 0.5 }}>Tidak ditemukan</div>
-              )}
-            </div>
-          ) : (
-            <div style={{ padding: '2px 8px 6px' }}>
-              <button
-                type="button"
-                onClick={() => { onChange(''); setOpen(false); }}
-                style={{ fontSize: 11, color: 'var(--primary, #0ea5e9)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}
-              >
-                Hapus filter
-              </button>
-            </div>
-          )}
-
-          {options && value && (
-            <div style={{ borderTop: '1px solid var(--border, #e5e7eb)', padding: '4px 8px 2px' }}>
-              <button
-                type="button"
-                onClick={() => { onChange(''); setSearch(''); setOpen(false); }}
-                style={{ fontSize: 11, color: 'var(--primary, #0ea5e9)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}
-              >
-                Hapus filter
-              </button>
-            </div>
-          )}
-        </div>
+          <div className="col-filter-actions">
+            <button type="button" onClick={selectAll}>{search.trim() ? 'Pilih hasil pencarian' : 'Pilih semua'}</button>
+            <button type="button" onClick={clearVisible}>{search.trim() ? 'Hapus hasil pencarian' : 'Kosongkan'}</button>
+          </div>
+          <div className="col-filter-list">
+            {rendered.map(opt => (
+              <label key={opt.value} className="col-filter-option">
+                <input type="checkbox" checked={selectedSet.has(opt.value)} onChange={() => toggle(opt.value)} />
+                <span className="col-filter-option-text" title={opt.value}>{opt.value === '-' ? '(Kosong)' : opt.value}</span>
+                <span className="col-filter-option-count">{opt.count}</span>
+              </label>
+            ))}
+            {visible.length === 0 && <div className="col-filter-empty">Tidak ditemukan</div>}
+            {visible.length > MAX_RENDERED_OPTIONS && (
+              <div className="col-filter-empty">Menampilkan {MAX_RENDERED_OPTIONS} dari {visible.length} nilai — persempit dengan pencarian.</div>
+            )}
+          </div>
+          <div className="col-filter-footer">
+            <span>{options.length} nilai</span>
+            {hasFilter && <button type="button" onClick={() => { onChange(undefined); setOpen(false); }}>Hapus filter</button>}
+            <button type="button" className="is-primary" onClick={() => setOpen(false)}>Selesai</button>
+          </div>
+        </div>,
+        document.body,
       )}
-    </div>
+    </>
   );
 }
 
@@ -199,10 +183,11 @@ export default function RecordMCUTableModern() {
   const store = useMCUStore();
   const [rows, setRows] = useState<RecordRow[]>([]);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loadProgress, setLoadProgress] = useState<{ loaded: number; total: number } | null>(null);
+  const [recordLoaded, setRecordLoaded] = useState(false);
+  const [pageSize, setPageSize] = useState(100);
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [frozenColumns, setFrozenColumns] = useState<string[]>(['nik_karyawan', 'nama']);
@@ -217,16 +202,9 @@ export default function RecordMCUTableModern() {
   const [monitorSearch, setMonitorSearch] = useState('');
   const [monitorPage, setMonitorPage] = useState(1);
 
-  // Spreadsheet-style per-column filters
-  const [monitorFilters, setMonitorFilters] = useState<Record<string, string>>({});
-  const [recordFilters, setRecordFilters] = useState<Record<string, string>>({});
-
-  // Refs for each th cell (used to position filter dropdowns)
-  const thRefs = useRef<Record<string, React.RefObject<HTMLTableCellElement | null>>>({});
-  const getThRef = (key: string) => {
-    if (!thRefs.current[key]) thRefs.current[key] = { current: null };
-    return thRefs.current[key] as React.RefObject<HTMLTableCellElement | null>;
-  };
+  // Filter per kolom ala spreadsheet: daftar nilai terpilih (undefined = semua nilai)
+  const [monitorFilters, setMonitorFilters] = useState<Record<string, string[] | undefined>>({});
+  const [recordFilters, setRecordFilters] = useState<Record<string, string[] | undefined>>({});
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Apakah Anda yakin ingin menghapus data MCU untuk ${name}?`)) return;
@@ -273,32 +251,44 @@ export default function RecordMCUTableModern() {
     }
   };
 
+  // Memuat SEMUA record sekaligus (bertahap 500 baris per request agar ukuran respons aman),
+  // sehingga filter kolom bekerja pada seluruh data, bukan hanya satu halaman.
   const load = async () => {
     setLoading(true);
     setError('');
+    setLoadProgress(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const params = new URLSearchParams({ page: String(page) });
-      if (search.trim()) params.set('search', search.trim());
-      const response = await fetch(`/api/mcu/records?${params.toString()}`, {
-        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
-      });
-      const json = await response.json();
-      if (!response.ok) throw new Error(json.error || 'Gagal memuat record MCU');
-      setRows(json.records || []);
-      setTotal(json.total || 0);
-      setTotalPages(json.totalPages || 0);
+      const all: RecordRow[] = [];
+      let offset = 0;
+      for (;;) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const params = new URLSearchParams({ batch: '1', offset: String(offset), limit: '500' });
+        const response = await fetch(`/api/mcu/records?${params.toString()}`, {
+          headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+        });
+        const json = await response.json();
+        if (!response.ok) throw new Error(json.error || 'Gagal memuat record MCU');
+        const batch: RecordRow[] = json.records || [];
+        all.push(...batch);
+        setLoadProgress({ loaded: all.length, total: json.total || all.length });
+        offset += batch.length;
+        if (!json.hasMore || batch.length === 0) break;
+      }
+      setRows(all);
+      setRecordLoaded(true);
+      setPage(1);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat record MCU');
+      store.showToast(err instanceof Error ? err.message : 'Gagal memuat record MCU', 'error');
     } finally {
       setLoading(false);
+      setLoadProgress(null);
     }
   };
 
   useEffect(() => {
-    const t = window.setTimeout(() => { void load(); }, 180);
-    return () => window.clearTimeout(t);
-  }, [page, search]);
+    if (activeTab === 'record' && !recordLoaded && !loading) void load();
+  }, [activeTab]);
 
   const loadMonitor = async (forceRefresh = false) => {
     setMonitorLoading(true);
@@ -388,47 +378,67 @@ export default function RecordMCUTableModern() {
   const activeFrozenColumns = activeTab === 'record' ? frozenColumns : frozenColumnsMonitor;
   const setActiveFrozenColumns = activeTab === 'record' ? setFrozenColumns : setFrozenColumnsMonitor;
 
-  // Columns that get enum-style dropdowns (derive options from loaded data)
-  const ENUM_COLS_MONITOR = useMemo(() => new Set([
-    'jenis_kelamin', 'jabatan', 'client', 'site', 'area',
-    'kategori_mcu_terakhir', 'kesimpulan_mcu', 'status_follow_up', 'kesimpulan_fu',
-    'kategori_masa_berlaku', 'zona_status_kesehatan', 'frs',
-  ]), []);
-  const ENUM_COLS_RECORD = useMemo(() => new Set([
-    'site', 'jabatan', 'jenis_kelamin', 'zonasi', 'kes_vendor',
-    'status_mcu', 'perlu_fu', 'merokok', 'gol_darah',
-  ]), []);
+  const activeFilters = activeTab === 'record' ? recordFilters : monitorFilters;
+  const activeFilterCount = Object.values(activeFilters).filter(v => v !== undefined).length;
 
-  // Unique values for each filterable column
-  const filterOptions = useMemo(() => {
-    const opts: Record<string, string[]> = {};
-    const srcRows = activeTab === 'monitor' ? monitorRows : rows;
-    const enumSet = activeTab === 'monitor' ? ENUM_COLS_MONITOR : ENUM_COLS_RECORD;
-    for (const col of columns) {
-      if (enumSet.has(col.key)) {
-        const vals = [...new Set(srcRows.map(r => String(r[col.key] ?? '')).filter(Boolean))].sort();
-        if (vals.length > 0) opts[col.key] = vals;
-      }
-    }
-    return opts;
-  }, [activeTab, monitorRows, rows, columns, ENUM_COLS_MONITOR, ENUM_COLS_RECORD]);
+  // Teks yang tampil di sel = nilai yang dipakai filter (kosong/ciphertext tampil '-').
+  const cellText = (row: RecordRow, key: string) => short(row[key]);
 
-  // Stable per-tab filter setters — avoids stale closure on alias
-  const setFilterValue = (colKey: string, value: string) => {
+  const setFilterValue = (colKey: string, value: string[] | undefined) => {
     if (activeTab === 'monitor') {
       setMonitorFilters(prev => ({ ...prev, [colKey]: value }));
       setMonitorPage(1);
     } else {
       setRecordFilters(prev => ({ ...prev, [colKey]: value }));
+      setPage(1);
     }
   };
   const clearAllFilters = () => {
-    if (activeTab === 'monitor') setMonitorFilters({});
-    else setRecordFilters({});
+    if (activeTab === 'monitor') { setMonitorFilters({}); setMonitorPage(1); }
+    else { setRecordFilters({}); setPage(1); }
   };
 
-  const activeFilters = activeTab === 'record' ? recordFilters : monitorFilters;
-  const activeFilterCount = Object.values(activeFilters).filter(v => v.trim()).length;
+  const applyFilters = (source: RecordRow[], filters: Record<string, string[] | undefined>, exceptKey?: string) => {
+    const active = Object.entries(filters).filter(([key, values]) => key !== exceptKey && values !== undefined) as [string, string[]][];
+    if (!active.length) return source;
+    const sets = active.map(([key, values]) => [key, new Set(values)] as const);
+    return source.filter(row => sets.every(([key, set]) => set.has(cellText(row, key))));
+  };
+
+  // Hasil pencarian teks (NIK/Nama) sebelum filter kolom
+  const searchedMonitorRows = useMemo(() => {
+    const q = monitorSearch.trim().toLowerCase();
+    if (!q) return monitorRows;
+    return monitorRows.filter(r =>
+      String(r.nik_karyawan || '').toLowerCase().includes(q) || String(r.nama || '').toLowerCase().includes(q));
+  }, [monitorRows, monitorSearch]);
+
+  const searchedRecordRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter(r =>
+      String(r.nik_karyawan || '').toLowerCase().includes(q) || String(r.nama || '').toLowerCase().includes(q));
+  }, [rows, search]);
+
+  // Opsi dropdown sebuah kolom = nilai unik dari data yang lolos filter kolom LAIN (seperti spreadsheet)
+  const getFilterOptions = (colKey: string): FilterOption[] => {
+    const base = activeTab === 'monitor' ? searchedMonitorRows : searchedRecordRows;
+    const scoped = applyFilters(base, activeFilters, colKey);
+    const counts = new Map<string, number>();
+    for (const row of scoped) {
+      const text = cellText(row, colKey);
+      counts.set(text, (counts.get(text) || 0) + 1);
+    }
+    // Nilai yang sudah dipilih tetapi tidak muncul lagi tetap ditampilkan agar bisa dilepas
+    for (const value of activeFilters[colKey] ?? []) if (!counts.has(value)) counts.set(value, 0);
+    return [...counts.entries()]
+      .map(([value, count]) => ({ value, count }))
+      .sort((a, b) => {
+        if (a.value === '-') return 1;
+        if (b.value === '-') return -1;
+        return a.value.localeCompare(b.value, 'id', { numeric: true, sensitivity: 'base' });
+      });
+  };
 
   const frozenOffsets = useMemo(() => {
     let offset = 48;
@@ -446,39 +456,24 @@ export default function RecordMCUTableModern() {
     setActiveFrozenColumns(c => c.includes(key) ? c.filter(x => x !== key) : [...c, key]);
   };
 
-  const filteredMonitorRows = useMemo(() => {
-    let result = monitorRows;
-    if (monitorSearch.trim()) {
-      const lower = monitorSearch.toLowerCase();
-      result = result.filter(r =>
-        String(r.nik_karyawan || '').toLowerCase().includes(lower) ||
-        String(r.nama || '').toLowerCase().includes(lower),
-      );
-    }
-    for (const [key, value] of Object.entries(monitorFilters)) {
-      if (!value.trim()) continue;
-      result = result.filter(r => String(r[key] ?? '').toLowerCase().includes(value.toLowerCase()));
-    }
-    return result;
-  }, [monitorRows, monitorSearch, monitorFilters]);
+  const filteredMonitorRows = useMemo(
+    () => applyFilters(searchedMonitorRows, monitorFilters),
+    [searchedMonitorRows, monitorFilters]);
+  const filteredRecordRows = useMemo(
+    () => applyFilters(searchedRecordRows, recordFilters),
+    [searchedRecordRows, recordFilters]);
 
-  const filteredRecordRows = useMemo(() => {
-    if (Object.values(recordFilters).every(v => !v.trim())) return rows;
-    return rows.filter(row => Object.entries(recordFilters).every(([k, v]) =>
-      !v.trim() || String(row[k] ?? '').toLowerCase().includes(v.toLowerCase()),
-    ));
-  }, [rows, recordFilters]);
-
-  const pagedMonitorRows = useMemo(() =>
-    filteredMonitorRows.slice((monitorPage - 1) * 100, monitorPage * 100),
-    [filteredMonitorRows, monitorPage]);
-  const monitorTotalPages = Math.max(1, Math.ceil(filteredMonitorRows.length / 100));
-
-  const displayRows = activeTab === 'record' ? filteredRecordRows : pagedMonitorRows;
-  const displayTotal = activeTab === 'record' ? total : filteredMonitorRows.length;
+  const activeFiltered = activeTab === 'record' ? filteredRecordRows : filteredMonitorRows;
   const displayPage = activeTab === 'record' ? page : monitorPage;
-  const displayTotalPages = activeTab === 'record' ? totalPages : monitorTotalPages;
+  const displayTotal = activeFiltered.length;
+  const sourceTotal = activeTab === 'record' ? rows.length : monitorRows.length;
+  const displayTotalPages = Math.max(1, Math.ceil(displayTotal / pageSize));
+  const currentPage = Math.min(displayPage, displayTotalPages);
+  const displayRows = useMemo(
+    () => activeFiltered.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [activeFiltered, currentPage, pageSize]);
   const displayLoading = activeTab === 'record' ? loading : monitorLoading;
+  const setDisplayPage = (value: number) => (activeTab === 'record' ? setPage(value) : setMonitorPage(value));
 
   return (
     <div className="mcu-records-modern">
@@ -512,7 +507,7 @@ export default function RecordMCUTableModern() {
               <Search size={14} />
               <input
                 aria-label="Cari record MCU"
-                placeholder={activeTab === 'record' ? 'Cari NIK Karyawan...' : 'Cari NIK atau Nama...'}
+                placeholder="Cari NIK atau Nama..."
                 value={activeTab === 'record' ? search : monitorSearch}
                 onChange={e => {
                   if (activeTab === 'record') { setSearch(e.target.value); setPage(1); }
@@ -520,20 +515,18 @@ export default function RecordMCUTableModern() {
                 }}
               />
             </div>
-            {activeTab === 'monitor' && (
-              <button
-                type="button"
-                className="mcu-dashboard-refresh"
-                onClick={() => { void loadMonitor(true); }}
-                disabled={monitorLoading}
-                title="Muat ulang data Monitor MCU"
-              >
-                <RefreshCw size={14} className={monitorLoading ? 'animate-spin' : ''} />
-                Refresh
-              </button>
-            )}
+            <button
+              type="button"
+              className="mcu-dashboard-refresh"
+              onClick={() => { if (activeTab === 'monitor') void loadMonitor(true); else void load(); }}
+              disabled={displayLoading}
+              title={activeTab === 'monitor' ? 'Muat ulang data Monitor MCU' : 'Muat ulang data Record MCU'}
+            >
+              <RefreshCw size={14} className={displayLoading ? 'animate-spin' : ''} />
+              Refresh
+            </button>
             <div className="mcu-records-count">
-              {displayTotal} record
+              {displayTotal === sourceTotal ? `${displayTotal} record` : `${displayTotal} dari ${sourceTotal} record`}
               {activeFilterCount > 0 && (
                 <button
                   type="button"
@@ -574,11 +567,6 @@ export default function RecordMCUTableModern() {
             )}
           </div>
           <span className="mcu-records-hint">Kolom terpilih tetap terlihat saat tabel digeser horizontal.</span>
-          {activeTab === 'record' && activeFilterCount > 0 && (
-            <span className="mcu-records-hint" style={{ color: 'var(--color-warning,#d97706)', marginLeft: 8 }}>
-              Filter kolom berlaku pada halaman saat ini.
-            </span>
-          )}
         </div>
 
         {/* Table */}
@@ -590,33 +578,26 @@ export default function RecordMCUTableModern() {
                 {columns.map(c => {
                   const isFrozen = activeFrozenColumns.includes(c.key);
                   const w = getColWidth(c.key);
-                  const hasFilter = !!(activeFilters[c.key]?.trim());
+                  const hasFilter = activeFilters[c.key] !== undefined;
                   const thStyle: React.CSSProperties = {
                     width: `${w}px`, minWidth: `${w}px`, maxWidth: `${Math.max(w, 160)}px`,
                     ...(isFrozen ? { left: `${frozenOffsets[c.key]}px` } : {}),
                   };
-                  // Enum columns get dropdown options; others get free-text input in dropdown
-                  const enumOpts = filterOptions[c.key] ?? null;
 
                   return (
                     <th
                       key={c.key}
-                      ref={getThRef(c.key) as React.Ref<HTMLTableCellElement>}
                       className={isFrozen ? 'is-frozen' : ''}
                       style={thStyle}
                     >
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                        <span style={hasFilter ? { color: 'var(--primary,#0ea5e9)', fontWeight: 700 } : undefined}>
-                          {c.label}
-                        </span>
-                        {isFrozen && <Pin size={12} />}
+                      <span className="mcu-th-inner">
+                        <span className={hasFilter ? 'mcu-th-label is-filtered' : 'mcu-th-label'}>{c.label}</span>
+                        {isFrozen && <Pin size={11} />}
                         <ColFilterDropdown
-                          colKey={c.key}
                           label={c.label}
-                          options={enumOpts}
-                          value={activeFilters[c.key] || ''}
+                          selected={activeFilters[c.key]}
+                          getOptions={() => getFilterOptions(c.key)}
                           onChange={v => setFilterValue(c.key, v)}
-                          anchorRef={getThRef(c.key)}
                         />
                       </span>
                     </th>
@@ -635,18 +616,21 @@ export default function RecordMCUTableModern() {
                         <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
                       </div>
                     </div>
+                    {activeTab === 'record' && loadProgress && (
+                      <div className="mcu-records-progress">Memuat data {loadProgress.loaded} / {loadProgress.total}…</div>
+                    )}
                   </td>
                 </tr>
               ) : displayRows.length === 0 ? (
-                <tr><td colSpan={columns.length + 2} style={{ padding: 36, textAlign: 'center' }}>Belum ada data.</td></tr>
+                <tr><td colSpan={columns.length + 2} style={{ padding: 36, textAlign: 'center' }}>{error || (activeFilterCount > 0 || (activeTab === 'record' ? search : monitorSearch) ? 'Tidak ada data yang cocok dengan filter.' : 'Belum ada data.')}</td></tr>
               ) : displayRows.map((row, idx) => {
-                const id = String(row.id || `${displayPage}-${idx}`);
+                const id = String(row.id ?? row.nik_karyawan ?? `${currentPage}-${idx}`);
                 const isExp = !!expanded[id];
                 const zoneKey = activeTab === 'record' ? row.zonasi : row.zona_status_kesehatan;
                 return (
                   <Fragment key={id}>
                     <tr className={`mcu-zone-${String(zoneKey || 'belum-lengkap').toLowerCase().replace(/\s+/g, '-')}`}>
-                      <td className="mcu-records-index">{(displayPage - 1) * 100 + idx + 1}</td>
+                      <td className="mcu-records-index">{(currentPage - 1) * pageSize + idx + 1}</td>
                       {columns.map(c => {
                         const isFrozen = activeFrozenColumns.includes(c.key);
                         const w = getColWidth(c.key);
@@ -662,7 +646,8 @@ export default function RecordMCUTableModern() {
                           </td>
                         );
                       })}
-                      <td className="mcu-records-action" style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                      <td className="mcu-records-action">
+                        <div className="mcu-records-action-inner">
                         <Button size="sm" variant="ghost" onClick={() => setExpanded(s => ({ ...s, [id]: !s[id] }))} title={isExp ? 'Tutup detail' : 'Lihat detail'}><Eye size={14} /></Button>
                         {activeTab === 'record' && (isSuperuser || isAdmin) && (
                           <>
@@ -670,6 +655,7 @@ export default function RecordMCUTableModern() {
                             <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => handleDelete(String(row.id), row.nama)} title="Hapus data"><Trash2 size={14} /></Button>
                           </>
                         )}
+                        </div>
                       </td>
                     </tr>
                     {isExp && (
@@ -689,17 +675,21 @@ export default function RecordMCUTableModern() {
         </div>
 
         {/* Pagination */}
-        {displayTotalPages > 1 && (
-          <div className="mcu-records-pagination">
-            <Button size="sm" variant="outline" disabled={displayPage === 1} onClick={() => activeTab === 'record' ? setPage(p => p - 1) : setMonitorPage(p => p - 1)}>
-              <ChevronLeft size={14} /> Sebelumnya
-            </Button>
-            <div>Halaman {displayPage} / {displayTotalPages}</div>
-            <Button size="sm" variant="outline" disabled={displayPage >= displayTotalPages} onClick={() => activeTab === 'record' ? setPage(p => p + 1) : setMonitorPage(p => p + 1)}>
-              Berikutnya <ChevronRight size={14} />
-            </Button>
-          </div>
-        )}
+        <div className="mcu-records-pagination">
+          <label className="mcu-records-pagesize">
+            Baris per halaman
+            <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); setMonitorPage(1); }}>
+              {[50, 100, 250, 500].map(size => <option key={size} value={size}>{size}</option>)}
+            </select>
+          </label>
+          <Button size="sm" variant="outline" disabled={currentPage <= 1} onClick={() => setDisplayPage(currentPage - 1)}>
+            <ChevronLeft size={14} /> Sebelumnya
+          </Button>
+          <div>Halaman {currentPage} / {displayTotalPages}</div>
+          <Button size="sm" variant="outline" disabled={currentPage >= displayTotalPages} onClick={() => setDisplayPage(currentPage + 1)}>
+            Berikutnya <ChevronRight size={14} />
+          </Button>
+        </div>
 
         {/* Edit dialog */}
         <Dialog open={!!editingRow} onOpenChange={open => !open && setEditingRow(null)}>

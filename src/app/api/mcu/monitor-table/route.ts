@@ -109,7 +109,7 @@ const EMPLOYEE_COLUMNS = [
 const MCU_COLUMNS = [
   'id', 'national_id', 'nik_karyawan', 'status_mcu', 'tgl_mcu', 'tgl_expired',
   'kes_vendor', 'rek_fu', 'kesimpulan_fu1', 'rek_fu2', 'kesimpulan_fu2', 'rek_fu3',
-  'kesimpulan_fu3', 'rek_fu4', 'zonasi', 'catatan', 'diagnosa_medis', 'fram_kat',
+  'kesimpulan_fu3', 'rek_fu4', 'zonasi', 'item_fu', 'diagnosa_medis', 'fram_kat',
 ].join(',');
 
 const SCHEDULE_COLUMNS = 'id,national_id,nik_karyawan,tanggal_jadwal';
@@ -244,7 +244,8 @@ async function buildRows(): Promise<Row[]> {
       jadwal_mcu_selanjutnya: jadwal ? formatDate(jadwal) : '',
       notifikasi_jadwal: notifikasi,
       zona_status_kesehatan: exempt ? EXEMPT_TEXT : (latest ? text(latest.rec.zonasi) : NO_DATA_TEXT),
-      catatan: latest ? text(latest.rec.catatan) : '',
+      // Catatan = kolom item_fu pada record MCU terbaru
+      catatan: latest ? plain(latest.rec.item_fu) : '',
       diagnosa: exempt ? EXEMPT_TEXT : (latest ? (text(latest.rec.diagnosa_medis) || NO_DATA_TEXT) : NO_DATA_TEXT),
       frs,
       _tglMasuk: tglMasuk,

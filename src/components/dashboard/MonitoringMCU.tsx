@@ -7,17 +7,23 @@ import {
   MCUChartCard,
   MCUDashboardFilters,
   MCURefreshButton,
+  expiryDateOf,
+  parseRowDate,
   useMCUDashboardData,
 } from '@/components/dashboard/MCUDashboardShared';
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 const PALETTE = ['#00B894', '#FF4444', '#616161', '#778899'];
 const CHART_COLORS = ['#00B894', '#F39C12', '#FF6B6B'];
+// Setiap batang pada "10 Jobsite MCU Tidak Ditemukan Terbanyak" memakai warna berbeda.
+const SITE_BAR_COLORS = [
+  '#E74C3C', '#F39C12', '#F1C40F', '#2ECC71', '#1ABC9C',
+  '#3498DB', '#6C5CE7', '#9B59B6', '#E84393', '#778899',
+];
 
 function monthIndex(value: string | null) {
-  if (!value) return -1;
-  const parsed = new Date(`${value.slice(0, 10)}T00:00:00`);
-  return Number.isNaN(parsed.getTime()) ? -1 : parsed.getMonth();
+  const parsed = parseRowDate(value);
+  return parsed && !Number.isNaN(parsed.getTime()) ? parsed.getMonth() : -1;
 }
 
 export default function MonitoringMCU() {
@@ -57,13 +63,13 @@ export default function MonitoringMCU() {
         if (targetMonth < 0) pending++;
         return;
       }
-      const scheduleDate = new Date(`${row.jadwal_mcu_selanjutnya.slice(0, 10)}T00:00:00`);
-      if (Number.isNaN(scheduleDate.getTime()) || scheduleDate > now || !row.mcu_terakhir) {
+      const scheduleDate = parseRowDate(row.jadwal_mcu_selanjutnya);
+      if (!scheduleDate || scheduleDate > now || !row.mcu_terakhir) {
         pending++;
         return;
       }
-      const actualDate = new Date(`${row.mcu_terakhir.slice(0, 10)}T00:00:00`);
-      if (Number.isNaN(actualDate.getTime())) {
+      const actualDate = parseRowDate(row.mcu_terakhir);
+      if (!actualDate) {
         pending++;
       } else if (actualDate.getTime() <= scheduleDate.getTime()) {
         // Mengikuti GAS: realisasi MCU <= jadwal MCU berarti Tepat Waktu / Lebih Cepat
@@ -80,8 +86,8 @@ export default function MonitoringMCU() {
   const expiredTrend = useMemo(() => {
     const values = Array(12).fill(0) as number[];
     filtered.filter(row => row.status_mcu === 'Expired').forEach(row => {
-      const index = monthIndex(row.masa_berlaku_mcu);
-      if (index >= 0) values[index]++;
+      const expiry = expiryDateOf(row.masa_berlaku_mcu);
+      if (expiry) values[expiry.getMonth()]++;
     });
     return values;
   }, [filtered]);
@@ -100,9 +106,9 @@ export default function MonitoringMCU() {
       const group = groups.get(row.site!) || { total: 0, onTime: 0 };
       group.total++;
       if (!row.exempt && row.jadwal_mcu_selanjutnya && row.mcu_terakhir) {
-        const scheduled = new Date(`${row.jadwal_mcu_selanjutnya.slice(0, 10)}T00:00:00`).getTime();
-        const actual = new Date(`${row.mcu_terakhir.slice(0, 10)}T00:00:00`).getTime();
-        if (Number.isFinite(scheduled) && Number.isFinite(actual) && actual <= scheduled) group.onTime++;
+        const scheduled = parseRowDate(row.jadwal_mcu_selanjutnya)?.getTime();
+        const actual = parseRowDate(row.mcu_terakhir)?.getTime();
+        if (scheduled !== undefined && actual !== undefined && actual <= scheduled) group.onTime++;
       }
       groups.set(row.site!, group);
     });
@@ -112,13 +118,23 @@ export default function MonitoringMCU() {
       .slice(0, 10);
   }, [filtered]);
 
-  const expiredBySite = useMemo(() => {
+  const expiredSiteStats = useMemo(() => {
     const counts = new Map<string, number>();
-    filtered.filter(row => row.status_mcu === 'Expired' && row.site).forEach(row => {
-      counts.set(row.site!, (counts.get(row.site!) || 0) + 1);
+    let withoutSite = 0;
+    filtered.filter(row => row.status_mcu === 'Expired').forEach(row => {
+      if (!row.site) { withoutSite++; return; }
+      counts.set(row.site, (counts.get(row.site) || 0) + 1);
     });
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+    const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    const top = sorted.slice(0, 10);
+    return {
+      top,
+      topTotal: top.reduce((sum, [, value]) => sum + value, 0),
+      siteCount: sorted.length,
+      withoutSite,
+    };
   }, [filtered]);
+  const expiredBySite = expiredSiteStats.top;
 
   return (
     <div className="dashboard mcu-live-dashboard">
@@ -173,12 +189,15 @@ export default function MonitoringMCU() {
 
             <div className="mcu-grid-3 mcu-live-chart-row">
               <MCUChartCard title="10 Jobsite MCU Tidak Ditemukan Terbanyak" className="glow-teal">
-                <MCUChart type="bar" horizontal labels={noDataBySite.map(([name]) => name)} values={noDataBySite.map(([, value]) => value)} colors={Array(10).fill('#616161')} legendLabel="Karyawan tanpa data MCU" />
+                <MCUChart type="bar" horizontal labels={noDataBySite.map(([name]) => name)} values={noDataBySite.map(([, value]) => value)} colors={noDataBySite.map((_, index) => SITE_BAR_COLORS[index % SITE_BAR_COLORS.length])} legendLabel="Karyawan tanpa data MCU" />
               </MCUChartCard>
               <MCUChartCard title="Peringkat Jobsite MCU Tepat Waktu" className="glow-steel">
                 <MCUChart type="bar" horizontal labels={siteTimeliness.map(row => row.name)} values={siteTimeliness.map(row => Number(row.percent.toFixed(2)))} colors={siteTimeliness.map(row => row.percent >= 80 ? '#00B894' : row.percent >= 50 ? '#F39C12' : '#FF4444')} legendLabel="MCU tepat waktu (%)" percentLabels />
               </MCUChartCard>
-              <MCUChartCard title="Jobsite Expired Terbanyak">
+              <MCUChartCard
+                title="Jobsite Expired Terbanyak"
+                subtitle={`Top 10 = ${expiredSiteStats.topTotal} dari ${summary.expired} Expired (${expiredSiteStats.siteCount} jobsite${expiredSiteStats.withoutSite ? `, ${expiredSiteStats.withoutSite} tanpa site` : ''})`}
+              >
                 <MCUChart type="bar" horizontal labels={expiredBySite.map(([name]) => name)} values={expiredBySite.map(([, value]) => value)} colors={Array(10).fill('#E67E22')} legendLabel="Karyawan dengan MCU kedaluwarsa" />
               </MCUChartCard>
             </div>

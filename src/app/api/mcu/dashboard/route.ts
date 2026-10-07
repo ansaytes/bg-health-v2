@@ -36,13 +36,23 @@ function normalizeArea(rawArea: unknown, site: unknown): string {
   return SITE_AREAS[String(site || '').trim().toLowerCase()] || '';
 }
 
-function normalizeMcuStatus(value: unknown, exempt: boolean) {
+function normalizeMcuStatus(value: unknown, exempt: boolean, masaBerlaku?: unknown) {
   const status = String(value || '').trim().toLowerCase();
   if (exempt || /tidak perlu mine permit|\bexempt\b/.test(status)) return 'Exempt';
-  if (status === 'no data' || !status) return 'No Data';
+  if (status === 'no data') return 'No Data';
   if (status.includes('expired')) return 'Expired';
   if (status.includes('valid')) return 'Valid';
+  // Status tidak dikenali/kosong: simpulkan dari kolom masa berlaku ("Expired 12 Hari" / "30 Hari lagi")
+  const masa = String(masaBerlaku || '').trim().toLowerCase();
+  if (/^expired\b/.test(masa)) return 'Expired';
+  if (/hari\s*lagi/.test(masa)) return 'Valid';
   return 'No Data';
+}
+
+// Samakan penulisan nama jobsite agar "SATUI", "satui " dan "Satui" dihitung sebagai satu site.
+function normalizeSiteName(value: unknown): string {
+  const text = String(value ?? '').replace(/\s+/g, ' ').trim();
+  return text.toLowerCase().replace(/(^|[\s(/-])([a-z])/g, (_, sep: string, ch: string) => sep + ch.toUpperCase());
 }
 
 function normalizeFollowUpStatus(value: unknown, exempt: boolean) {
@@ -109,7 +119,10 @@ async function fetchAllMonitorMcuRows(): Promise<Record<string, unknown>[]> {
     const { data, error } = await client
       .from('monitor_mcu')
       .select(SELECT_FIELDS)
+      // Urutan HARUS unik: order by site saja tidak deterministik, sehingga baris bisa
+      // terlewat/ganda di antara halaman 1000-an dan hitungan grafik jadi keliru.
       .order('site', { ascending: true })
+      .order('employee_id', { ascending: true })
       .range(from, from + PAGE_SIZE - 1);
 
     if (error) throw error;
@@ -162,9 +175,10 @@ export async function GET(request: NextRequest) {
       const exempt = Boolean(row.exempt);
       return {
         ...row,
+        site: normalizeSiteName(row.site) || null,
         client: String(row.client || '').trim() || 'PT. BDM',
         area: normalizeArea(row.area_raw, row.site),
-        status_mcu: normalizeMcuStatus(row.status_mcu, exempt),
+        status_mcu: normalizeMcuStatus(row.status_mcu, exempt, row.masa_berlaku_mcu),
         status_follow_up: normalizeFollowUpStatus(row.status_follow_up, exempt),
       };
     }).filter(row => caller.role !== 'pic' || !caller.site

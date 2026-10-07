@@ -44,6 +44,40 @@ function contrastColor(background: unknown, fallback: string): string {
   return luminance > 0.179 ? '#111827' : '#FFFFFF';
 }
 
+
+/** Terima 'YYYY-MM-DD[...]', 'DD/MM/YYYY', 'DD-MM-YYYY'; selain itu null. */
+export function parseRowDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const text = String(value).trim();
+  const iso = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+  const dmy = text.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})/);
+  if (dmy) return new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]));
+  return null;
+}
+
+/**
+ * Tanggal kedaluwarsa MCU. Kolom masa_berlaku_mcu bisa berisi tanggal, atau teks
+ * seperti "Expired 120 Hari" / "45 Hari lagi" (hasil hitung monitor MCU).
+ */
+export function expiryDateOf(value: string | null | undefined, today = new Date()): Date | null {
+  const direct = parseRowDate(value);
+  if (direct) return direct;
+  const text = String(value || '').trim();
+  const base = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const expired = text.match(/expired\s+(\d+)\s*hari/i);
+  if (expired) { base.setDate(base.getDate() - Number(expired[1])); return base; }
+  const left = text.match(/(\d+)\s*hari\s*lagi/i);
+  if (left) { base.setDate(base.getDate() + Number(left[1])); return base; }
+  return null;
+}
+
+/** Samakan penulisan nama jobsite ("SATUI", "satui ", "Satui" -> "Satui"). */
+export function normalizeSiteName(value: unknown): string {
+  const text = String(value ?? '').replace(/\s+/g, ' ').trim();
+  return text.toLowerCase().replace(/(^|[\s(/-])([a-z])/g, (_, sep: string, ch: string) => sep + ch.toUpperCase());
+}
+
 export interface MCUDashboardRow {
   employee_id: string;
   site: string | null;
@@ -273,7 +307,9 @@ export function MCUChart({
   // (dengan animasi dari nol) tiap kali induk render -> layar berkedip. Karena itu
   // chart hanya dibangun ulang bila ISI datanya benar-benar berubah.
   const dataSignature = JSON.stringify([type, labels, values, colors, legendLabel, horizontal, centerText, percentLabels]);
-  const hasAnimatedRef = useRef(false);
+  // Menyimpan signature data yang animasinya sudah selesai. Pergantian tema (isDark)
+  // tidak mengubah signature, jadi tidak memicu animasi ulang; data baru selalu beranimasi.
+  const animatedSignatureRef = useRef<string | null>(null);
   const [isDark, setIsDark] = useState(
     () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
   );
@@ -315,10 +351,11 @@ export function MCUChart({
         indexAxis: horizontal ? 'y' : 'x',
         responsive: true,
         maintainAspectRatio: false,
-        // Animasi hanya pada gambar pertama; redraw berikutnya (tema/data) langsung tampil.
-        animation: hasAnimatedRef.current ? false : {
-          duration: type === 'doughnut' ? 450 : 400,
+        // Animasi dijalankan setiap kali DATA berubah (mount, filter, refresh), bukan saat ganti tema.
+        animation: animatedSignatureRef.current === dataSignature ? false : {
+          duration: type === 'doughnut' ? 800 : 700,
           easing: 'easeOutQuart',
+          onComplete: () => { animatedSignatureRef.current = dataSignature; },
         },
         ...(type === 'doughnut' ? { cutout: '62%', radius: '82%' } : {}),
         plugins: {
@@ -407,7 +444,6 @@ export function MCUChart({
     };
 
     chartRef.current = new ChartJS(canvasRef.current, config);
-    hasAnimatedRef.current = true;
     return () => {
       chartRef.current?.stop();
       chartRef.current?.destroy();
@@ -421,16 +457,18 @@ export function MCUChart({
 
 export function MCUChartCard({
   title,
+  subtitle,
   children,
   className = 'glow-orange',
 }: {
   title: string;
+  subtitle?: string;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
     <section className={`card ${className} mcu-dashboard-card`}>
-      <div className="card-head"><div><h2>{title}</h2></div></div>
+      <div className="card-head"><div><h2>{title}</h2>{subtitle && <p className="mcu-dashboard-card-sub">{subtitle}</p>}</div></div>
       {children}
     </section>
   );

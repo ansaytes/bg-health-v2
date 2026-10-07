@@ -31,11 +31,24 @@ export async function GET(req: NextRequest) {
   const nationalId = params.get('national_id')?.trim() || '';
   if (!nik && !nationalId) {
     const requestedPage = Number.parseInt(params.get('page') || '1', 10);
-    const pageSize = 100;
+    // Mode batch (?batch=1&offset=0&limit=500): dipakai tabel Record MCU untuk memuat SEMUA data
+    // secara bertahap supaya filter kolom bekerja pada seluruh data, bukan hanya 100 baris.
+    const batchMode = params.get('batch') === '1';
+    const requestedLimit = Number.parseInt(params.get('limit') || '500', 10);
+    const requestedOffset = Number.parseInt(params.get('offset') || '0', 10);
+    const pageSize = batchMode
+      ? (Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 1000) : 500)
+      : 100;
     const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
-    const from = (page - 1) * pageSize;
-    const search = params.get('search')?.trim() || '';
-    let listQuery = client.from('mcu_records').select('*', { count: 'exact' }).order('tgl_mcu', { ascending: false }).range(from, from + pageSize - 1);
+    const from = batchMode
+      ? (Number.isFinite(requestedOffset) && requestedOffset > 0 ? requestedOffset : 0)
+      : (page - 1) * pageSize;
+    const search = batchMode ? '' : (params.get('search')?.trim() || '');
+    // id sebagai pengurut kedua: tgl_mcu tidak unik, tanpa ini baris bisa terlewat/ganda antar halaman.
+    let listQuery = client.from('mcu_records').select('*', { count: 'exact' })
+      .order('tgl_mcu', { ascending: false })
+      .order('id', { ascending: true })
+      .range(from, from + pageSize - 1);
     if (search) {
       const hash = hashField(search);
       listQuery = listQuery.or(`nik_karyawan_hash.eq.${hash},national_id_hash.eq.${hash}`);
@@ -55,11 +68,12 @@ export async function GET(req: NextRequest) {
       .filter(needsEmployeeNik)
       .map(record => String(record.national_id_hash)))];
     const employeeNikByNationalId = new Map<string, string>();
-    if (nationalIdHashes.length) {
+    // Dipecah per 100 hash agar URL query tidak terlalu panjang.
+    for (let index = 0; index < nationalIdHashes.length; index += 100) {
       const { data: employees, error: employeeError } = await client
         .from('employees')
         .select('nik,national_id_hash')
-        .in('national_id_hash', nationalIdHashes);
+        .in('national_id_hash', nationalIdHashes.slice(index, index + 100));
       if (employeeError) return NextResponse.json({ error: employeeError.message }, { status: 500 });
 
       for (const employee of employees || []) {
@@ -89,6 +103,8 @@ export async function GET(req: NextRequest) {
       }),
       page,
       pageSize,
+      offset: from,
+      hasMore: from + (records?.length || 0) < (count || 0),
       total: count || 0,
       totalPages: Math.ceil((count || 0) / pageSize),
     });
