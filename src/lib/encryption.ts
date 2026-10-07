@@ -111,14 +111,22 @@ export function decryptMCURecord(record: Record<string, any>): Record<string, an
   const result: Record<string, any> = { ...record };
 
   for (const field of MCU_SENSITIVE_FIELDS) {
-    if (result[field] != null && typeof result[field] === 'string') {
-      result[field] = decrypt(result[field]) || result[field];
+    if (result[field] != null && typeof result[field] === 'string' && looksEncrypted(result[field])) {
+      const decrypted = decrypt(result[field]);
+      if (decrypted != null) result[field] = decrypted;
     }
   }
 
   delete result.national_id_hash;
   delete result.nik_karyawan_hash;
   return result;
+}
+
+/** Check if a string looks like AES-256-GCM encrypted data (hex, min 58 chars = 12+16+1 bytes) */
+function looksEncrypted(value: string): boolean {
+  if (typeof value !== 'string') return false;
+  // Encrypted format: IV(12) + TAG(16) + ciphertext(min 1) = min 29 bytes = 58 hex chars
+  return value.length >= 58 && /^[0-9a-fA-F]+$/.test(value);
 }
 
 /** Encrypt + compute hashes for employee fields */
@@ -147,8 +155,9 @@ export function decryptEmployee(emp: Record<string, any>): Record<string, any> {
   const result: Record<string, any> = { ...emp };
 
   for (const field of SENSITIVE_FIELDS) {
-    if (result[field] != null && typeof result[field] === 'string') {
-      result[field] = decrypt(result[field]) || result[field];
+    if (result[field] != null && typeof result[field] === 'string' && looksEncrypted(result[field])) {
+      const decrypted = decrypt(result[field]);
+      if (decrypted != null) result[field] = decrypted;
     }
   }
 

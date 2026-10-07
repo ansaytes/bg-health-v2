@@ -822,7 +822,6 @@ export default function Home() {
   const { user, profile, loading: authLoading, isAdmin, isSuperuser, role } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const [loading, setLoading] = useState(true);
   const activePage = role === 'employee' ? 'home' : store.activePage;
 
   const isLoggedIn = !!user && !!profile;
@@ -861,12 +860,6 @@ export default function Home() {
   useEffect(() => {
     resetSidebar(activePage);
   }, [activePage, resetSidebar]);
-
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(true), 0);
-    const t2 = setTimeout(() => setLoading(false), 50);
-    return () => { clearTimeout(t); clearTimeout(t2); };
-  }, [activePage, store.activeDashSidebar, store.activeDataEntrySidebar, store.activeAdminSidebar, store.activeHomeSidebar]);
 
   // Role-based header nav
   const headerNav = ALL_HEADER_NAV.filter((item) => {
@@ -1039,14 +1032,6 @@ export default function Home() {
         </div>
 
         <div className="page-content has-content" style={{ position: 'relative' }}>
-          {loading && (
-            <div className="loading-overlay">
-              <div className="loading-spinner">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/BM.png" alt="Loading" />
-              </div>
-            </div>
-          )}
           <AnimatePresence mode="wait">
             {activePage === 'home' ? (
               <motion.div
