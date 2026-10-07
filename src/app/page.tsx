@@ -667,7 +667,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
           </p>
           <p className="login-footer-text" style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
             Employee dapat login dengan NIK Karyawan atau National ID. Akun dibuat otomatis pada login pertama;
-            gunakan password awal <strong>bagong1994</strong> lalu ganti password untuk melanjutkan.
+            gunakan password awal dari administrator, lalu ganti password untuk melanjutkan.
           </p>
           </>
           ) : (

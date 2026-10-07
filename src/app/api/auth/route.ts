@@ -10,7 +10,12 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // Server-side admin client (service role) — for creating users
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : supabase;
-const EMPLOYEE_DEFAULT_PASSWORD = 'bagong1994';
+// Password awal akun karyawan dibaca dari environment (server-only, JANGAN pakai prefix NEXT_PUBLIC_).
+// Tanpa nilai yang valid, pembuatan akun karyawan otomatis dinonaktifkan (tidak ada fallback hardcoded).
+const EMPLOYEE_DEFAULT_PASSWORD = process.env.EMPLOYEE_DEFAULT_PASSWORD || '';
+const MIN_PASSWORD_LENGTH = 8;
+// Password yang pernah bocor di repo tidak boleh dipakai lagi sebagai password baru.
+const BLOCKED_PASSWORDS = new Set(['bagong1994']);
 const EMPLOYEE_AUTH_DOMAIN = 'employee.bg-health.local';
 
 interface EmployeeLoginProfile {
@@ -142,6 +147,10 @@ export async function POST(req: NextRequest) {
         }
 
         if (!profile) {
+          if (EMPLOYEE_DEFAULT_PASSWORD.length < MIN_PASSWORD_LENGTH) {
+            console.error('EMPLOYEE_DEFAULT_PASSWORD belum diatur / kurang dari 8 karakter.');
+            return NextResponse.json({ error: 'Login pertama karyawan belum dikonfigurasi. Hubungi administrator.' }, { status: 500 });
+          }
           if (password !== EMPLOYEE_DEFAULT_PASSWORD) {
             return NextResponse.json({ error: 'NIK/National ID atau password salah' }, { status: 401 });
           }
@@ -241,8 +250,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Tidak ada penggantian password wajib untuk akun ini' }, { status: 400 });
       }
       const newPassword = String(body.newPassword ?? '');
-      if (newPassword.length < 8) {
+      if (newPassword.length < MIN_PASSWORD_LENGTH) {
         return NextResponse.json({ error: 'Password baru minimal 8 karakter' }, { status: 400 });
+      }
+      if (newPassword === EMPLOYEE_DEFAULT_PASSWORD || BLOCKED_PASSWORDS.has(newPassword)) {
+        return NextResponse.json({ error: 'Password baru tidak boleh sama dengan password awal' }, { status: 400 });
       }
       const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
         password: newPassword,

@@ -7,6 +7,7 @@ import {
   registerables,
   type Chart as ChartInstance,
   type ChartConfiguration,
+  type ChartOptions,
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { supabase } from '@/lib/supabase';
@@ -332,6 +333,12 @@ export function MCUChart({
     const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
     const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     const total = values.reduce((sum, value) => sum + value, 0);
+    const animation = animatedSignatureRef.current === dataSignature ? false : {
+      duration: type === 'doughnut' ? 600 : 500,
+      easing: 'easeOutQuart',
+      ...(type === 'doughnut' ? { animateRotate: true, animateScale: false } : {}),
+      onComplete: () => { animatedSignatureRef.current = dataSignature; },
+    };
     const config: ChartConfiguration = {
       type,
       data: {
@@ -351,12 +358,11 @@ export function MCUChart({
         indexAxis: horizontal ? 'y' : 'x',
         responsive: true,
         maintainAspectRatio: false,
-        // Animasi dijalankan setiap kali DATA berubah (mount, filter, refresh), bukan saat ganti tema.
-        animation: animatedSignatureRef.current === dataSignature ? false : {
-          duration: type === 'doughnut' ? 800 : 700,
-          easing: 'easeOutQuart',
-          onComplete: () => { animatedSignatureRef.current = dataSignature; },
-        },
+        // Mengikuti dashboard GAS: chart dibuat ulang dan dianimasikan setiap DATA berubah
+        // (ganti halaman, filter, refresh). Ganti tema tidak mengulang animasi.
+        //  - donut : berputar (animateRotate), tanpa scale, 600 ms, easeOutQuart
+        //  - bar   : tumbuh dari garis dasar, 500 ms, easeOutQuart
+        animation: animation as ChartOptions['animation'],
         ...(type === 'doughnut' ? { cutout: '62%', radius: '82%' } : {}),
         plugins: {
           legend: {
