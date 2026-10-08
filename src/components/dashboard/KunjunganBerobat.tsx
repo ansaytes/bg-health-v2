@@ -228,10 +228,10 @@ export default function KunjunganBerobat() {
     lastAnimatedSignature.current = dataSignature;
 
     const animationSettings = isDataChange
-      ? { duration: 500, easing: 'easeOutQuart' as const }
+      ? { duration: 900, easing: 'easeOutQuart' as const }
       : false as const;
     const lineAnimationSettings = isDataChange
-      ? { duration: 600, easing: 'easeOutQuart' as const }
+      ? { duration: 1000, easing: 'easeOutQuart' as const }
       : false as const;
 
       // Common theme colors

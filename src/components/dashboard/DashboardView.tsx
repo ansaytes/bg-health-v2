@@ -277,8 +277,9 @@ export default function DashboardView() {
     setChartReady(false);
   }, []);
 
-  /* ─── Chart canvas drawing ────────────────────────────── */
+  /* ─── Chart canvas drawing with smooth growth animation ────────────────── */
   const asrRank = asrRanking.slice(0, 10);
+  const animFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!chartReady || asrRank.length === 0) return;
@@ -294,7 +295,6 @@ export default function DashboardView() {
     canvas.height = rect.height * dpr;
     canvas.style.width = rect.width + 'px';
     canvas.style.height = rect.height + 'px';
-    ctx.scale(dpr, dpr);
 
     const W = rect.width;
     const H = rect.height;
@@ -305,54 +305,94 @@ export default function DashboardView() {
     const textCol = isDark ? '#F9FAFB' : '#111827';
     const gridCol = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
     const maxVal = Math.max(...asrRank.map(d => d.asr), 1);
-
-    ctx.clearRect(0, 0, W, H);
-
     const barCount = asrRank.length;
     const gap = chartH / barCount;
     const barH = Math.min(20, gap * 0.7);
 
-    asrRank.forEach((d, i) => {
-      const y = pad.top + gap * i + (gap - barH) / 2;
-      const w = (d.asr / maxVal) * chartW;
-
-      // Site name on the left
-      ctx.fillStyle = textCol;
-      ctx.font = '10px sans-serif';
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'middle';
-      const label = d.jobsite.length > 14 ? d.jobsite.slice(0, 12) + '..' : d.jobsite;
-      ctx.fillText(label, pad.left - 8, y + barH / 2);
-
-      // Bar
-      const grad = ctx.createLinearGradient(pad.left, 0, pad.left + w, 0);
-      grad.addColorStop(0, '#E54B1A');
-      grad.addColorStop(1, '#FF8C42');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.roundRect(pad.left, y, Math.max(w, 2), barH, 3);
-      ctx.fill();
-
-      // Datalabel at bar end
-      ctx.fillStyle = textCol;
-      ctx.font = 'bold 10px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(d.asr.toFixed(2), pad.left + w + 6, y + barH / 2);
-    });
-
-    // Vertical grid lines + x-axis labels
-    const gridLines = 4;
-    for (let i = 0; i <= gridLines; i++) {
-      const x = pad.left + (chartW / gridLines) * i;
-      ctx.strokeStyle = gridCol;
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + chartH); ctx.stroke();
-      const val = Math.round((maxVal / gridLines) * i);
-      ctx.fillStyle = textCol;
-      ctx.font = '8px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(val.toLocaleString('id-ID'), x, pad.top + chartH + 12);
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
     }
+
+    const startTime = performance.now();
+    const duration = 1000;
+
+    const render = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // easeOutCubic curve
+      const ease = 1 - Math.pow(1 - progress, 3);
+
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.scale(dpr, dpr);
+
+      // Vertical grid lines + x-axis labels
+      const gridLines = 4;
+      for (let i = 0; i <= gridLines; i++) {
+        const x = pad.left + (chartW / gridLines) * i;
+        ctx.strokeStyle = gridCol;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, pad.top);
+        ctx.lineTo(x, pad.top + chartH);
+        ctx.stroke();
+        const val = Math.round((maxVal / gridLines) * i);
+        ctx.fillStyle = textCol;
+        ctx.font = '8px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(val.toLocaleString('id-ID'), x, pad.top + chartH + 12);
+      }
+
+      // Grow bars from baseline (x: pad.left)
+      asrRank.forEach((d, i) => {
+        const y = pad.top + gap * i + (gap - barH) / 2;
+        const targetW = (d.asr / maxVal) * chartW;
+        const currentW = targetW * ease;
+
+        // Site name on the left
+        ctx.fillStyle = textCol;
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        const label = d.jobsite.length > 14 ? d.jobsite.slice(0, 12) + '..' : d.jobsite;
+        ctx.fillText(label, pad.left - 8, y + barH / 2);
+
+        // Bar
+        if (currentW > 0) {
+          const grad = ctx.createLinearGradient(pad.left, 0, pad.left + Math.max(currentW, 2), 0);
+          grad.addColorStop(0, '#E54B1A');
+          grad.addColorStop(1, '#FF8C42');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.roundRect(pad.left, y, Math.max(currentW, 2), barH, 3);
+          ctx.fill();
+        }
+
+        // Datalabel counting up dynamically
+        if (currentW > 1) {
+          ctx.fillStyle = textCol;
+          ctx.font = 'bold 10px sans-serif';
+          ctx.textAlign = 'left';
+          const displayedVal = (d.asr * ease).toFixed(2);
+          ctx.fillText(displayedVal, pad.left + currentW + 6, y + barH / 2);
+        }
+      });
+
+      ctx.restore();
+
+      if (progress < 1) {
+        animFrameRef.current = requestAnimationFrame(render);
+      }
+    };
+
+    animFrameRef.current = requestAnimationFrame(render);
+
+    return () => {
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+      }
+    };
   }, [chartReady, asrRank, isDark]);
 
   useEffect(() => {

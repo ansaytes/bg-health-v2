@@ -344,7 +344,7 @@ export function MCUChart({
     lastAnimatedSignature.current = dataSignature;
 
     const animation = isDataChange ? {
-      duration: type === 'doughnut' ? 600 : 500,
+      duration: type === 'doughnut' ? 1000 : 900,
       easing: 'easeOutQuart' as const,
       ...(type === 'doughnut' ? { animateRotate: true, animateScale: false } : {}),
     } : false;
