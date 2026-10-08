@@ -802,7 +802,7 @@ export default function KunjunganBerobat() {
                 </div>
               </div>
               <div className="chart-box" style={{ position: 'relative', width: '100%', height: '100%', minHeight: 180 }}>
-                <canvas ref={trendCanvasRef} />
+                <canvas ref={trendCanvasRef} key={dataSignature} />
               </div>
             </div>
 
@@ -822,7 +822,7 @@ export default function KunjunganBerobat() {
                 </div>
               </div>
               <div className="chart-box" style={{ position: 'relative', width: '100%', height: '100%', minHeight: 180 }}>
-                <canvas ref={ulangCanvasRef} />
+                <canvas ref={ulangCanvasRef} key={dataSignature} />
               </div>
             </div>
           </div>
@@ -845,7 +845,7 @@ export default function KunjunganBerobat() {
                 </div>
               </div>
               <div className="chart-box" style={{ position: 'relative', width: '100%', height: '100%', minHeight: 180 }}>
-                <canvas ref={diagCanvasRef} />
+                <canvas ref={diagCanvasRef} key={dataSignature} />
               </div>
             </div>
 
@@ -862,7 +862,7 @@ export default function KunjunganBerobat() {
                 </div>
               </div>
               <div className="chart-box" style={{ position: 'relative', width: '100%', height: '100%', minHeight: 180 }}>
-                <canvas ref={obatCanvasRef} />
+                <canvas ref={obatCanvasRef} key={dataSignature} />
               </div>
             </div>
 
@@ -882,7 +882,7 @@ export default function KunjunganBerobat() {
                 </div>
               </div>
               <div className="chart-box" style={{ position: 'relative', width: '100%', height: '100%', minHeight: 180 }}>
-                <canvas ref={deptCanvasRef} />
+                <canvas ref={deptCanvasRef} key={dataSignature} />
               </div>
             </div>
           </div>

@@ -471,7 +471,11 @@ export function MCUChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataSignature, isDark]);
 
-  return <div className="mcu-dashboard-chart"><canvas ref={canvasRef} /></div>;
+  return (
+    <div className="mcu-dashboard-chart">
+      <canvas ref={canvasRef} key={dataSignature} />
+    </div>
+  );
 }
 
 export function MCUChartCard({

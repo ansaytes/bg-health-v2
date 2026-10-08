@@ -807,7 +807,7 @@ export default function InventoryDashboard() {
         <div className="card glow-coral" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Stok Obat/BHP Expired</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-            <canvas ref={topExpiredCanvasRef} className="inventory-chart-canvas" />
+            <canvas ref={topExpiredCanvasRef} key={chartDataSignature} className="inventory-chart-canvas" />
           </div>
         </div>
 
@@ -815,7 +815,7 @@ export default function InventoryDashboard() {
         <div className="card glow-orange" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Stok Habis (kebutuhan/bln)</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-            <canvas ref={topHabisCanvasRef} className="inventory-chart-canvas" />
+            <canvas ref={topHabisCanvasRef} key={chartDataSignature} className="inventory-chart-canvas" />
           </div>
         </div>
 
@@ -823,7 +823,7 @@ export default function InventoryDashboard() {
         <div className="card glow-amber" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Stok Akan Expired &lt; 3 Bln</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-            <canvas ref={topExpSoonCanvasRef} className="inventory-chart-canvas" />
+            <canvas ref={topExpSoonCanvasRef} key={chartDataSignature} className="inventory-chart-canvas" />
           </div>
         </div>
 
@@ -831,7 +831,7 @@ export default function InventoryDashboard() {
         <div className="card glow-teal" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Pemakaian per Bulan</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-            <canvas ref={fastMovingCanvasRef} className="inventory-chart-canvas" />
+            <canvas ref={fastMovingCanvasRef} key={chartDataSignature} className="inventory-chart-canvas" />
           </div>
         </div>
               </div>
