@@ -288,12 +288,13 @@ export default function InventoryDashboard() {
       }, 50);
     }
 
-    const textColor = isDark ? '#F9FAFB' : '#111827';
-    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
-    const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    let chartDelayTimeout = setTimeout(() => {
+      const textColor = isDark ? '#F9FAFB' : '#111827';
+      const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+      const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
-    // 1. Top 10 Sudah Expired (Horizontal Bar)
-    if (topExpiredCanvasRef.current) {
+      // 1. Top 10 Sudah Expired (Horizontal Bar)
+      if (topExpiredCanvasRef.current) {
       const existing = ChartJS.getChart(topExpiredCanvasRef.current);
       if (existing) existing.destroy();
       if (topExpiredChart.current) topExpiredChart.current.destroy();
@@ -571,9 +572,11 @@ export default function InventoryDashboard() {
         options,
       });
     }
+    }, 150);
 
     return () => {
       if (animTimeout) clearTimeout(animTimeout);
+      clearTimeout(chartDelayTimeout);
       topExpiredChart.current?.destroy();
       topHabisChart.current?.destroy();
       topExpSoonChart.current?.destroy();

@@ -228,18 +228,19 @@ export default function KunjunganBerobat() {
       }, 50);
     }
 
-    // Common theme colors
-    const textColor = isDark ? '#F9FAFB' : '#111827';
-    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
-    const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    let chartDelayTimeout = setTimeout(() => {
+      // Common theme colors
+      const textColor = isDark ? '#F9FAFB' : '#111827';
+      const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+      const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
-    // ───────────────────────────────────────────────
-    // 1. TREN KUNJUNGAN PER BULAN (Line Chart)
-    // ───────────────────────────────────────────────
-    if (trendCanvasRef.current) {
-      if (trendChartInst.current) {
-        trendChartInst.current.destroy();
-      }
+      // ───────────────────────────────────────────────
+      // 1. TREN KUNJUNGAN PER BULAN (Line Chart)
+      // ───────────────────────────────────────────────
+      if (trendCanvasRef.current) {
+        if (trendChartInst.current) {
+          trendChartInst.current.destroy();
+        }
 
       // Group by month (1..12) from all or filtered dataset
       const monthlyCounts = new Array(12).fill(0);
@@ -678,9 +679,11 @@ export default function KunjunganBerobat() {
         options: deptOptions,
       });
     }
+    }, 150);
 
     return () => {
       if (animTimeout) clearTimeout(animTimeout);
+      clearTimeout(chartDelayTimeout);
       trendChartInst.current?.destroy();
       ulangChartInst.current?.destroy();
       diagChartInst.current?.destroy();

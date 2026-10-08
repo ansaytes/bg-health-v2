@@ -455,9 +455,15 @@ export function MCUChart({
       }] : [],
     };
 
-    chartRef.current = new ChartJS(canvasRef.current, config);
+    let chartDelayTimeout = setTimeout(() => {
+      if (canvasRef.current) {
+        chartRef.current = new ChartJS(canvasRef.current, config);
+      }
+    }, 150);
+
     return () => {
       if (animTimeout) clearTimeout(animTimeout);
+      clearTimeout(chartDelayTimeout);
       chartRef.current?.stop();
       chartRef.current?.destroy();
       chartRef.current = null;
