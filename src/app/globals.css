@@ -458,7 +458,7 @@
 .page-content.has-content {
   align-items: stretch;
   justify-content: stretch;
-  overflow: visible;
+  overflow: hidden;
 }
 
 /* ═══════════════════════════════════
@@ -1937,16 +1937,15 @@ select.admin-input.compact-input {
 .mcu-entry-modern-shell {
   min-height: 0;
   width: 100%;
-  padding: 18px;
+  padding: 12px 18px 8px;
 }
-/* Tabel MCU: isi mengikuti tinggi layar dan menyisakan ruang di bawah, tidak terpotong */
 .mcu-records-modern {
   display: flex;
   flex-direction: column;
   flex: 1;
   height: 100%;
   box-sizing: border-box;
-  padding: 12px 18px 32px;
+  padding: 12px 18px 8px;
   overflow: hidden;
 }
 .mcu-records-modern .mcu-records-card {

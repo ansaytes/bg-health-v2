@@ -56,6 +56,10 @@ export default function InventoryDashboard() {
   const topExpSoonChart = useRef<ChartJS | null>(null);
   const fastMovingChart = useRef<ChartJS | null>(null);
 
+  // Signature data terakhir yang sudah dianimasikan. Ganti tema tidak mengubah
+  // signature sehingga animasi tidak diulang; data baru selalu beranimasi.
+  const animatedSignatureRef = useRef<string | null>(null);
+
   useEffect(() => {
     const root = document.documentElement;
     const syncTheme = () => setIsDark(root.classList.contains('dark'));
@@ -267,8 +271,16 @@ export default function InventoryDashboard() {
   }, [filteredItems]);
 
   // Render Charts
+  const chartDataSignature = JSON.stringify([items.length, chartRenderKey]);
+
   useEffect(() => {
     if (loading || !isAuthorized || items.length === 0) return;
+
+    // Apakah hanya tema yang berubah (data sama)?
+    const isThemeOnlyChange = animatedSignatureRef.current === chartDataSignature;
+    const animationSettings = isThemeOnlyChange
+      ? (false as const)
+      : ({ duration: 500, easing: 'easeOutQuart' } as const);
 
     const textColor = isDark ? '#F9FAFB' : '#111827';
     const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
@@ -305,7 +317,7 @@ export default function InventoryDashboard() {
         indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
-        animation: { duration: 500, easing: 'easeOutQuart' },
+        animation: animationSettings,
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -372,7 +384,7 @@ export default function InventoryDashboard() {
         indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
-        animation: { duration: 500, easing: 'easeOutQuart' },
+        animation: animationSettings,
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -440,7 +452,7 @@ export default function InventoryDashboard() {
         indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
-        animation: { duration: 500, easing: 'easeOutQuart' },
+        animation: animationSettings,
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -518,7 +530,7 @@ export default function InventoryDashboard() {
         indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
-        animation: { duration: 500, easing: 'easeOutQuart' },
+        animation: animationSettings,
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -554,13 +566,19 @@ export default function InventoryDashboard() {
       });
     }
 
+    // Tandai signature saat ini agar pergantian tema berikutnya tidak mengulang animasi.
+    if (!isThemeOnlyChange) {
+      animatedSignatureRef.current = chartDataSignature;
+    }
+
     return () => {
       topExpiredChart.current?.destroy();
       topHabisChart.current?.destroy();
       topExpSoonChart.current?.destroy();
       fastMovingChart.current?.destroy();
     };
-  }, [items, loading, isAuthorized, chartRenderKey, isDark]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chartDataSignature, loading, isAuthorized, isDark]);
 
   // Access guard
   if (!isAuthorized) {

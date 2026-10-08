@@ -116,6 +116,10 @@ export default function KunjunganBerobat() {
   const obatChartInst = useRef<ChartJS | null>(null);
   const deptChartInst = useRef<ChartJS | null>(null);
 
+  // Signature data terakhir yang sudah dianimasikan. Ganti tema tidak mengubah
+  // signature sehingga animasi tidak diulang; data baru selalu beranimasi.
+  const animatedSignatureRef = useRef<string | null>(null);
+
   useEffect(() => {
     const root = document.documentElement;
     const syncTheme = () => setIsDark(root.classList.contains('dark'));
@@ -204,8 +208,19 @@ export default function KunjunganBerobat() {
   const totalRujukRS = rujukList.length;
 
   // Render Charts using safe recreation
+  const dataSignature = JSON.stringify([filteredRecords.length, records.length, selectedDept]);
+
   useEffect(() => {
     if (loading) return;
+
+    // Apakah hanya tema yang berubah (data sama)?
+    const isThemeOnlyChange = animatedSignatureRef.current === dataSignature;
+    const animationSettings = isThemeOnlyChange
+      ? false as const
+      : { duration: 500, easing: 'easeOutQuart' as const };
+    const lineAnimationSettings = isThemeOnlyChange
+      ? false as const
+      : { duration: 600, easing: 'easeOutQuart' as const };
 
     // Common theme colors
     const textColor = isDark ? '#F9FAFB' : '#111827';
@@ -255,10 +270,7 @@ export default function KunjunganBerobat() {
       const trendOptions: ChartOptions<'line'> = {
         responsive: true,
         maintainAspectRatio: false,
-        animation: {
-          duration: 600,
-          easing: 'easeOutQuart',
-        },
+        animation: lineAnimationSettings,
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -352,10 +364,7 @@ export default function KunjunganBerobat() {
         indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
-        animation: {
-          duration: 500,
-          easing: 'easeOutQuart',
-        },
+        animation: animationSettings,
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -442,10 +451,7 @@ export default function KunjunganBerobat() {
         indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
-        animation: {
-          duration: 500,
-          easing: 'easeOutQuart',
-        },
+        animation: animationSettings,
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -536,10 +542,7 @@ export default function KunjunganBerobat() {
         indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
-        animation: {
-          duration: 500,
-          easing: 'easeOutQuart',
-        },
+        animation: animationSettings,
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -624,10 +627,7 @@ export default function KunjunganBerobat() {
         indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
-        animation: {
-          duration: 500,
-          easing: 'easeOutQuart',
-        },
+        animation: animationSettings,
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -673,6 +673,11 @@ export default function KunjunganBerobat() {
       });
     }
 
+    // Tandai signature saat ini agar pergantian tema berikutnya tidak mengulang animasi.
+    if (!isThemeOnlyChange) {
+      animatedSignatureRef.current = dataSignature;
+    }
+
     return () => {
       trendChartInst.current?.destroy();
       ulangChartInst.current?.destroy();
@@ -680,7 +685,8 @@ export default function KunjunganBerobat() {
       obatChartInst.current?.destroy();
       deptChartInst.current?.destroy();
     };
-  }, [filteredRecords, records, selectedDept, loading, isDark]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataSignature, loading, isDark]);
 
   return (
     <div className="dashboard" ref={containerRef} style={{ overflowY: 'auto', overflowX: 'hidden' }}>
