@@ -280,7 +280,11 @@ export default function InventoryDashboard() {
     const isThemeOnlyChange = animatedSignatureRef.current === chartDataSignature;
     const animationSettings = isThemeOnlyChange
       ? (false as const)
-      : ({ duration: 500, easing: 'easeOutQuart' } as const);
+      : ({ 
+          duration: 500, 
+          easing: 'easeOutQuart',
+          onComplete: () => { animatedSignatureRef.current = chartDataSignature; },
+        } as const);
 
     const textColor = isDark ? '#F9FAFB' : '#111827';
     const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
@@ -564,11 +568,6 @@ export default function InventoryDashboard() {
         data,
         options,
       });
-    }
-
-    // Tandai signature saat ini agar pergantian tema berikutnya tidak mengulang animasi.
-    if (!isThemeOnlyChange) {
-      animatedSignatureRef.current = chartDataSignature;
     }
 
     return () => {

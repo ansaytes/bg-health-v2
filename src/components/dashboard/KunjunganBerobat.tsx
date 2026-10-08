@@ -217,10 +217,18 @@ export default function KunjunganBerobat() {
     const isThemeOnlyChange = animatedSignatureRef.current === dataSignature;
     const animationSettings = isThemeOnlyChange
       ? false as const
-      : { duration: 500, easing: 'easeOutQuart' as const };
+      : { 
+          duration: 500, 
+          easing: 'easeOutQuart' as const,
+          onComplete: () => { animatedSignatureRef.current = dataSignature; },
+        };
     const lineAnimationSettings = isThemeOnlyChange
       ? false as const
-      : { duration: 600, easing: 'easeOutQuart' as const };
+      : { 
+          duration: 600, 
+          easing: 'easeOutQuart' as const,
+          onComplete: () => { animatedSignatureRef.current = dataSignature; },
+        };
 
     // Common theme colors
     const textColor = isDark ? '#F9FAFB' : '#111827';
@@ -671,11 +679,6 @@ export default function KunjunganBerobat() {
         data: deptData,
         options: deptOptions,
       });
-    }
-
-    // Tandai signature saat ini agar pergantian tema berikutnya tidak mengulang animasi.
-    if (!isThemeOnlyChange) {
-      animatedSignatureRef.current = dataSignature;
     }
 
     return () => {

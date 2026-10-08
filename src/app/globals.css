@@ -1521,7 +1521,7 @@ select.admin-input.compact-input {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 6px 14px 8px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -1937,7 +1937,7 @@ select.admin-input.compact-input {
 .mcu-entry-modern-shell {
   min-height: 0;
   width: 100%;
-  padding: 12px 18px 8px;
+  padding: 16px;
 }
 .mcu-records-modern {
   display: flex;
@@ -1945,13 +1945,13 @@ select.admin-input.compact-input {
   flex: 1;
   height: 100%;
   box-sizing: border-box;
-  padding: 12px 18px 8px;
+  padding: 16px;
   overflow: hidden;
 }
 .mcu-records-modern .mcu-records-card {
   display: flex;
   flex-direction: column;
-  flex: 0 1 auto;
+  flex: 1;
   min-height: 0;
   padding: 12px 16px 12px;
 }
