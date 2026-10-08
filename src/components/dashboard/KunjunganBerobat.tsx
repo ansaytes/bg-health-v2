@@ -321,11 +321,24 @@ export default function KunjunganBerobat() {
         },
       };
 
-      trendChartInst.current = new ChartJS(trendCanvasRef.current, {
-        type: 'line',
-        data: trendData,
-        options: trendOptions,
-      });
+      if (trendChartInst.current) {
+        if (isDataChange) {
+          trendChartInst.current.destroy();
+          trendChartInst.current = null;
+        }
+      }
+
+      if (trendChartInst.current) {
+        trendChartInst.current.data = trendData;
+        trendChartInst.current.options = trendOptions;
+        trendChartInst.current.update('none');
+      } else {
+        trendChartInst.current = new ChartJS(trendCanvasRef.current, {
+          type: 'line',
+          data: trendData,
+          options: trendOptions,
+        });
+      }
     }
 
       // ───────────────────────────────────────────────
@@ -407,14 +420,16 @@ export default function KunjunganBerobat() {
       };
 
       if (ulangChartInst.current) {
+        if (isDataChange) {
+          ulangChartInst.current.destroy();
+          ulangChartInst.current = null;
+        }
+      }
+
+      if (ulangChartInst.current) {
         ulangChartInst.current.data = ulangData;
         ulangChartInst.current.options = ulangOptions;
-        if (isDataChange) {
-          ulangChartInst.current.reset();
-          ulangChartInst.current.update();
-        } else {
-          ulangChartInst.current.update('none');
-        }
+        ulangChartInst.current.update('none');
       } else {
         ulangChartInst.current = new ChartJS(ulangCanvasRef.current, {
           type: 'bar',
@@ -505,14 +520,16 @@ export default function KunjunganBerobat() {
       };
 
       if (diagChartInst.current) {
+        if (isDataChange) {
+          diagChartInst.current.destroy();
+          diagChartInst.current = null;
+        }
+      }
+
+      if (diagChartInst.current) {
         diagChartInst.current.data = diagData;
         diagChartInst.current.options = diagOptions;
-        if (isDataChange) {
-          diagChartInst.current.reset();
-          diagChartInst.current.update();
-        } else {
-          diagChartInst.current.update('none');
-        }
+        diagChartInst.current.update('none');
       } else {
         diagChartInst.current = new ChartJS(diagCanvasRef.current, {
           type: 'bar',
@@ -604,14 +621,16 @@ export default function KunjunganBerobat() {
       };
 
       if (obatChartInst.current) {
+        if (isDataChange) {
+          obatChartInst.current.destroy();
+          obatChartInst.current = null;
+        }
+      }
+
+      if (obatChartInst.current) {
         obatChartInst.current.data = obatData;
         obatChartInst.current.options = obatOptions;
-        if (isDataChange) {
-          obatChartInst.current.reset();
-          obatChartInst.current.update();
-        } else {
-          obatChartInst.current.update('none');
-        }
+        obatChartInst.current.update('none');
       } else {
         obatChartInst.current = new ChartJS(obatCanvasRef.current, {
           type: 'bar',
@@ -625,9 +644,6 @@ export default function KunjunganBerobat() {
     // 5. DISTRIBUSI DEPARTMENT (Horizontal Bar)
     // ───────────────────────────────────────────────
     if (deptCanvasRef.current) {
-      if (deptChartInst.current) {
-        deptChartInst.current.destroy();
-      }
 
       const deptCounts: Record<string, number> = {};
       filteredRecords.forEach(r => {
@@ -699,23 +715,25 @@ export default function KunjunganBerobat() {
         },
       };
 
-        if (deptChartInst.current) {
-          deptChartInst.current.data = deptData;
-          deptChartInst.current.options = deptOptions;
-          if (isDataChange) {
-            deptChartInst.current.reset();
-            deptChartInst.current.update();
-          } else {
-            deptChartInst.current.update('none');
-          }
-        } else {
-          deptChartInst.current = new ChartJS(deptCanvasRef.current, {
-            type: 'bar',
-            data: deptData,
-            options: deptOptions,
-          });
+      if (deptChartInst.current) {
+        if (isDataChange) {
+          deptChartInst.current.destroy();
+          deptChartInst.current = null;
         }
       }
+
+      if (deptChartInst.current) {
+        deptChartInst.current.data = deptData;
+        deptChartInst.current.options = deptOptions;
+        deptChartInst.current.update('none');
+      } else {
+        deptChartInst.current = new ChartJS(deptCanvasRef.current, {
+          type: 'bar',
+          data: deptData,
+          options: deptOptions,
+        });
+      }
+    }
 
     return () => {
       // Don't destroy on every re-render, only on full unmount

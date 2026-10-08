@@ -460,14 +460,18 @@ export function MCUChart({
     };
 
     if (chartRef.current) {
-      chartRef.current.data = config.data;
-      chartRef.current.options = config.options;
       if (isDataChange) {
-        chartRef.current.reset();
-        chartRef.current.update();
-      } else {
-        chartRef.current.update('none');
+        chartRef.current.destroy();
+        chartRef.current = null;
       }
+    }
+
+    if (chartRef.current) {
+      chartRef.current.data = config.data;
+      if (config.options) {
+        chartRef.current.options = config.options;
+      }
+      chartRef.current.update('none');
     } else {
       chartRef.current = new ChartJS(canvasRef.current, config);
     }

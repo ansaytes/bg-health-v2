@@ -281,12 +281,11 @@ export default function InventoryDashboard() {
   }, [filteredItems]);
 
   // Render Charts
-  const chartDataSignature = JSON.stringify([items.length, chartRenderKey]);
+  const chartDataSignature = JSON.stringify([items.length, chartRenderKey, isDashboardView]);
 
   useEffect(() => {
     if (loading || !isAuthorized || items.length === 0) return;
 
-    const shouldAnimate = lastAnimatedSignature.current !== chartDataSignature;
     const isDataChange = lastAnimatedSignature.current !== chartDataSignature;
     lastAnimatedSignature.current = chartDataSignature;
 
@@ -355,14 +354,16 @@ export default function InventoryDashboard() {
       };
 
       if (topExpiredChart.current) {
+        if (isDataChange) {
+          topExpiredChart.current.destroy();
+          topExpiredChart.current = null;
+        }
+      }
+
+      if (topExpiredChart.current) {
         topExpiredChart.current.data = data;
         topExpiredChart.current.options = options;
-        if (isDataChange) {
-          topExpiredChart.current.reset();
-          topExpiredChart.current.update();
-        } else {
-          topExpiredChart.current.update('none');
-        }
+        topExpiredChart.current.update('none');
       } else {
         topExpiredChart.current = new ChartJS(topExpiredCanvasRef.current, {
           type: 'bar',
@@ -430,14 +431,16 @@ export default function InventoryDashboard() {
       };
 
       if (topHabisChart.current) {
+        if (isDataChange) {
+          topHabisChart.current.destroy();
+          topHabisChart.current = null;
+        }
+      }
+
+      if (topHabisChart.current) {
         topHabisChart.current.data = data;
         topHabisChart.current.options = options;
-        if (isDataChange) {
-          topHabisChart.current.reset();
-          topHabisChart.current.update();
-        } else {
-          topHabisChart.current.update('none');
-        }
+        topHabisChart.current.update('none');
       } else {
         topHabisChart.current = new ChartJS(topHabisCanvasRef.current, {
           type: 'bar',
@@ -506,14 +509,16 @@ export default function InventoryDashboard() {
       };
 
       if (topExpSoonChart.current) {
+        if (isDataChange) {
+          topExpSoonChart.current.destroy();
+          topExpSoonChart.current = null;
+        }
+      }
+
+      if (topExpSoonChart.current) {
         topExpSoonChart.current.data = data;
         topExpSoonChart.current.options = options;
-        if (isDataChange) {
-          topExpSoonChart.current.reset();
-          topExpSoonChart.current.update();
-        } else {
-          topExpSoonChart.current.update('none');
-        }
+        topExpSoonChart.current.update('none');
       } else {
         topExpSoonChart.current = new ChartJS(topExpSoonCanvasRef.current, {
           type: 'bar',
@@ -592,14 +597,16 @@ export default function InventoryDashboard() {
       };
 
       if (fastMovingChart.current) {
+        if (isDataChange) {
+          fastMovingChart.current.destroy();
+          fastMovingChart.current = null;
+        }
+      }
+
+      if (fastMovingChart.current) {
         fastMovingChart.current.data = data;
         fastMovingChart.current.options = options;
-        if (isDataChange) {
-          fastMovingChart.current.reset();
-          fastMovingChart.current.update();
-        } else {
-          fastMovingChart.current.update('none');
-        }
+        fastMovingChart.current.update('none');
       } else {
         fastMovingChart.current = new ChartJS(fastMovingCanvasRef.current, {
           type: 'bar',
@@ -613,7 +620,7 @@ export default function InventoryDashboard() {
       // Don't destroy on every re-render, only on full unmount
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chartDataSignature, loading, isAuthorized, isDark]);
+  }, [chartDataSignature, loading, isAuthorized, isDark, isDashboardView]);
 
   // Access guard
   if (!isAuthorized) {
