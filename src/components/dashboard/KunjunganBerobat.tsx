@@ -116,6 +116,17 @@ export default function KunjunganBerobat() {
   const obatChartInst = useRef<ChartJS | null>(null);
   const deptChartInst = useRef<ChartJS | null>(null);
 
+  useEffect(() => {
+    return () => {
+      // Cleanup on full unmount
+      if (trendChartInst.current) trendChartInst.current.destroy();
+      if (ulangChartInst.current) ulangChartInst.current.destroy();
+      if (diagChartInst.current) diagChartInst.current.destroy();
+      if (obatChartInst.current) obatChartInst.current.destroy();
+      if (deptChartInst.current) deptChartInst.current.destroy();
+    };
+  }, []);
+
   // Signature data terakhir yang sudah dianimasikan. Ganti tema tidak mengubah
   // signature sehingga animasi tidak diulang; data baru selalu beranimasi.
   const lastAnimatedSignature = useRef<string | null>(null);
@@ -213,22 +224,16 @@ export default function KunjunganBerobat() {
   useEffect(() => {
     if (loading) return;
 
-    const shouldAnimate = lastAnimatedSignature.current !== dataSignature;
-    const animationSettings = shouldAnimate
+    const isDataChange = lastAnimatedSignature.current !== dataSignature;
+    lastAnimatedSignature.current = dataSignature;
+
+    const animationSettings = isDataChange
       ? { duration: 500, easing: 'easeOutQuart' as const }
       : false as const;
-    const lineAnimationSettings = shouldAnimate
+    const lineAnimationSettings = isDataChange
       ? { duration: 600, easing: 'easeOutQuart' as const }
       : false as const;
 
-    let animTimeout: NodeJS.Timeout;
-    if (shouldAnimate) {
-      animTimeout = setTimeout(() => {
-        lastAnimatedSignature.current = dataSignature;
-      }, 50);
-    }
-
-    let chartDelayTimeout = setTimeout(() => {
       // Common theme colors
       const textColor = isDark ? '#F9FAFB' : '#111827';
       const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
@@ -238,9 +243,6 @@ export default function KunjunganBerobat() {
       // 1. TREN KUNJUNGAN PER BULAN (Line Chart)
       // ───────────────────────────────────────────────
       if (trendCanvasRef.current) {
-        if (trendChartInst.current) {
-          trendChartInst.current.destroy();
-        }
 
       // Group by month (1..12) from all or filtered dataset
       const monthlyCounts = new Array(12).fill(0);
@@ -326,13 +328,10 @@ export default function KunjunganBerobat() {
       });
     }
 
-    // ───────────────────────────────────────────────
-    // 2. PASIEN KUNJUNGAN BERULANG (Horizontal Bar)
-    // ───────────────────────────────────────────────
-    if (ulangCanvasRef.current) {
-      if (ulangChartInst.current) {
-        ulangChartInst.current.destroy();
-      }
+      // ───────────────────────────────────────────────
+      // 2. PASIEN KUNJUNGAN BERULANG (Horizontal Bar)
+      // ───────────────────────────────────────────────
+      if (ulangCanvasRef.current) {
 
       const patientCounts: Record<string, { nama: string; dept: string; count: number }> = {};
       filteredRecords.forEach(r => {
@@ -407,20 +406,28 @@ export default function KunjunganBerobat() {
         },
       };
 
-      ulangChartInst.current = new ChartJS(ulangCanvasRef.current, {
-        type: 'bar',
-        data: ulangData,
-        options: ulangOptions,
-      });
+      if (ulangChartInst.current) {
+        ulangChartInst.current.data = ulangData;
+        ulangChartInst.current.options = ulangOptions;
+        if (isDataChange) {
+          ulangChartInst.current.reset();
+          ulangChartInst.current.update();
+        } else {
+          ulangChartInst.current.update('none');
+        }
+      } else {
+        ulangChartInst.current = new ChartJS(ulangCanvasRef.current, {
+          type: 'bar',
+          data: ulangData,
+          options: ulangOptions,
+        });
+      }
     }
 
     // ───────────────────────────────────────────────
     // 3. TOP 10 DIAGNOSA (Horizontal Bar)
     // ───────────────────────────────────────────────
     if (diagCanvasRef.current) {
-      if (diagChartInst.current) {
-        diagChartInst.current.destroy();
-      }
 
       const diagCounts: Record<string, number> = {};
       filteredRecords.forEach(r => {
@@ -497,20 +504,28 @@ export default function KunjunganBerobat() {
         },
       };
 
-      diagChartInst.current = new ChartJS(diagCanvasRef.current, {
-        type: 'bar',
-        data: diagData,
-        options: diagOptions,
-      });
+      if (diagChartInst.current) {
+        diagChartInst.current.data = diagData;
+        diagChartInst.current.options = diagOptions;
+        if (isDataChange) {
+          diagChartInst.current.reset();
+          diagChartInst.current.update();
+        } else {
+          diagChartInst.current.update('none');
+        }
+      } else {
+        diagChartInst.current = new ChartJS(diagCanvasRef.current, {
+          type: 'bar',
+          data: diagData,
+          options: diagOptions,
+        });
+      }
     }
 
     // ───────────────────────────────────────────────
     // 4. TOP 10 JENIS OBAT KELUAR (Horizontal Bar)
     // ───────────────────────────────────────────────
     if (obatCanvasRef.current) {
-      if (obatChartInst.current) {
-        obatChartInst.current.destroy();
-      }
 
       const obatCounts: Record<string, number> = {};
       filteredRecords.forEach(r => {
@@ -588,11 +603,22 @@ export default function KunjunganBerobat() {
         },
       };
 
-      obatChartInst.current = new ChartJS(obatCanvasRef.current, {
-        type: 'bar',
-        data: obatData,
-        options: obatOptions,
-      });
+      if (obatChartInst.current) {
+        obatChartInst.current.data = obatData;
+        obatChartInst.current.options = obatOptions;
+        if (isDataChange) {
+          obatChartInst.current.reset();
+          obatChartInst.current.update();
+        } else {
+          obatChartInst.current.update('none');
+        }
+      } else {
+        obatChartInst.current = new ChartJS(obatCanvasRef.current, {
+          type: 'bar',
+          data: obatData,
+          options: obatOptions,
+        });
+      }
     }
 
     // ───────────────────────────────────────────────
@@ -673,22 +699,26 @@ export default function KunjunganBerobat() {
         },
       };
 
-      deptChartInst.current = new ChartJS(deptCanvasRef.current, {
-        type: 'bar',
-        data: deptData,
-        options: deptOptions,
-      });
-    }
-    }, 150);
+        if (deptChartInst.current) {
+          deptChartInst.current.data = deptData;
+          deptChartInst.current.options = deptOptions;
+          if (isDataChange) {
+            deptChartInst.current.reset();
+            deptChartInst.current.update();
+          } else {
+            deptChartInst.current.update('none');
+          }
+        } else {
+          deptChartInst.current = new ChartJS(deptCanvasRef.current, {
+            type: 'bar',
+            data: deptData,
+            options: deptOptions,
+          });
+        }
+      }
 
     return () => {
-      if (animTimeout) clearTimeout(animTimeout);
-      clearTimeout(chartDelayTimeout);
-      trendChartInst.current?.destroy();
-      ulangChartInst.current?.destroy();
-      diagChartInst.current?.destroy();
-      obatChartInst.current?.destroy();
-      deptChartInst.current?.destroy();
+      // Don't destroy on every re-render, only on full unmount
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataSignature, loading, isDark]);
@@ -802,7 +832,7 @@ export default function KunjunganBerobat() {
                 </div>
               </div>
               <div className="chart-box" style={{ position: 'relative', width: '100%', height: '100%', minHeight: 180 }}>
-                <canvas ref={trendCanvasRef} key={dataSignature} />
+                <canvas ref={trendCanvasRef} />
               </div>
             </div>
 
@@ -822,7 +852,7 @@ export default function KunjunganBerobat() {
                 </div>
               </div>
               <div className="chart-box" style={{ position: 'relative', width: '100%', height: '100%', minHeight: 180 }}>
-                <canvas ref={ulangCanvasRef} key={dataSignature} />
+                <canvas ref={ulangCanvasRef} />
               </div>
             </div>
           </div>
@@ -845,7 +875,7 @@ export default function KunjunganBerobat() {
                 </div>
               </div>
               <div className="chart-box" style={{ position: 'relative', width: '100%', height: '100%', minHeight: 180 }}>
-                <canvas ref={diagCanvasRef} key={dataSignature} />
+                <canvas ref={diagCanvasRef} />
               </div>
             </div>
 
@@ -862,7 +892,7 @@ export default function KunjunganBerobat() {
                 </div>
               </div>
               <div className="chart-box" style={{ position: 'relative', width: '100%', height: '100%', minHeight: 180 }}>
-                <canvas ref={obatCanvasRef} key={dataSignature} />
+                <canvas ref={obatCanvasRef} />
               </div>
             </div>
 
@@ -882,7 +912,7 @@ export default function KunjunganBerobat() {
                 </div>
               </div>
               <div className="chart-box" style={{ position: 'relative', width: '100%', height: '100%', minHeight: 180 }}>
-                <canvas ref={deptCanvasRef} key={dataSignature} />
+                <canvas ref={deptCanvasRef} />
               </div>
             </div>
           </div>

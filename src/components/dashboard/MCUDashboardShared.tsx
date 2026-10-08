@@ -324,26 +324,30 @@ export function MCUChart({
   }, []);
 
   useEffect(() => {
+    return () => {
+      // Cleanup on unmount
+      if (chartRef.current) {
+        chartRef.current.destroy();
+        chartRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (!canvasRef.current) return;
-    chartRef.current?.destroy();
 
     const textColor = isDark ? '#F9FAFB' : '#111827';
     const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
     const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     const total = values.reduce((sum, value) => sum + value, 0);
-    const shouldAnimate = lastAnimatedSignature.current !== dataSignature;
-    const animation = shouldAnimate ? {
+    const isDataChange = lastAnimatedSignature.current !== dataSignature;
+    lastAnimatedSignature.current = dataSignature;
+
+    const animation = isDataChange ? {
       duration: type === 'doughnut' ? 600 : 500,
       easing: 'easeOutQuart' as const,
       ...(type === 'doughnut' ? { animateRotate: true, animateScale: false } : {}),
     } : false;
-    
-    let animTimeout: NodeJS.Timeout;
-    if (shouldAnimate) {
-      animTimeout = setTimeout(() => {
-        lastAnimatedSignature.current = dataSignature;
-      }, 50);
-    }
 
     const config: ChartConfiguration = {
       type,
@@ -455,25 +459,28 @@ export function MCUChart({
       }] : [],
     };
 
-    let chartDelayTimeout = setTimeout(() => {
-      if (canvasRef.current) {
-        chartRef.current = new ChartJS(canvasRef.current, config);
+    if (chartRef.current) {
+      chartRef.current.data = config.data;
+      chartRef.current.options = config.options;
+      if (isDataChange) {
+        chartRef.current.reset();
+        chartRef.current.update();
+      } else {
+        chartRef.current.update('none');
       }
-    }, 150);
+    } else {
+      chartRef.current = new ChartJS(canvasRef.current, config);
+    }
 
     return () => {
-      if (animTimeout) clearTimeout(animTimeout);
-      clearTimeout(chartDelayTimeout);
-      chartRef.current?.stop();
-      chartRef.current?.destroy();
-      chartRef.current = null;
+      // Don't destroy on every re-render, only on full unmount
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataSignature, isDark]);
 
   return (
     <div className="mcu-dashboard-chart">
-      <canvas ref={canvasRef} key={dataSignature} />
+      <canvas ref={canvasRef} />
     </div>
   );
 }

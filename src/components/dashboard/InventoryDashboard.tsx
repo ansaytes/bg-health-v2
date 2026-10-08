@@ -56,6 +56,16 @@ export default function InventoryDashboard() {
   const topExpSoonChart = useRef<ChartJS | null>(null);
   const fastMovingChart = useRef<ChartJS | null>(null);
 
+  useEffect(() => {
+    return () => {
+      // Cleanup on full unmount
+      if (topExpiredChart.current) topExpiredChart.current.destroy();
+      if (topHabisChart.current) topHabisChart.current.destroy();
+      if (topExpSoonChart.current) topExpSoonChart.current.destroy();
+      if (fastMovingChart.current) fastMovingChart.current.destroy();
+    };
+  }, []);
+
   // Signature data terakhir yang sudah dianimasikan. Ganti tema tidak mengubah
   // signature sehingga animasi tidak diulang; data baru selalu beranimasi.
   const lastAnimatedSignature = useRef<string | null>(null);
@@ -277,27 +287,18 @@ export default function InventoryDashboard() {
     if (loading || !isAuthorized || items.length === 0) return;
 
     const shouldAnimate = lastAnimatedSignature.current !== chartDataSignature;
-    const animationSettings = shouldAnimate
+    const isDataChange = lastAnimatedSignature.current !== chartDataSignature;
+    lastAnimatedSignature.current = chartDataSignature;
+
+    const animationSettings = isDataChange
       ? ({ duration: 500, easing: 'easeOutQuart' } as const)
       : (false as const);
-
-    let animTimeout: NodeJS.Timeout;
-    if (shouldAnimate) {
-      animTimeout = setTimeout(() => {
-        lastAnimatedSignature.current = chartDataSignature;
-      }, 50);
-    }
-
-    let chartDelayTimeout = setTimeout(() => {
       const textColor = isDark ? '#F9FAFB' : '#111827';
       const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
       const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
       // 1. Top 10 Sudah Expired (Horizontal Bar)
       if (topExpiredCanvasRef.current) {
-      const existing = ChartJS.getChart(topExpiredCanvasRef.current);
-      if (existing) existing.destroy();
-      if (topExpiredChart.current) topExpiredChart.current.destroy();
 
       const topExpired = items
         .filter(i => getExpiredStatus(i.tanggal_expired) === 'Sudah Kadaluarsa')
@@ -353,18 +354,26 @@ export default function InventoryDashboard() {
         },
       };
 
-      topExpiredChart.current = new ChartJS(topExpiredCanvasRef.current, {
-        type: 'bar',
-        data,
-        options,
-      });
+      if (topExpiredChart.current) {
+        topExpiredChart.current.data = data;
+        topExpiredChart.current.options = options;
+        if (isDataChange) {
+          topExpiredChart.current.reset();
+          topExpiredChart.current.update();
+        } else {
+          topExpiredChart.current.update('none');
+        }
+      } else {
+        topExpiredChart.current = new ChartJS(topExpiredCanvasRef.current, {
+          type: 'bar',
+          data,
+          options,
+        });
+      }
     }
 
     // 2. Top 10 Stok Habis (Horizontal Bar)
     if (topHabisCanvasRef.current) {
-      const existing = ChartJS.getChart(topHabisCanvasRef.current);
-      if (existing) existing.destroy();
-      if (topHabisChart.current) topHabisChart.current.destroy();
 
       const topHabis = items
         .filter(i => (i.stock || 0) <= 0)
@@ -420,18 +429,26 @@ export default function InventoryDashboard() {
         },
       };
 
-      topHabisChart.current = new ChartJS(topHabisCanvasRef.current, {
-        type: 'bar',
-        data,
-        options,
-      });
+      if (topHabisChart.current) {
+        topHabisChart.current.data = data;
+        topHabisChart.current.options = options;
+        if (isDataChange) {
+          topHabisChart.current.reset();
+          topHabisChart.current.update();
+        } else {
+          topHabisChart.current.update('none');
+        }
+      } else {
+        topHabisChart.current = new ChartJS(topHabisCanvasRef.current, {
+          type: 'bar',
+          data,
+          options,
+        });
+      }
     }
 
     // 3. Top 10 Akan Expired < 3 Bulan (Horizontal Bar)
     if (topExpSoonCanvasRef.current) {
-      const existing = ChartJS.getChart(topExpSoonCanvasRef.current);
-      if (existing) existing.destroy();
-      if (topExpSoonChart.current) topExpSoonChart.current.destroy();
 
       const topExpSoon = items
         .filter(i => getExpiredStatus(i.tanggal_expired) === 'Kadaluarsa < 3 Bulan')
@@ -488,18 +505,26 @@ export default function InventoryDashboard() {
         },
       };
 
-      topExpSoonChart.current = new ChartJS(topExpSoonCanvasRef.current, {
-        type: 'bar',
-        data,
-        options,
-      });
+      if (topExpSoonChart.current) {
+        topExpSoonChart.current.data = data;
+        topExpSoonChart.current.options = options;
+        if (isDataChange) {
+          topExpSoonChart.current.reset();
+          topExpSoonChart.current.update();
+        } else {
+          topExpSoonChart.current.update('none');
+        }
+      } else {
+        topExpSoonChart.current = new ChartJS(topExpSoonCanvasRef.current, {
+          type: 'bar',
+          data,
+          options,
+        });
+      }
     }
 
     // 4. Top 10 Fast-Moving Items (Horizontal Bar)
     if (fastMovingCanvasRef.current) {
-      const existing = ChartJS.getChart(fastMovingCanvasRef.current);
-      if (existing) existing.destroy();
-      if (fastMovingChart.current) fastMovingChart.current.destroy();
 
       const topFast = [...items]
         .sort((a, b) => (b.avg_monthly_usage || 0) - (a.avg_monthly_usage || 0))
@@ -566,21 +591,26 @@ export default function InventoryDashboard() {
         },
       };
 
-      fastMovingChart.current = new ChartJS(fastMovingCanvasRef.current, {
-        type: 'bar',
-        data,
-        options,
-      });
+      if (fastMovingChart.current) {
+        fastMovingChart.current.data = data;
+        fastMovingChart.current.options = options;
+        if (isDataChange) {
+          fastMovingChart.current.reset();
+          fastMovingChart.current.update();
+        } else {
+          fastMovingChart.current.update('none');
+        }
+      } else {
+        fastMovingChart.current = new ChartJS(fastMovingCanvasRef.current, {
+          type: 'bar',
+          data,
+          options,
+        });
+      }
     }
-    }, 150);
 
     return () => {
-      if (animTimeout) clearTimeout(animTimeout);
-      clearTimeout(chartDelayTimeout);
-      topExpiredChart.current?.destroy();
-      topHabisChart.current?.destroy();
-      topExpSoonChart.current?.destroy();
-      fastMovingChart.current?.destroy();
+      // Don't destroy on every re-render, only on full unmount
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chartDataSignature, loading, isAuthorized, isDark]);
@@ -807,7 +837,7 @@ export default function InventoryDashboard() {
         <div className="card glow-coral" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Stok Obat/BHP Expired</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-            <canvas ref={topExpiredCanvasRef} key={chartDataSignature} className="inventory-chart-canvas" />
+            <canvas ref={topExpiredCanvasRef} className="inventory-chart-canvas" />
           </div>
         </div>
 
@@ -815,7 +845,7 @@ export default function InventoryDashboard() {
         <div className="card glow-orange" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Stok Habis (kebutuhan/bln)</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-            <canvas ref={topHabisCanvasRef} key={chartDataSignature} className="inventory-chart-canvas" />
+            <canvas ref={topHabisCanvasRef} className="inventory-chart-canvas" />
           </div>
         </div>
 
@@ -823,7 +853,7 @@ export default function InventoryDashboard() {
         <div className="card glow-amber" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Stok Akan Expired &lt; 3 Bln</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-            <canvas ref={topExpSoonCanvasRef} key={chartDataSignature} className="inventory-chart-canvas" />
+            <canvas ref={topExpSoonCanvasRef} className="inventory-chart-canvas" />
           </div>
         </div>
 
@@ -831,7 +861,7 @@ export default function InventoryDashboard() {
         <div className="card glow-teal" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Pemakaian per Bulan</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-            <canvas ref={fastMovingCanvasRef} key={chartDataSignature} className="inventory-chart-canvas" />
+            <canvas ref={fastMovingCanvasRef} className="inventory-chart-canvas" />
           </div>
         </div>
               </div>
