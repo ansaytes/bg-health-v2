@@ -308,9 +308,7 @@ export function MCUChart({
   // (dengan animasi dari nol) tiap kali induk render -> layar berkedip. Karena itu
   // chart hanya dibangun ulang bila ISI datanya benar-benar berubah.
   const dataSignature = JSON.stringify([type, labels, values, colors, legendLabel, horizontal, centerText, percentLabels]);
-  // Menyimpan signature data yang animasinya sudah selesai. Pergantian tema (isDark)
-  // tidak mengubah signature, jadi tidak memicu animasi ulang; data baru selalu beranimasi.
-  const animatedSignatureRef = useRef<string | null>(null);
+  const lastAnimatedSignature = useRef<string | null>(null);
   const [isDark, setIsDark] = useState(
     () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
   );
@@ -333,12 +331,20 @@ export function MCUChart({
     const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
     const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     const total = values.reduce((sum, value) => sum + value, 0);
-    const animation = animatedSignatureRef.current === dataSignature ? false : {
+    const shouldAnimate = lastAnimatedSignature.current !== dataSignature;
+    const animation = shouldAnimate ? {
       duration: type === 'doughnut' ? 600 : 500,
-      easing: 'easeOutQuart',
+      easing: 'easeOutQuart' as const,
       ...(type === 'doughnut' ? { animateRotate: true, animateScale: false } : {}),
-      onComplete: () => { animatedSignatureRef.current = dataSignature; },
-    };
+    } : false;
+    
+    let animTimeout: NodeJS.Timeout;
+    if (shouldAnimate) {
+      animTimeout = setTimeout(() => {
+        lastAnimatedSignature.current = dataSignature;
+      }, 50);
+    }
+
     const config: ChartConfiguration = {
       type,
       data: {
@@ -451,6 +457,7 @@ export function MCUChart({
 
     chartRef.current = new ChartJS(canvasRef.current, config);
     return () => {
+      if (animTimeout) clearTimeout(animTimeout);
       chartRef.current?.stop();
       chartRef.current?.destroy();
       chartRef.current = null;

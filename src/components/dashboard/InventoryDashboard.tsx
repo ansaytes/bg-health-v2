@@ -58,7 +58,7 @@ export default function InventoryDashboard() {
 
   // Signature data terakhir yang sudah dianimasikan. Ganti tema tidak mengubah
   // signature sehingga animasi tidak diulang; data baru selalu beranimasi.
-  const animatedSignatureRef = useRef<string | null>(null);
+  const lastAnimatedSignature = useRef<string | null>(null);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -276,15 +276,17 @@ export default function InventoryDashboard() {
   useEffect(() => {
     if (loading || !isAuthorized || items.length === 0) return;
 
-    // Apakah hanya tema yang berubah (data sama)?
-    const isThemeOnlyChange = animatedSignatureRef.current === chartDataSignature;
-    const animationSettings = isThemeOnlyChange
-      ? (false as const)
-      : ({ 
-          duration: 500, 
-          easing: 'easeOutQuart',
-          onComplete: () => { animatedSignatureRef.current = chartDataSignature; },
-        } as const);
+    const shouldAnimate = lastAnimatedSignature.current !== chartDataSignature;
+    const animationSettings = shouldAnimate
+      ? ({ duration: 500, easing: 'easeOutQuart' } as const)
+      : (false as const);
+
+    let animTimeout: NodeJS.Timeout;
+    if (shouldAnimate) {
+      animTimeout = setTimeout(() => {
+        lastAnimatedSignature.current = chartDataSignature;
+      }, 50);
+    }
 
     const textColor = isDark ? '#F9FAFB' : '#111827';
     const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
@@ -571,6 +573,7 @@ export default function InventoryDashboard() {
     }
 
     return () => {
+      if (animTimeout) clearTimeout(animTimeout);
       topExpiredChart.current?.destroy();
       topHabisChart.current?.destroy();
       topExpSoonChart.current?.destroy();

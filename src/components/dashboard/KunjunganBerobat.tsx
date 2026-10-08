@@ -118,7 +118,7 @@ export default function KunjunganBerobat() {
 
   // Signature data terakhir yang sudah dianimasikan. Ganti tema tidak mengubah
   // signature sehingga animasi tidak diulang; data baru selalu beranimasi.
-  const animatedSignatureRef = useRef<string | null>(null);
+  const lastAnimatedSignature = useRef<string | null>(null);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -213,22 +213,20 @@ export default function KunjunganBerobat() {
   useEffect(() => {
     if (loading) return;
 
-    // Apakah hanya tema yang berubah (data sama)?
-    const isThemeOnlyChange = animatedSignatureRef.current === dataSignature;
-    const animationSettings = isThemeOnlyChange
-      ? false as const
-      : { 
-          duration: 500, 
-          easing: 'easeOutQuart' as const,
-          onComplete: () => { animatedSignatureRef.current = dataSignature; },
-        };
-    const lineAnimationSettings = isThemeOnlyChange
-      ? false as const
-      : { 
-          duration: 600, 
-          easing: 'easeOutQuart' as const,
-          onComplete: () => { animatedSignatureRef.current = dataSignature; },
-        };
+    const shouldAnimate = lastAnimatedSignature.current !== dataSignature;
+    const animationSettings = shouldAnimate
+      ? { duration: 500, easing: 'easeOutQuart' as const }
+      : false as const;
+    const lineAnimationSettings = shouldAnimate
+      ? { duration: 600, easing: 'easeOutQuart' as const }
+      : false as const;
+
+    let animTimeout: NodeJS.Timeout;
+    if (shouldAnimate) {
+      animTimeout = setTimeout(() => {
+        lastAnimatedSignature.current = dataSignature;
+      }, 50);
+    }
 
     // Common theme colors
     const textColor = isDark ? '#F9FAFB' : '#111827';
@@ -682,6 +680,7 @@ export default function KunjunganBerobat() {
     }
 
     return () => {
+      if (animTimeout) clearTimeout(animTimeout);
       trendChartInst.current?.destroy();
       ulangChartInst.current?.destroy();
       diagChartInst.current?.destroy();
