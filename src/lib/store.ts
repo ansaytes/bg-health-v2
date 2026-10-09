@@ -5,8 +5,8 @@ import { getMissingZonasiInputs } from './zonasi-engine';
 import { applyMCUCalculations, buildAutomaticFollowUpRecommendations } from './mcu-calculations';
 
 export type PageTab = 'home' | 'dashboard' | 'data-entry' | 'administrator';
-export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan' | 'inventory-dashboard';
-export type AdminSidebar = 'lagging-indicator' | 'review-mcu' | 'input-jadwal-mcu' | 'kunjungan-admin' | 'health-campaign' | 'kelola-pengguna';
+export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan' | 'inventory-dashboard' | 'hearing-dashboard' | 'ergonomi-dashboard';
+export type AdminSidebar = 'lagging-indicator' | 'review-mcu' | 'input-jadwal-mcu' | 'kunjungan-admin' | 'health-campaign' | 'kelola-pengguna' | 'hearing-conservation' | 'ergonomi';
 export type DataEntrySidebar = 'gangguan-tidur' | 'kesehatan-mental' | 'input-jadwal-mcu';
 export type HomeSidebar = 'semua-feed' | 'health-campaign' | 'health-talk' | 'podcast' | 'news';
 export type ReviewStep = 'search' | 'ocr' | 'form';

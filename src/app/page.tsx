@@ -29,6 +29,12 @@ import DataKunjunganTable from '@/components/dashboard/DataKunjunganTable';
 import RecordMCUTable from '@/components/dashboard/RecordMCUTableModern';
 import DataManPowerTable from '@/components/dashboard/DataManPowerTable';
 import InventoryDashboard from '@/components/dashboard/InventoryDashboard';
+import HearingConservationDashboard from '@/components/dashboard/HearingConservationDashboard';
+import ErgonomiDashboard from '@/components/dashboard/ErgonomiDashboard';
+import HcInputPage from '@/components/administrator/HcInputPage';
+import HcAudiometriEval from '@/components/administrator/HcAudiometriEval';
+import ErgoSurveyForm from '@/components/administrator/ErgoSurveyForm';
+import ErgoSurveyTable from '@/components/administrator/ErgoSurveyTable';
 
 /*   Sidebar Icon Components */
 
@@ -209,6 +215,8 @@ const DASH_SIDEBAR: SidebarItem[] = [
   { key: 'tindak-lanjut', label: 'Analisa & Tindak Lanjut MCU', icon: <IconTindakLanjut /> },
   { key: 'kunjungan', label: 'Kunjungan Berobat', icon: <IconKunjunganDash /> },
   { key: 'inventory-dashboard', label: 'Monitoring Obat & BHP', icon: <IconInventory />, adminOnly: true },
+  { key: 'hearing-dashboard', label: 'Hearing Conservation', icon: <IconMonitoring />, adminOnly: true },
+  { key: 'ergonomi-dashboard', label: 'Ergonomi', icon: <IconStatistik />, adminOnly: true },
 ];
 
 const ADMIN_SIDEBAR: SidebarItem[] = [
@@ -217,6 +225,8 @@ const ADMIN_SIDEBAR: SidebarItem[] = [
   { key: 'health-campaign', label: 'Health Campaign', icon: <IconCampaignAdmin /> },
   { key: 'kunjungan-admin', label: 'Kunjungan Berobat', icon: <IconKunjunganAdmin /> },
   { key: 'inventory', label: 'Inventory', icon: <IconInventory /> },
+  { key: 'hearing-conservation', label: 'Hearing Conservation', icon: <IconMonitoring /> },
+  { key: 'ergonomi', label: 'Ergonomi', icon: <IconStatistik /> },
   { key: 'kelola-pengguna', label: 'Kelola Pengguna', icon: <IconUsers />, superuserOnly: true },
 ];
 const DATA_ENTRY_SIDEBAR: SidebarItem[] = [
@@ -312,6 +322,8 @@ function DashContent() {
     case 'tindak-lanjut': return <HasilTindakLanjutMCU />;
     case 'kunjungan': return <KunjunganBerobat />;
     case 'inventory-dashboard': return <InventoryDashboard />;
+    case 'hearing-dashboard': return <HearingConservationDashboard />;
+    case 'ergonomi-dashboard': return <ErgonomiDashboard />;
     default: return <DashboardView />;
   }
 }
@@ -423,6 +435,18 @@ function AdminContent() {
       hasTable: false,
       form: <InventoryAdmin />,
       tables: [],
+    },
+    'hearing-conservation': {
+      hasTable: true,
+      labels: ['Input HC', 'Evaluasi Audiometri & STS'],
+      form: <HcInputPage />,
+      tables: [<HcAudiometriEval key="hc-audio" />],
+    },
+    'ergonomi': {
+      hasTable: true,
+      labels: ['Input Survei', 'Data Survei & PICA'],
+      form: <ErgoSurveyForm />,
+      tables: [<ErgoSurveyTable key="ergo-table" />],
     },
   };
 
