@@ -183,8 +183,8 @@ function ExposureTab({ areas, onMsg }: { areas: Row[]; onMsg: (m: any) => void }
   useEffect(() => { load(); }, [load]);
 
   const found = (e: EmployeeData) => setF((p) => ({
-    ...p, nama: e.nama || p.nama, national_id: e.national_id || p.national_id, departemen: e.department || p.departemen,
-    jabatan: e.job_position || p.jabatan, site: e.site_name || p.site,
+    ...p, nik: e.nik || p.nik, nama: e.nama || p.nama, national_id: e.national_id || p.national_id, departemen: e.department || p.departemen,
+    jabatan: e.job_position || p.jabatan, site: e.site_name || e.site || p.site,
   }));
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); onMsg(null); setSaving(true);
