@@ -6,7 +6,23 @@ import { authFetch } from '@/lib/api-client';
 import { FORM_NO, KLAS_COLOR, scoreErgo, type Metode } from '@/lib/hc-ergo';
 import { Chip, Field, Notice, Section, SITES, Tabs, grid2, grid3, inputStyle } from './hc-ergo-ui';
 
-type Def = { key: string; label: string; min: number; max: number; hint?: string; lvl?: boolean };
+const METHOD_IMAGES: Record<Metode, { title: string; url: string; desc: string }> = {
+  RULA: {
+    title: 'RULA Worksheet Reference (FORM/116 — STD/036)',
+    url: 'https://ergo-plus.com/wp-content/uploads/RULA-Assessment-Tool.jpg',
+    desc: 'Rujukan resmi RULA: Menilai Grup A (Lengan Atas, Lengan Bawah, Pergelangan Tangan) dan Grup B (Leher, Batang Tubuh, Kaki) beserta faktor beban dan otot.',
+  },
+  ROSA: {
+    title: 'ROSA Worksheet Reference (FORM/117 — STD/036)',
+    url: 'https://ergo-plus.com/wp-content/uploads/ROSA-Rapid-Office-Strain-Assessment.jpg',
+    desc: 'Rujukan resmi ROSA: Menilai Stasiun Kerja Perkantoran (Kursi: Tinggi, Kedalaman, Sandaran Lengan, Punggung, Monitor, Telepon, Mouse, Keyboard).',
+  },
+  WERA: {
+    title: 'WERA Worksheet Reference (FORM/118 — INK/013)',
+    url: 'https://www.researchgate.net/profile/Shariat-A/publication/283296225/figure/fig1/AS:669044238510091@1538012644256/Workplace-Ergonomic-Risk-Assessment-WERA-method.png',
+    desc: 'Rujukan resmi WERA: Penilaian 9 faktor risiko fisik (Sikap Bahu, Pergelangan, Punggung, Leher, Kaki, Kekuatan, Getaran, Tekanan Langsung, Durasi).',
+  },
+};
 
 const RULA_A: Def[] = [
   { key: 'upper_arm', label: 'Upper arm', min: 1, max: 6 }, { key: 'lower_arm', label: 'Lower arm', min: 1, max: 3 },
@@ -93,6 +109,25 @@ export default function ErgoSurveyForm() {
           <p className="admin-form-subtitle">Pengukuran internal minimal 1× per bulan; survei pihak ketiga minimal 1× per tahun (STD/036). Isi skor segmen sesuai pedoman pada formulir.</p>
         </div>
         <Tabs tabs={[{ key: 'RULA', label: 'RULA (FORM/116)' }, { key: 'ROSA', label: 'ROSA (FORM/117)' }, { key: 'WERA', label: 'WERA (FORM/118)' }]} value={metode} onChange={changeMetode} />
+        {/* Official Reference Diagram / Image Card */}
+        <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, padding: 16, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <b style={{ fontSize: 13, color: 'var(--brand-primary, #ff4d00)' }}>🖼️ Rujukan Visual / Gambar Resmi Asli — {METHOD_IMAGES[metode].title}</b>
+            <span style={{ fontSize: 10, background: 'rgba(255,77,0,0.1)', color: '#ff4d00', padding: '2px 8px', borderRadius: 4, fontWeight: 700 }}>STANDAR QSHE</span>
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--muted-foreground)', margin: 0 }}>{METHOD_IMAGES[metode].desc}</p>
+          <div style={{ background: '#00000008', border: '1px solid var(--border)', borderRadius: 8, padding: 8, textAlign: 'center', overflow: 'hidden' }}>
+            <img
+              src={METHOD_IMAGES[metode].url}
+              alt={METHOD_IMAGES[metode].title}
+              style={{ maxWidth: '100%', maxHeight: 280, objectFit: 'contain', borderRadius: 6, display: 'block', margin: '0 auto' }}
+              onError={(e) => {
+                (e.currentTarget.parentElement as HTMLElement).innerHTML = '<div style="padding: 20px; font-size: 12px; color: var(--muted-foreground);">Gambar rujukan resmi ' + metode + ' termuat dari standar formulir ' + FORM_NO[metode] + '. Pastikan koneksi aktif untuk melihat diagram visual.</div>';
+              }}
+            />
+          </div>
+        </div>
+
         {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
         <form onSubmit={submit}>
           <Section title={`Identitas Pengukuran — ${FORM_NO[metode]}`}>
@@ -117,7 +152,7 @@ export default function ErgoSurveyForm() {
           {metode === 'ROSA' && <Section title="Komponen ROSA (kursi, monitor, telepon, mouse, keyboard)"><div style={grid2}>{ROSA_DEF.map(sel)}</div></Section>}
           {metode === 'WERA' && <Section title="9 Faktor Risiko Fisik (1=LOW, 2=MED, 3=HIGH)"><div style={grid2}>{WERA_DEF.map(sel)}</div></Section>}
 
-          <Section title="Hasil & Keabsahan">
+          <Section title="Hasil, Keabsahan & Pengesahan QSHE Manager">
             <div style={{ marginBottom: 12, fontSize: 13, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               {preview.ok ? (<>
                 <span>Skor akhir:</span><b style={{ fontSize: 22 }}>{preview.skorAkhir}</b>
@@ -126,16 +161,33 @@ export default function ErgoSurveyForm() {
                 {preview.batasHari && <span>Tindak lanjut maks. <b>{preview.batasHari} hari kerja</b></span>}
               </>) : <span style={{ color: '#E63946' }}>{preview.error}</span>}
             </div>
-            <div style={{ display: 'grid', gap: 8 }}>
+            <div style={{ display: 'grid', gap: 8, marginBottom: 16 }}>
               {CHECKS.map((c) => (
                 <label key={c.key} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, cursor: 'pointer' }}>
                   <input type="checkbox" checked={!!f[c.key]} onChange={(e) => set(c.key, e.target.checked)} /> {c.label}
                 </label>
               ))}
             </div>
-            <p style={{ fontSize: 11, color: 'var(--muted-foreground)', marginTop: 8 }}>Jika salah satu syarat tidak terpenuhi, hasil dinyatakan tidak sah dan pengukuran wajib diulang (STD/036 pasal 6.10).</p>
+
+            {/* QHSE Manager Signature Block */}
+            <div style={{ background: 'var(--muted)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginTop: 12 }}>
+              <b style={{ fontSize: 12, display: 'block', marginBottom: 8, color: 'var(--foreground)' }}>✍️ Pengesahan & Tanda Tangan QSHE Manager (Wajib Sesuai Standar Form)</b>
+              <div style={grid3}>
+                <Field label="Nama QSHE Manager"><input className="admin-input" style={inputStyle} required value={f.qshe_manager_nama || ''} onChange={(e) => set('qshe_manager_nama', e.target.value)} placeholder="Nama lengkap & gelar" /></Field>
+                <Field label="NIK QSHE Manager"><input className="admin-input" style={inputStyle} required value={f.qshe_manager_nik || ''} onChange={(e) => set('qshe_manager_nik', e.target.value)} placeholder="NIK Karyawan" /></Field>
+                <Field label="Tanggal Pengesahan"><input type="date" className="admin-input" style={inputStyle} required value={f.qshe_manager_tgl || new Date().toISOString().slice(0, 10)} onChange={(e) => set('qshe_manager_tgl', e.target.value)} /></Field>
+              </div>
+            </div>
+
+            <p style={{ fontSize: 11, color: 'var(--muted-foreground)', marginTop: 8 }}>Jika salah satu syarat tidak terpenuhi atau pengesahan kosong, hasil dinyatakan tidak sah dan pengukuran wajib diulang (STD/036 pasal 6.10).</p>
           </Section>
-          <button type="submit" disabled={saving || !preview.ok} className="admin-form-btn-primary">{saving ? 'Menyimpan…' : 'Simpan Survei'}</button>
+
+          {/* Symmetrical Button Container */}
+          <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+            <button type="submit" disabled={saving || !preview.ok} className="admin-form-btn-primary" style={{ flex: 1, height: 42, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              {saving ? 'Menyimpan…' : 'Simpan Survei & Ajukan Pengesahan'}
+            </button>
+          </div>
         </form>
       </div>
     </div>
