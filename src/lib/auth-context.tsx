@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { supabase } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
-export type UserRole = 'superuser' | 'administrator' | 'pic' | 'viewer' | 'manager' | 'employee';
+export type UserRole = 'superuser' | 'administrator' | 'manager' | 'pic' | 'viewer' | 'employee';
 
 export interface UserProfile {
   id: string;
@@ -26,6 +26,8 @@ interface AuthContextValue {
   loading: boolean;
   isAdmin: boolean;
   isSuperuser: boolean;
+  isManager: boolean;
+  canApproveErgo: boolean;
   refreshProfile: () => Promise<void>;
 }
 
@@ -37,6 +39,8 @@ const AuthContext = createContext<AuthContextValue>({
   loading: true,
   isAdmin: false,
   isSuperuser: false,
+  isManager: false,
+  canApproveErgo: false,
   refreshProfile: async () => {},
 });
 
@@ -59,22 +63,9 @@ async function fetchProfile(userId: string): Promise<UserProfile | null> {
   return data as UserProfile;
 }
 
-/**
- * Preview / Demo mode — injects a mock user with the role specified by
- * NEXT_PUBLIC_PREVIEW_ROLE (superuser | administrator | viewer). This bypasses
- * Supabase entirely so the preview URL can be opened without credentials.
- * Only active when Supabase URL is not configured OR when explicitly enabled
- * via NEXT_PUBLIC_PREVIEW_ROLE.
- */
 const PREVIEW_ROLE = (typeof process !== 'undefined'
   ? (process.env.NEXT_PUBLIC_PREVIEW_ROLE as UserRole | '' | undefined)
   : '') || '';
-
-const SUPABASE_CONFIGURED = !!(
-  typeof process !== 'undefined' &&
-  process.env.NEXT_PUBLIC_SUPABASE_URL &&
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
 
 export const PREVIEW_MODE: boolean = !!PREVIEW_ROLE;
 
@@ -85,9 +76,9 @@ function buildMockProfile(role: UserRole): UserProfile {
   const labelMap: Record<UserRole, { username: string; fullName: string }> = {
     superuser: { username: 'superuser.preview', fullName: 'Preview Superuser' },
     administrator: { username: 'admin.preview', fullName: 'Preview Administrator' },
+    manager: { username: 'manager.preview', fullName: 'Ir. Budi Manager, QSHE' },
     pic: { username: 'pic.preview', fullName: 'Preview PIC' },
     viewer: { username: 'viewer.preview', fullName: 'Preview Viewer' },
-    manager: { username: 'manager.preview', fullName: 'Ir. Budi Manager, QSHE' },
     employee: { username: 'employee.preview', fullName: 'Preview Employee' },
   };
   const label = labelMap[role];
@@ -136,8 +127,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const role = profile?.role ?? null;
-  const isAdmin = role === 'superuser' || role === 'administrator' || role === 'pic';
+  // Admin panels: superuser, administrator, manager, pic
+  const isAdmin = role === 'superuser' || role === 'administrator' || role === 'manager' || role === 'pic';
   const isSuperuser = role === 'superuser';
+  const isManager = role === 'manager';
+  // Only manager / administrator / superuser may approve or reject ergo surveys
+  const canApproveErgo = role === 'superuser' || role === 'administrator' || role === 'manager';
 
   const refreshProfile = useCallback(async () => {
     if (PREVIEW_MODE && PREVIEW_ROLE) {
@@ -153,20 +148,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
-    // === Preview Mode — bypass Supabase, inject mock session ===
     if (PREVIEW_MODE && PREVIEW_ROLE) {
       const role = PREVIEW_ROLE as UserRole;
-      const mockUser = buildMockUser();
-      const mockProfile = buildMockProfile(role);
-      const mockSession = buildMockSession();
-      setUser(mockUser);
-      setSession(mockSession);
-      setProfile(mockProfile);
+      setUser(buildMockUser());
+      setSession(buildMockSession());
+      setProfile(buildMockProfile(role));
       setLoading(false);
       return () => { cancelled = true; };
     }
 
-    // === Production Mode — real Supabase auth ===
     supabase.auth.getSession().then(async ({ data: { session: sess } }) => {
       if (cancelled) return;
       setSession(sess);
@@ -180,12 +170,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!cancelled) setLoading(false);
     });
 
-    // Timeout fallback: if Supabase is unreachable, stop loading after 3s
     const timeout = setTimeout(() => {
       if (!cancelled) setLoading(false);
     }, 3000);
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, sess) => {
         if (cancelled) return;
@@ -210,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, session, profile, role, loading, isAdmin, isSuperuser, refreshProfile }}
+      value={{ user, session, profile, role, loading, isAdmin, isSuperuser, isManager, canApproveErgo, refreshProfile }}
     >
       {children}
     </AuthContext.Provider>
