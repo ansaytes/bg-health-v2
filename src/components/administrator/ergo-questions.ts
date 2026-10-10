@@ -243,7 +243,6 @@ export const ROSA_PERIPH: Q[] = [
     diagramKey: 'rosa_keyboard',
     options: [
       { score: 0, label: 'Tinggi ideal, pergelangan netral', diagram: 'kb_0' },
-      { score: 1, label: 'Tinggi ideal, pergelangan netral', diagram: 'kb_0' },
       { score: 1, label: 'Terlalu tinggi / pergelangan ekstensi', diagram: 'kb_1' },
       { score: 2, label: 'Terlalu rendah / sudut buruk', diagram: 'kb_2' },
     ],
