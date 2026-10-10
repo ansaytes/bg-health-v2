@@ -1,5 +1,5 @@
 'use client';
-// Illustrated Ergo survey — SVG posture diagrams per option + employee lookup + jabatan autofill
+// Illustrated Ergo survey — SVG posture diagrams per option + detailed text instructions
 import { useMemo, useState } from 'react';
 import { authFetch } from '@/lib/api-client';
 import { FORM_NO, KLAS_COLOR, scoreErgo, type Metode } from '@/lib/hc-ergo';
@@ -18,24 +18,39 @@ const CHECKS = [
   { key: 'ok_dokumentasi_lengkap', label: 'Dokumentasi lengkap: foto & formulir (pasal 6.9)' },
 ];
 
-const METHOD_META: Record<Metode, { form: string; source: string; how: string; img: string }> = {
+const METHOD_META: Record<Metode, { form: string; source: string; steps: string[] }> = {
   RULA: {
     form: 'FORM/116',
-    source: 'McAtamney & Corlett, Applied Ergonomics 1993',
-    how: 'Pilih skor yang paling sesuai dengan postur yang diamati. Skor Grup A & B digabung dengan faktor otot & beban menjadi skor akhir RULA (1–7).',
-    img: 'https://ergo-plus.com/wp-content/uploads/RULA-Assessment-Tool.jpg',
+    source: 'McAtamney & Corlett, Applied Ergonomics 1993 (worksheet resmi)',
+    steps: [
+      'Amati postur pekerja pada saat pekerjaan paling berat / paling sering dilakukan. Nilai sisi tubuh yang paling terpapar.',
+      'Grup A (lengan & pergelangan): pilih skor sudut lengan atas, lengan bawah, pergelangan, dan putaran pergelangan. Tambahkan penyesuaian (+1 bahu terangkat/abduksi/ditopang; +1 lengan melintasi garis tengah; +1 deviasi radial/ulnar).',
+      'Skor otot A: +1 jika postur statis >1 menit ATAU gerakan berulang ≥4× per menit. Skor beban A: 0 (<2 kg intermiten), 1 (2–10 kg intermiten), 2 (2–10 kg statis/berulang atau ≥10 kg intermiten), 3 (≥10 kg statis/berulang atau benturan).',
+      'Grup B (leher, batang tubuh, kaki): pilih skor leher & batang tubuh (tambah +1 jika terpuntir/miring). Kaki: 1 jika tertopang seimbang, 2 jika tidak.',
+      'Skor otot B & beban B memakai aturan yang sama dengan Grup A.',
+      'Sistem menghitung skor akhir RULA 1–7: 1–2 dapat diterima; 3–4 investigasi lebih lanjut; 5–6 investigasi & ubah segera; 7 investigasi & ubah sekarang.',
+    ],
   },
   ROSA: {
     form: 'FORM/117',
-    source: 'Sonne, Villalta & Andrews, Applied Ergonomics 2012',
-    how: 'Isi skor kursi lalu perifer (monitor, telepon, mouse, keyboard). Section A digabung dengan perifer menjadi skor akhir ROSA.',
-    img: 'https://ergo-plus.com/wp-content/uploads/ROSA-Rapid-Office-Strain-Assessment.jpg',
+    source: 'Sonne, Villalta & Andrews, Applied Ergonomics 2012 (worksheet resmi)',
+    steps: [
+      'ROSA khusus stasiun kerja kantor (kursi + monitor/telepon + mouse/keyboard). Amati postur yang paling sering / paling buruk selama penggunaan komputer.',
+      'Section A — Kursi: nilai tinggi kursi, kedalaman dudukan (pan), sandaran lengan, dan sandaran punggung sesuai deskripsi di setiap pilihan. Skor kursi digabung di matriks Section A.',
+      'Perifer: nilai monitor (tinggi & jarak), telepon (headset vs dijepit bahu), mouse, dan keyboard. Setiap item punya skor dasar sesuai kondisi aktual.',
+      'Durasi: jika posisi digunakan lama (mis. >4 jam/hari) pilih skor yang paling mewakili paparan aktual, bukan hanya postur sesaat.',
+      'Skor akhir ROSA ≥5 = risiko tinggi — stasiun kerja perlu ditinjau dan diperbaiki. Skor lebih rendah tetap dicatat untuk baseline.',
+    ],
   },
   WERA: {
     form: 'FORM/118',
-    source: 'Rahman et al., Journal of Human Ergology 2011',
-    how: 'Nilai 9 faktor (sikap & pengulangan, kekuatan, getaran, tekanan, durasi) LOW/MED/HIGH.',
-    img: 'https://www.researchgate.net/profile/Shariat-A/publication/283296225/figure/fig1/AS:669044238510091@1538012644256/Workplace-Ergonomic-Risk-Assessment-WERA-method.png',
+    source: 'Rahman et al., Journal of Human Ergology 2011 (worksheet resmi)',
+    steps: [
+      'WERA menilai 9 faktor risiko fisik: bahu, pergelangan, punggung, leher, kaki (sikap & pengulangan), kekuatan, getaran, tekanan kontak, dan durasi tugas.',
+      'Untuk setiap faktor, pilih LOW / MED / HIGH sesuai deskripsi di pilihan. Amati tugas nyata (boleh dibantu foto/video) tanpa mengganggu pekerjaan.',
+      'Skor dijumlahkan otomatis. Interpretasi total: 18–27 risiko rendah (diterima); 28–44 risiko sedang (perlu perbaikan); 45–54 risiko tinggi (tindak lanjut segera).',
+      'Fokus pada postur ekstrem, pengulangan tinggi, beban berat, getaran lama, kontak tepi tajam, dan kerja >4 jam/hari.',
+    ],
   },
 };
 
@@ -131,7 +146,6 @@ export default function ErgoSurveyForm() {
       pekerja_diamati: emp.nama || p.pekerja_diamati,
       pekerja_nik: emp.nik || p.pekerja_nik,
       departemen: emp.department || p.departemen,
-      // Jabatan yang dinilai — isi otomatis dari master employee
       aktivitas: jabatan || p.aktivitas,
     }));
   };
@@ -163,7 +177,7 @@ export default function ErgoSurveyForm() {
         <div style={{ marginBottom: 14 }}>
           <h1 className="admin-form-title">Survei Ergonomi</h1>
           <p className="admin-form-subtitle">
-            Pengukuran internal minimal 1× per bulan (STD/036). Soal bergambar — pilih skor sesuai postur + lihat ilustrasi.
+            Pengukuran internal minimal 1× per bulan (STD/036). Pilih skor sesuai postur yang diamati; ikuti petunjuk di bawah.
           </p>
         </div>
 
@@ -177,22 +191,24 @@ export default function ErgoSurveyForm() {
           onChange={changeMetode}
         />
 
-        <div style={{ background: 'rgba(255,77,0,0.06)', border: '1px solid rgba(255,77,0,0.2)', borderRadius: 10, padding: 14, marginBottom: 12 }}>
-          <b style={{ fontSize: 12, color: 'var(--brand-primary, #ff4d00)' }}>Petunjuk pengisian — {meta.form}</b>
-          <p style={{ fontSize: 12, margin: '6px 0 0', lineHeight: 1.5 }}>{meta.how}</p>
-          <p style={{ fontSize: 11, margin: '6px 0 0', color: 'var(--muted-foreground)' }}>Sumber: {meta.source}</p>
-        </div>
-
-        <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, padding: 12, marginBottom: 16, textAlign: 'center' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted-foreground)', margin: '0 0 8px' }}>
-            Diagram postur resmi — {metode}
+        <div style={{
+          background: 'rgba(255,77,0,0.05)',
+          border: '1px solid rgba(255,77,0,0.18)',
+          borderRadius: 10,
+          padding: '12px 14px',
+          marginBottom: 14,
+        }}>
+          <b style={{ fontSize: 12, color: 'var(--brand-primary, #ff4d00)', display: 'block', marginBottom: 6 }}>
+            Petunjuk pengisian — {meta.form}
+          </b>
+          <ol style={{ margin: 0, paddingLeft: 18, fontSize: 11, lineHeight: 1.55, color: 'var(--foreground)' }}>
+            {meta.steps.map((s, i) => (
+              <li key={i} style={{ marginBottom: 4 }}>{s}</li>
+            ))}
+          </ol>
+          <p style={{ fontSize: 10, margin: '8px 0 0', color: 'var(--muted-foreground)' }}>
+            Sumber resmi: {meta.source}. Ilustrasi di setiap pilihan skor membantu membandingkan postur; prioritaskan deskripsi teks resmi.
           </p>
-          <img
-            src={meta.img}
-            alt={`Diagram ${metode}`}
-            style={{ maxWidth: '100%', maxHeight: 320, objectFit: 'contain', borderRadius: 6 }}
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-          />
         </div>
 
         {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
