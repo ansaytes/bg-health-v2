@@ -33,10 +33,20 @@ async function getAuthHeaders(): Promise<HeadersInit> {
 const ROLE_STYLES: Record<string, { bg: string; color: string }> = {
   superuser: { bg: 'rgba(239,68,68,0.12)', color: '#ef4444' },
   administrator: { bg: 'rgba(255,77,0,0.12)', color: '#ff4d00' },
+  manager: { bg: 'rgba(139,92,246,0.12)', color: '#7c3aed' },
   viewer: { bg: 'var(--muted)', color: 'var(--muted-foreground)' },
   pic: { bg: 'rgba(0,184,148,0.12)', color: '#00a884' },
   employee: { bg: 'rgba(59,130,246,0.12)', color: '#2563eb' },
 };
+
+const ROLE_OPTIONS = [
+  { value: 'viewer', label: 'Viewer' },
+  { value: 'employee', label: 'Employee' },
+  { value: 'pic', label: 'PIC' },
+  { value: 'manager', label: 'Manager (QSHE)' },
+  { value: 'administrator', label: 'Administrator' },
+  { value: 'superuser', label: 'Superuser' },
+];
 
 export default function UserManagement() {
   const { isSuperuser, isAdmin } = useAuth();
@@ -44,7 +54,6 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Register form state
   const [showRegister, setShowRegister] = useState(false);
   const [regForm, setRegForm] = useState({
     username: '', password: '', full_name: '', role: 'viewer' as string, employee_nik: '', national_id: '', site: '',
@@ -124,14 +133,6 @@ export default function UserManagement() {
   if (!isAdmin) {
     return (
       <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted-foreground)' }}>
-        <div style={{
-          width: 48, height: 48, borderRadius: 12, margin: '0 auto 12px',
-          background: 'rgba(239,68,68,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-        </div>
         <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--foreground)', marginBottom: 4 }}>Akses Ditolak</p>
         <p style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>Anda memerlukan akses administrator untuk mengelola pengguna.</p>
       </div>
@@ -140,66 +141,44 @@ export default function UserManagement() {
 
   return (
     <div className="admin-form-inner">
-      {/* Header */}
       <div style={{ marginBottom: 16, flexShrink: 0 }}>
         <h1 className="admin-form-title">Kelola Pengguna</h1>
         <p className="admin-form-subtitle">Kelola akun dan akses pengguna sistem BG-Health</p>
       </div>
 
-      {/* Add user button */}
       {isSuperuser && (
         <div style={{ flexShrink: 0, marginBottom: 12 }}>
           <button
             onClick={() => { setShowRegister(!showRegister); setRegError(''); setRegSuccess(''); }}
             className={`admin-form-btn-${showRegister ? 'secondary' : 'primary'}`}
-            style={{
-              flex: 'unset',
-              width: 'auto',
-              padding: '0 18px',
-              height: 38,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
+            style={{ flex: 'unset', width: 'auto', padding: '0 18px', height: 38, display: 'inline-flex', alignItems: 'center', gap: 6 }}
           >
-            {showRegister ? (
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-            ) : (
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-            )}
             {showRegister ? 'Tutup Form' : 'Tambah Pengguna'}
           </button>
         </div>
       )}
 
-      {/* Register Form */}
       {isSuperuser && showRegister && (
         <div className="admin-form-card" style={{ marginBottom: 16, flexShrink: 0 }}>
           <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--foreground)', margin: '0 0 14px' }}>Daftarkan Pengguna Baru</h3>
           <form onSubmit={handleRegister} className="user-register-grid">
             <div>
               <label className="admin-label">Username (Email)</label>
-              <input
-                type="text" value={regForm.username}
+              <input type="text" value={regForm.username}
                 onChange={(e) => setRegForm({ ...regForm, username: e.target.value })}
-                placeholder="user@perusahaan.com" className="admin-input"
-              />
+                placeholder="user@perusahaan.com" className="admin-input" />
             </div>
             <div>
               <label className="admin-label">Password</label>
-              <input
-                type="password" value={regForm.password}
+              <input type="password" value={regForm.password}
                 onChange={(e) => setRegForm({ ...regForm, password: e.target.value })}
-                placeholder="Min. 6 karakter" className="admin-input"
-              />
+                placeholder="Min. 6 karakter" className="admin-input" />
             </div>
             <div>
               <label className="admin-label">Nama Lengkap</label>
-              <input
-                type="text" value={regForm.full_name}
+              <input type="text" value={regForm.full_name}
                 onChange={(e) => setRegForm({ ...regForm, full_name: e.target.value })}
-                placeholder="Nama lengkap" className="admin-input"
-              />
+                placeholder="Nama lengkap" className="admin-input" />
             </div>
             <div>
               <label className="admin-label">Role</label>
@@ -208,11 +187,9 @@ export default function UserManagement() {
                 onChange={(e) => setRegForm({ ...regForm, role: e.target.value })}
                 className="admin-input" style={{ appearance: 'none', cursor: 'pointer' }}
               >
-                <option value="viewer">Viewer</option>
-                <option value="employee">Employee</option>
-                <option value="administrator">Administrator</option>
-                <option value="pic">PIC</option>
-                <option value="superuser">Superuser</option>
+                {ROLE_OPTIONS.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
               </select>
             </div>
             <div>
@@ -229,11 +206,7 @@ export default function UserManagement() {
                   }));
                 }}
                 placeholder="Ketik Nama, NIK, atau KTP Karyawan"
-                label={
-                  <span className="admin-label" style={{ marginBottom: 0 }}>
-                    Cari Data Karyawan *
-                  </span>
-                }
+                label={<span className="admin-label" style={{ marginBottom: 0 }}>Cari Data Karyawan *</span>}
                 required
                 inputStyle={{ width: '100%', height: 38, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)', padding: '0 12px', fontSize: 13, color: 'var(--foreground)' }}
               />
@@ -245,11 +218,7 @@ export default function UserManagement() {
             {regForm.role === 'pic' && (
               <div>
                 <label className="admin-label">Site PIC</label>
-                <input
-                  type="text" value={regForm.site}
-                  readOnly
-                  placeholder="Terisi dari employee" className="admin-input"
-                />
+                <input type="text" value={regForm.site} readOnly placeholder="Terisi dari employee" className="admin-input" />
               </div>
             )}
             <div className="user-register-btn-cell">
@@ -263,39 +232,15 @@ export default function UserManagement() {
         </div>
       )}
 
-      {/* Error state */}
       {error && !loading && (
         <div style={{ padding: 20, textAlign: 'center', flexShrink: 0 }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: 10, margin: '0 auto 8px',
-            background: 'rgba(239,68,68,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-          </div>
           <p style={{ fontSize: 12, fontWeight: 600, color: '#ef4444', marginBottom: 4 }}>{error}</p>
-          <p style={{ fontSize: 10, color: 'var(--muted-foreground)', marginBottom: 8 }}>Pastikan sesi Anda masih aktif dan coba lagi.</p>
-          <button
-            onClick={fetchUsers}
-            className="admin-form-btn-primary"
-            style={{
-              flex: 'unset',
-              width: 'auto',
-              padding: '0 16px',
-              height: 36,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
-          >
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>
+          <button onClick={fetchUsers} className="admin-form-btn-primary" style={{ flex: 'unset', width: 'auto', padding: '0 16px', height: 36 }}>
             Coba Lagi
           </button>
         </div>
       )}
 
-      {/* Users table */}
       <div className="raw-table-container">
         <div className="raw-table-scroll">
           <table>
@@ -309,7 +254,6 @@ export default function UserManagement() {
                 <th>Site</th>
                 <th>Username</th>
                 <th>Role</th>
-                <th>NIK</th>
                 <th>Terdaftar</th>
                 {isSuperuser && <th style={{ textAlign: 'center' }}>Aksi</th>}
               </tr>
@@ -317,15 +261,7 @@ export default function UserManagement() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={isSuperuser ? 10 : 9} style={{ padding: 0 }}>
-                    <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat daftar pengguna">
-                      <div className="bm-loading-spinner">
-                        <div className="bm-loading-ring" aria-hidden="true" />
-                        <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
-                      </div>
-                      <p className="bm-loading-label">Memuat daftar pengguna…</p>
-                    </div>
-                  </td>
+                  <td colSpan={isSuperuser ? 10 : 9} style={{ padding: 24, textAlign: 'center' }}>Memuat…</td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr><td colSpan={isSuperuser ? 10 : 9} style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)' }}>Belum ada pengguna terdaftar</td></tr>
@@ -347,14 +283,13 @@ export default function UserManagement() {
                             value={u.role} onChange={(e) => handleRoleChange(u.id, e.target.value)}
                             style={{ padding: '3px 8px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--input)', color: 'var(--foreground)', fontSize: 10, fontWeight: 600 }}
                           >
-                            <option value="viewer">Viewer</option>
-                            <option value="employee">Employee</option>
-                            <option value="administrator">Administrator</option>
-                            <option value="superuser">Superuser</option>
+                            {ROLE_OPTIONS.map((r) => (
+                              <option key={r.value} value={r.value}>{r.label}</option>
+                            ))}
                           </select>
                         ) : (
                           <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700, background: rs.bg, color: rs.color }}>
-                            {u.role.charAt(0).toUpperCase() + u.role.slice(1)}
+                            {u.role}
                           </span>
                         )}
                       </td>
