@@ -1,14 +1,15 @@
 'use client';
-// Restored Ergo survey form — illustrated score cards + employee lookup + jabatan autofill
+// Illustrated Ergo survey — SVG posture diagrams per option + employee lookup + jabatan autofill
 import { useMemo, useState } from 'react';
 import { authFetch } from '@/lib/api-client';
 import { FORM_NO, KLAS_COLOR, scoreErgo, type Metode } from '@/lib/hc-ergo';
 import {
-  Chip, Field, Notice, Section, SITES, Tabs, ScoreOptionCard,
+  Chip, Field, Notice, Section, SITES, Tabs,
   btnPrimaryStyle, grid3, inputStyle,
 } from './hc-ergo-ui';
 import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
 import { RULA_GROUP_A, RULA_GROUP_B, ROSA_CHAIR, ROSA_PERIPH, WERA_QS, blankInput, type Q } from './ergo-questions';
+import { PostureDiagram } from './PostureDiagram';
 
 const CHECKS = [
   { key: 'ok_personil_kompeten', label: 'Personil pengukur kompeten (STD/036 pasal 6.8)' },
@@ -40,16 +41,62 @@ const METHOD_META: Record<Metode, { form: string; source: string; how: string; i
 
 function QuestionBlock({ q, value, onChange }: { q: Q; value: number; onChange: (n: number) => void }) {
   return (
-    <div style={{ marginBottom: 18 }}>
-      <div style={{ marginBottom: 8 }}>
-        <b style={{ fontSize: 13, color: 'var(--foreground)' }}>{q.title}</b>
-        {q.guide && (
-          <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '4px 0 0', lineHeight: 1.4 }}>{q.guide}</p>
-        )}
+    <div style={{ marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 10 }}>
+        {q.diagramKey && <PostureDiagram id={q.diagramKey} size={56} />}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <b style={{ fontSize: 13, color: 'var(--foreground)' }}>{q.title}</b>
+          {q.guide && (
+            <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '4px 0 0', lineHeight: 1.4 }}>{q.guide}</p>
+          )}
+        </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 8 }}>
         {q.options.map((o) => (
-          <ScoreOptionCard key={o.score} score={o.score} label={o.label} selected={value === o.score} onSelect={() => onChange(o.score)} />
+          <button
+            key={o.score}
+            type="button"
+            onClick={() => onChange(o.score)}
+            style={{
+              textAlign: 'left',
+              padding: '10px 12px',
+              borderRadius: 10,
+              border: value === o.score ? '2px solid var(--brand-primary, #ff4d00)' : '1px solid var(--border)',
+              background: value === o.score ? 'rgba(255,77,0,0.08)' : 'var(--background)',
+              cursor: 'pointer',
+              display: 'flex',
+              gap: 10,
+              alignItems: 'center',
+              transition: 'border-color 0.15s, background 0.15s',
+              width: '100%',
+              fontFamily: 'inherit',
+            }}
+          >
+            {o.diagram ? (
+              <PostureDiagram id={o.diagram} size={48} />
+            ) : (
+              <span style={{
+                width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 800, fontSize: 13,
+                background: value === o.score ? 'var(--brand-primary, #ff4d00)' : 'var(--muted)',
+                color: value === o.score ? '#fff' : 'var(--foreground)',
+              }}>
+                {o.score}
+              </span>
+            )}
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{
+                display: 'inline-block', fontSize: 11, fontWeight: 800, marginBottom: 2,
+                color: value === o.score ? 'var(--brand-primary, #ff4d00)' : 'var(--muted-foreground)',
+              }}>
+                Skor {o.score}
+              </span>
+              <span style={{ display: 'block', fontSize: 12, lineHeight: 1.35, color: 'var(--foreground)' }}>
+                {o.label}
+              </span>
+            </span>
+          </button>
         ))}
       </div>
     </div>
@@ -78,12 +125,14 @@ export default function ErgoSurveyForm() {
   const changeMetode = (m: Metode) => { setMetode(m); setInput(blankInput(m)); setMsg(null); };
 
   const onPekerjaFound = (emp: EmployeeData) => {
+    const jabatan = (emp.job_position || '').trim();
     setF((p) => ({
       ...p,
       pekerja_diamati: emp.nama || p.pekerja_diamati,
       pekerja_nik: emp.nik || p.pekerja_nik,
       departemen: emp.department || p.departemen,
-      aktivitas: emp.job_position || p.aktivitas,
+      // Jabatan yang dinilai — isi otomatis dari master employee
+      aktivitas: jabatan || p.aktivitas,
     }));
   };
 
@@ -114,7 +163,7 @@ export default function ErgoSurveyForm() {
         <div style={{ marginBottom: 14 }}>
           <h1 className="admin-form-title">Survei Ergonomi</h1>
           <p className="admin-form-subtitle">
-            Pengukuran internal minimal 1× per bulan (STD/036). Isi seperti soal bergambar — pilih skor sesuai postur + lihat diagram resmi.
+            Pengukuran internal minimal 1× per bulan (STD/036). Soal bergambar — pilih skor sesuai postur + lihat ilustrasi.
           </p>
         </div>
 
@@ -173,7 +222,7 @@ export default function ErgoSurveyForm() {
                 <input className="admin-input" style={inputStyle} required value={f.departemen} onChange={(e) => set('departemen', e.target.value)} />
               </Field>
               <Field label={metode === 'ROSA' ? 'Pekerjaan / Jabatan yang Dinilai' : 'Aktivitas / Pekerjaan'}>
-                <input className="admin-input" style={inputStyle} required value={f.aktivitas} onChange={(e) => set('aktivitas', e.target.value)} />
+                <input className="admin-input" style={inputStyle} required value={f.aktivitas} onChange={(e) => set('aktivitas', e.target.value)} placeholder="Otomatis dari jabatan karyawan" />
               </Field>
               <Field label="Personil Pengukur">
                 <input className="admin-input" style={inputStyle} required value={f.personil_pengukur} onChange={(e) => set('personil_pengukur', e.target.value)} />
@@ -195,7 +244,8 @@ export default function ErgoSurveyForm() {
                   <p style={{ fontSize: 12, marginTop: 6, color: 'var(--muted-foreground)' }}>
                     Terpilih: <b style={{ color: 'var(--foreground)' }}>{f.pekerja_diamati}</b>
                     {f.pekerja_nik && <> · NIK {f.pekerja_nik}</>}
-                    {f.aktivitas && <> · Jabatan: {f.aktivitas}</>}
+                    {f.aktivitas && <> · Jabatan: <b style={{ color: 'var(--foreground)' }}>{f.aktivitas}</b></>}
+                    {f.departemen && <> · Dept: {f.departemen}</>}
                   </p>
                 )}
               </div>
