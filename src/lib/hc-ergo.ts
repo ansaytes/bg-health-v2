@@ -1,7 +1,8 @@
 // src/lib/hc-ergo.ts
 // Perhitungan Program Konservasi Pendengaran (STD/033, INK/015) dan Ergonomi RULA/ROSA/WERA
 // (STD/036, INK/013, FORM/116-118). Fungsi murni: dipakai API (server, otoritatif) dan form (preview).
-// Tabel skor RULA/ROSA disalin otomatis dari tabel pada FORM/116 dan FORM/117.
+// Tabel skor RULA disalin dari McAtamney & Corlett 1993; ROSA dari Sonne et al. 2012 (worksheet resmi);
+// WERA dari Rahman et al. 2011. Diverifikasi ulang 2026-10-10.
 
 /* ════════════════ HEARING CONSERVATION ════════════════ */
 
@@ -140,7 +141,71 @@ export const FORM_NO: Record<Metode, string> = {
 };
 
 type Mx = { rows: string[]; cols: string[]; data: number[][] };
-const MATRIX: Record<string, Mx> = {"RULA_A":{"rows":["1-1","1-2","1-3","2-1","2-2","2-3","3-1","3-2","3-3","4-1","4-2","4-3","5-1","5-2","5-3","6-1","6-2","6-3"],"cols":["W1T1","W1T2","W2T1","W2T2","W3T1","W3T2","W4T1","W4T2"],"data":[[1,2,2,2,2,3,3,3],[2,2,2,2,3,3,3,3],[2,3,3,3,3,3,4,4],[2,3,3,3,3,4,4,4],[3,3,3,3,3,4,4,4],[3,4,4,4,4,4,5,5],[3,3,4,4,4,4,5,5],[3,4,4,4,4,4,5,5],[4,4,4,4,4,5,5,5],[4,4,4,4,4,5,5,5],[4,4,4,4,4,5,5,5],[4,4,4,4,5,5,5,6],[5,5,5,5,5,6,6,7],[5,6,6,6,6,7,7,7],[6,6,6,7,7,7,7,8],[7,7,7,7,7,8,8,9],[8,8,8,8,8,9,9,9],[9,9,9,9,9,9,9,9]]},"RULA_B":{"rows":["1","2","3","4","5","6"],"cols":["K1L1","K1L2","K2L1","K2L2","K3L1","K3L2","K4L1","K4L2","K5L1","K5L2","K6L1","K6L2"],"data":[[1,3,2,3,3,4,5,5,6,6,7,7],[2,3,2,3,4,5,5,6,6,7,7,7],[3,3,3,4,4,5,5,6,6,7,7,7],[5,5,5,6,6,7,7,7,7,7,8,8],[7,7,7,7,7,8,8,8,8,8,8,8],[8,8,8,8,8,8,8,9,9,9,9,9]]},"RULA_C":{"rows":["1","2","3","4","5","6","7","8+"],"cols":["1","2","3","4","5","6","7+"],"data":[[1,2,3,3,4,5,5],[2,2,3,4,4,5,5],[3,3,3,4,4,5,6],[3,3,3,4,5,6,6],[4,4,4,5,6,7,7],[4,4,5,6,6,7,7],[5,5,6,6,7,7,7],[5,5,6,7,7,7,7]]},"ROSA_A":{"rows":["2","3","4","5","6","7","8"],"cols":["2","3","4","5","6","7","8","9"],"data":[[2,2,3,4,5,6,7,8],[2,2,3,4,5,6,7,8],[3,3,3,4,5,6,7,8],[4,4,4,4,5,6,7,8],[5,5,5,5,6,7,8,9],[6,6,6,7,7,8,8,9],[7,7,7,8,8,9,9,9]]},"ROSA_B":{"rows":["0","1","2","3","4","5","6"],"cols":["0","1","2","3","4","5","6","7"],"data":[[1,1,1,2,3,4,5,6],[1,1,2,2,3,4,5,6],[1,2,2,3,3,4,6,7],[2,2,3,3,4,5,6,8],[3,3,4,4,5,6,7,8],[4,4,5,5,6,7,8,9],[5,5,6,7,8,8,9,9]]},"ROSA_C":{"rows":["0","1","2","3","4","5","6","7"],"cols":["0","1","2","3","4","5","6","7"],"data":[[1,1,1,2,3,4,5,6],[1,1,2,3,4,5,6,7],[1,2,2,3,4,5,6,7],[2,3,3,3,5,6,7,8],[3,4,4,5,5,6,7,8],[4,5,5,6,6,7,8,9],[5,6,6,7,7,8,8,9],[6,7,7,8,8,9,9,9]]},"ROSA_PERIPH":{"rows":["1","2","3","4","5","6","7","8","9"],"cols":["1","2","3","4","5","6","7","8","9"],"data":[[1,2,3,4,5,6,7,8,9],[2,2,3,4,5,6,7,8,9],[3,3,3,4,5,6,7,8,9],[4,4,4,4,5,6,7,8,9],[5,5,5,5,5,6,7,8,9],[6,6,6,6,6,6,7,8,9],[7,7,7,7,7,7,7,8,9],[8,8,8,8,8,8,8,8,9],[9,9,9,9,9,9,9,9,9]]},"ROSA_FINAL":{"rows":["1","2","3","4","5","6","7","8","9"],"cols":["1","2","3","4","5","6","7","8","9","10"],"data":[[1,2,3,4,5,6,7,8,9,10],[2,2,3,4,5,6,7,8,9,10],[3,3,3,4,5,6,7,8,9,10],[4,4,4,4,5,6,7,8,9,10],[5,5,5,5,5,6,7,8,9,10],[6,6,6,6,6,6,7,8,9,10],[7,7,7,7,7,7,7,8,9,10],[8,8,8,8,8,8,8,8,9,10],[9,9,9,9,9,9,9,9,9,10]]}};
+
+/**
+ * Matrix skor resmi.
+ * RULA  : McAtamney & Corlett, Applied Ergonomics 1993
+ * ROSA  : Sonne, Villalta & Andrews, Applied Ergonomics 2012 (worksheet resmi Cornell)
+ * WERA  : Rahman et al., Journal of Human Ergology 2011
+ */
+const MATRIX: Record<string, Mx> = {
+  "RULA_A": {
+    "rows": ["1-1","1-2","1-3","2-1","2-2","2-3","3-1","3-2","3-3","4-1","4-2","4-3","5-1","5-2","5-3","6-1","6-2","6-3"],
+    "cols": ["W1T1","W1T2","W2T1","W2T2","W3T1","W3T2","W4T1","W4T2"],
+    "data": [[1,2,2,2,2,3,3,3],[2,2,2,2,3,3,3,3],[2,3,3,3,3,3,4,4],[2,3,3,3,3,4,4,4],[3,3,3,3,3,4,4,4],[3,4,4,4,4,4,5,5],[3,3,4,4,4,4,5,5],[3,4,4,4,4,4,5,5],[4,4,4,4,4,5,5,5],[4,4,4,4,4,5,5,5],[4,4,4,4,4,5,5,5],[4,4,4,4,5,5,5,6],[5,5,5,5,5,6,6,7],[5,6,6,6,6,7,7,7],[6,6,6,7,7,7,7,8],[7,7,7,7,7,8,8,9],[8,8,8,8,8,9,9,9],[9,9,9,9,9,9,9,9]]
+  },
+  "RULA_B": {
+    "rows": ["1","2","3","4","5","6"],
+    "cols": ["K1L1","K1L2","K2L1","K2L2","K3L1","K3L2","K4L1","K4L2","K5L1","K5L2","K6L1","K6L2"],
+    "data": [[1,3,2,3,3,4,5,5,6,6,7,7],[2,3,2,3,4,5,5,6,6,7,7,7],[3,3,3,4,4,5,5,6,6,7,7,7],[5,5,5,6,6,7,7,7,7,7,8,8],[7,7,7,7,7,8,8,8,8,8,8,8],[8,8,8,8,8,8,8,9,9,9,9,9]]
+  },
+  "RULA_C": {
+    "rows": ["1","2","3","4","5","6","7","8+"],
+    "cols": ["1","2","3","4","5","6","7+"],
+    "data": [[1,2,3,3,4,5,5],[2,2,3,4,4,5,5],[3,3,3,4,4,5,6],[3,3,3,4,5,6,6],[4,4,4,5,6,7,7],[4,4,5,6,6,7,7],[5,5,6,6,7,7,7],[5,5,6,7,7,7,7]]
+  },
+  // ROSA Section A – Chair (Height+Depth vs Armrest+Backrest)
+  // Official Sonne et al. 2012 / Cornell worksheet (corrected 2026-10-10)
+  // Rows = seat (height+depth) 2..8 ; Cols = arm (armrest+backrest) 2..9
+  "ROSA_A": {
+    "rows": ["2","3","4","5","6","7","8"],
+    "cols": ["2","3","4","5","6","7","8","9"],
+    "data": [
+      [1,2,3,4,5,6,7,8], // seat 2
+      [2,2,3,4,5,6,7,8], // seat 3
+      [3,3,3,4,5,6,7,8], // seat 4
+      [4,4,4,4,5,6,7,8], // seat 5
+      [5,5,5,5,6,7,8,9], // seat 6
+      [6,6,6,7,7,8,8,9], // seat 7
+      [7,7,7,8,8,9,9,9]  // seat 8
+    ]
+  },
+  // Section B – Monitor (cols) vs Phone (rows) – matches official
+  "ROSA_B": {
+    "rows": ["0","1","2","3","4","5","6"],
+    "cols": ["0","1","2","3","4","5","6","7"],
+    "data": [[1,1,1,2,3,4,5,6],[1,1,2,2,3,4,5,6],[1,2,2,3,3,4,6,7],[2,2,3,3,4,5,6,8],[3,3,4,4,5,6,7,8],[4,4,5,5,6,7,8,9],[5,5,6,7,8,8,9,9]]
+  },
+  // Section C – Mouse (rows) vs Keyboard (cols) – matches official
+  "ROSA_C": {
+    "rows": ["0","1","2","3","4","5","6","7"],
+    "cols": ["0","1","2","3","4","5","6","7"],
+    "data": [[1,1,1,2,3,4,5,6],[1,1,2,3,4,5,6,7],[1,2,2,3,4,5,6,7],[2,3,3,3,5,6,7,8],[3,4,4,5,5,6,7,8],[4,5,5,6,6,7,8,9],[5,6,6,7,7,8,8,9],[6,7,7,8,8,9,9,9]]
+  },
+  // Peripheral chart (Section B vs Section C)
+  "ROSA_PERIPH": {
+    "rows": ["1","2","3","4","5","6","7","8","9"],
+    "cols": ["1","2","3","4","5","6","7","8","9"],
+    "data": [[1,2,3,4,5,6,7,8,9],[2,2,3,4,5,6,7,8,9],[3,3,3,4,5,6,7,8,9],[4,4,4,4,5,6,7,8,9],[5,5,5,5,5,6,7,8,9],[6,6,6,6,6,6,7,8,9],[7,7,7,7,7,7,7,8,9],[8,8,8,8,8,8,8,8,9],[9,9,9,9,9,9,9,9,9]]
+  },
+  // Final ROSA chart (Section A vs Peripheral)
+  "ROSA_FINAL": {
+    "rows": ["1","2","3","4","5","6","7","8","9"],
+    "cols": ["1","2","3","4","5","6","7","8","9","10"],
+    "data": [[1,2,3,4,5,6,7,8,9,10],[2,2,3,4,5,6,7,8,9,10],[3,3,3,4,5,6,7,8,9,10],[4,4,4,4,5,6,7,8,9,10],[5,5,5,5,5,6,7,8,9,10],[6,6,6,6,6,6,7,8,9,10],[7,7,7,7,7,7,7,8,9,10],[8,8,8,8,8,8,8,8,9,10],[9,9,9,9,9,9,9,9,9,10]]
+  }
+};
+
 const WERA_SKOR = [[2, 3, 4], [3, 4, 5], [4, 5, 6]];
 
 const inRange = (v: unknown, lo: number, hi: number) => Number.isInteger(v) && (v as number) >= lo && (v as number) <= hi;
@@ -178,7 +243,18 @@ export function scoreRULA(i: RulaInput) {
 export interface RosaInput {
   chair_height: number; pan_depth: number; armrest: number; backrest: number;
   monitor: number; phone: number; mouse: number; keyboard: number;
+  // Duration scores (official ROSA): -1 / 0 / +1 per section. Optional for backward compatibility.
+  duration_chair?: number;   // -1 | 0 | 1
+  duration_monitor?: number; // -1 | 0 | 1
+  duration_mouse?: number;   // -1 | 0 | 1
 }
+
+/**
+ * ROSA scoring – Sonne et al. 2012.
+ * Duration is optional; if omitted, treated as 0 (no adjustment).
+ * When duration is supplied, it is added to the respective section score before chart lookup
+ * (clamped to valid chart range).
+ */
 export function scoreROSA(i: RosaInput) {
   need(inRange(i.chair_height, 1, 5), 'Tinggi kursi harus 1-5');
   need(inRange(i.pan_depth, 1, 3), 'Kedalaman dudukan harus 1-3');
@@ -188,12 +264,28 @@ export function scoreROSA(i: RosaInput) {
   need(inRange(i.phone, 0, 6), 'Telepon harus 0-6');
   need(inRange(i.mouse, 0, 7), 'Mouse harus 0-7');
   need(inRange(i.keyboard, 0, 7), 'Keyboard harus 0-7');
-  const seat = i.chair_height + i.pan_depth, arm = i.armrest + i.backrest;
-  const sectionA = cell(MATRIX.ROSA_A, seat - 2, arm - 2, 'ROSA Section A');
-  const sectionB = cell(MATRIX.ROSA_B, i.phone, i.monitor, 'ROSA Section B');
-  const sectionC = cell(MATRIX.ROSA_C, i.mouse, i.keyboard, 'ROSA Section C');
+
+  const durChair = i.duration_chair ?? 0;
+  const durMon   = i.duration_monitor ?? 0;
+  const durMouse = i.duration_mouse ?? 0;
+
+  // Section A (Chair)
+  const seat = i.chair_height + i.pan_depth;
+  const arm  = i.armrest + i.backrest;
+  let sectionA = cell(MATRIX.ROSA_A, seat - 2, arm - 2, 'ROSA Section A');
+  sectionA = Math.max(1, Math.min(9, sectionA + durChair));
+
+  // Section B (Monitor + Phone)
+  let sectionB = cell(MATRIX.ROSA_B, i.phone, i.monitor, 'ROSA Section B');
+  sectionB = Math.max(1, Math.min(9, sectionB + durMon));
+
+  // Section C (Mouse + Keyboard)
+  let sectionC = cell(MATRIX.ROSA_C, i.mouse, i.keyboard, 'ROSA Section C');
+  sectionC = Math.max(1, Math.min(9, sectionC + durMouse));
+
   const periph = cell(MATRIX.ROSA_PERIPH, sectionB - 1, sectionC - 1, 'ROSA Peripherals');
-  const akhir = cell(MATRIX.ROSA_FINAL, sectionA - 1, periph - 1, 'ROSA Final');
+  const akhir  = cell(MATRIX.ROSA_FINAL, sectionA - 1, periph - 1, 'ROSA Final');
+
   return { sectionA, sectionB, sectionC, periph, akhir };
 }
 
