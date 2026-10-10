@@ -7,7 +7,11 @@ const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 export const db = createClient(url, serviceKey || anonKey);
 
-export const ALLOWED_ROLES = ['administrator', 'superuser'];
+/** Roles that may access HC & Ergo modules (view + input). */
+export const ALLOWED_ROLES = ['administrator', 'superuser', 'manager', 'pic'];
+
+/** Roles that may approve / reject ergo surveys (QSHE Manager sign-off). */
+export const APPROVER_ROLES = ['administrator', 'superuser', 'manager'];
 
 export interface Caller { role: string; name: string; }
 
@@ -29,6 +33,14 @@ export async function requireCaller(req: NextRequest): Promise<{ caller: Caller 
   const caller = await getCaller(req);
   if (!caller || !ALLOWED_ROLES.includes(caller.role)) {
     return { error: NextResponse.json({ success: false, error: 'Akses ditolak' }, { status: 403 }) };
+  }
+  return { caller };
+}
+
+export async function requireApprover(req: NextRequest): Promise<{ caller: Caller } | { error: NextResponse }> {
+  const caller = await getCaller(req);
+  if (!caller || !APPROVER_ROLES.includes(caller.role)) {
+    return { error: NextResponse.json({ success: false, error: 'Hanya QSHE Manager / Administrator / Superuser yang dapat menyetujui atau menolak survei.' }, { status: 403 }) };
   }
   return { caller };
 }
