@@ -12,6 +12,24 @@ export const inputStyle: CSSProperties = {
 };
 export const smallInput: CSSProperties = { ...inputStyle, height: 32, fontSize: 12, padding: '0 8px' };
 
+/** Primary action button — fixed height, no text overflow, full-width friendly */
+export const btnPrimaryStyle: CSSProperties = {
+  height: 44,
+  minHeight: 44,
+  fontSize: 13,
+  fontWeight: 700,
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  padding: '0 20px',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: 8,
+  width: '100%',
+};
+
 export function Field({ label, hint, children, full }: { label: ReactNode; hint?: string; children: ReactNode; full?: boolean }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, gridColumn: full ? '1 / -1' : undefined }}>
@@ -93,5 +111,61 @@ export function BarRow({ label, value, max, color }: { label: string; value: num
       </div>
       <b style={{ width: 28, textAlign: 'right' }}>{value}</b>
     </div>
+  );
+}
+
+/**
+ * ScoreOptionCard — pilihan skor bergaya "soal bergambar".
+ * Dipakai di form RULA / ROSA / WERA agar mirip worksheet resmi.
+ */
+export function ScoreOptionCard({
+  score,
+  label,
+  selected,
+  onSelect,
+}: {
+  score: number;
+  label: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      style={{
+        textAlign: 'left',
+        padding: '10px 12px',
+        borderRadius: 10,
+        border: selected ? '2px solid var(--brand-primary, #ff4d00)' : '1px solid var(--border)',
+        background: selected ? 'rgba(255,77,0,0.08)' : 'var(--background)',
+        cursor: 'pointer',
+        display: 'flex',
+        gap: 10,
+        alignItems: 'flex-start',
+        transition: 'border-color 0.15s, background 0.15s',
+        width: '100%',
+        fontFamily: 'inherit',
+      }}
+    >
+      <span style={{
+        width: 28,
+        height: 28,
+        borderRadius: 8,
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontWeight: 800,
+        fontSize: 13,
+        background: selected ? 'var(--brand-primary, #ff4d00)' : 'var(--muted)',
+        color: selected ? '#fff' : 'var(--foreground)',
+      }}>
+        {score}
+      </span>
+      <span style={{ fontSize: 12, lineHeight: 1.4, color: 'var(--foreground)', paddingTop: 4 }}>
+        {label}
+      </span>
+    </button>
   );
 }
