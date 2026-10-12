@@ -38,11 +38,11 @@ async function getCallerRole(req: NextRequest): Promise<{ userId: string; role: 
   return { userId: user.id, role: profile.role };
 }
 
-// GET /api/users — list all users (admin/superuser only)
+// GET /api/users — list all users (admin/superuser/manager only)
 export async function GET(req: NextRequest) {
   try {
     const caller = await getCallerRole(req);
-    if (!caller || !['superuser', 'administrator'].includes(caller.role)) {
+    if (!caller || !['superuser', 'administrator', 'manager'].includes(caller.role)) {
       return NextResponse.json({
         error: 'Akses ditolak',
         detail: !caller ? 'Tidak bisa memverifikasi sesi login. Pastikan SUPABASE_SERVICE_ROLE_KEY sudah diisi.' : 'Role Anda tidak punya akses ke halaman ini.',

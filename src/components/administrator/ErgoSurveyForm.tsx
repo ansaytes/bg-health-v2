@@ -1,39 +1,74 @@
 'use client';
-// Administrator > Ergonomi > Input Survei.
-// Wizard bergambar per metode (RULA FORM/116, ROSA FORM/117, WERA FORM/118): satu pertanyaan per langkah,
-// gambar resmi dari formulir, petunjuk pengisian, skor langkah & skor akhir otomatis.
+// Halaman Administrator > Ergonomi (panel "Input Survei"). Form RULA (FORM/116), ROSA (FORM/117), WERA (FORM/118).
+// Skor dihitung ulang di server (api/ergo); preview di sini memakai fungsi yang sama (lib/hc-ergo.ts).
 import { useMemo, useState } from 'react';
 import { authFetch } from '@/lib/api-client';
-import { useAuth } from '@/lib/auth-context';
-import { KLAS_COLOR, scoreErgo, type Metode } from '@/lib/hc-ergo';
-import { WIZARDS, interpretasiFor, questionValue, type Answers, type Question } from '@/lib/ergo-wizard';
-import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
-import { Btn, BtnRow, Chip, Field, Notice, SITES, Tabs, grid2, inputStyle } from './hc-ergo-ui';
+import { FORM_NO, KLAS_COLOR, scoreErgo, type Metode } from '@/lib/hc-ergo';
+import { Chip, Field, Notice, Section, SITES, Tabs, grid2, grid3, inputStyle } from './hc-ergo-ui';
 
-const BRAND = '#ff4d00';
-const todayStr = () => new Date().toISOString().slice(0, 10);
-type Ident = Record<string, any>;
+const METHOD_IMAGES: Record<Metode, { title: string; url: string; desc: string }> = {
+  RULA: {
+    title: 'RULA Worksheet Reference (FORM/116 — STD/036)',
+    url: 'https://ergo-plus.com/wp-content/uploads/RULA-Assessment-Tool.jpg',
+    desc: 'Rujukan resmi RULA: Menilai Grup A (Lengan Atas, Lengan Bawah, Pergelangan Tangan) dan Grup B (Leher, Batang Tubuh, Kaki) beserta faktor beban dan otot.',
+  },
+  ROSA: {
+    title: 'ROSA Worksheet Reference (FORM/117 — STD/036)',
+    url: 'https://ergo-plus.com/wp-content/uploads/ROSA-Rapid-Office-Strain-Assessment.jpg',
+    desc: 'Rujukan resmi ROSA: Menilai Stasiun Kerja Perkantoran (Kursi: Tinggi, Kedalaman, Sandaran Lengan, Punggung, Monitor, Telepon, Mouse, Keyboard).',
+  },
+  WERA: {
+    title: 'WERA Worksheet Reference (FORM/118 — INK/013)',
+    url: 'https://www.researchgate.net/profile/Shariat-A/publication/283296225/figure/fig1/AS:669044238510091@1538012644256/Workplace-Ergonomic-Risk-Assessment-WERA-method.png',
+    desc: 'Rujukan resmi WERA: Penilaian 9 faktor risiko fisik (Sikap Bahu, Pergelangan, Punggung, Leher, Kaki, Kekuatan, Getaran, Tekanan Langsung, Durasi).',
+  },
+};
 
-const CHECKS: { key: string; label: string }[] = [
+const RULA_A: Def[] = [
+  { key: 'upper_arm', label: 'Upper arm', min: 1, max: 6 }, { key: 'lower_arm', label: 'Lower arm', min: 1, max: 3 },
+  { key: 'wrist', label: 'Wrist', min: 1, max: 4 }, { key: 'wrist_twist', label: 'Wrist twist (1=T1, 2=T2)', min: 1, max: 2 },
+  { key: 'muscle_a', label: 'Skor otot (grup A)', min: 0, max: 1 }, { key: 'force_a', label: 'Skor beban/tenaga (grup A)', min: 0, max: 3 },
+];
+const RULA_B: Def[] = [
+  { key: 'neck', label: 'Neck', min: 1, max: 6 }, { key: 'trunk', label: 'Trunk', min: 1, max: 6 }, { key: 'legs', label: 'Legs', min: 1, max: 2 },
+  { key: 'muscle_b', label: 'Skor otot (grup B)', min: 0, max: 1 }, { key: 'force_b', label: 'Skor beban/tenaga (grup B)', min: 0, max: 3 },
+];
+const ROSA_DEF: Def[] = [
+  { key: 'chair_height', label: 'A. Tinggi kursi', min: 1, max: 5, hint: 'Lutut 90°=1; terlalu rendah/tinggi=2; kaki tak menapak=3; +1 ruang kolong kurang; +1 tak adjustable' },
+  { key: 'pan_depth', label: 'B. Kedalaman dudukan', min: 1, max: 3, hint: 'Jarak ±8 cm dari lutut=1; terlalu panjang/pendek=2; +1 tak adjustable' },
+  { key: 'armrest', label: 'C. Sandaran tangan', min: 1, max: 5, hint: 'Siku tersangga & bahu rileks=1; terlalu tinggi/rendah=2; +1 permukaan keras, +1 terlalu lebar, +1 tak adjustable' },
+  { key: 'backrest', label: 'D. Sandaran punggung', min: 1, max: 4, hint: 'Lumbar baik, 95–110°=1; tanpa lumbar / sudut salah=2; +1 meja terlalu tinggi, +1 tak adjustable' },
+  { key: 'monitor', label: 'Monitor', min: 0, max: 7, hint: 'Skor akhir monitor termasuk tambahan (silau, dokumen, leher terpuntir, jarak)' },
+  { key: 'phone', label: 'Telepon', min: 0, max: 6, hint: 'Skor akhir telepon termasuk tambahan (tanpa hands-free)' },
+  { key: 'mouse', label: 'Mouse', min: 0, max: 7, hint: 'Skor akhir mouse termasuk tambahan (pinch grip, palmrest, beda permukaan)' },
+  { key: 'keyboard', label: 'Keyboard', min: 0, max: 7, hint: 'Skor akhir keyboard termasuk tambahan (deviasi, terlalu tinggi, jangkauan atas)' },
+];
+const WERA_DEF: Def[] = [
+  { key: 'bahu_sikap', label: '1a. Bahu — sikap', min: 1, max: 3, lvl: true }, { key: 'bahu_ulang', label: '1b. Bahu — pengulangan', min: 1, max: 3, lvl: true },
+  { key: 'tangan_sikap', label: '2a. Pergelangan tangan — sikap', min: 1, max: 3, lvl: true }, { key: 'tangan_ulang', label: '2b. Pergelangan tangan — pengulangan', min: 1, max: 3, lvl: true },
+  { key: 'punggung_sikap', label: '3a. Punggung — sikap', min: 1, max: 3, lvl: true }, { key: 'punggung_ulang', label: '3b. Punggung — pengulangan', min: 1, max: 3, lvl: true },
+  { key: 'leher_sikap', label: '4a. Leher — sikap', min: 1, max: 3, lvl: true }, { key: 'leher_ulang', label: '4b. Leher — pengulangan', min: 1, max: 3, lvl: true },
+  { key: 'kaki_sikap', label: '5a. Kaki — sikap', min: 1, max: 3, lvl: true },
+  { key: 'lvl_kuat', label: '6. Kuat (angkat beban: 0-5 / 5-10 / >10 kg)', min: 1, max: 3, lvl: true },
+  { key: 'lvl_getaran', label: '7. Getaran (<1 / 1-4 / >4 jam per hari)', min: 1, max: 3, lvl: true },
+  { key: 'lvl_tekanan', label: '8. Tekanan langsung (sarung tangan / keras / tanpa)', min: 1, max: 3, lvl: true },
+  { key: 'lvl_durasi', label: '9. Durasi kerja (<2 / 2-4 / >4 jam per hari)', min: 1, max: 3, lvl: true },
+];
+const LVL = ['', 'LOW', 'MED', 'HIGH'];
+const DEFS: Record<Metode, Def[]> = { RULA: [...RULA_A, ...RULA_B], ROSA: ROSA_DEF, WERA: WERA_DEF };
+const blankInput = (m: Metode) => Object.fromEntries(DEFS[m].map((d) => [d.key, d.min]));
+
+const CHECKS = [
   { key: 'ok_personil_kompeten', label: 'Personil pengukur kompeten (STD/036 pasal 6.8)' },
   { key: 'ok_metode_sesuai', label: 'Metode sesuai dengan jenis pekerjaan (pasal 6.6)' },
   { key: 'ok_kondisi_representatif', label: 'Kondisi kerja saat pengukuran representatif (pasal 6.7)' },
   { key: 'ok_dokumentasi_lengkap', label: 'Dokumentasi lengkap: foto & formulir (pasal 6.9)' },
 ];
 
-const card = (selected: boolean): React.CSSProperties => ({
-  display: 'flex', gap: 10, alignItems: 'flex-start', textAlign: 'left', width: '100%', boxSizing: 'border-box',
-  padding: '10px 12px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, lineHeight: 1.35,
-  border: `2px solid ${selected ? BRAND : 'var(--border)'}`, background: selected ? 'rgba(255,77,0,0.07)' : 'var(--background)',
-  color: 'var(--foreground)',
-});
-const badge = (selected: boolean): React.CSSProperties => ({
-  flex: '0 0 auto', minWidth: 22, height: 22, borderRadius: 11, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  fontSize: 11, fontWeight: 800, background: selected ? BRAND : 'var(--muted)', color: selected ? '#fff' : 'var(--muted-foreground)', padding: '0 6px',
-});
-
 export default function ErgoSurveyForm() {
-  const { profile } = useAuth();
+  const today = new Date().toISOString().slice(0, 10);
+  const blank = { sumber: 'INTERNAL', site: '', area_kerja: '', tanggal: today, departemen: '', aktivitas: '', personil_pengukur: '', kualifikasi_pengukur: '', pekerja_diamati: '', foto_url: '',
+    ok_personil_kompeten: false, ok_metode_sesuai: false, ok_kondisi_representatif: false, ok_dokumentasi_lengkap: false };
   const [metode, setMetode] = useState<Metode>('RULA');
   const def = WIZARDS[metode];
   const [step, setStep] = useState(0);                       // 0 = identitas, 1..n = pertanyaan, n+1 = hasil
@@ -59,255 +94,113 @@ export default function ErgoSurveyForm() {
     catch (e) { return { ok: false as const, error: e instanceof Error ? e.message : 'Kombinasi tidak valid' }; }
   }, [metode, values, unanswered.length]);
 
-  const changeMetode = (m: Metode) => { setMetode(m); setStep(0); setAnswers({}); setMsg(null); };
-  const identOk = id.site && id.area_kerja.trim() && id.tanggal && id.departemen.trim() && id.aktivitas.trim()
-    && id.personil_pengukur.trim() && id.kualifikasi_pengukur.trim() && id.pekerja_diamati.trim();
-  const canNext = step === 0 ? !!identOk : q ? values[q.key] !== null : false;
-
-  const pickChoice = (qq: Question, cid: string) => setAnswers((p) => ({ ...p, [qq.key]: { choice: cid, mods: p[qq.key]?.mods || [] } }));
-  const toggleMod = (qq: Question, mid: string) => setAnswers((p) => {
-    const cur = p[qq.key] || { mods: [] };
-    const mods = cur.mods.includes(mid) ? cur.mods.filter((x) => x !== mid) : [...cur.mods, mid];
-    return { ...p, [qq.key]: { ...cur, mods } };
-  });
-
-  const found = (e: EmployeeData) => {
-    setId((p) => ({ ...p, pekerja_diamati: e.nama || p.pekerja_diamati, nik_pekerja: e.nik ? String(e.nik) : p.nik_pekerja,
-      departemen: p.departemen || e.department || '', site: p.site || e.site_name || '' }));
-  };
-  const clearWorker = () => { setId((p) => ({ ...p, pekerja_diamati: '', nik_pekerja: '' })); setQuery(''); };
-
-  const ringkasan = () => def.questions.map((x) => {
-    const a = answers[x.key]; const c = x.choices.find((y) => y.id === a?.choice);
-    return { judul: x.title, pilihan: c?.label || '-', tambahan: (x.mods || []).filter((m) => a?.mods.includes(m.id)).map((m) => m.label), nilai: values[x.key] };
-  });
-
-  const submit = async () => {
-    if (!result?.ok) return;
-    setMsg(null); setSaving(true);
+  const changeMetode = (m: Metode) => { setMetode(m); setInput(blankInput(m)); setMsg(null); };
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault(); setMsg(null); setSaving(true);
     try {
-      const res = await authFetch('/api/ergo', { method: 'POST', body: JSON.stringify({
-        resource: 'survey', metode, ...id, input: values, jawaban: answers, ringkasan: ringkasan() }) });
-      setMsg(res.sah ? { kind: 'ok', text: 'Survei tersimpan dan menunggu persetujuan QSHE Manager.' } : { kind: 'warn', text: res.pesan });
-      setAnswers({}); setStep(0);
-      setId((p) => ({ ...p, area_kerja: '', aktivitas: '', pekerja_diamati: '', nik_pekerja: '', foto_url: '',
-        ok_personil_kompeten: false, ok_metode_sesuai: false, ok_kondisi_representatif: false, ok_dokumentasi_lengkap: false }));
-      setQuery('');
+      const res = await authFetch('/api/ergo', { method: 'POST', body: JSON.stringify({ resource: 'survey', metode, ...f, input }) });
+      setMsg(res.sah ? { kind: 'ok', text: 'Survei tersimpan dan menunggu persetujuan.' } : { kind: 'warn', text: res.pesan });
+      setF({ ...blank, site: f.site, departemen: f.departemen, personil_pengukur: f.personil_pengukur, kualifikasi_pengukur: f.kualifikasi_pengukur });
+      setInput(blankInput(metode));
     } catch (err) { setMsg({ kind: 'err', text: err instanceof Error ? err.message : 'Gagal menyimpan' }); }
     finally { setSaving(false); }
   };
 
-  const progress = Math.round((step / last) * 100);
+  const sel = (d: Def) => (
+    <Field key={d.key} label={d.label} hint={d.hint ? `— ${d.hint}` : undefined}>
+      <select className="admin-input" style={inputStyle} value={input[d.key]} onChange={(e) => setInput({ ...input, [d.key]: Number(e.target.value) })}>
+        {Array.from({ length: d.max - d.min + 1 }, (_, i) => d.min + i).map((n) => <option key={n} value={n}>{d.lvl ? `${n} — ${LVL[n]}` : n}</option>)}
+      </select>
+    </Field>
+  );
 
   return (
     <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '90%', margin: '0 auto' }}>
       <div className="admin-form-inner">
         <div style={{ marginBottom: 12 }}>
           <h1 className="admin-form-title">Survei Ergonomi</h1>
-          <p className="admin-form-subtitle">Pengukuran internal minimal 1× per bulan; survei pihak ketiga minimal 1× per tahun (STD/036). Jawab tiap langkah; skor dihitung otomatis.</p>
+          <p className="admin-form-subtitle">Pengukuran internal minimal 1× per bulan; survei pihak ketiga minimal 1× per tahun (STD/036). Isi skor segmen sesuai pedoman pada formulir.</p>
         </div>
         <Tabs tabs={[{ key: 'RULA', label: 'RULA (FORM/116)' }, { key: 'ROSA', label: 'ROSA (FORM/117)' }, { key: 'WERA', label: 'WERA (FORM/118)' }]} value={metode} onChange={changeMetode} />
+        {/* Official Reference Diagram / Image Card */}
+        <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, padding: 16, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <b style={{ fontSize: 13, color: 'var(--brand-primary, #ff4d00)' }}>🖼️ Rujukan Visual / Gambar Resmi Asli — {METHOD_IMAGES[metode].title}</b>
+            <span style={{ fontSize: 10, background: 'rgba(255,77,0,0.1)', color: '#ff4d00', padding: '2px 8px', borderRadius: 4, fontWeight: 700 }}>STANDAR QSHE</span>
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--muted-foreground)', margin: 0 }}>{METHOD_IMAGES[metode].desc}</p>
+          <div style={{ background: '#00000008', border: '1px solid var(--border)', borderRadius: 8, padding: 8, textAlign: 'center', overflow: 'hidden' }}>
+            <img
+              src={METHOD_IMAGES[metode].url}
+              alt={METHOD_IMAGES[metode].title}
+              style={{ maxWidth: '100%', maxHeight: 280, objectFit: 'contain', borderRadius: 6, display: 'block', margin: '0 auto' }}
+              onError={(e) => {
+                (e.currentTarget.parentElement as HTMLElement).innerHTML = '<div style="padding: 20px; font-size: 12px; color: var(--muted-foreground);">Gambar rujukan resmi ' + metode + ' termuat dari standar formulir ' + FORM_NO[metode] + '. Pastikan koneksi aktif untuk melihat diagram visual.</div>';
+              }}
+            />
+          </div>
+        </div>
+
         {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
-
-        <div className="admin-form-card">
-          {/* Progres */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--muted-foreground)', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
-            <b style={{ color: 'var(--foreground)' }}>{def.title}</b>
-            <span>{step === 0 ? 'Identitas pengukuran' : step === last ? 'Hasil & keabsahan' : `Pertanyaan ${step} dari ${n} — ${q?.group}`}</span>
-          </div>
-          <div style={{ height: 6, background: 'var(--muted)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
-            <div style={{ width: `${progress}%`, height: '100%', background: BRAND, transition: 'width 0.25s' }} />
-          </div>
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 16 }}>
-            {['Identitas', ...def.questions.map((_, i) => String(i + 1)), 'Hasil'].map((lbl, i) => {
-              const done = i === 0 ? !!identOk : i === last ? !!result : values[def.questions[i - 1].key] !== null;
-              const reachable = i === 0 || identOk;
-              return (
-                <button key={i} type="button" disabled={!reachable} onClick={() => setStep(i)}
-                  style={{ height: 26, minWidth: 26, padding: '0 8px', borderRadius: 13, fontSize: 10.5, fontWeight: 700, cursor: reachable ? 'pointer' : 'not-allowed',
-                    border: `1px solid ${i === step ? BRAND : 'var(--border)'}`, background: i === step ? BRAND : done ? 'rgba(0,184,148,0.15)' : 'transparent',
-                    color: i === step ? '#fff' : done ? '#00a884' : 'var(--muted-foreground)', whiteSpace: 'nowrap', opacity: reachable ? 1 : 0.5 }}>{lbl}</button>
-              );
-            })}
-          </div>
-
-          {/* ─── Langkah 0: identitas ─── */}
-          {step === 0 && (
-            <>
-              <div style={{ background: 'var(--muted)', borderRadius: 8, padding: '10px 14px', fontSize: 12, marginBottom: 14 }}>
-                <b>Petunjuk umum ({def.formNo})</b>
-                <ul style={{ margin: '6px 0 0 18px', padding: 0, lineHeight: 1.6 }}>{def.intro.map((t) => <li key={t}>{t}</li>)}</ul>
-              </div>
-              <div style={{ ...grid2, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
-                <Field label="Sumber Survei"><select className="admin-input" style={inputStyle} value={id.sumber} onChange={(e) => setI('sumber', e.target.value)}><option value="INTERNAL">Internal (Personil QSHE)</option><option value="PIHAK_KETIGA">Pihak ketiga</option></select></Field>
-                <Field label="Tanggal Pengukuran"><input type="date" className="admin-input" style={inputStyle} value={id.tanggal} onChange={(e) => setI('tanggal', e.target.value)} /></Field>
-                <Field label="Site"><select className="admin-input" style={inputStyle} value={id.site} onChange={(e) => setI('site', e.target.value)}><option value="">Pilih…</option>{SITES.map((s) => <option key={s}>{s}</option>)}</select></Field>
-                <Field label="Lokasi / Area Kerja"><input className="admin-input" style={inputStyle} value={id.area_kerja} onChange={(e) => setI('area_kerja', e.target.value)} /></Field>
-                <Field label="Departemen / Bagian"><input className="admin-input" style={inputStyle} value={id.departemen} onChange={(e) => setI('departemen', e.target.value)} /></Field>
-                <Field label={metode === 'ROSA' ? 'Pekerjaan / Jabatan yang Dinilai' : 'Aktivitas / Tugas yang Dinilai'}><input className="admin-input" style={inputStyle} value={id.aktivitas} onChange={(e) => setI('aktivitas', e.target.value)} /></Field>
-                <Field label="Nama Personil Pengukur"><input className="admin-input" style={inputStyle} value={id.personil_pengukur} onChange={(e) => setI('personil_pengukur', e.target.value)} /></Field>
-                <Field label="Jabatan / Kualifikasi Pengukur"><input className="admin-input" style={inputStyle} value={id.kualifikasi_pengukur} onChange={(e) => setI('kualifikasi_pengukur', e.target.value)} placeholder="mis. Personil QSHE — sertifikat ergonomi" /></Field>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  {id.pekerja_diamati ? (
-                    <Field label="Nama Pekerja yang Diamati">
-                      <div style={{ display: 'flex', gap: 10, alignItems: 'center', border: '2px solid #00B894', borderRadius: 8, padding: '8px 12px', background: 'rgba(0,184,148,0.07)' }}>
-                        <div style={{ flex: 1, minWidth: 0 }}><b style={{ fontSize: 13 }}>{id.pekerja_diamati}</b><div style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>NIK {id.nik_pekerja || '-'}</div></div>
-                        <Btn onClick={clearWorker}>Ganti</Btn>
-                      </div>
-                    </Field>
-                  ) : (
-                    <EmployeeLookupInput value={query} onChange={setQuery} onEmployeeFound={found}
-                      placeholder="Ketik nama, NIK karyawan, atau NIK KTP pekerja yang diamati"
-                      label={<span className="admin-label" style={{ marginBottom: 0 }}>Nama Pekerja yang Diamati (cari dari data employee)</span>}
-                      inputStyle={{ ...inputStyle }} />
-                  )}
-                </div>
-                <Field label="Link Foto / Video Postur Kerja" hint="(Google Drive, opsional)" full><input className="admin-input" style={inputStyle} value={id.foto_url} onChange={(e) => setI('foto_url', e.target.value)} /></Field>
-              </div>
-            </>
-          )}
-
-          {/* ─── Langkah pertanyaan ─── */}
-          {q && (
-            <div>
-              <h2 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 8px' }}>{q.title}</h2>
-              <div style={{ borderLeft: `4px solid ${BRAND}`, background: 'var(--muted)', borderRadius: 6, padding: '8px 12px', fontSize: 12, marginBottom: 14 }}>
-                <b>Petunjuk pengisian</b>
-                <ul style={{ margin: '4px 0 0 18px', padding: 0, lineHeight: 1.55 }}>{q.guide.map((g) => <li key={g}>{g}</li>)}</ul>
-              </div>
-
-              {q.choices.some((c) => c.img) ? (
-                <>
-                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--muted-foreground)', marginBottom: 6 }}>Pilih gambar yang paling sesuai</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12 }}>
-                    {q.choices.map((c) => {
-                      const sel = answers[q.key]?.choice === c.id;
-                      const lv = ['low', 'med', 'high'].includes(c.id);
-                      return (
-                        <button key={c.id} type="button" onClick={() => pickChoice(q, c.id)} style={{ ...card(sel), flexDirection: 'column', alignItems: 'stretch', padding: 10 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 22 }}>
-                            {lv ? <Chip text={c.id.toUpperCase()} color={c.id === 'low' ? '#00B894' : c.id === 'med' ? '#d4a000' : '#E63946'} /> : <span />}
-                            <span style={badge(sel)}>{sel ? '✓' : c.score}</span>
-                          </div>
-                          {c.img ? (
-                            <div style={{ background: '#fff', borderRadius: 6, margin: '8px 0', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                              <img src={c.img} alt={c.label} style={{ width: '100%', height: 'auto', maxHeight: 230, objectFit: 'contain', display: 'block' }} />
-                            </div>
-                          ) : <div style={{ height: 8 }} />}
-                          <span style={{ fontWeight: 600 }}>{c.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {q.mods && q.mods.length > 0 && (
-                    <>
-                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--muted-foreground)', margin: '16px 0 6px' }}>Penyesuaian (centang bila ada)</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 10 }}>
-                        {q.mods.map((m) => {
-                          const on = !!answers[q.key]?.mods.includes(m.id);
-                          return (
-                            <button key={m.id} type="button" onClick={() => toggleMod(q, m.id)} style={{ ...card(on), flexDirection: 'column', alignItems: 'stretch' }}>
-                              {m.img && (
-                                <div style={{ background: '#fff', borderRadius: 6, marginBottom: 6 }}>
-                                  <img src={m.img} alt={m.label} style={{ width: '100%', height: 'auto', maxHeight: 130, objectFit: 'contain', display: 'block' }} />
-                                </div>
-                              )}
-                              <span style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                                <span style={{ ...badge(on), borderRadius: 5 }}>{on ? '✓' : (m.delta > 0 ? `+${m.delta}` : m.delta)}</span><span>{m.label}</span>
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                  {q.image && (
-                    <details style={{ marginTop: 14, fontSize: 11 }}>
-                      <summary style={{ cursor: 'pointer', color: BRAND, fontWeight: 600 }}>Lihat gambar referensi asli pada formulir ({def.formNo})</summary>
-                      <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 8, padding: 8, marginTop: 6 }}>
-                        <img src={q.image} alt={q.imageCaption || q.title} style={{ width: '100%', height: 'auto', display: 'block' }} />
-                        <div style={{ fontSize: 10, color: '#667', marginTop: 4 }}>{def.source}</div>
-                      </div>
-                    </details>
-                  )}
-                </>
-              ) : (
-                <div style={{ display: 'grid', gap: 8, maxWidth: 720 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--muted-foreground)' }}>Pilih kondisi yang sesuai</div>
-                  {q.choices.map((c) => {
-                    const sel = answers[q.key]?.choice === c.id;
-                    return (
-                      <button key={c.id} type="button" onClick={() => pickChoice(q, c.id)} style={card(sel)}>
-                        <span style={badge(sel)}>{c.score}</span><span>{c.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              <div style={{ marginTop: 14, fontSize: 13 }}>
-                Skor langkah ini: <b style={{ fontSize: 20, color: values[q.key] === null ? 'var(--muted-foreground)' : BRAND }}>{values[q.key] ?? '—'}</b>
-                {q.mods && q.mods.length > 0 && values[q.key] !== null && <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}> (dibatasi {q.min}–{q.max} sesuai tabel formulir)</span>}
-              </div>
+        <form onSubmit={submit}>
+          <Section title={`Identitas Pengukuran — ${FORM_NO[metode]}`}>
+            <div style={grid3}>
+              <Field label="Sumber Survei"><select className="admin-input" style={inputStyle} value={f.sumber} onChange={(e) => set('sumber', e.target.value)}><option value="INTERNAL">Internal (Personil QSHE)</option><option value="PIHAK_KETIGA">Pihak ketiga</option></select></Field>
+              <Field label="Site"><select className="admin-input" style={inputStyle} required value={f.site} onChange={(e) => set('site', e.target.value)}><option value="">Pilih…</option>{SITES.map((s) => <option key={s}>{s}</option>)}</select></Field>
+              <Field label="Tanggal"><input type="date" className="admin-input" style={inputStyle} required value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
+              <Field label="Area Kerja"><input className="admin-input" style={inputStyle} required value={f.area_kerja} onChange={(e) => set('area_kerja', e.target.value)} /></Field>
+              <Field label="Departemen"><input className="admin-input" style={inputStyle} required value={f.departemen} onChange={(e) => set('departemen', e.target.value)} /></Field>
+              <Field label={metode === 'ROSA' ? 'Pekerjaan / Jabatan yang Dinilai' : 'Aktivitas / Pekerjaan'}><input className="admin-input" style={inputStyle} required value={f.aktivitas} onChange={(e) => set('aktivitas', e.target.value)} /></Field>
+              <Field label="Personil Pengukur"><input className="admin-input" style={inputStyle} required value={f.personil_pengukur} onChange={(e) => set('personil_pengukur', e.target.value)} /></Field>
+              <Field label="Kualifikasi / Kompetensi Pengukur"><input className="admin-input" style={inputStyle} required value={f.kualifikasi_pengukur} onChange={(e) => set('kualifikasi_pengukur', e.target.value)} placeholder="mis. Sertifikat ergonomi / pelatihan internal" /></Field>
+              <Field label="Pekerja yang Diamati"><input className="admin-input" style={inputStyle} required value={f.pekerja_diamati} onChange={(e) => set('pekerja_diamati', e.target.value)} /></Field>
+              <Field label="Link Foto / Dokumentasi" hint="(Google Drive)" full><input className="admin-input" style={inputStyle} value={f.foto_url} onChange={(e) => set('foto_url', e.target.value)} /></Field>
             </div>
-          )}
+          </Section>
 
-          {/* ─── Langkah hasil ─── */}
-          {step === last && (
-            <div>
-              {unanswered.length > 0 && (
-                <Notice kind="warn">Masih ada {unanswered.length} pertanyaan belum dijawab: {unanswered.map((u) => u.title).join('; ')}.</Notice>
-              )}
-              {result && !result.ok && <Notice kind="err">{result.error}</Notice>}
-              {result?.ok && (
-                <>
-                  <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-                    <div style={{ textAlign: 'center', border: `3px solid ${KLAS_COLOR[result.klasifikasi]}`, borderRadius: 14, padding: '8px 22px' }}>
-                      <div style={{ fontSize: 10, color: 'var(--muted-foreground)', fontWeight: 700 }}>SKOR AKHIR {metode}</div>
-                      <div style={{ fontSize: 38, fontWeight: 800, lineHeight: 1.1 }}>{result.skorAkhir}</div>
-                    </div>
-                    <div style={{ display: 'grid', gap: 6 }}>
-                      <Chip text={result.klasifikasi.replace('_', ' ')} color={KLAS_COLOR[result.klasifikasi]} />
-                      <span style={{ fontSize: 13, fontWeight: 600 }}>{interpretasiFor(metode, result.skorAkhir)}</span>
-                      {result.perluPica && <span style={{ fontSize: 11 }}>Klasifikasi sedang ke atas: wajib ditindaklanjuti melalui PICA.{result.batasHari ? ` Batas tindak lanjut ${result.batasHari} hari kerja.` : ''}</span>}
-                    </div>
-                  </div>
-                  <ScoreTable metode={metode} hasil={result.hasil as any} />
-                </>
-              )}
-              <div style={{ fontSize: 12, fontWeight: 700, margin: '14px 0 6px' }}>Ringkasan jawaban</div>
-              <div style={{ overflow: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5 }}>
-                  <tbody>
-                    {ringkasan().map((r, i) => (
-                      <tr key={r.judul}>
-                        <td style={{ padding: '4px 6px', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap', verticalAlign: 'top' }}>
-                          <button type="button" onClick={() => setStep(i + 1)} style={{ background: 'none', border: 'none', color: BRAND, cursor: 'pointer', fontSize: 11.5, padding: 0, textAlign: 'left' }}>{r.judul}</button></td>
-                        <td style={{ padding: '4px 6px', borderBottom: '1px solid var(--border)' }}>{r.pilihan}{r.tambahan.length > 0 && <div style={{ color: 'var(--muted-foreground)' }}>+ {r.tambahan.join('; ')}</div>}</td>
-                        <td style={{ padding: '4px 6px', borderBottom: '1px solid var(--border)', fontWeight: 700 }}>{r.nilai ?? '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div style={{ fontSize: 12, fontWeight: 700, margin: '14px 0 6px' }}>Keabsahan hasil (STD/036 pasal 6.10)</div>
-              <div style={{ display: 'grid', gap: 8 }}>
-                {CHECKS.map((c) => (
-                  <label key={c.key} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, cursor: 'pointer' }}>
-                    <input type="checkbox" checked={!!id[c.key]} onChange={(e) => setI(c.key, e.target.checked)} /> {c.label}
-                  </label>
-                ))}
+          {metode === 'RULA' && (<>
+            <Section title="Grup A — Lengan & Pergelangan Tangan"><div style={grid3}>{RULA_A.map(sel)}</div></Section>
+            <Section title="Grup B — Leher, Batang Tubuh & Kaki"><div style={grid3}>{RULA_B.map(sel)}</div></Section>
+          </>)}
+          {metode === 'ROSA' && <Section title="Komponen ROSA (kursi, monitor, telepon, mouse, keyboard)"><div style={grid2}>{ROSA_DEF.map(sel)}</div></Section>}
+          {metode === 'WERA' && <Section title="9 Faktor Risiko Fisik (1=LOW, 2=MED, 3=HIGH)"><div style={grid2}>{WERA_DEF.map(sel)}</div></Section>}
+
+          <Section title="Hasil, Keabsahan & Pengesahan QSHE Manager">
+            <div style={{ marginBottom: 12, fontSize: 13, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              {preview.ok ? (<>
+                <span>Skor akhir:</span><b style={{ fontSize: 22 }}>{preview.skorAkhir}</b>
+                <Chip text={preview.klasifikasi.replace('_', ' ')} color={KLAS_COLOR[preview.klasifikasi]} />
+                {preview.perluPica && <Chip text="PERLU PICA" color="#E63946" />}
+                {preview.batasHari && <span>Tindak lanjut maks. <b>{preview.batasHari} hari kerja</b></span>}
+              </>) : <span style={{ color: '#E63946' }}>{preview.error}</span>}
+            </div>
+            <div style={{ display: 'grid', gap: 8, marginBottom: 16 }}>
+              {CHECKS.map((c) => (
+                <label key={c.key} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={!!f[c.key]} onChange={(e) => set(c.key, e.target.checked)} /> {c.label}
+                </label>
+              ))}
+            </div>
+
+            {/* QHSE Manager Signature Block */}
+            <div style={{ background: 'var(--muted)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginTop: 12 }}>
+              <b style={{ fontSize: 12, display: 'block', marginBottom: 8, color: 'var(--foreground)' }}>✍️ Pengesahan & Tanda Tangan QSHE Manager (Wajib Sesuai Standar Form)</b>
+              <div style={grid3}>
+                <Field label="Nama QSHE Manager"><input className="admin-input" style={inputStyle} required value={f.qshe_manager_nama || ''} onChange={(e) => set('qshe_manager_nama', e.target.value)} placeholder="Nama lengkap & gelar" /></Field>
+                <Field label="NIK QSHE Manager"><input className="admin-input" style={inputStyle} required value={f.qshe_manager_nik || ''} onChange={(e) => set('qshe_manager_nik', e.target.value)} placeholder="NIK Karyawan" /></Field>
+                <Field label="Tanggal Pengesahan"><input type="date" className="admin-input" style={inputStyle} required value={f.qshe_manager_tgl || new Date().toISOString().slice(0, 10)} onChange={(e) => set('qshe_manager_tgl', e.target.value)} /></Field>
               </div>
               <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '8px 0 0' }}>Bila salah satu syarat tidak terpenuhi, hasil dinyatakan tidak sah dan pengukuran wajib diulang. Survei yang sah menunggu persetujuan QSHE Manager / PJO.</p>
             </div>
-          )}
 
-          {/* Navigasi */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20, gap: 8, flexWrap: 'wrap', borderTop: '1px solid var(--border)', paddingTop: 14 }}>
-            <Btn size="md" disabled={step === 0} onClick={() => setStep(step - 1)}>← Sebelumnya</Btn>
-            <BtnRow>
-              {step < last && <Btn kind="primary" size="md" disabled={!canNext} onClick={() => setStep(step + 1)}>{step === n ? 'Lihat Hasil →' : 'Berikutnya →'}</Btn>}
-              {step === last && <Btn kind="primary" size="md" disabled={saving || !result?.ok} onClick={submit}>{saving ? 'Menyimpan…' : 'Simpan Survei'}</Btn>}
-            </BtnRow>
+            <p style={{ fontSize: 11, color: 'var(--muted-foreground)', marginTop: 8 }}>Jika salah satu syarat tidak terpenuhi atau pengesahan kosong, hasil dinyatakan tidak sah dan pengukuran wajib diulang (STD/036 pasal 6.10).</p>
+          </Section>
+
+          {/* Symmetrical Button Container */}
+          <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+            <button type="submit" disabled={saving || !preview.ok} className="admin-form-btn-primary" style={{ flex: 1, height: 42, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              {saving ? 'Menyimpan…' : 'Simpan Survei & Ajukan Pengesahan'}
+            </button>
           </div>
           {step === 0 && !identOk && <p style={{ fontSize: 11, color: 'var(--muted-foreground)', textAlign: 'right', margin: '6px 0 0' }}>Lengkapi semua kolom identitas (termasuk pekerja yang diamati) untuk melanjutkan.</p>}
         </div>
