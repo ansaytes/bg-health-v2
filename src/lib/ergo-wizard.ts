@@ -149,7 +149,7 @@ export const ROSA_DEF: WizardDef = {
 
 /* ═════════════ WERA — FORM/118 ═════════════ */
 const lv = (f: string, labels: [string, string, string]): Choice[] =>
-  (['low', 'med', 'high'] as const).map((l, i) => ({ id: l, label: labels[i], score: i + 1, img: `${P}wera_${f}_${l}.png` }));
+  (['low', 'med', 'high'] as const).map((l, i) => ({ id: l, label: labels[i], score: i + 1, img: `${S}wera_${f}_${l}.svg` }));
 const WERA_GUIDE = 'Nilai setiap faktor berdasarkan kriteria Low/Medium/High pada gambar. Skor faktor dihitung otomatis dari tabel scoring system pada formulir.';
 const w = (key: string, group: string, title: string, f: string, labels: [string, string, string], extra: string[] = []): Question =>
   ({ key, group, title, guide: [WERA_GUIDE, ...extra], choices: lv(f, labels), imageChoices: true, min: 1, max: 3 });

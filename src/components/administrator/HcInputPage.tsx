@@ -245,43 +245,38 @@ function ExposureTab({ areas, onMsg }: { areas: Row[]; onMsg: (m: any) => void }
 
 /* ───────────── MASTER AREA ───────────── */
 function AreaTab({ areas, onMsg, onChanged }: { areas: Row[]; onMsg: (m: any) => void; onChanged: () => void }) {
-  const [site, setSite] = useState('');
-  const [nama, setNama] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [site, setSite] = useState(''); const [nama, setNama] = useState(''); const [sumber, setSumber] = useState('');
   const submit = async (e: React.FormEvent) => {
-    e.preventDefault(); onMsg(null); setSaving(true);
+    e.preventDefault(); onMsg(null);
     try {
-      await authFetch('/api/hc', { method: 'POST', body: JSON.stringify({ resource: 'area', site, nama_area: nama }) });
-      onMsg({ kind: 'ok', text: 'Area tersimpan.' }); setNama(''); onChanged();
+      await authFetch('/api/hc', { method: 'POST', body: JSON.stringify({ resource: 'area', site, nama_area: nama, sumber_bising: sumber }) });
+      setNama(''); setSumber(''); onChanged(); onMsg({ kind: 'ok', text: 'Area tersimpan.' });
     } catch (err) { onMsg({ kind: 'err', text: err instanceof Error ? err.message : 'Gagal menyimpan' }); }
-    finally { setSaving(false); }
   };
   const off = async (id: string) => {
-    if (!confirm('Nonaktifkan area ini?')) return;
+    if (!confirm('Nonaktifkan area ini? Riwayat ukur tetap tersimpan.')) return;
     try { await authFetch(`/api/hc?resource=area&id=${id}`, { method: 'DELETE' }); onChanged(); }
     catch (err) { onMsg({ kind: 'err', text: err instanceof Error ? err.message : 'Gagal' }); }
   };
-
   return (
     <>
       <form onSubmit={submit}>
-        <Section title="Master Area Kerja">
-          <div style={grid2}>
+        <Section title="Tambah Area Kerja">
+          <div style={grid3}>
             <Field label="Site"><select className="admin-input" style={inputStyle} required value={site} onChange={(e) => setSite(e.target.value)}><option value="">Pilih…</option>{SITES.map((s) => <option key={s}>{s}</option>)}</select></Field>
-            <Field label="Nama Area"><input className="admin-input" style={inputStyle} required value={nama} onChange={(e) => setNama(e.target.value)} /></Field>
+            <Field label="Nama Area"><input className="admin-input" style={inputStyle} required value={nama} onChange={(e) => setNama(e.target.value)} placeholder="mis. Workshop, Crusher, Genset" /></Field>
+            <Field label="Sumber Bising"><input className="admin-input" style={inputStyle} value={sumber} onChange={(e) => setSumber(e.target.value)} /></Field>
           </div>
         </Section>
         <Btn type="submit" kind="primary" size="md">Simpan Area</Btn>
       </form>
       <div className="admin-form-card" style={{ marginTop: 20 }}>
-        <div className="admin-section-header"><h3 className="admin-section-title">Daftar Area</h3></div>
+        <div className="admin-section-header"><h3 className="admin-section-title">Area Terdaftar</h3></div>
         <table style={tableStyle}>
-          <thead><tr>{['Site', 'Nama Area', 'Zona', 'Terakhir diukur', 'Jatuh tempo', ''].map((h) => <th key={h} style={thStyle}>{h}</th>)}</tr></thead>
+          <thead><tr>{['Site', 'Area', 'Zona terkini', 'Ukur terakhir', 'Jatuh tempo', ''].map((h) => <th key={h} style={thStyle}>{h}</th>)}</tr></thead>
           <tbody>
             {areas.map((a) => (
-              <tr key={a.area_id}>
-                <td style={tdStyle}>{a.site}</td>
-                <td style={tdStyle}>{a.nama_area}</td>
+              <tr key={a.area_id}><td style={tdStyle}>{a.site}</td><td style={tdStyle}>{a.nama_area}</td>
                 <td style={tdStyle}>{a.zona ? <Chip text={a.zona} color={ZONA_COLOR[a.zona as Zona]} /> : <Chip text="BELUM DIUKUR" color="#778899" />}</td>
                 <td style={tdStyle}>{fmtDate(a.tanggal_ukur)}</td>
                 <td style={tdStyle}>{a.jatuh_tempo ? fmtDate(a.jatuh_tempo) : '-'} {a.terlambat && a.zona && <Chip text="TERLAMBAT" color="#E63946" />}</td>

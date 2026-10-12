@@ -36,7 +36,7 @@ export default function HearingConservationDashboard() {
         <Stat label="Area Zona Hijau" value={d.zona.HIJAU} color={ZONA_COLOR.HIJAU} />
         <Stat label="Ukur Ulang Terlambat" value={d.areaTerlambat} color={d.areaTerlambat ? '#E63946' : undefined} sub={`${d.zona.BELUM} area belum pernah diukur`} />
         <Stat label="STS Belum Ditindaklanjuti" value={d.sts.belumDitindaklanjuti} color={d.sts.belumDitindaklanjuti ? '#E63946' : undefined} />
-        <Stat label="Audiometri Tidak Lengkap" value={d.audiometri.tidakLengkap} color={d.audiometri.tidakLengkap ? '#E63946' : undefined} sub={`dari ${d.audiometri.dengan} audiogram · wajib 500–8000 Hz`} />
+        <Stat label="Audiometri Tidak Lengkap" value={d.audiometri.tidakLengkap} color={d.audiometri.tidakLengkap ? '#d97706' : undefined} sub={`dari ${d.audiometri.dengan} audiogram · catatan, data tetap dievaluasi`} />
         <Stat label="Retest Terlambat (>30 hr)" value={d.sts.retestTerlambat} color={d.sts.retestTerlambat ? '#E63946' : undefined} />
       </div>
 

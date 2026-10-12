@@ -127,12 +127,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const role = profile?.role ?? null;
-  // Admin panels: superuser, administrator, manager, pic
-  const isAdmin = role === 'superuser' || role === 'administrator' || role === 'manager' || role === 'pic';
+  // Admin panels: superuser, administrator, pic. Manager = viewer + hak persetujuan (tidak membuka panel admin).
+  const isAdmin = role === 'superuser' || role === 'administrator' || role === 'pic';
   const isSuperuser = role === 'superuser';
   const isManager = role === 'manager';
-  // Only manager / administrator / superuser may approve or reject ergo surveys
-  const canApproveErgo = role === 'superuser' || role === 'administrator' || role === 'manager';
+  // Hanya Manager (QSHE Manager / PJO) dan superuser yang dapat menyetujui / menolak survei ergonomi
+  const canApproveErgo = role === 'superuser' || role === 'manager';
 
   const refreshProfile = useCallback(async () => {
     if (PREVIEW_MODE && PREVIEW_ROLE) {

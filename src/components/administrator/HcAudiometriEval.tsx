@@ -55,11 +55,14 @@ export default function HcAudiometriEval() {
           <p className="admin-form-subtitle">Karyawan Kategori A/B. Derajat gangguan (WHO) = rata-rata 500/1000/2000/4000 Hz per telinga, dibulatkan ke bilangan bulat terdekat; derajat karyawan = telinga yang lebih baik. STS = geser rata-rata 2000/3000/4000 Hz ≥ 10 dB terhadap baseline, per telinga (STD/033 6.4).</p>
         </div>
         {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
+        <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '0 0 10px' }}>
+          Catatan: audiogram yang tidak lengkap (standar vendor 500–8000 Hz, 14 titik) hanya diberi tanda <b>TIDAK LENGKAP</b>. Data tetap dievaluasi, dapat ditetapkan sebagai baseline, dan dapat dilanjutkan ke tindak lanjut STS; frekuensi yang kosong tidak ikut dihitung.
+        </p>
         <div className="kunjungan-filter-bar" style={{ marginBottom: 12 }}>
           <select className="admin-filter-select" value={site} onChange={(e) => setSite(e.target.value)}><option value="">Semua site</option>{SITES.map((s) => <option key={s}>{s}</option>)}</select>
           <select className="admin-filter-select" value={kat} onChange={(e) => setKat(e.target.value)}><option value="">Kategori A & B</option><option value="A">Kategori A</option><option value="B">Kategori B</option></select>
           <select className="admin-filter-select" value={only} onChange={(e) => setOnly(e.target.value)}>
-            <option value="">Semua status</option><option value="sts">Hanya STS</option><option value="nobase">Belum ada baseline</option><option value="belum">Belum audiometri tahun ini</option><option value="tdklengkap">Audiometri tidak lengkap (vendor)</option></select>
+            <option value="">Semua status</option><option value="sts">Hanya STS</option><option value="nobase">Belum ada baseline</option><option value="belum">Belum audiometri tahun ini</option><option value="tdklengkap">Audiometri tidak lengkap (catatan)</option></select>
           <span className="kunjungan-total-right">{shown.length} karyawan {loading && '· memuat…'}</span>
         </div>
 
@@ -72,7 +75,7 @@ export default function HcAudiometriEval() {
                   <td style={tdStyle}><b>{r.nama}</b><div style={{ color: 'var(--muted-foreground)', fontSize: 10 }}>{r.nik}</div></td>
                   <td style={tdStyle}>{r.site}</td><td style={tdStyle}>{r.kategori}</td>
                   <td style={tdStyle}>{r.latest ? fmtDate(r.latest.tanggal) : <Chip text="BELUM ADA" color="#778899" />}{r.latest && !r.tahunIni && <div><Chip text="BUKAN TAHUN INI" color="#F5A623" /></div>}
-                    {r.latest && r.lengkap === false && <div title={`Frekuensi belum terisi: ${r.kurang.join(', ')}`}><Chip text={`TIDAK LENGKAP ${r.terisi}/14`} color="#E63946" /></div>}</td>
+                    {r.latest && r.lengkap === false && <div title={`Catatan: frekuensi belum terisi — ${r.kurang.join(', ')}. Data tetap dievaluasi.`}><Chip text={`TIDAK LENGKAP ${r.terisi}/14`} color="#F5A623" /></div>}</td>
                   <td style={tdStyle}>{kelasChip(r.kelasKanan)}<div style={{ fontSize: 10 }}>{r.avg4Kanan ?? '-'} dB</div></td>
                   <td style={tdStyle}>{kelasChip(r.kelasKiri)}<div style={{ fontSize: 10 }}>{r.avg4Kiri ?? '-'} dB</div></td>
                   <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>

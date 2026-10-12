@@ -61,6 +61,7 @@ async function buildDashboard(site: string) {
     byKlas[s.metode] = byKlas[s.metode] || { RENDAH: 0, SEDANG: 0, TINGGI: 0, SANGAT_TINGGI: 0 };
     byKlas[s.metode][s.klasifikasi]++;
   }
+  // tren bulanan 12 bulan
   const months: string[] = [];
   const d = new Date(); d.setDate(1);
   for (let i = 11; i >= 0; i--) { const x = new Date(d.getFullYear(), d.getMonth() - i, 1); months.push(`${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`); }
@@ -69,6 +70,7 @@ async function buildDashboard(site: string) {
     total: approved.filter(s => s.tanggal.startsWith(m)).length,
     sedangKeAtas: approved.filter(s => s.tanggal.startsWith(m) && s.perlu_pica).length,
   }));
+  // kepatuhan per site: internal >=1/bulan ini, pihak ketiga >=1/12 bulan (STD/036)
   const thisMonth = months[months.length - 1];
   const { data: sitesData } = await db.from('ergo_survey').select('site');
   const siteList = [...new Set((sitesData || []).map(s => s.site))].filter(siteOk).sort();
@@ -120,9 +122,10 @@ export async function POST(req: NextRequest) {
         site: b.site, area_kerja: b.area_kerja.trim(), tanggal: b.tanggal, departemen: b.departemen.trim(),
         aktivitas: b.aktivitas.trim(), personil_pengukur: b.personil_pengukur.trim(),
         kualifikasi_pengukur: b.kualifikasi_pengukur.trim(), pekerja_diamati: b.pekerja_diamati.trim(),
-        foto_url: b.foto_url || null, nik_pekerja_hash: b.nik_pekerja ? hashField(String(b.nik_pekerja).trim()) : (b.pekerja_nik ? hashField(String(b.pekerja_nik).trim()) : null),
+        foto_url: b.foto_url || null, nik_pekerja_hash: b.nik_pekerja ? hashField(String(b.nik_pekerja).trim()) : null,
         ...oks, input, hasil: { ...sc.hasil, ringkasan: Array.isArray(b.ringkasan) ? b.ringkasan.slice(0, 40) : null }, skor_akhir: sc.skorAkhir,
         klasifikasi: sc.klasifikasi, perlu_pica: sc.perluPica, batas_tindak_hari_kerja: sc.batasHari,
+        // STD/036 6.10: hasil tidak sah wajib diulang
         status: sah ? 'MENUNGGU_PERSETUJUAN' : 'DITOLAK_ULANG', dibuat_oleh: caller.name,
       }).select().single();
       if (error) throw new Error(error.message);
@@ -184,10 +187,6 @@ export async function PATCH(req: NextRequest) {
         if (error) throw new Error(error.message);
         return ok({ rejected: true });
       }
-
-      // pica number update — any allowed role
-      const auth = await requireCaller(req);
-      if ('error' in auth) return auth.error;
       if (b.action === 'pica') {
         const { error } = await db.from('ergo_survey').update({ pica_no: b.pica_no || null }).eq('id', b.id);
         if (error) throw new Error(error.message);
@@ -195,7 +194,6 @@ export async function PATCH(req: NextRequest) {
       }
       return fail('action tidak dikenal');
     }
-
     if (b.resource === 'recommendation') {
       if (!ADMIN_ROLES.includes(caller.role)) return fail('Akses ditolak', 403);
       const patch: Row = {};
