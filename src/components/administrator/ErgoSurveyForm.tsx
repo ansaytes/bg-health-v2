@@ -4,6 +4,7 @@
 import { useMemo, useState } from 'react';
 import { authFetch } from '@/lib/api-client';
 import { FORM_NO, KLAS_COLOR, scoreErgo, type Metode } from '@/lib/hc-ergo';
+import { WIZARDS, questionValue, type Answers, type Question } from '@/lib/ergo-wizard';
 import { Chip, Field, Notice, Section, SITES, Tabs, grid2, grid3, inputStyle } from './hc-ergo-ui';
 
 const METHOD_IMAGES: Record<Metode, { title: string; url: string; desc: string }> = {
