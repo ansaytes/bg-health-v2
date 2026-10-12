@@ -142,7 +142,7 @@ export default function InventoryAdmin() {
     setSelectedItem(item);
     setRestockForm({
       jumlah_masuk: '',
-      tanggal_masuk: new Date().toISOString().split('T')[0], // default hari ini
+      tanggal_masuk: new Date().toISOString().split('T')[0],
       tanggal_expired: ''
     });
     setIsRestockOpen(true);
@@ -250,7 +250,7 @@ export default function InventoryAdmin() {
   };
 
   return (
-    <div className="admin-form-container" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '0 24px 24px 24px' }}>
+    <div className="admin-form-container" style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '0 24px 8px 24px', height: '100%', minHeight: 0 }}>
       
       {/* HEADER LAYOUT: SYMMETRICAL & APPLE-LIKE */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid var(--border)' }}>
@@ -296,7 +296,7 @@ export default function InventoryAdmin() {
         </div>
       </div>
 
-      <div className="mcu-records-table-wrap inventory-admin-table-wrap" style={{ border: '1px solid var(--border)', borderRadius: '10px' }}>
+      <div className="mcu-records-table-wrap inventory-admin-table-wrap" style={{ border: '1px solid var(--border)', borderRadius: '10px', flex: '1 1 auto', minHeight: 380, maxHeight: 'calc(100dvh - 200px)' }}>
         <table className="mcu-records-table inventory-admin-table" style={{ borderCollapse: 'collapse', fontSize: '13px' }}>
           <thead style={{ background: 'var(--muted)', textAlign: 'left', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             <tr>
@@ -424,16 +424,15 @@ export default function InventoryAdmin() {
                 <input type="number" style={inputStyle} required value={addForm.avg_monthly_usage} onChange={e => setAddForm({...addForm, avg_monthly_usage: e.target.value})} placeholder="Cth: 30" />
               </div>
             </div>
-            <p style={{ fontSize: '12px', color: 'var(--muted-foreground)' }}>* Setelah master item dibuat, Anda dapat menambahkan stok melalui tombol <b>Restock</b>.</p>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setIsAddOpen(false)}>Batal</Button>
-              <Button type="submit" disabled={saving}>{saving ? 'Menyimpan...' : 'Simpan Master Item'}</Button>
+              <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>Batal</Button>
+              <Button type="submit" disabled={saving}>{saving ? 'Menyimpan...' : 'Simpan'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* EDIT MASTER ITEM DIALOG */}
+      {/* EDIT ITEM DIALOG */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent style={{ maxWidth: 450 }}>
           <DialogHeader>
@@ -443,12 +442,12 @@ export default function InventoryAdmin() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
               <div>
                 <label className="admin-label">Nama Obat / BHP</label>
-                <input type="text" style={inputStyle} required value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
+                <input type="text" style={inputStyle} required value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label className="admin-label">Kategori</label>
-                  <select style={inputStyle} value={editForm.category} onChange={e => setEditForm({ ...editForm, category: e.target.value })}>
+                  <select style={inputStyle} value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})}>
                     <option value="Obat">Obat</option>
                     <option value="Bahan Medis">Bahan Medis</option>
                     <option value="Lainnya">Lainnya</option>
@@ -456,49 +455,44 @@ export default function InventoryAdmin() {
                 </div>
                 <div>
                   <label className="admin-label">Satuan</label>
-                  <input type="text" style={inputStyle} required value={editForm.unit} onChange={e => setEditForm({ ...editForm, unit: e.target.value })} />
+                  <input type="text" style={inputStyle} required value={editForm.unit} onChange={e => setEditForm({...editForm, unit: e.target.value})} />
                 </div>
               </div>
               <div>
-                <label className="admin-label">Rata-rata Pemakaian / Bulan</label>
-                <input type="number" min="0" step="1" style={inputStyle} required value={editForm.avg_monthly_usage} onChange={e => setEditForm({ ...editForm, avg_monthly_usage: e.target.value })} />
+                <label className="admin-label">Rata2 Pemakaian / Bulan</label>
+                <input type="number" style={inputStyle} required value={editForm.avg_monthly_usage} onChange={e => setEditForm({...editForm, avg_monthly_usage: e.target.value})} />
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setIsEditOpen(false)}>Batal</Button>
+              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>Batal</Button>
               <Button type="submit" disabled={editSaving}>{editSaving ? 'Menyimpan...' : 'Simpan Perubahan'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* RESTOCK / ADD BATCH DIALOG */}
+      {/* RESTOCK DIALOG */}
       <Dialog open={isRestockOpen} onOpenChange={setIsRestockOpen}>
-        <DialogContent style={{ maxWidth: 450 }}>
+        <DialogContent style={{ maxWidth: 420 }}>
           <DialogHeader>
-            <DialogTitle>📦 Restock Stok (Batch Baru)</DialogTitle>
+            <DialogTitle>Restock / Tambah Batch — {selectedItem?.name}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleRestock} style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 12 }}>
-            <div style={{ padding: '10px 12px', background: 'var(--muted)', borderRadius: '8px', fontSize: '13px' }}>
-              Anda akan menambahkan stok untuk: <strong>{selectedItem?.name}</strong>
+            <div>
+              <label className="admin-label">Jumlah Masuk</label>
+              <input type="number" style={inputStyle} required min={1} value={restockForm.jumlah_masuk} onChange={e => setRestockForm({...restockForm, jumlah_masuk: e.target.value})} placeholder="Jumlah" />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
-              <div>
-                <label className="admin-label">Jumlah Masuk ({selectedItem?.unit})</label>
-                <input type="number" style={inputStyle} required value={restockForm.jumlah_masuk} onChange={e => setRestockForm({...restockForm, jumlah_masuk: e.target.value})} placeholder="Cth: 200" />
-              </div>
-              <div>
-                <label className="admin-label">Tanggal Masuk</label>
-                <input type="date" style={inputStyle} required value={restockForm.tanggal_masuk} onChange={e => setRestockForm({...restockForm, tanggal_masuk: e.target.value})} />
-              </div>
-              <div>
-                <label className="admin-label">Tanggal Kedaluwarsa (Expired)</label>
-                <input type="date" style={inputStyle} required value={restockForm.tanggal_expired} onChange={e => setRestockForm({...restockForm, tanggal_expired: e.target.value})} />
-              </div>
+            <div>
+              <label className="admin-label">Tanggal Masuk</label>
+              <input type="date" style={inputStyle} required value={restockForm.tanggal_masuk} onChange={e => setRestockForm({...restockForm, tanggal_masuk: e.target.value})} />
+            </div>
+            <div>
+              <label className="admin-label">Tanggal Expired</label>
+              <input type="date" style={inputStyle} required value={restockForm.tanggal_expired} onChange={e => setRestockForm({...restockForm, tanggal_expired: e.target.value})} />
             </div>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setIsRestockOpen(false)}>Batal</Button>
-              <Button type="submit" disabled={restockSaving}>{restockSaving ? 'Menyimpan...' : 'Simpan Batch Baru'}</Button>
+              <Button type="button" variant="outline" onClick={() => setIsRestockOpen(false)}>Batal</Button>
+              <Button type="submit" disabled={restockSaving}>{restockSaving ? 'Menyimpan...' : 'Tambah Batch'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

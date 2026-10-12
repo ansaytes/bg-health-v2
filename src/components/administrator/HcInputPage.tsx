@@ -7,7 +7,7 @@ import { authFetch } from '@/lib/api-client';
 import { aptRequirement, jatuhTempoUkur, zonaFromLeq, ZONA_COLOR, type Zona } from '@/lib/hc-ergo';
 import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
 import {
-  Chip, Field, Notice, Section, SITES, Tabs, fmtDate, grid2, grid3, inputStyle, smallInput, tableStyle, tdStyle, thStyle,
+  Btn, BtnRow, Chip, Field, Notice, Section, SITES, Tabs, fmtDate, grid2, grid3, inputStyle, smallInput, tableStyle, tdStyle, thStyle,
 } from './hc-ergo-ui';
 
 type Row = Record<string, any>;
@@ -124,7 +124,7 @@ function NoiseTab({ areas, onMsg, onSaved }: { areas: Row[]; onMsg: (m: any) => 
               </div>
             );
           })}
-          <button type="button" className="admin-form-btn-secondary compact-btn" onClick={() => setPts([...pts, newPt(pts.length + 1)])}><Plus size={13} /> Tambah Titik</button>
+          <Btn onClick={() => setPts([...pts, newPt(pts.length + 1)])}><Plus size={13} /> Tambah Titik</Btn>
           {zona && leqMax !== null && apt && (
             <div style={{ marginTop: 12, fontSize: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               <span>Zona area (titik tertinggi {leqMax} dB(A)):</span><Chip text={zona} color={ZONA_COLOR[zona]} />
@@ -142,7 +142,7 @@ function NoiseTab({ areas, onMsg, onSaved }: { areas: Row[]; onMsg: (m: any) => 
             <Field label="Catatan" full><textarea className="admin-input" style={{ ...inputStyle, height: 60, padding: 8 }} value={f.catatan} onChange={(e) => set('catatan', e.target.value)} /></Field>
           </div>
         </Section>
-        <button type="submit" disabled={saving} className="admin-form-btn-primary">{saving ? 'Menyimpan…' : 'Simpan Noise Mapping'}</button>
+        <Btn type="submit" kind="primary" size="md" disabled={saving}>{saving ? 'Menyimpan…' : 'Simpan Noise Mapping'}</Btn>
       </form>
 
       <div className="admin-form-card" style={{ marginTop: 20 }}>
@@ -183,8 +183,8 @@ function ExposureTab({ areas, onMsg }: { areas: Row[]; onMsg: (m: any) => void }
   useEffect(() => { load(); }, [load]);
 
   const found = (e: EmployeeData) => setF((p) => ({
-    ...p, nik: e.nik || p.nik, nama: e.nama || p.nama, national_id: e.national_id || p.national_id, departemen: e.department || p.departemen,
-    jabatan: e.job_position || p.jabatan, site: e.site_name || e.site || p.site,
+    ...p, nik: e.nik ? String(e.nik) : p.nik, nama: e.nama || p.nama, national_id: e.national_id || p.national_id, departemen: e.department || p.departemen,
+    jabatan: e.job_position || p.jabatan, site: e.site_name || p.site,
   }));
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); onMsg(null); setSaving(true);
@@ -220,7 +220,7 @@ function ExposureTab({ areas, onMsg }: { areas: Row[]; onMsg: (m: any) => void }
             <Field label="Catatan"><input className="admin-input" style={inputStyle} value={f.catatan} onChange={(e) => set('catatan', e.target.value)} /></Field>
           </div>
         </Section>
-        <button type="submit" disabled={saving} className="admin-form-btn-primary">{saving ? 'Menyimpan…' : 'Simpan Klasifikasi'}</button>
+        <Btn type="submit" kind="primary" size="md" disabled={saving}>{saving ? 'Menyimpan…' : 'Simpan Klasifikasi'}</Btn>
       </form>
       <div className="admin-form-card" style={{ marginTop: 20 }}>
         <div className="admin-section-header"><h3 className="admin-section-title">Klasifikasi Terkini ({list.length} karyawan)</h3></div>
@@ -268,7 +268,7 @@ function AreaTab({ areas, onMsg, onChanged }: { areas: Row[]; onMsg: (m: any) =>
             <Field label="Sumber Bising"><input className="admin-input" style={inputStyle} value={sumber} onChange={(e) => setSumber(e.target.value)} /></Field>
           </div>
         </Section>
-        <button type="submit" className="admin-form-btn-primary">Simpan Area</button>
+        <Btn type="submit" kind="primary" size="md">Simpan Area</Btn>
       </form>
       <div className="admin-form-card" style={{ marginTop: 20 }}>
         <div className="admin-section-header"><h3 className="admin-section-title">Area Terdaftar</h3></div>

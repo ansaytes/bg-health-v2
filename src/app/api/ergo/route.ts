@@ -5,14 +5,15 @@
 // DELETE ?resource=survey|recommendation&id=
 import { NextRequest } from 'next/server';
 import { addWorkdays, scoreErgo, type Metode } from '@/lib/hc-ergo';
-import { db, fail, ok, requireCaller, today } from '@/lib/hc-ergo-server';
+import { ADMIN_ROLES, APPROVER_ROLES, db, fail, ok, requireCaller, today } from '@/lib/hc-ergo-server';
+import { hashField } from '@/lib/encryption';
 
 export const dynamic = 'force-dynamic';
 type Row = Record<string, any>;
 const METODE: Metode[] = ['RULA', 'ROSA', 'WERA'];
 
 export async function GET(req: NextRequest) {
-  const auth = await requireCaller(req);
+  const auth = await requireCaller(req, [...ADMIN_ROLES, 'manager']);
   if ('error' in auth) return auth.error;
   const p = new URL(req.url).searchParams;
   const resource = p.get('resource') || 'dashboard';
@@ -34,7 +35,10 @@ export async function GET(req: NextRequest) {
       if (error) throw new Error(error.message);
       return ok(data);
     }
-    if (resource === 'dashboard') return ok(await buildDashboard(p.get('site') || ''));
+    if (resource === 'dashboard') {
+      if (!ADMIN_ROLES.includes(auth.caller.role)) return fail('Akses ditolak', 403);
+      return ok(await buildDashboard(p.get('site') || ''));
+    }
     return fail('resource tidak dikenal');
   } catch (e) {
     return fail(e instanceof Error ? e.message : 'Gagal memuat data', 500);
@@ -118,7 +122,8 @@ export async function POST(req: NextRequest) {
         site: b.site, area_kerja: b.area_kerja.trim(), tanggal: b.tanggal, departemen: b.departemen.trim(),
         aktivitas: b.aktivitas.trim(), personil_pengukur: b.personil_pengukur.trim(),
         kualifikasi_pengukur: b.kualifikasi_pengukur.trim(), pekerja_diamati: b.pekerja_diamati.trim(),
-        foto_url: b.foto_url || null, ...oks, input, hasil: sc.hasil, skor_akhir: sc.skorAkhir,
+        foto_url: b.foto_url || null, nik_pekerja_hash: b.nik_pekerja ? hashField(String(b.nik_pekerja).trim()) : null,
+        ...oks, input, hasil: { ...sc.hasil, ringkasan: Array.isArray(b.ringkasan) ? b.ringkasan.slice(0, 40) : null }, skor_akhir: sc.skorAkhir,
         klasifikasi: sc.klasifikasi, perlu_pica: sc.perluPica, batas_tindak_hari_kerja: sc.batasHari,
         // STD/036 6.10: hasil tidak sah wajib diulang
         status: sah ? 'MENUNGGU_PERSETUJUAN' : 'DITOLAK_ULANG', dibuat_oleh: caller.name,
@@ -145,26 +150,40 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const auth = await requireCaller(req);
+  const auth = await requireCaller(req, [...ADMIN_ROLES, 'manager']);
   if ('error' in auth) return auth.error;
   const { caller } = auth;
   const b: Row = await req.json().catch(() => ({}));
   if (!b.id) return fail('id wajib');
   try {
     if (b.resource === 'survey') {
+      if (b.action === 'approve' || b.action === 'reject') {
+        // Persetujuan hanya oleh QSHE Manager / PJO (role manager); superuser sebagai cadangan.
+        if (!APPROVER_ROLES.includes(caller.role)) return fail('Persetujuan hanya dapat diberikan oleh role Manager', 403);
+      } else if (!ADMIN_ROLES.includes(caller.role) && caller.role !== 'manager') {
+        return fail('Akses ditolak', 403);
+      }
       if (b.action === 'approve') {
         const { data: s } = await db.from('ergo_survey').select('sah,status').eq('id', b.id).maybeSingle();
         if (!s) return fail('Survei tidak ditemukan');
         if (!s.sah) return fail('Hasil tidak sah (STD/036 6.10): tidak dapat disetujui, pengukuran wajib diulang');
+        if (s.status === 'DISETUJUI') return fail('Survei sudah disetujui');
         const t = today();
-        const { error } = await db.from('ergo_survey').update({ status: 'DISETUJUI', disetujui_oleh: caller.name, tgl_disetujui: t, pica_no: b.pica_no || null }).eq('id', b.id);
+        const { error } = await db.from('ergo_survey').update({
+          status: 'DISETUJUI', disetujui_oleh: caller.name, disetujui_jabatan: caller.jabatan, tgl_disetujui: t,
+          catatan_persetujuan: b.catatan || null, pica_no: b.pica_no || null,
+        }).eq('id', b.id);
         if (error) throw new Error(error.message);
         // verifikasi efektivitas maks 30 hari kerja sejak laporan disetujui (STD/036)
         await db.from('ergo_recommendation').update({ batas_verifikasi: addWorkdays(t, 30) }).eq('survey_id', b.id).is('batas_verifikasi', null);
-        return ok({ approved: true });
+        return ok({ approved: true, disetujui_oleh: caller.name, disetujui_jabatan: caller.jabatan });
       }
       if (b.action === 'reject') {
-        const { error } = await db.from('ergo_survey').update({ status: 'DITOLAK_ULANG', disetujui_oleh: null, tgl_disetujui: null }).eq('id', b.id);
+        if (!String(b.catatan || '').trim()) return fail('Alasan penolakan wajib diisi');
+        const { error } = await db.from('ergo_survey').update({
+          status: 'DITOLAK_ULANG', disetujui_oleh: null, disetujui_jabatan: null, tgl_disetujui: null,
+          catatan_persetujuan: `Ditolak oleh ${caller.name}${caller.jabatan ? ` (${caller.jabatan})` : ''}: ${String(b.catatan).trim()}`,
+        }).eq('id', b.id);
         if (error) throw new Error(error.message);
         return ok({ rejected: true });
       }
@@ -176,6 +195,7 @@ export async function PATCH(req: NextRequest) {
       return fail('action tidak dikenal');
     }
     if (b.resource === 'recommendation') {
+      if (!ADMIN_ROLES.includes(caller.role)) return fail('Akses ditolak', 403);
       const patch: Row = {};
       for (const f of ['status', 'pica_no', 'tgl_closed', 'verifikasi_tgl', 'verifikasi_ket', 'due_date', 'pic']) if (f in b) patch[f] = b[f] === '' ? null : b[f];
       if (patch.status === 'CLOSED' && !patch.tgl_closed) patch.tgl_closed = today();

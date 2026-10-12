@@ -5,7 +5,7 @@
 import { NextRequest } from 'next/server';
 import { decryptMCURecord, decrypt, encrypt, hashField } from '@/lib/encryption';
 import {
-  audiogramFromRecord, evaluateAudiogram, FREQS, KELAS_LABEL, type KelasPendengaran,
+  audiogramCompleteness, audiogramFromRecord, evaluateAudiogram, FREQS, KELAS_LABEL, type KelasPendengaran,
 } from '@/lib/hc-ergo';
 import { db, fail, ok, requireCaller, today } from '@/lib/hc-ergo-server';
 
@@ -71,16 +71,19 @@ async function loadAudiometriEval() {
     const isBaseline = !!(latest && baseRec && String(latest.id) === String(baseRec.id));
     const ev = latest ? evaluateAudiogram(audiogramFromRecord(latest)!, isBaseline ? null : baseRec ? audiogramFromRecord(baseRec) : null) : null;
     const stsCase = latest ? caseByRec.get(String(latest.id)) || null : null;
+    const ag = latest ? audiogramFromRecord(latest) : null;
+    const comp = ag ? audiogramCompleteness(ag) : null;
     return {
       exposureId: e.id, nikHash: e.nik_hash, nik: e.nik, nama: e.nama, site: e.site, departemen: e.departemen,
       jabatan: e.jabatan, kategori: e.kategori,
       jumlahAudiometri: recs.length,
       latest: latest ? { id: String(latest.id), tanggal: latest.tgl_mcu } : null,
+      lengkap: comp ? comp.lengkap : null, terisi: comp ? comp.terisi : 0, kurang: comp ? comp.kurang : [] as string[],
       tahunIni: !!latest && String(latest.tgl_mcu).startsWith(String(year)),
       baseline: baseRec ? { id: String(baseRec.id), tanggal: baseRec.tgl_mcu } : null,
       saranBaseline: !baseRec && oldest ? { id: String(oldest.id), tanggal: oldest.tgl_mcu } : null,
       isBaseline,
-      kelasKanan: ev?.kanan.kelas || null, kelasKiri: ev?.kiri.kelas || null, kelasTerburuk: ev?.kelasTerburuk || null,
+      kelasKanan: ev?.kanan.kelas || null, kelasKiri: ev?.kiri.kelas || null, kelasTerburuk: ev?.kelasTerburuk || null, kelasWHO: ev?.kelasTerbaik || null,
       avg4Kanan: ev?.kanan.avg4 ?? null, avg4Kiri: ev?.kiri.avg4 ?? null,
       sts: ev?.baseline || null,
       stsCase,
@@ -146,7 +149,7 @@ async function buildDashboard(site: string) {
     };
   });
   const kelas: Record<string, number> = {};
-  for (const r of emp) if (r.kelasTerburuk) kelas[r.kelasTerburuk] = (kelas[r.kelasTerburuk] || 0) + 1;
+  for (const r of emp) if (r.kelasWHO) kelas[r.kelasWHO] = (kelas[r.kelasWHO] || 0) + 1;      // derajat WHO = telinga lebih baik
   const { data: cases } = await db.from('hc_sts_case').select('status,retest_deadline,site');
   const cs = (cases || []).filter(c => siteOk(c.site));
   const t = today();
@@ -161,6 +164,7 @@ async function buildDashboard(site: string) {
     zona, areaTerlambat: areas.filter(a => a.terlambat).length, areas, kategori, cakupan,
     kelas: Object.fromEntries(Object.entries(kelas).map(([k, v]) => [KELAS_LABEL[k as KelasPendengaran], v])),
     sts, totalEvaluasi: emp.length, adaExposure: exposure.length,
+    audiometri: { dengan: emp.filter(r => r.latest).length, tidakLengkap: emp.filter(r => r.latest && r.lengkap === false).length },
   };
 }
 

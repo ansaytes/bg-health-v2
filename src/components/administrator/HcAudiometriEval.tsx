@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { authFetch } from '@/lib/api-client';
 import { KELAS_LABEL, type KelasPendengaran } from '@/lib/hc-ergo';
-import { Chip, Field, Notice, SITES, fmtDate, grid3, inputStyle, tableStyle, tdStyle, thStyle } from './hc-ergo-ui';
+import { Btn, BtnRow, Chip, Field, Notice, SITES, fmtDate, grid3, inputStyle, tableStyle, tdStyle, thStyle } from './hc-ergo-ui';
 
 type Row = Record<string, any>;
 const KELAS_COLOR: Record<string, string> = { NORMAL: '#00B894', RINGAN: '#F5C518', SEDANG: '#F5A623', BERAT: '#FF6B35', SANGAT_BERAT: '#E63946' };
@@ -31,7 +31,7 @@ export default function HcAudiometriEval() {
 
   const shown = useMemo(() => rows.filter((r) =>
     (!site || r.site === site) && (!kat || r.kategori === kat) &&
-    (only === '' || (only === 'sts' && r.sts?.sts) || (only === 'nobase' && !r.baseline && !r.isBaseline) || (only === 'belum' && !r.tahunIni))), [rows, site, kat, only]);
+    (only === '' || (only === 'sts' && r.sts?.sts) || (only === 'tdklengkap' && r.latest && r.lengkap === false) || (only === 'nobase' && !r.baseline && !r.isBaseline) || (only === 'belum' && !r.tahunIni))), [rows, site, kat, only]);
 
   const act = async (fn: () => Promise<unknown>, ok: string) => {
     setMsg(null);
@@ -52,14 +52,14 @@ export default function HcAudiometriEval() {
       <div className="admin-form-inner">
         <div style={{ marginBottom: 14 }}>
           <h1 className="admin-form-title">Evaluasi Audiometri & STS</h1>
-          <p className="admin-form-subtitle">Karyawan Kategori A/B. Derajat gangguan = rata-rata 500/1000/2000/3000 Hz; STS = geser rata-rata 2000/3000/4000 Hz ≥ 10 dB terhadap baseline (STD/033 6.4).</p>
+          <p className="admin-form-subtitle">Karyawan Kategori A/B. Derajat gangguan (WHO) = rata-rata 500/1000/2000/4000 Hz per telinga, dibulatkan ke bilangan bulat terdekat; derajat karyawan = telinga yang lebih baik. STS = geser rata-rata 2000/3000/4000 Hz ≥ 10 dB terhadap baseline, per telinga (STD/033 6.4).</p>
         </div>
         {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
         <div className="kunjungan-filter-bar" style={{ marginBottom: 12 }}>
           <select className="admin-filter-select" value={site} onChange={(e) => setSite(e.target.value)}><option value="">Semua site</option>{SITES.map((s) => <option key={s}>{s}</option>)}</select>
           <select className="admin-filter-select" value={kat} onChange={(e) => setKat(e.target.value)}><option value="">Kategori A & B</option><option value="A">Kategori A</option><option value="B">Kategori B</option></select>
           <select className="admin-filter-select" value={only} onChange={(e) => setOnly(e.target.value)}>
-            <option value="">Semua status</option><option value="sts">Hanya STS</option><option value="nobase">Belum ada baseline</option><option value="belum">Belum audiometri tahun ini</option></select>
+            <option value="">Semua status</option><option value="sts">Hanya STS</option><option value="nobase">Belum ada baseline</option><option value="belum">Belum audiometri tahun ini</option><option value="tdklengkap">Audiometri tidak lengkap (vendor)</option></select>
           <span className="kunjungan-total-right">{shown.length} karyawan {loading && '· memuat…'}</span>
         </div>
 
@@ -71,17 +71,18 @@ export default function HcAudiometriEval() {
                 <tr key={r.exposureId}>
                   <td style={tdStyle}><b>{r.nama}</b><div style={{ color: 'var(--muted-foreground)', fontSize: 10 }}>{r.nik}</div></td>
                   <td style={tdStyle}>{r.site}</td><td style={tdStyle}>{r.kategori}</td>
-                  <td style={tdStyle}>{r.latest ? fmtDate(r.latest.tanggal) : <Chip text="BELUM ADA" color="#778899" />}{r.latest && !r.tahunIni && <div><Chip text="BUKAN TAHUN INI" color="#F5A623" /></div>}</td>
+                  <td style={tdStyle}>{r.latest ? fmtDate(r.latest.tanggal) : <Chip text="BELUM ADA" color="#778899" />}{r.latest && !r.tahunIni && <div><Chip text="BUKAN TAHUN INI" color="#F5A623" /></div>}
+                    {r.latest && r.lengkap === false && <div title={`Frekuensi belum terisi: ${r.kurang.join(', ')}`}><Chip text={`TIDAK LENGKAP ${r.terisi}/14`} color="#E63946" /></div>}</td>
                   <td style={tdStyle}>{kelasChip(r.kelasKanan)}<div style={{ fontSize: 10 }}>{r.avg4Kanan ?? '-'} dB</div></td>
                   <td style={tdStyle}>{kelasChip(r.kelasKiri)}<div style={{ fontSize: 10 }}>{r.avg4Kiri ?? '-'} dB</div></td>
-                  <td style={tdStyle}>
+                  <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                     {r.baseline ? fmtDate(r.baseline.tanggal) : r.saranBaseline
-                      ? <button type="button" className="admin-form-btn-secondary compact-btn" onClick={() => setBaseline(r, r.saranBaseline.id)} title="Tetapkan audiometri tertua sebagai baseline">Tetapkan {fmtDate(r.saranBaseline.tanggal)}</button>
+                      ? <Btn onClick={() => setBaseline(r, r.saranBaseline.id)} title="Tetapkan audiometri tertua sebagai baseline">Tetapkan {fmtDate(r.saranBaseline.tanggal)}</Btn>
                       : '-'}
                   </td>
                   <td style={tdStyle}>{r.sts ? `${r.sts.geserKanan ?? '-'} / ${r.sts.geserKiri ?? '-'}` : r.isBaseline ? 'baseline' : '-'}{r.sts?.berbasisEstimasi && <div><Chip text="3000 Hz estimasi" color="#778899" /></div>}</td>
                   <td style={tdStyle}>{r.sts?.sts ? <Chip text="STS" color="#E63946" /> : r.sts ? <Chip text="Tidak STS" color="#00B894" /> : '-'}{r.stsCase && <div style={{ fontSize: 10 }}>{STATUS_LABEL[r.stsCase.status]}</div>}</td>
-                  <td style={tdStyle}>{r.sts?.sts && !r.stsCase && <button type="button" className="admin-form-btn-primary compact-btn" onClick={() => buatKasus(r)}>Buat Kasus STS</button>}</td>
+                  <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{r.sts?.sts && !r.stsCase && <Btn kind="primary" onClick={() => buatKasus(r)}>Buat Kasus STS</Btn>}</td>
                 </tr>
               ))}
               {!shown.length && <tr><td style={tdStyle} colSpan={10}>{loading ? 'Memuat…' : 'Belum ada karyawan Kategori A/B. Isi dulu di Form Input > Klasifikasi Karyawan.'}</td></tr>}
@@ -100,7 +101,7 @@ export default function HcAudiometriEval() {
                   <tr key={c.id}><td style={tdStyle}>{c.nama}</td><td style={tdStyle}>{c.site}</td><td style={tdStyle}>{fmtDate(c.tanggal_deteksi)}</td><td style={tdStyle}>{c.telinga}</td>
                     <td style={tdStyle}>{fmtDate(c.retest_deadline)} {late && <Chip text="TERLAMBAT" color="#E63946" />}</td>
                     <td style={tdStyle}>{STATUS_LABEL[c.status]}</td><td style={tdStyle}>{c.rujuk_tht ? 'Dirujuk' : '-'}</td><td style={tdStyle}>{c.kajian_pak}</td>
-                    <td style={tdStyle}><button type="button" className="admin-form-btn-secondary compact-btn" onClick={() => setEdit(c)}>Kelola</button></td></tr>
+                    <td style={tdStyle}><Btn onClick={() => setEdit(c)}>Kelola</Btn></td></tr>
                 );
               })}
               {!cases.length && <tr><td style={tdStyle} colSpan={9}>Belum ada kasus STS.</td></tr>}
@@ -120,10 +121,10 @@ export default function HcAudiometriEval() {
                 <Field label="Riwayat bising non-okupasi" full><textarea className="admin-input" style={{ ...inputStyle, height: 60, padding: 8 }} value={edit.riwayat_non_okupasi || ''} onChange={(e) => setEdit({ ...edit, riwayat_non_okupasi: e.target.value })} /></Field>
                 <Field label="Catatan" full><input className="admin-input" style={inputStyle} value={edit.catatan || ''} onChange={(e) => setEdit({ ...edit, catatan: e.target.value })} /></Field>
               </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                <button type="submit" className="admin-form-btn-primary">Simpan</button>
-                <button type="button" className="admin-form-btn-secondary" onClick={() => setEdit(null)}>Batal</button>
-              </div>
+              <div style={{ marginTop: 12 }}><BtnRow>
+                <Btn type="submit" kind="primary" size="md">Simpan</Btn>
+                <Btn size="md" onClick={() => setEdit(null)}>Batal</Btn>
+              </BtnRow></div>
             </form>
           )}
         </div>

@@ -47,14 +47,11 @@ const NOT_FOUND_COLOR = '#FF4444';
 function autoDetectSearchBy(query: string): 'nik' | 'national_id' | 'nama' {
   const trimmed = query.trim();
   if (!trimmed) return 'nama';
-  // If contains any letter → name search
   if (/[a-zA-Z]/.test(trimmed)) return 'nama';
-  // If all digits
   if (/^\d+$/.test(trimmed)) {
     if (trimmed.length === 16) return 'national_id';
     return 'nik';
   }
-  // Default fallback
   return 'nama';
 }
 
@@ -83,11 +80,9 @@ export default function EmployeeLookupInput({
   const containerRef = useRef<HTMLDivElement>(null);
   const [lookupError, setLookupError] = useState('');
 
-  // Auto-detect search type
   const searchBy = autoDetectSearchBy(value);
   const minLength = minLengthProp || (searchBy === 'nama' ? 3 : 4);
 
-  // Single unified placeholder (auto-detect handles type)
   const dynamicPlaceholder = 'Masukkan NIK KTP, NIK Karyawan, atau Nama Karyawan';
   const placeholder = placeholderProp || dynamicPlaceholder;
 
@@ -97,7 +92,6 @@ export default function EmployeeLookupInput({
     };
   }, []);
 
-  // Close suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -107,6 +101,29 @@ export default function EmployeeLookupInput({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const applyEmployee = useCallback(
+    (emp: EmployeeData) => {
+      onEmployeeFound(emp);
+      if (autoFill && onAutoFill) {
+        const entries = Object.entries(autoFill) as [string, string][];
+        for (const [empField, formFieldId] of entries) {
+          const val = emp[empField];
+          if (val) onAutoFill(formFieldId, val);
+        }
+      }
+      // Always set the visible input value to NIK Karyawan so the field never keeps the typed name
+      if (emp.nik) {
+        onChange(emp.nik);
+        lastSearchedValue.current = emp.nik;
+      }
+      setStatus('found');
+      setShowSuggestions(false);
+      setSuggestions([]);
+      setActiveSuggestion(-1);
+    },
+    [autoFill, onAutoFill, onEmployeeFound, onChange]
+  );
 
   const doLookup = useCallback(
     async (searchValue: string) => {
@@ -134,18 +151,9 @@ export default function EmployeeLookupInput({
           const results = json.data as EmployeeData[];
           setSuggestions(results);
           setStatus('found');
-          // If only 1 result, auto-fill directly
+          // Single result → auto-select and force NIK into the input
           if (results.length === 1) {
-            const emp = results[0];
-            onEmployeeFound(emp);
-            if (autoFill && onAutoFill) {
-              const entries = Object.entries(autoFill) as [string, string][];
-              for (const [empField, formFieldId] of entries) {
-                const val = emp[empField];
-                if (val) onAutoFill(formFieldId, val);
-              }
-            }
-            setShowSuggestions(false);
+            applyEmployee(results[0]);
           }
         } else {
           setSuggestions([]);
@@ -163,7 +171,7 @@ export default function EmployeeLookupInput({
         setLookupError(error instanceof Error ? error.message : 'Gagal mencari data karyawan.');
       }
     },
-    [autoFill, onAutoFill, onEmployeeFound, minLength]
+    [applyEmployee, minLength]
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,7 +191,6 @@ export default function EmployeeLookupInput({
   };
 
   const handleBlur = () => {
-    // Delay blur so click on suggestion works
     setTimeout(() => {
       if (value.length >= minLength && value !== lastSearchedValue.current) {
         if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -193,19 +200,7 @@ export default function EmployeeLookupInput({
   };
 
   const handleSelectSuggestion = (emp: EmployeeData) => {
-    onEmployeeFound(emp);
-    if (autoFill && onAutoFill) {
-      const entries = Object.entries(autoFill) as [string, string][];
-      for (const [empField, formFieldId] of entries) {
-        const val = emp[empField];
-        if (val) onAutoFill(formFieldId, val);
-      }
-    }
-    // Optionally fill input with NIK Karyawan for visibility
-    if (emp.nik) onChange(emp.nik);
-    setStatus('found');
-    setShowSuggestions(false);
-    setSuggestions([]);
+    applyEmployee(emp);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -271,7 +266,6 @@ export default function EmployeeLookupInput({
     return null;
   })();
 
-  // Detect badge text
   const detectBadge = value && value.length >= 2
     ? (searchBy === 'nik' ? 'NIK Karyawan' : searchBy === 'national_id' ? 'NIK KTP' : 'Nama')
     : null;
@@ -365,7 +359,6 @@ export default function EmployeeLookupInput({
         </div>
       )}
 
-      {/* Suggestions dropdown — modern design */}
       {showSuggestions && suggestions.length > 0 && (
         <div className="emp-suggestions" style={{
           position: 'absolute',
@@ -382,7 +375,6 @@ export default function EmployeeLookupInput({
           padding: 6,
           fontFamily: 'inherit',
         }}>
-          {/* Header label */}
           <div style={{
             padding: '6px 10px 8px',
             fontSize: 10,
@@ -412,7 +404,6 @@ export default function EmployeeLookupInput({
                 transform: idx === activeSuggestion ? 'translateX(2px)' : 'none',
               }}
             >
-              {/* Avatar with gradient */}
               <div style={{
                 width: 36,
                 height: 36,
@@ -431,7 +422,6 @@ export default function EmployeeLookupInput({
               }}>
                 {(emp.nama || '?').charAt(0).toUpperCase()}
               </div>
-              {/* Main info */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
                   fontSize: 13,
@@ -477,7 +467,6 @@ export default function EmployeeLookupInput({
                   )}
                 </div>
               </div>
-              {/* NIK Karyawan badge */}
               {emp.nik && (
                 <div style={{
                   fontSize: 11,

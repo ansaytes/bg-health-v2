@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { authFetch } from '@/lib/api-client';
 import { FORM_NO, KLAS_COLOR, type Klasifikasi, type Metode } from '@/lib/hc-ergo';
-import { Chip, Field, Notice, SITES, fmtDate, grid3, inputStyle, smallInput, tableStyle, tdStyle, thStyle } from './hc-ergo-ui';
+import { Btn, BtnRow, Chip, Field, Notice, SITES, fmtDate, grid3, inputStyle, smallInput, tableStyle, tdStyle, thStyle } from './hc-ergo-ui';
 
 type Row = Record<string, any>;
 const STATUS: Record<string, { t: string; c: string }> = {
@@ -37,11 +37,6 @@ export default function ErgoSurveyTable() {
     try { await fn(); setMsg({ kind: 'ok', text: ok }); await load(); then?.(); }
     catch (e) { setMsg({ kind: 'err', text: e instanceof Error ? e.message : 'Gagal' }); }
   };
-  const approve = (s: Row) => {
-    const pica = s.perlu_pica ? (prompt('No. PICA (FORM/039) untuk tindak lanjut — kosongkan bila belum ada:', s.pica_no || '') ?? '') : '';
-    return act(() => authFetch('/api/ergo', { method: 'PATCH', body: JSON.stringify({ resource: 'survey', id: s.id, action: 'approve', pica_no: pica }) }), 'Survei disetujui.');
-  };
-  const reject = (s: Row) => act(() => authFetch('/api/ergo', { method: 'PATCH', body: JSON.stringify({ resource: 'survey', id: s.id, action: 'reject' }) }), 'Survei ditandai perlu diulang.');
   const del = (s: Row) => confirm('Hapus survei ini beserta rekomendasinya?') && act(() => authFetch(`/api/ergo?resource=survey&id=${s.id}`, { method: 'DELETE' }), 'Survei dihapus.');
   const addRec = (sid: string) => act(() => authFetch('/api/ergo', { method: 'POST', body: JSON.stringify({ resource: 'recommendation', survey_id: sid, ...nr }) }), 'Rekomendasi ditambahkan.',
     () => { setNr({ problem: '', tindakan: '', pic: '', due_date: '', pica_no: '' }); loadRecs(sid); });
@@ -53,7 +48,7 @@ export default function ErgoSurveyTable() {
       <div className="admin-form-inner">
         <div style={{ marginBottom: 14 }}>
           <h1 className="admin-form-title">Data Survei Ergonomi & PICA</h1>
-          <p className="admin-form-subtitle">Hasil tidak sah tidak dapat disetujui. Klasifikasi sedang ke atas wajib ditindaklanjuti lewat PICA; verifikasi efektivitas maksimal 30 hari kerja sejak laporan disetujui.</p>
+          <p className="admin-form-subtitle">Persetujuan dilakukan oleh QSHE Manager / PJO (role Manager) pada menu Dashboard → Persetujuan Ergonomi. Klasifikasi sedang ke atas wajib ditindaklanjuti lewat PICA; verifikasi efektivitas maksimal 30 hari kerja sejak laporan disetujui.</p>
         </div>
         {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
         <div className="kunjungan-filter-bar" style={{ marginBottom: 12 }}>
@@ -76,13 +71,17 @@ export default function ErgoSurveyTable() {
                     <td style={tdStyle}><b>{s.skor_akhir}</b></td>
                     <td style={tdStyle}><Chip text={String(s.klasifikasi).replace('_', ' ')} color={KLAS_COLOR[s.klasifikasi as Klasifikasi]} />{s.batas_tindak_hari_kerja && <div style={{ fontSize: 10 }}>≤ {s.batas_tindak_hari_kerja} hari kerja</div>}</td>
                     <td style={tdStyle}>{s.sah ? 'Ya' : <Chip text="TIDAK" color="#E63946" />}</td>
-                    <td style={tdStyle}><Chip text={STATUS[s.status].t} color={STATUS[s.status].c} />{s.tgl_disetujui && <div style={{ fontSize: 10 }}>{fmtDate(s.tgl_disetujui)}</div>}</td>
-                    <td style={tdStyle}>{s.perlu_pica ? (s.pica_no || <Chip text="BELUM ADA" color="#F5A623" />) : '-'}</td>
-                    <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
-                      {s.status === 'MENUNGGU_PERSETUJUAN' && s.sah && <button type="button" className="admin-form-btn-primary compact-btn" onClick={() => approve(s)}>Setujui</button>}{' '}
-                      {s.status !== 'DITOLAK_ULANG' && s.status !== 'DISETUJUI' && <button type="button" className="admin-form-btn-secondary compact-btn" onClick={() => reject(s)}>Ulang</button>}{' '}
-                      {s.perlu_pica && <button type="button" className="admin-form-btn-secondary compact-btn" onClick={() => toggle(s.id)}>{open === s.id ? 'Tutup' : 'Rekomendasi'}</button>}{' '}
-                      <button type="button" className="admin-form-btn-secondary compact-btn" onClick={() => del(s)}>Hapus</button>
+                    <td style={tdStyle}><Chip text={STATUS[s.status].t} color={STATUS[s.status].c} />
+                      {s.status === 'DISETUJUI' && <div style={{ fontSize: 10, marginTop: 2 }}>{s.disetujui_oleh}{s.disetujui_jabatan ? ` — ${s.disetujui_jabatan}` : ''}<br />{fmtDate(s.tgl_disetujui)}</div>}
+                      {s.status === 'MENUNGGU_PERSETUJUAN' && <div style={{ fontSize: 10, marginTop: 2 }}>Menunggu QSHE Manager</div>}
+                      {s.status === 'DITOLAK_ULANG' && s.catatan_persetujuan && <div style={{ fontSize: 10, marginTop: 2, maxWidth: 180 }}>{s.catatan_persetujuan}</div>}</td>
+                    <td style={tdStyle}>{s.perlu_pica ? (s.pica_no || <Chip text="BELUM ADA" color="#F5A623" />) : '-'}
+                      {s.perlu_pica && <div style={{ marginTop: 4 }}><Btn onClick={() => { const v = prompt('No. PICA (FORM/039):', s.pica_no || ''); if (v !== null) act(() => authFetch('/api/ergo', { method: 'PATCH', body: JSON.stringify({ resource: 'survey', id: s.id, action: 'pica', pica_no: v }) }), 'No. PICA diperbarui.'); }}>{s.pica_no ? 'Ubah' : 'Isi No.'}</Btn></div>}</td>
+                    <td style={tdStyle}>
+                      <BtnRow>
+                        {s.perlu_pica && <Btn onClick={() => toggle(s.id)}>{open === s.id ? 'Tutup' : 'Rekomendasi'}</Btn>}
+                        <Btn kind="danger" onClick={() => del(s)}>Hapus</Btn>
+                      </BtnRow>
                     </td>
                   </tr>
                   {open === s.id && (
@@ -96,7 +95,7 @@ export default function ErgoSurveyTable() {
                               <td style={tdStyle}>{fmtDate(r.due_date)} {r.status !== 'CLOSED' && r.due_date < t && <Chip text="LEWAT" color="#E63946" />}</td>
                               <td style={tdStyle}>{fmtDate(r.batas_verifikasi)}</td>
                               <td style={tdStyle}><select style={smallInput} value={r.status} onChange={(e) => patchRec(r, { status: e.target.value })}><option value="OPEN">Open</option><option value="PROGRESS">Progress</option><option value="CLOSED">Closed</option></select></td>
-                              <td style={tdStyle}>{r.status === 'CLOSED' && !r.verifikasi_tgl && <button type="button" className="admin-form-btn-secondary compact-btn" onClick={() => { const k = prompt('Hasil verifikasi efektivitas tindakan:'); if (k) patchRec(r, { verifikasi_tgl: t, verifikasi_ket: k }); }}>Verifikasi</button>}{r.verifikasi_tgl && <span style={{ fontSize: 10 }}>Terverifikasi {fmtDate(r.verifikasi_tgl)}</span>}</td></tr>
+                              <td style={tdStyle}>{r.status === 'CLOSED' && !r.verifikasi_tgl && <Btn onClick={() => { const k = prompt('Hasil verifikasi efektivitas tindakan:'); if (k) patchRec(r, { verifikasi_tgl: t, verifikasi_ket: k }); }}>Verifikasi</Btn>}{r.verifikasi_tgl && <span style={{ fontSize: 10 }}>Terverifikasi {fmtDate(r.verifikasi_tgl)}</span>}</td></tr>
                           ))}
                           {!recs.length && <tr><td style={tdStyle} colSpan={7}>Belum ada rekomendasi.</td></tr>}
                         </tbody>
@@ -108,7 +107,7 @@ export default function ErgoSurveyTable() {
                         <Field label="Jatuh tempo"><input type="date" className="admin-input" style={inputStyle} value={nr.due_date} onChange={(e) => setNr({ ...nr, due_date: e.target.value })} /></Field>
                         <Field label="No. PICA"><input className="admin-input" style={inputStyle} value={nr.pica_no} onChange={(e) => setNr({ ...nr, pica_no: e.target.value })} /></Field>
                       </div>
-                      <button type="button" className="admin-form-btn-primary compact-btn" style={{ marginTop: 8 }} onClick={() => addRec(s.id)}>Tambah Rekomendasi</button>
+                      <div style={{ marginTop: 8 }}><Btn kind="primary" onClick={() => addRec(s.id)}>Tambah Rekomendasi</Btn></div>
                     </td></tr>
                   )}
                 </Fragment>

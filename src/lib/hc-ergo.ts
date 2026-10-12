@@ -53,6 +53,16 @@ export function audiogramFromRecord(rec: Record<string, unknown>): Audiogram | n
   return any ? { r, l } : null;
 }
 
+/** Kelengkapan audiogram: STD/033 6.4 & INK/015 mewajibkan penyedia jasa menguji 500, 1000, 2000, 3000, 4000, 6000, 8000 Hz di kedua telinga (14 titik). */
+export const AUDIOGRAM_TOTAL = FREQS.length * 2;
+export function audiogramCompleteness(a: Audiogram): { lengkap: boolean; terisi: number; total: number; kurang: string[] } {
+  const kurang: string[] = [];
+  for (const [ear, lab] of [['r', 'Kanan'], ['l', 'Kiri']] as const) {
+    for (const fq of FREQS) if (a[ear][fq] === null) kurang.push(`${lab} ${fq === '500' ? 500 : parseInt(fq, 10) * 1000} Hz`);
+  }
+  return { lengkap: kurang.length === 0, terisi: AUDIOGRAM_TOTAL - kurang.length, total: AUDIOGRAM_TOTAL, kurang };
+}
+
 /** STD/033 6.4: 3000 Hz yang kosong pada data historis diestimasi (2000+4000)/2 dan ditandai estimasi. */
 export function withEstimate3k(ear: Ear): { ear: Ear; estimated: boolean } {
   if (ear['3k'] === null && ear['2k'] !== null && ear['4k'] !== null) {
@@ -64,16 +74,16 @@ export function withEstimate3k(ear: Ear): { ear: Ear; estimated: boolean } {
 export type KelasPendengaran = 'NORMAL' | 'RINGAN' | 'SEDANG' | 'BERAT' | 'SANGAT_BERAT';
 
 /**
- * STD/033 6.4: derajat gangguan dari rata-rata 500/1000/2000/3000 Hz.
- * Celah angka pada dokumen (25-26, 40-41, 60-61, 80-81) ditutup: <=25 Normal, <=40 Ringan, <=60 Sedang, <=80 Berat.
- * Dibandingkan memakai JUMLAH 4 frekuensi (<=100/160/240/320) agar bebas error pembulatan.
+ * STD/033 6.4 (Rev.001), mengikuti WHO (1991) / Kemenkes: derajat dari rata-rata ambang dengar
+ * 500/1000/2000/4000 Hz (4fPTA) per telinga. Rata-rata DIBULATKAN ke bilangan bulat terdekat (0,5 ke atas)
+ * lalu dicocokkan: Normal <=25 | Ringan 26-40 | Sedang 41-60 | Berat 61-80 | Sangat Berat >=81 dB.
  */
 export function kelasPendengaran(avg4: number): KelasPendengaran {
-  const sum = avg4 * 4;
-  if (sum <= 100) return 'NORMAL';
-  if (sum <= 160) return 'RINGAN';
-  if (sum <= 240) return 'SEDANG';
-  if (sum <= 320) return 'BERAT';
+  const r = Math.round(avg4);
+  if (r <= 25) return 'NORMAL';
+  if (r <= 40) return 'RINGAN';
+  if (r <= 60) return 'SEDANG';
+  if (r <= 80) return 'BERAT';
   return 'SANGAT_BERAT';
 }
 
@@ -88,11 +98,11 @@ const sumOf = (ear: Ear, fs: Freq[]): number | null => {
   return s;
 };
 
-export interface EarEval { avg4: number | null; avg3: number | null; kelas: KelasPendengaran | null; estimated: boolean; }
+export interface EarEval { avg4: number | null; avg3: number | null; kelas: KelasPendengaran | null; estimated: boolean; }   // avg4 = 4fPTA WHO; avg3 = 2000/3000/4000 Hz untuk STS
 
 export function evaluateEar(ear: Ear): EarEval {
   const { ear: e, estimated } = withEstimate3k(ear);
-  const s4 = sumOf(e, ['500', '1k', '2k', '3k']);
+  const s4 = sumOf(e, ['500', '1k', '2k', '4k']);        // WHO: 500/1000/2000/4000 Hz
   const s3 = sumOf(e, ['2k', '3k', '4k']);
   const avg4 = s4 === null ? null : s4 / 4;
   return { avg4, avg3: s3 === null ? null : s3 / 3, kelas: avg4 === null ? null : kelasPendengaran(avg4), estimated };
@@ -101,6 +111,8 @@ export function evaluateEar(ear: Ear): EarEval {
 export interface AudiogramEval {
   kanan: EarEval; kiri: EarEval;
   kelasTerburuk: KelasPendengaran | null;
+  /** Derajat menurut WHO = telinga yang LEBIH BAIK (STD/033 6.4 Rev.001). */
+  kelasTerbaik: KelasPendengaran | null;
   baseline: null | {
     geserKanan: number | null; geserKiri: number | null;
     stsKanan: boolean; stsKiri: boolean; sts: boolean; berbasisEstimasi: boolean;
@@ -112,6 +124,7 @@ export function evaluateAudiogram(current: Audiogram, baseline?: Audiogram | nul
   const kanan = evaluateEar(current.r), kiri = evaluateEar(current.l);
   const kelas = [kanan.kelas, kiri.kelas].filter(Boolean) as KelasPendengaran[];
   const kelasTerburuk = kelas.length ? kelas.reduce((a, b) => (KELAS_ORDER.indexOf(b) > KELAS_ORDER.indexOf(a) ? b : a)) : null;
+  const kelasTerbaik = kelas.length ? kelas.reduce((a, b) => (KELAS_ORDER.indexOf(b) < KELAS_ORDER.indexOf(a) ? b : a)) : null;
   let base: AudiogramEval['baseline'] = null;
   if (baseline) {
     const bR = evaluateEar(baseline.r), bL = evaluateEar(baseline.l);
@@ -127,7 +140,7 @@ export function evaluateAudiogram(current: Audiogram, baseline?: Audiogram | nul
       berbasisEstimasi: kanan.estimated || kiri.estimated || bR.estimated || bL.estimated,
     };
   }
-  return { kanan, kiri, kelasTerburuk, baseline: base };
+  return { kanan, kiri, kelasTerburuk, kelasTerbaik, baseline: base };
 }
 
 /* ════════════════ ERGONOMI ════════════════ */

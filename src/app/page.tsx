@@ -31,6 +31,7 @@ import DataManPowerTable from '@/components/dashboard/DataManPowerTable';
 import InventoryDashboard from '@/components/dashboard/InventoryDashboard';
 import HearingConservationDashboard from '@/components/dashboard/HearingConservationDashboard';
 import ErgonomiDashboard from '@/components/dashboard/ErgonomiDashboard';
+import ErgoApproval from '@/components/dashboard/ErgoApproval';
 import HcInputPage from '@/components/administrator/HcInputPage';
 import HcAudiometriEval from '@/components/administrator/HcAudiometriEval';
 import ErgoSurveyForm from '@/components/administrator/ErgoSurveyForm';
@@ -189,6 +190,7 @@ interface SidebarItem {
   icon: React.ReactNode;
   superuserOnly?: boolean;
   adminOnly?: boolean;
+  approverOnly?: boolean;   // khusus Manager (dan superuser): persetujuan dokumen
 }
 
 function IconPodcast() {
@@ -217,6 +219,7 @@ const DASH_SIDEBAR: SidebarItem[] = [
   { key: 'inventory-dashboard', label: 'Monitoring Obat & BHP', icon: <IconInventory />, adminOnly: true },
   { key: 'hearing-dashboard', label: 'Hearing Conservation', icon: <IconMonitoring />, adminOnly: true },
   { key: 'ergonomi-dashboard', label: 'Ergonomi', icon: <IconStatistik />, adminOnly: true },
+  { key: 'persetujuan-ergonomi', label: 'Persetujuan Ergonomi', icon: <IconTindakLanjut />, approverOnly: true },
 ];
 
 const ADMIN_SIDEBAR: SidebarItem[] = [
@@ -324,6 +327,7 @@ function DashContent() {
     case 'inventory-dashboard': return <InventoryDashboard />;
     case 'hearing-dashboard': return <HearingConservationDashboard />;
     case 'ergonomi-dashboard': return <ErgonomiDashboard />;
+    case 'persetujuan-ergonomi': return <ErgoApproval />;
     default: return <DashboardView />;
   }
 }
@@ -899,6 +903,7 @@ export default function Home() {
     if (activePage === 'dashboard') {
       return DASH_SIDEBAR.filter((item) => {
         if (item.adminOnly && !['administrator', 'superuser'].includes(role || '')) return false;
+        if (item.approverOnly && !['manager', 'superuser'].includes(role || '')) return false;
         if (item.superuserOnly && !isSuperuser) return false;
         return true;
       });
@@ -954,7 +959,8 @@ export default function Home() {
   const roleLabel = profile?.role === 'superuser' ? 'Superuser'
     : profile?.role === 'administrator' ? 'Administrator'
       : profile?.role === 'pic' ? 'PIC'
-        : profile?.role === 'employee' ? 'Employee' : 'Viewer';
+        : profile?.role === 'employee' ? 'Employee'
+          : profile?.role === 'manager' ? 'Manager' : 'Viewer';
 
   return (
     <div className="app-shell">

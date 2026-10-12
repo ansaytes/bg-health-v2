@@ -95,3 +95,25 @@ export function BarRow({ label, value, max, color }: { label: string; value: num
     </div>
   );
 }
+
+/* ───────── Tombol seragam: tinggi tetap, teks tidak pernah keluar dari tombol ───────── */
+type BtnKind = 'primary' | 'secondary' | 'danger';
+export function Btn({ kind = 'secondary', size = 'sm', children, style, ...rest }:
+  { kind?: BtnKind; size?: 'sm' | 'md' } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  const h = size === 'md' ? 38 : 30;
+  const base: CSSProperties = {
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxSizing: 'border-box',
+    height: h, minWidth: h, padding: size === 'md' ? '0 20px' : '0 12px', borderRadius: 8, fontSize: size === 'md' ? 13 : 11.5,
+    fontWeight: 600, lineHeight: 1, whiteSpace: 'nowrap', cursor: rest.disabled ? 'not-allowed' : 'pointer',
+    fontFamily: 'inherit', opacity: rest.disabled ? 0.55 : 1, flex: '0 0 auto', width: 'auto',
+    ...(kind === 'primary' ? { background: '#ff4d00', color: '#fff', border: '1px solid #ff4d00' }
+      : kind === 'danger' ? { background: 'transparent', color: '#E63946', border: '1px solid #E6394655' }
+      : { background: 'transparent', color: 'var(--foreground)', border: '1px solid var(--border)' }),
+  };
+  return <button type="button" {...rest} style={{ ...base, ...style }}>{children}</button>;
+}
+
+/** Baris tombol: rata, jarak sama, boleh membungkus per tombol (bukan per teks). */
+export function BtnRow({ children, justify = 'flex-start' }: { children: ReactNode; justify?: CSSProperties['justifyContent'] }) {
+  return <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', justifyContent: justify }}>{children}</div>;
+}

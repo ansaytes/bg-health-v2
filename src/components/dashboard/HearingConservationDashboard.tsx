@@ -36,6 +36,7 @@ export default function HearingConservationDashboard() {
         <Stat label="Area Zona Hijau" value={d.zona.HIJAU} color={ZONA_COLOR.HIJAU} />
         <Stat label="Ukur Ulang Terlambat" value={d.areaTerlambat} color={d.areaTerlambat ? '#E63946' : undefined} sub={`${d.zona.BELUM} area belum pernah diukur`} />
         <Stat label="STS Belum Ditindaklanjuti" value={d.sts.belumDitindaklanjuti} color={d.sts.belumDitindaklanjuti ? '#E63946' : undefined} />
+        <Stat label="Audiometri Tidak Lengkap" value={d.audiometri.tidakLengkap} color={d.audiometri.tidakLengkap ? '#E63946' : undefined} sub={`dari ${d.audiometri.dengan} audiogram · wajib 500–8000 Hz`} />
         <Stat label="Retest Terlambat (>30 hr)" value={d.sts.retestTerlambat} color={d.sts.retestTerlambat ? '#E63946' : undefined} />
       </div>
 
@@ -58,7 +59,7 @@ export default function HearingConservationDashboard() {
           ))}
         </div>
         <div className="card" style={{ padding: 12 }}>
-          <div className="card-head"><h2>Derajat Gangguan Pendengaran</h2></div>
+          <div className="card-head"><h2>Derajat Gangguan Pendengaran (WHO, telinga lebih baik)</h2></div>
           {Object.entries(d.kelas as Record<string, number>).map(([k, v]) => <BarRow key={k} label={k} value={v} max={maxKelas} color={KELAS_COLOR[k] || '#778899'} />)}
           {!Object.keys(d.kelas).length && <span style={{ fontSize: 11 }}>Belum ada data audiometri karyawan Kategori A/B.</span>}
         </div>
