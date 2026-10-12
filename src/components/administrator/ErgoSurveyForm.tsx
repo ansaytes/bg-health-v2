@@ -203,7 +203,7 @@ export default function ErgoSurveyForm() {
             </button>
           </div>
           {step === 0 && !identOk && <p style={{ fontSize: 11, color: 'var(--muted-foreground)', textAlign: 'right', margin: '6px 0 0' }}>Lengkapi semua kolom identitas (termasuk pekerja yang diamati) untuk melanjutkan.</p>}
-        </div>
+        </form>
       </div>
     </div>
   );

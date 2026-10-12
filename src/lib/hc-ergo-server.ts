@@ -10,6 +10,7 @@ export const db = createClient(url, serviceKey || anonKey);
 
 /** Roles that may access HC & Ergo modules (view + input). */
 export const ALLOWED_ROLES = ['administrator', 'superuser', 'manager', 'pic'];
+export const ADMIN_ROLES = ALLOWED_ROLES;
 
 /** Roles that may approve / reject ergo surveys (QSHE Manager sign-off). */
 export const APPROVER_ROLES = ['administrator', 'superuser', 'manager'];
