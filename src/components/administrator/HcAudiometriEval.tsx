@@ -52,7 +52,7 @@ export default function HcAudiometriEval() {
       <div className="admin-form-inner">
         <div style={{ marginBottom: 14 }}>
           <h1 className="admin-form-title">Evaluasi Audiometri & STS</h1>
-          <p className="admin-form-subtitle">Karyawan Kategori A/B. Derajat gangguan (WHO) = rata-rata 500/1000/2000/4000 Hz per telinga, dibulatkan ke bilangan bulat terdekat; derajat karyawan = telinga yang lebih baik. STS = geser rata-rata 2000/3000/4000 Hz ≥ 10 dB terhadap baseline, per telinga (STD/033 6.4).</p>
+          <p className="admin-form-subtitle">Karyawan Kategori A/B. Derajat gangguan (WHO) = rata-rata 500/1000/2000/4000 Hz per telinga, dibulatkan ke bilangan bulat terdekat; derajat karyawan = telinga yang lebih baik. STS = geser rata-rata 2000/3000/4000 Hz ≥ 10 dB terhadap baseline, per telinga.</p>
         </div>
         {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
         <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '0 0 10px' }}>
@@ -94,7 +94,7 @@ export default function HcAudiometriEval() {
         </div>
 
         <div className="admin-form-card">
-          <div className="admin-section-header"><h3 className="admin-section-title">Tindak Lanjut Kasus STS (INK/015 6.4–6.5)</h3></div>
+          <div className="admin-section-header"><h3 className="admin-section-title">Tindak Lanjut Kasus STS</h3></div>
           <table style={tableStyle}>
             <thead><tr>{['Nama', 'Site', 'Terdeteksi', 'Telinga', 'Batas retest', 'Status', 'THT', 'PAK', ''].map((h) => <th key={h} style={thStyle}>{h}</th>)}</tr></thead>
             <tbody>

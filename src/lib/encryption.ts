@@ -129,8 +129,13 @@ export function isEncryptedValue(value: unknown): boolean {
 
 function looksEncrypted(value: string): boolean {
   if (typeof value !== 'string') return false;
-  // Encrypted format: IV(12) + TAG(16) + ciphertext(min 1) = min 29 bytes = 58 hex chars
-  return value.length >= 58 && /^[0-9a-fA-F]+$/.test(value);
+  // Encrypted format: IV(12) + TAG(16) + ciphertext(min 1) = min 29 bytes = 58 hex chars.
+  // Require even length (valid hex byte pairs) AND even byte count that decodes
+  // to at least IV+TAG+1 bytes, so numeric plaintext (e.g. long NIKs) is not misclassified.
+  if (value.length < 58 || value.length % 2 !== 0) return false;
+  if (!/^[0-9a-fA-F]+$/.test(value)) return false;
+  const byteLength = value.length / 2;
+  return byteLength >= IV_LENGTH + TAG_LENGTH + 1 && (byteLength - IV_LENGTH - TAG_LENGTH) % 1 === 0;
 }
 
 /** Encrypt + compute hashes for employee fields */

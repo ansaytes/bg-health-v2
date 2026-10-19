@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // Zonasi Assessment Engine — BG/QSHE/STD/006 Rev001
 // ============================================================
 //
@@ -166,151 +166,156 @@ export function assessZonasi(d: MCUDraft, gender?: string): ZonasiResult {
   }
 
   const genderKey = gender ?? d.jenisKelamin;
-  const male = detectGender(genderKey) === 'male';
-  const catatanSOP: string[] = [];
-  const merah: Finding[] = [];
-  const kuning: Finding[] = [];
+  const ctx: AssessCtx = {
+    d, genderKey, catatanSOP: [], merah: [], kuning: [],
+    collect: () => {},
+  };
+  ctx.collect = makeCollect(ctx);
 
-  /**
-   * Menempatkan hasil klasifikasi ke zona sesuai severity-nya.
-   * severity 'tidak-dinilai' berarti nilai berada di luar rentang tabel
-   * SOP, sehingga dilaporkan sebagai catatan, bukan dipaksa masuk zona.
-   */
-  const collect = (finding: Classification | null, label?: string) => {
+  assessObjectiveZonasi(ctx);
+  assessAnamnesisZonasi(ctx);
+  assessQuestionnaireZonasi(ctx);
+
+  return buildZonasiOutcome(ctx.merah, ctx.kuning, ctx.catatanSOP);
+}
+
+interface AssessCtx {
+  d: MCUDraft;
+  genderKey: string | number | undefined;
+  catatanSOP: string[];
+  merah: Finding[];
+  kuning: Finding[];
+  collect: (finding: Classification | null, label?: string) => void;
+}
+
+/**
+ * Menempatkan hasil klasifikasi ke zona sesuai severity-nya.
+ * severity 'tidak-dinilai' berarti nilai berada di luar rentang tabel
+ * SOP, sehingga dilaporkan sebagai catatan, bukan dipaksa masuk zona.
+ */
+function makeCollect(ctx: AssessCtx) {
+  return (finding: Classification | null, label?: string) => {
     if (!finding) return;
     const name = label ?? finding.label;
     if (finding.severity === 'tidak-dinilai') {
-      catatanSOP.push(`${finding.label}: ${finding.detail ?? ''}`.trim());
+      ctx.catatanSOP.push(`${finding.label}: ${finding.detail ?? ''}`.trim());
       return;
     }
     if (finding.severity === 'merah') {
-      merah.push({ label: `${name} (Merah)`, severity: 'merah', detail: finding.detail });
+      ctx.merah.push({ label: `${name} (Merah)`, severity: 'merah', detail: finding.detail });
       return;
     }
     if (finding.severity === 'kuning') {
-      kuning.push({ label: `${name} (Kuning)`, severity: 'kuning', detail: finding.detail });
+      ctx.kuning.push({ label: `${name} (Kuning)`, severity: 'kuning', detail: finding.detail });
     }
   };
+}
 
-  // ── 1. Tekanan darah ──────────────────────────────────────
-  // Hijau <140/90 · Kuning Grade I 140–159/90–99 · Merah Grade ≥2
+/** Parameter 1-12: pengukuran objektif (TD, glukosa, lipid, fungsi organ). */
+function assessObjectiveZonasi(ctx: AssessCtx) {
+  const { d, collect } = ctx;
+
+  // -- 1. Tekanan darah: Hijau <140/90 - Kuning Grade I - Merah Grade >=2
   collect(classifyBloodPressure(toNumber(d.tdS), toNumber(d.tdD)));
 
-  // ── 2. Glukosa darah ───────────────────────────────────────
-  // Hijau HbA1c <7% & GDP <100 · Kuning Prediabetes 100–125 ·
-  // Merah HbA1c ≥8% atau GDP ≥200
+  // -- 2. Glukosa darah
   collect(classifyGlucose(toNumber(d.gdp), toNumber(d.gd2pp), toNumber(d.hba1c)));
 
-  // ── 3. Dislipidemia ────────────────────────────────────────
-  // Hijau LDL <100 · Kuning 100–189 · Merah ≥190
+  // -- 3. Dislipidemia
   collect(classifyLdl(toNumber(d.ldl)));
-  // Hijau TG <150 · Kuning 200–499 · Merah ≥500
   collect(classifyTriglyceride(toNumber(d.tg)));
 
-  // ── 4. Fungsi ginjal ───────────────────────────────────────
-  // Hijau ≥60 · Kuning G3a 45–59 · Merah <45
+  // -- 4. Fungsi ginjal
   const egfr = toNumber(d.egfr) ?? calcEgfrCkdEpi2021(d.kreatinin, d.usia, d.jenisKelamin);
   collect(classifyEgfr(egfr));
 
-  // ── 5. Asam urat ───────────────────────────────────────────
-  // Hijau <7 · Kuning 7–9 · Merah >9
-  collect(classifyUricAcid(toNumber(d.au), detectGender(genderKey)));
+  // -- 5. Asam urat
+  collect(classifyUricAcid(toNumber(d.au), detectGender(ctx.genderKey)));
 
-  // ── 6. Indeks massa tubuh ──────────────────────────────────
-  // Hijau <23 · Kuning 23–24,9 dan ≥25 · Merah ≥30 dengan komorbid,
-  // serta ≥35 dengan keterbatasan fungsional
+  // -- 6. Indeks massa tubuh
   const bmi = toNumber(d.bmi);
   const weight = classifyBmi(bmi);
   if (weight && weight.severity === 'merah') {
     collect(weight);
   } else if (weight && weight.severity === 'kuning') {
     if (bmi !== null && bmi >= 30) {
-      // IMT ≥30: kuning hanya bila TIDAK ada komorbid signifikan.
-      const comorbid = hasComorbidity(d, genderKey);
+      // IMT >=30: kuning hanya bila TIDAK ada komorbid signifikan.
+      const comorbid = hasComorbidity(d, ctx.genderKey);
       if (comorbid) {
-        merah.push({
+        ctx.merah.push({
           label: 'Obesity with Significant Comorbidity (Merah)',
           severity: 'merah',
           detail: `${weight.detail}, disertai ${comorbid}`,
         });
       } else {
-        kuning.push({ label: `${weight.label} tanpa komorbid metabolik (Kuning)`, severity: 'kuning', detail: weight.detail });
+        ctx.kuning.push({ label: `${weight.label} tanpa komorbid metabolik (Kuning)`, severity: 'kuning', detail: weight.detail });
       }
     } else {
       collect(weight);
     }
   }
 
-  // ── 7. Hemoglobin ──────────────────────────────────────────
-  // Kuning pria 11,0–13,4 / wanita 10,0–11,9 · Merah <10,0
-  collect(classifyHemoglobin(toNumber(d.hb), detectGender(genderKey)));
+  // -- 7. Hemoglobin
+  collect(classifyHemoglobin(toNumber(d.hb), detectGender(ctx.genderKey)));
 
-  // ── 8. Fungsi paru ─────────────────────────────────────────
-  // Hijau FEV1/FVC ≥70% & FVC ≥80% · Kuning FEV1 50–79% · Merah <50%
+  // -- 8. Fungsi paru
   collect(classifyLung(toNumber(d.fev1Pct), toNumber(d.fev1FvcAct), toNumber(d.fvcPct), String(d.spiInterp ?? '')));
 
-  // ── 9. Penglihatan ─────────────────────────────────────────
-  // Hijau visus terkoreksi ≥6/9 · Kuning 6/9–6/18 · Merah <6/18
+  // -- 9. Penglihatan
   collect(classifyVision(d.visusJauh));
 
-  // ── 10. Pendengaran ────────────────────────────────────────
-  // Hijau ≤25 dB · Kuning 26–40 dB · Merah 41–90 dB atau >90 dB
+  // -- 10. Pendengaran
   collect(classifyHearing(toNumber(d.pta), String(d.audInterp ?? '')));
 
-  // ── 11. Fungsi hati ────────────────────────────────────────
-  // Hijau <1,5x batas atas normal & HBsAg negatif ·
-  // Kuning 1,5–3x atau HBsAg+ fungsi hati normal · Merah >3x
+  // -- 11. Fungsi hati
   collect(classifyLiver(toNumber(d.sgot), toNumber(d.sgpt), isReactive(d.hbsag)));
 
-  // ── 12. Pneumokoniosis ─────────────────────────────────────
-  // Hijau foto normal · Kuning ILO 1/0–1/1 · Merah ≥2/1 atau PMF
+  // -- 12. Pneumokoniosis
   collect(classifyChestXr(d.chestXR));
+}
 
-  // ═══════════════════════════════════════════
-  // PARAMETER ANAMNESIS — kosong dianggap normal
-  // ═══════════════════════════════════════════
+/** Parameter 13-15: anamnesis -- kosong dianggap normal. */
+function assessAnamnesisZonasi(ctx: AssessCtx) {
+  const { d } = ctx;
 
-  // ── 13. Epilepsi ────────────────────────────────────────────
-  // Hijau bebas kejang ≥12 bulan · Kuning terkontrol · Merah tidak terkontrol
+  // -- 13. Epilepsi
   if (hasUncontrolledEpilepsy(d.riwayatEpilepsi)) {
-    merah.push({ label: 'Epilepsy, Uncontrolled (Merah)', severity: 'merah', detail: String(d.riwayatEpilepsi) });
+    ctx.merah.push({ label: 'Epilepsy, Uncontrolled (Merah)', severity: 'merah', detail: String(d.riwayatEpilepsi) });
   } else if (hasControlledEpilepsy(d.riwayatEpilepsi)) {
-    kuning.push({ label: 'Epilepsy, Controlled (Kuning)', severity: 'kuning', detail: String(d.riwayatEpilepsi) });
+    ctx.kuning.push({ label: 'Epilepsy, Controlled (Kuning)', severity: 'kuning', detail: String(d.riwayatEpilepsi) });
   }
 
-  // ── 14. Riwayat jantung / stroke ───────────────────────────
+  // -- 14. Riwayat jantung / stroke
   if (hasResidualCardiacSymptom(d.riwayatJantung)) {
-    merah.push({ label: 'Cardiovascular Disease with Residual Symptoms (Merah)', severity: 'merah' });
+    ctx.merah.push({ label: 'Cardiovascular Disease with Residual Symptoms (Merah)', severity: 'merah' });
   }
   if (hasResidualStroke(d.riwayatStroke)) {
-    merah.push({ label: 'Stroke with Residual Symptoms (Merah)', severity: 'merah' });
+    ctx.merah.push({ label: 'Stroke with Residual Symptoms (Merah)', severity: 'merah' });
   }
 
-  // ── 15. LBP ────────────────────────────────────────────────
+  // -- 15. LBP
   if (hasLbpWithNeurologicalDeficit(d.lbp)) {
-    merah.push({ label: 'Chronic Low Back Pain with Neurological Deficit (Merah)', severity: 'merah', detail: String(d.lbp) });
+    ctx.merah.push({ label: 'Chronic Low Back Pain with Neurological Deficit (Merah)', severity: 'merah', detail: String(d.lbp) });
   } else if (hasChronicLbp(d.lbp)) {
-    kuning.push({ label: 'Chronic Low Back Pain (Kuning)', severity: 'kuning', detail: String(d.lbp) });
+    ctx.kuning.push({ label: 'Chronic Low Back Pain (Kuning)', severity: 'kuning', detail: String(d.lbp) });
   }
+}
 
-  // ═══════════════════════════════════════════
-  // PARAMETER KUISIONER — kosong dianggap normal
-  // ═══════════════════════════════════════════
+/** Parameter 16-17: kuesioner -- kosong dianggap normal. */
+function assessQuestionnaireZonasi(ctx: AssessCtx) {
+  const { d } = ctx;
 
-  // ── 16. Kualitas tidur (ESS) ───────────────────────────────
-  // Hijau <11 · Kuning 11–15 · Merah >15
+  // -- 16. Kualitas tidur (ESS): Hijau <11 - Kuning 11-15 - Merah >15
   const ess = toNumber(d.essScore);
   if (ess !== null) {
-    if (ess > 15) merah.push({ label: `Excessive Daytime Sleepiness (Severe, ESS ${ess}) (Merah)`, severity: 'merah' });
-    else if (ess >= 11) kuning.push({ label: `Excessive Daytime Sleepiness (Mild to Moderate, ESS ${ess}) (Kuning)`, severity: 'kuning' });
+    if (ess > 15) ctx.merah.push({ label: `Excessive Daytime Sleepiness (Severe, ESS ${ess}) (Merah)`, severity: 'merah' });
+    else if (ess >= 11) ctx.kuning.push({ label: `Excessive Daytime Sleepiness (Mild to Moderate, ESS ${ess}) (Kuning)`, severity: 'kuning' });
   }
 
-  // ── 17. Kesehatan mental ───────────────────────────────────
-  // SRQ-20 ≥6 atau DASS-21 kategori ringan–sedang → Kuning
-  // Psikosis aktif, depresi berat, atau tidak patuh terapi → Merah
+  // -- 17. Kesehatan mental
   const srq = toNumber(d.srq20Score);
   if (srq !== null && srq >= SRQ20_THRESHOLD) {
-    kuning.push({ label: `Possible Mental Disorder (SRQ-20 ${srq}) (Kuning)`, severity: 'kuning' });
+    ctx.kuning.push({ label: `Possible Mental Disorder (SRQ-20 ${srq}) (Kuning)`, severity: 'kuning' });
   }
   // Ambang "berat" DASS-21 berbeda per subskala (depresi 22, ansietas 20,
   // stres 26), jadi penentuannya memakai kategori, bukan angka tetap.
@@ -326,7 +331,7 @@ export function assessZonasi(d: MCUDraft, gender?: string): ZonasiResult {
     if (value === null || !isDassActionable(domain, value)) continue;
     const verySevere = dassCategory(domain, value) === 'sangat-berat';
     const severity = verySevere ? 'merah' : 'kuning';
-    (verySevere ? merah : kuning).push({
+    (verySevere ? ctx.merah : ctx.kuning).push({
       label: `DASS-21 ${DASS_LABEL[domain]} ${value} — ${dassBandLabel(domain, value)} (${verySevere ? 'Merah' : 'Kuning'})`,
       severity,
     });
@@ -334,16 +339,15 @@ export function assessZonasi(d: MCUDraft, gender?: string): ZonasiResult {
   const sds = toNumber(d.sdsScore);
   if (sds !== null && sds >= 60) {
     const severe = sds >= 70;
-    (severe ? merah : kuning).push({
+    (severe ? ctx.merah : ctx.kuning).push({
       label: `Depressive Disorder (SDS ${sds}, ${severe ? 'Severe' : 'Moderate'}) (${severe ? 'Merah' : 'Kuning'})`,
       severity: severe ? 'merah' : 'kuning',
     });
   }
+}
 
-  // ═══════════════════════════════════════════
-  // HASIL
-  // ═══════════════════════════════════════════
-
+/** Membangun ZonasiResult akhir dari temuan yang terkumpul. */
+function buildZonasiOutcome(merah: Finding[], kuning: Finding[], catatanSOP: string[]): ZonasiResult {
   if (merah.length > 0) {
     return {
       zona: 'Merah',
@@ -362,7 +366,7 @@ export function assessZonasi(d: MCUDraft, gender?: string): ZonasiResult {
   }
 
   if (kuning.length > 0) {
-    // Poin 6.2.2: bila hanya Prediabetes atau Obesitas ringan/sedang, kontrol 6 bulan. 
+    // Poin 6.2.2: bila hanya Prediabetes atau Obesitas ringan/sedang, kontrol 6 bulan.
     // Parameter lain selalu 3 bulan, dan bila ada lebih dari satu, yang terpendek berlaku.
     const onlyLongInterval = kuning.every((f) => /Prediabetes/i.test(f.label) || /Obesity/i.test(f.label) || /Overweight/i.test(f.label));
     const interval = onlyLongInterval ? '6 bulan' : '3 bulan';
@@ -512,104 +516,93 @@ export function calcFramingham(d: MCUDraft): { score: number; prob: string; kat:
     return { score: 0, prob: 'Cek Parameter', kat: 'Cek Parameter' };
   }
 
-  let score = 0;
+  // Declarative point tables. Each entry is [ageUpperBound, points]; the
+  // first row whose bound is >= age wins. Cholesterol tables are per age
+  // band: [ageUpperBound, [points for <160, <200, <240, <280, >=280]].
+  const AGE_POINTS: Record<'male' | 'female', [number, number][]> = {
+    male: [[34, -9], [39, -4], [44, 0], [49, 3], [54, 6], [59, 8], [64, 10], [69, 11], [74, 12], [Infinity, 13]],
+    female: [[34, -7], [39, -3], [44, 0], [49, 3], [54, 6], [59, 8], [64, 10], [69, 12], [74, 14], [Infinity, 16]],
+  };
+  const CHOL_POINTS: Record<'male' | 'female', [number, number[]][]> = {
+    male: [
+      [39, [0, 4, 7, 9, 11]],
+      [49, [0, 3, 5, 6, 8]],
+      [59, [0, 2, 3, 4, 5]],
+      [69, [0, 1, 1, 2, 3]],
+      [Infinity, [0, 0, 0, 1, 1]],
+    ],
+    female: [
+      [39, [0, 4, 8, 11, 13]],
+      [49, [0, 3, 6, 8, 10]],
+      [59, [0, 2, 4, 5, 7]],
+      [69, [0, 1, 2, 3, 4]],
+      [Infinity, [0, 1, 1, 2, 2]],
+    ],
+  };
+  const SMOKING_POINTS: Record<'male' | 'female', [number, number][]> = {
+    male: [[39, 8], [49, 5], [59, 3], [69, 1], [Infinity, 1]],
+    female: [[39, 9], [49, 7], [59, 4], [69, 2], [Infinity, 1]],
+  };
+  const DM_POINTS: Record<'male' | 'female', number> = { male: 3, female: 5 };
+  const SBP_POINTS: Record<'male' | 'female', number[]> = {
+    // [<120, <130, <140, <160, >=160]
+    male: [0, 0, 1, 1, 2],
+    female: [0, 1, 2, 3, 4],
+  };
+  const PROB_TABLE: Record<'male' | 'female', [number, string][]> = {
+    male: [[0, '1'], [5, '2'], [7, '3'], [8, '4'], [9, '5'], [10, '6'], [11, '8'], [12, '10'], [13, '12'], [14, '16'], [15, '20'], [16, '25']],
+    female: [[9, '1'], [13, '2'], [15, '3'], [16, '4'], [17, '5'], [18, '6'], [19, '8'], [20, '11'], [21, '14'], [22, '17'], [23, '22'], [24, '27']],
+  };
+  const PROB_CAPS: Record<'male' | 'female', { below: number; minScore: number }> = {
+    male: { below: 0, minScore: 17 },
+    female: { below: 9, minScore: 25 },
+  };
 
-  if (isMale) {
-    if (age <= 34) score -= 9;
-    else if (age <= 39) score -= 4;
-    else if (age <= 44) score += 0;
-    else if (age <= 49) score += 3;
-    else if (age <= 54) score += 6;
-    else if (age <= 59) score += 8;
-    else if (age <= 64) score += 10;
-    else if (age <= 69) score += 11;
-    else if (age <= 74) score += 12;
-    else score += 13;
+  const genderKey: 'male' | 'female' = isMale ? 'male' : 'female';
 
-    if (age <= 39) {
-      if (chol < 160) score += 0; else if (chol < 200) score += 4; else if (chol < 240) score += 7; else if (chol < 280) score += 9; else score += 11;
-    } else if (age <= 49) {
-      if (chol < 160) score += 0; else if (chol < 200) score += 3; else if (chol < 240) score += 5; else if (chol < 280) score += 6; else score += 8;
-    } else if (age <= 59) {
-      if (chol < 160) score += 0; else if (chol < 200) score += 2; else if (chol < 240) score += 3; else if (chol < 280) score += 4; else score += 5;
-    } else if (age <= 69) {
-      if (chol < 160) score += 0; else if (chol < 200) score += 1; else if (chol < 240) score += 1; else if (chol < 280) score += 2; else score += 3;
-    } else {
-      if (chol < 160) score += 0; else if (chol < 200) score += 0; else if (chol < 240) score += 0; else if (chol < 280) score += 1; else score += 1;
+  const lookup = <T>(table: [number, T][], value: number): T => {
+    for (const [bound, points] of table) {
+      if (value <= bound) return points;
     }
-  } else {
-    if (age <= 34) score -= 7;
-    else if (age <= 39) score -= 3;
-    else if (age <= 44) score += 0;
-    else if (age <= 49) score += 3;
-    else if (age <= 54) score += 6;
-    else if (age <= 59) score += 8;
-    else if (age <= 64) score += 10;
-    else if (age <= 69) score += 12;
-    else if (age <= 74) score += 14;
-    else score += 16;
+    return table[table.length - 1][1];
+  };
 
-    if (age <= 39) {
-      if (chol < 160) score += 0; else if (chol < 200) score += 4; else if (chol < 240) score += 8; else if (chol < 280) score += 11; else score += 13;
-    } else if (age <= 49) {
-      if (chol < 160) score += 0; else if (chol < 200) score += 3; else if (chol < 240) score += 6; else if (chol < 280) score += 8; else score += 10;
-    } else if (age <= 59) {
-      if (chol < 160) score += 0; else if (chol < 200) score += 2; else if (chol < 240) score += 4; else if (chol < 280) score += 5; else score += 7;
-    } else if (age <= 69) {
-      if (chol < 160) score += 0; else if (chol < 200) score += 1; else if (chol < 240) score += 2; else if (chol < 280) score += 3; else score += 4;
-    } else {
-      if (chol < 160) score += 0; else if (chol < 200) score += 1; else if (chol < 240) score += 1; else if (chol < 280) score += 2; else score += 2;
-    }
-  }
+  let score = lookup(AGE_POINTS[genderKey], age);
+
+  const cholBand = lookup(CHOL_POINTS[genderKey], age);
+  if (chol < 160) score += cholBand[0];
+  else if (chol < 200) score += cholBand[1];
+  else if (chol < 240) score += cholBand[2];
+  else if (chol < 280) score += cholBand[3];
+  else score += cholBand[4];
 
   if (hdl >= 60) score -= 1;
   else if (hdl >= 50) score += 0;
   else if (hdl >= 40) score += 1;
   else score += 2;
 
-  if (isMale) {
-    if (sbp < 120) score += 0; else if (sbp < 130) score += 0; else if (sbp < 140) score += 1; else if (sbp < 160) score += 1; else score += 2;
-  } else {
-    if (sbp < 120) score += 0; else if (sbp < 130) score += 1; else if (sbp < 140) score += 2; else if (sbp < 160) score += 3; else score += 4;
-  }
+  const sbpIdx = sbp < 120 ? 0 : sbp < 130 ? 1 : sbp < 140 ? 2 : sbp < 160 ? 3 : 4;
+  score += SBP_POINTS[genderKey][sbpIdx];
 
-  if (smoking) {
-    if (isMale) {
-      if (age <= 39) score += 8; else if (age <= 49) score += 5; else if (age <= 59) score += 3; else if (age <= 69) score += 1; else score += 1;
-    } else {
-      if (age <= 39) score += 9; else if (age <= 49) score += 7; else if (age <= 59) score += 4; else if (age <= 69) score += 2; else score += 1;
+  if (smoking) score += lookup(SMOKING_POINTS[genderKey], age);
+  if (dm) score += DM_POINTS[genderKey];
+
+  const caps = PROB_CAPS[genderKey];
+  let probNum: number;
+  if (score < caps.below) probNum = 0;
+  else if (score >= caps.minScore) probNum = 30;
+  else {
+    probNum = 1;
+    for (const [min, pct] of PROB_TABLE[genderKey]) {
+      if (score >= min) probNum = parseFloat(pct);
     }
   }
 
-  if (dm) score += isMale ? 3 : 5;
-
-  let prob = '';
+  const prob = probNum === 0 ? '<1%' : probNum >= 30 ? '≥30%' : `${probNum}%`;
   let kat = '';
-
-  if (isMale) {
-    if (score < 0) prob = '<1%';
-    else if (score >= 17) prob = '≥30%';
-    else {
-      const table: [number, string][] = [[0, '1%'], [5, '2%'], [7, '3%'], [8, '4%'], [9, '5%'], [10, '6%'], [11, '8%'], [12, '10%'], [13, '12%'], [14, '16%'], [15, '20%'], [16, '25%']];
-      for (let i = table.length - 1; i >= 0; i--) {
-        if (score >= table[i][0]) { prob = table[i][1]; break; }
-      }
-    }
-  } else {
-    if (score < 9) prob = '<1%';
-    else if (score >= 25) prob = '≥30%';
-    else {
-      const table: [number, string][] = [[9, '1%'], [13, '2%'], [15, '3%'], [16, '4%'], [17, '5%'], [18, '6%'], [19, '8%'], [20, '11%'], [21, '14%'], [22, '17%'], [23, '22%'], [24, '27%']];
-      for (let i = table.length - 1; i >= 0; i--) {
-        if (score >= table[i][0]) { prob = table[i][1]; break; }
-      }
-    }
-  }
-
-  const probNum = parseFloat(prob.replace(/[<>≥%]/g, ''));
-  if (probNum >= 20 || prob.includes('≥30')) kat = 'High Risk';
-  else if (probNum >= 10 || prob.includes('20') || prob.includes('25')) kat = 'Intermediate Risk';
+  if (probNum >= 20) kat = 'High Risk';
+  else if (probNum >= 10) kat = 'Intermediate Risk';
   else kat = 'Low Risk';
 
-  return { score, prob: prob ? prob + '%' : '', kat };
+  return { score, prob, kat };
 }

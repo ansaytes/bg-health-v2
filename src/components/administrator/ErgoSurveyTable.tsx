@@ -76,7 +76,7 @@ export default function ErgoSurveyTable() {
                       {s.status === 'MENUNGGU_PERSETUJUAN' && <div style={{ fontSize: 10, marginTop: 2 }}>Menunggu QSHE Manager</div>}
                       {s.status === 'DITOLAK_ULANG' && s.catatan_persetujuan && <div style={{ fontSize: 10, marginTop: 2, maxWidth: 180 }}>{s.catatan_persetujuan}</div>}</td>
                     <td style={tdStyle}>{s.perlu_pica ? (s.pica_no || <Chip text="BELUM ADA" color="#F5A623" />) : '-'}
-                      {s.perlu_pica && <div style={{ marginTop: 4 }}><Btn onClick={() => { const v = prompt('No. PICA (FORM/039):', s.pica_no || ''); if (v !== null) act(() => authFetch('/api/ergo', { method: 'PATCH', body: JSON.stringify({ resource: 'survey', id: s.id, action: 'pica', pica_no: v }) }), 'No. PICA diperbarui.'); }}>{s.pica_no ? 'Ubah' : 'Isi No.'}</Btn></div>}</td>
+                      {s.perlu_pica && <div style={{ marginTop: 4 }}><Btn onClick={() => { const v = prompt('No. PICA:', s.pica_no || ''); if (v !== null) act(() => authFetch('/api/ergo', { method: 'PATCH', body: JSON.stringify({ resource: 'survey', id: s.id, action: 'pica', pica_no: v }) }), 'No. PICA diperbarui.'); }}>{s.pica_no ? 'Ubah' : 'Isi No.'}</Btn></div>}</td>
                     <td style={tdStyle}>
                       <BtnRow>
                         {s.perlu_pica && <Btn onClick={() => toggle(s.id)}>{open === s.id ? 'Tutup' : 'Rekomendasi'}</Btn>}

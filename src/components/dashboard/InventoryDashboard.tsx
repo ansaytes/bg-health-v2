@@ -677,14 +677,14 @@ export default function InventoryDashboard() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -36 }}
               transition={{ duration: 0.22, ease: 'easeOut' }}
-              style={{ position: 'absolute', inset: 0, overflow: 'hidden', paddingRight: 28, display: 'flex', flexDirection: 'column' }}
+              style={{ position: 'absolute', inset: 0, overflow: 'hidden', paddingRight: 28, display: 'flex', flexDirection: 'column', background: 'var(--background)' }}
               onAnimationComplete={() => setChartRenderKey(prev => prev + 1)}
             >
               {/* Header Bar */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexShrink: 0 }}>
                 <div>
-                  <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--foreground)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Boxes size={20} color="var(--brand-primary, #ff4d00)" />
+                  <h1 style={{ fontSize: 17, fontWeight: 700, color: 'var(--foreground)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Boxes size={18} color="var(--brand-primary, #ff4d00)" />
                     Stok Obat & BHP
                   </h1>
                 </div>
@@ -716,13 +716,13 @@ export default function InventoryDashboard() {
               </div>
 
               {/* KPI Cards Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginBottom: 10, flexShrink: 0 }}>
                 {/* Card 1: Obat Habis */}
                 <div
                   className="card glow-coral"
                   onClick={() => openTableTab('habis')}
                   style={{
-                    padding: '12px 14px',
+                    padding: '8px 10px',
                     cursor: 'pointer',
                     border: actionTab === 'habis' ? '2px solid #FF4444' : undefined,
                     transition: 'all 0.15s ease',
@@ -730,10 +730,10 @@ export default function InventoryDashboard() {
                   title="Klik untuk melihat daftar obat yang stoknya habis"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 700 }}>Stok Habis</span>
-                    <AlertCircle size={16} color="#FF4444" />
+                    <span style={{ fontSize: 10, color: '#dc2626', fontWeight: 700 }}>Stok Habis</span>
+                    <AlertCircle size={14} color="#FF4444" />
                   </div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#FF4444', marginTop: 6 }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#FF4444', marginTop: 2, lineHeight: 1.1 }}>
                     {habisItems.length}
                   </div>
                   <div style={{ fontSize: 10, color: habisItems.length > 0 ? '#b91c1c' : 'var(--muted-foreground)', marginTop: 2, fontWeight: 500 }}>
@@ -746,7 +746,7 @@ export default function InventoryDashboard() {
                   className="card glow-amber"
                   onClick={() => openTableTab('kritis')}
                   style={{
-                    padding: '12px 14px',
+                    padding: '8px 10px',
                     cursor: 'pointer',
                     border: actionTab === 'kritis' ? '2px solid #FF9800' : undefined,
                     transition: 'all 0.15s ease',
@@ -754,10 +754,10 @@ export default function InventoryDashboard() {
                   title="Klik untuk melihat daftar obat yang stoknya menipis"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 11, color: '#d97706', fontWeight: 700 }}>Stok Menipis</span>
-                    <AlertTriangle size={16} color="#FF9800" />
+                    <span style={{ fontSize: 10, color: '#d97706', fontWeight: 700 }}>Stok Menipis</span>
+                    <AlertTriangle size={14} color="#FF9800" />
                   </div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#FF9800', marginTop: 6 }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#FF9800', marginTop: 2, lineHeight: 1.1 }}>
                     {kritisItems.length}
                   </div>
                   <div style={{ fontSize: 10, color: '#b45309', marginTop: 2, fontWeight: 500 }}>
@@ -770,7 +770,7 @@ export default function InventoryDashboard() {
                   className="card glow-teal"
                   onClick={() => openTableTab('fast')}
                   style={{
-                    padding: '12px 14px',
+                    padding: '8px 10px',
                     cursor: 'pointer',
                     border: actionTab === 'fast' ? '2px solid #00BCD4' : undefined,
                     transition: 'all 0.15s ease',
@@ -778,10 +778,10 @@ export default function InventoryDashboard() {
                   title="Klik untuk melihat ranking obat fast moving"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 11, color: '#00838f', fontWeight: 700 }}>Fast-Moving</span>
-                    <Boxes size={16} color="#00BCD4" />
+                    <span style={{ fontSize: 10, color: '#00838f', fontWeight: 700 }}>Fast-Moving</span>
+                    <Boxes size={14} color="#00BCD4" />
                   </div>
-                  <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--foreground)', marginTop: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--foreground)', marginTop: 4, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {topFastItem?.name || '-'}
                   </div>
                   <div style={{ fontSize: 10.5, color: '#00BCD4', marginTop: 2, fontWeight: 700 }}>
@@ -794,7 +794,7 @@ export default function InventoryDashboard() {
                   className="card glow-orange"
                   onClick={() => openTableTab('fefo')}
                   style={{
-                    padding: '12px 14px',
+                    padding: '8px 10px',
                     cursor: 'pointer',
                     border: actionTab === 'fefo' ? '2px solid #E67E22' : undefined,
                     transition: 'all 0.15s ease',
@@ -802,10 +802,10 @@ export default function InventoryDashboard() {
                   title="Klik untuk melihat obat yang mendekati masa expired"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 11, color: '#c2410c', fontWeight: 700 }}>Expired &lt; 3 Bln</span>
-                    <Clock size={16} color="#E67E22" />
+                    <span style={{ fontSize: 10, color: '#c2410c', fontWeight: 700 }}>Expired &lt; 3 Bln</span>
+                    <Clock size={14} color="#E67E22" />
                   </div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#E67E22', marginTop: 6 }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#E67E22', marginTop: 2, lineHeight: 1.1 }}>
                     {expSoonItems.length}
                   </div>
                   <div style={{ fontSize: 10, color: '#9a3412', marginTop: 2, fontWeight: 500 }}>
@@ -818,7 +818,7 @@ export default function InventoryDashboard() {
                   className="card glow-coral"
                   onClick={() => openTableTab('fefo')}
                   style={{
-                    padding: '12px 14px',
+                    padding: '8px 10px',
                     cursor: 'pointer',
                     border: actionTab === 'fefo' ? '2px solid #dc2626' : undefined,
                     transition: 'all 0.15s ease',
@@ -826,10 +826,10 @@ export default function InventoryDashboard() {
                   title="Klik untuk melihat obat yang sudah kadaluarsa"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 700 }}>Sudah Expired</span>
-                    <ShieldAlert size={16} color="#dc2626" />
+                    <span style={{ fontSize: 10, color: '#dc2626', fontWeight: 700 }}>Sudah Expired</span>
+                    <ShieldAlert size={14} color="#dc2626" />
                   </div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#dc2626', marginTop: 6 }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#dc2626', marginTop: 2, lineHeight: 1.1 }}>
                     {expiredItems.length}
                   </div>
                   <div style={{ fontSize: 10, color: '#991b1b', marginTop: 2, fontWeight: 500 }}>
@@ -838,35 +838,35 @@ export default function InventoryDashboard() {
                 </div>
               </div>
 
-              {/* 4 Charts Grid */}
-              <div key="charts-grid" style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+              {/* Grid grafik — dua baris, kartu lebar agar grafik dominan */}
+              <div key="charts-grid" style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1.15fr 1fr', gap: 8 }}>
         {/* Chart 1: Top Sudah Expired */}
-        <div className="card glow-coral" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Stok Obat/BHP Expired</h3>
+        <div className="card glow-coral" style={{ padding: '8px 12px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <h3 style={{ fontSize: 11, fontWeight: 700, margin: '0 0 4px 0', color: 'var(--foreground)' }}>Stok Obat/BHP Expired</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
             <canvas ref={topExpiredCanvasRef} className="inventory-chart-canvas" />
           </div>
         </div>
 
         {/* Chart 2: Top Stok Habis */}
-        <div className="card glow-orange" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Stok Habis (kebutuhan/bln)</h3>
+        <div className="card glow-orange" style={{ padding: '8px 12px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <h3 style={{ fontSize: 11, fontWeight: 700, margin: '0 0 4px 0', color: 'var(--foreground)' }}>Stok Habis (kebutuhan/bln)</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
             <canvas ref={topHabisCanvasRef} className="inventory-chart-canvas" />
           </div>
         </div>
 
         {/* Chart 3: Top Akan Expired < 3 Bulan */}
-        <div className="card glow-amber" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Stok Akan Expired &lt; 3 Bln</h3>
+        <div className="card glow-amber" style={{ padding: '8px 12px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <h3 style={{ fontSize: 11, fontWeight: 700, margin: '0 0 4px 0', color: 'var(--foreground)' }}>Stok Akan Expired &lt; 3 Bln</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
             <canvas ref={topExpSoonCanvasRef} className="inventory-chart-canvas" />
           </div>
         </div>
 
         {/* Chart 4: Top Fast Moving */}
-        <div className="card glow-teal" style={{ padding: '12px 14px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--foreground)' }}>Pemakaian per Bulan</h3>
+        <div className="card glow-teal" style={{ padding: '8px 12px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <h3 style={{ fontSize: 11, fontWeight: 700, margin: '0 0 4px 0', color: 'var(--foreground)' }}>Pemakaian per Bulan</h3>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
             <canvas ref={fastMovingCanvasRef} className="inventory-chart-canvas" />
           </div>
@@ -880,9 +880,9 @@ export default function InventoryDashboard() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 36 }}
               transition={{ duration: 0.22, ease: 'easeOut' }}
-              style={{ position: 'absolute', inset: 0, overflow: 'hidden', paddingRight: 28, display: 'flex', flexDirection: 'column' }}
+              style={{ position: 'absolute', inset: 0, overflow: 'hidden', paddingRight: 28, display: 'flex', flexDirection: 'column', background: 'var(--background)' }}
             >
-      <div className="card glow-steel" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+      <div className="card glow-steel" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: 'var(--muted)' }}>
         {/* Tab Headers */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderBottom: '1px solid var(--border)', paddingBottom: 10, marginBottom: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -1052,7 +1052,7 @@ export default function InventoryDashboard() {
                   habisItems.map((item, idx) => {
                     const bufferMin = Math.max(10, (item.avg_monthly_usage || 0) * 3);
                     return (
-                      <tr key={item.id || idx} style={{ borderBottom: '1px solid var(--border)', background: 'rgba(255,68,68,0.04)' }}>
+                      <tr key={item.id || idx} style={{ borderBottom: '1px solid var(--border)' }}>
                         <td style={{ padding: '8px 10px', color: 'var(--muted-foreground)' }}>{idx + 1}</td>
                         <td style={{ padding: '8px 10px', fontWeight: 700, color: 'var(--foreground)' }}>{item.name}</td>
                         <td style={{ padding: '8px 10px', color: 'var(--muted-foreground)' }}>{item.category}</td>
@@ -1229,7 +1229,7 @@ export default function InventoryDashboard() {
                   criticalExpiredItems.map((item, idx) => {
                     const isPassed = (item.daysLeft ?? 0) <= 0;
                     return (
-                      <tr key={item.id || idx} style={{ borderBottom: '1px solid var(--border)', background: isPassed ? 'rgba(255,68,68,0.06)' : undefined }}>
+                      <tr key={item.id || idx} style={{ borderBottom: '1px solid var(--border)', background: isPassed ? 'rgba(255,68,68,0.10)' : undefined }}>
                         <td style={{ padding: '8px 10px', color: 'var(--muted-foreground)' }}>{idx + 1}</td>
                         <td style={{ padding: '8px 10px', fontWeight: 600 }}>{item.name}</td>
                         <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontSize: 11.5 }}>

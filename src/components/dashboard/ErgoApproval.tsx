@@ -48,7 +48,7 @@ export default function ErgoApproval() {
       <div>
         <h1 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>Persetujuan Survei Ergonomi</h1>
         <p style={{ fontSize: 12, color: 'var(--muted-foreground)', margin: '4px 0 0' }}>
-          Dokumen FORM/116 (RULA), FORM/117 (ROSA), dan FORM/118 (WERA) disetujui oleh QSHE Manager / PJO.
+          Hasil survei RULA, ROSA, dan WERA disetujui oleh QSHE Manager / PJO.
           {canApprove && <> Anda masuk sebagai <b>{profile?.full_name || profile?.username}</b>; nama dan jabatan Anda dicatat otomatis saat menyetujui.</>}
         </p>
       </div>
@@ -77,7 +77,7 @@ export default function ErgoApproval() {
             {isOpen && (
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
                 <div style={{ fontSize: 12, marginBottom: 6 }}><b>Interpretasi:</b> {interpretasiFor(s.metode, s.skor_akhir)}{s.perlu_pica ? ' — wajib PICA.' : ''}{s.batas_tindak_hari_kerja ? ` Batas tindak lanjut ${s.batas_tindak_hari_kerja} hari kerja.` : ''}</div>
-                <div style={{ fontSize: 11, marginBottom: 6 }}>Keabsahan (STD/036 6.10): {s.sah ? 'semua syarat terpenuhi' : <b style={{ color: '#E63946' }}>ada syarat yang belum terpenuhi</b>}{s.foto_url && <> · <a href={s.foto_url} target="_blank" rel="noreferrer" style={{ color: '#ff4d00' }}>Foto / dokumentasi</a></>}</div>
+                <div style={{ fontSize: 11, marginBottom: 6 }}>Keabsahan: {s.sah ? 'semua syarat terpenuhi' : <b style={{ color: '#E63946' }}>ada syarat yang belum terpenuhi</b>}{s.foto_url && <> · <a href={s.foto_url} target="_blank" rel="noreferrer" style={{ color: '#ff4d00' }}>Foto / dokumentasi</a></>}</div>
                 {rk.length > 0 && (
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5, marginBottom: 10 }}>
                     <tbody>{rk.map((r) => (

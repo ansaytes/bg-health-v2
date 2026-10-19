@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { decryptMCURecord, encryptMCURecord } from '@/lib/encryption';
 import { applyMCUCalculations } from '@/lib/mcu-calculations';
@@ -8,7 +8,39 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabas
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
 const client = createClient(url, serviceKey);
 
-export async function GET() {
+const PREVIEW_ROLE = process.env.NEXT_PUBLIC_PREVIEW_ROLE as string | undefined;
+
+async function getSessionRole(req: NextRequest) {
+  const authHeader = req.headers.get('authorization');
+  let accessToken = authHeader?.replace('Bearer ', '');
+  if (!accessToken) {
+    const cookie = req.cookies.get('sb-access-token')?.value;
+    if (cookie) accessToken = cookie;
+  }
+  if (!accessToken) return null;
+  if (accessToken === 'preview-access-token' && PREVIEW_ROLE) {
+    return { role: PREVIEW_ROLE };
+  }
+  const { data: { user }, error } = await client.auth.getUser(accessToken);
+  if (error || !user) return null;
+  const { data: profile } = await client
+    .from('user_profiles')
+    .select('role')
+    .eq('user_id', user.id)
+    .single();
+  return { role: (profile?.role as string) || 'viewer' };
+}
+
+export async function GET(req: NextRequest) {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({ success: false, error: 'SUPABASE_SERVICE_ROLE_KEY is not configured; bulk recalculation is disabled.' }, { status: 500 });
+  }
+
+  const authInfo = await getSessionRole(req);
+  if (!authInfo || (authInfo.role !== 'superuser' && authInfo.role !== 'administrator')) {
+    return NextResponse.json({ success: false, error: 'Akses ditolak. Hanya superuser/administrator yang dapat menjalankan rekalkulasi.' }, { status: 403 });
+  }
+
   try {
     let allRecords: any[] = [];
     let from = 0;

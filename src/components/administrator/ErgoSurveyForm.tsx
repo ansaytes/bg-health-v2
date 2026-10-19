@@ -15,10 +15,10 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 type Ident = Record<string, any>;
 
 const CHECKS: { key: string; label: string }[] = [
-  { key: 'ok_personil_kompeten', label: 'Personil pengukur kompeten (STD/036 pasal 6.8)' },
-  { key: 'ok_metode_sesuai', label: 'Metode sesuai dengan jenis pekerjaan (pasal 6.6)' },
-  { key: 'ok_kondisi_representatif', label: 'Kondisi kerja saat pengukuran representatif (pasal 6.7)' },
-  { key: 'ok_dokumentasi_lengkap', label: 'Dokumentasi lengkap: foto & formulir (pasal 6.9)' },
+  { key: 'ok_personil_kompeten', label: 'Personil pengukur kompeten' },
+  { key: 'ok_metode_sesuai', label: 'Metode sesuai dengan jenis pekerjaan' },
+  { key: 'ok_kondisi_representatif', label: 'Kondisi kerja saat pengukuran representatif' },
+  { key: 'ok_dokumentasi_lengkap', label: 'Dokumentasi lengkap: foto & formulir' },
 ];
 
 const card = (selected: boolean): React.CSSProperties => ({
@@ -104,9 +104,9 @@ export default function ErgoSurveyForm() {
       <div className="admin-form-inner">
         <div style={{ marginBottom: 12 }}>
           <h1 className="admin-form-title">Survei Ergonomi</h1>
-          <p className="admin-form-subtitle">Pengukuran internal minimal 1× per bulan; survei pihak ketiga minimal 1× per tahun (STD/036). Jawab tiap langkah; skor dihitung otomatis.</p>
+          <p className="admin-form-subtitle">Pengukuran internal minimal 1× per bulan; survei pihak ketiga minimal 1× per tahun. Jawab tiap langkah; skor dihitung otomatis.</p>
         </div>
-        <Tabs tabs={[{ key: 'RULA', label: 'RULA (FORM/116)' }, { key: 'ROSA', label: 'ROSA (FORM/117)' }, { key: 'WERA', label: 'WERA (FORM/118)' }]} value={metode} onChange={changeMetode} />
+        <Tabs tabs={[{ key: 'RULA', label: 'RULA' }, { key: 'ROSA', label: 'ROSA' }, { key: 'WERA', label: 'WERA' }]} value={metode} onChange={changeMetode} />
         {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
 
         <div className="admin-form-card">
@@ -289,7 +289,7 @@ export default function ErgoSurveyForm() {
                   </tbody>
                 </table>
               </div>
-              <div style={{ fontSize: 12, fontWeight: 700, margin: '14px 0 6px' }}>Keabsahan hasil (STD/036 pasal 6.10)</div>
+              <div style={{ fontSize: 12, fontWeight: 700, margin: '14px 0 6px' }}>Keabsahan hasil</div>
               <div style={{ display: 'grid', gap: 8 }}>
                 {CHECKS.map((c) => (
                   <label key={c.key} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, cursor: 'pointer' }}>
