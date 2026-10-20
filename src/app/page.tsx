@@ -219,7 +219,6 @@ const DASH_SIDEBAR: SidebarItem[] = [
   { key: 'inventory-dashboard', label: 'Monitoring Obat & BHP', icon: <IconInventory />, adminOnly: true },
   { key: 'hearing-dashboard', label: 'Hearing Conservation', icon: <IconMonitoring />, adminOnly: true },
   { key: 'ergonomi-dashboard', label: 'Ergonomi', icon: <IconStatistik />, adminOnly: true },
-  { key: 'persetujuan-ergonomi', label: 'Persetujuan Ergonomi', icon: <IconTindakLanjut />, approverOnly: true },
 ];
 
 const ADMIN_SIDEBAR: SidebarItem[] = [
@@ -236,6 +235,7 @@ const DATA_ENTRY_SIDEBAR: SidebarItem[] = [
   { key: 'input-jadwal-mcu', label: 'Input Jadwal MCU', icon: <IconReviewMCU /> },
   { key: 'gangguan-tidur', label: 'Gangguan Tidur', icon: <IconQuestionnaire /> },
   { key: 'kesehatan-mental', label: 'Kesehatan Mental', icon: <IconQuestionnaire /> },
+  { key: 'persetujuan-ergonomi', label: 'Persetujuan Survey Ergonomi (By Manager)', icon: <IconTindakLanjut />, approverOnly: true },
 ];
 
 /*   Content Routers */
@@ -267,6 +267,9 @@ function DataEntryContent() {
   }
   if (activeDataEntrySidebar === 'kesehatan-mental') {
     return <div className="admin-form-container"><InputMentalHealthPage /></div>;
+  }
+  if (activeDataEntrySidebar === 'persetujuan-ergonomi') {
+    return <div className="admin-form-container" style={{ overflow: 'hidden' }}><ErgoApproval /></div>;
   }
   return activeDataEntrySidebar === 'input-jadwal-mcu'
     ? <div className="admin-form-container"><InputJadwalMCU /></div>
@@ -327,7 +330,6 @@ function DashContent() {
     case 'inventory-dashboard': return <InventoryDashboard />;
     case 'hearing-dashboard': return <HearingConservationDashboard />;
     case 'ergonomi-dashboard': return <ErgonomiDashboard />;
-    case 'persetujuan-ergonomi': return <ErgoApproval />;
     default: return <DashboardView />;
   }
 }
@@ -846,6 +848,12 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
 
 export default function Home() {
   const store = useMCUStore();
+  // Selector terpisah: referensi setter stabil, sehingga dependensi useCallback di bawah
+  // eksplisit (tidak bergantung pada objek store yang dibuat ulang tiap render).
+  const setActiveHomeSidebar = useMCUStore((s) => s.setActiveHomeSidebar);
+  const setActiveDashSidebar = useMCUStore((s) => s.setActiveDashSidebar);
+  const setActiveDataEntrySidebar = useMCUStore((s) => s.setActiveDataEntrySidebar);
+  const setActiveAdminSidebar = useMCUStore((s) => s.setActiveAdminSidebar);
   const { theme, setTheme } = useTheme();
   const { user, profile, loading: authLoading, isAdmin, isSuperuser, role } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -879,11 +887,11 @@ export default function Home() {
   // Reset sub-sidebar to topmost when main page changes
   // Use ref to avoid infinite loop (don't depend on store object)
   const resetSidebar = useCallback((page: string) => {
-    if (page === 'home') store.setActiveHomeSidebar('semua-feed');
-    else if (page === 'dashboard') store.setActiveDashSidebar('statistik');
-    else if (page === 'data-entry') store.setActiveDataEntrySidebar('input-jadwal-mcu');
-    else if (page === 'administrator') store.setActiveAdminSidebar('lagging-indicator');
-  }, [store.setActiveHomeSidebar, store.setActiveDashSidebar, store.setActiveDataEntrySidebar, store.setActiveAdminSidebar]);
+    if (page === 'home') setActiveHomeSidebar('semua-feed');
+    else if (page === 'dashboard') setActiveDashSidebar('statistik');
+    else if (page === 'data-entry') setActiveDataEntrySidebar('input-jadwal-mcu');
+    else if (page === 'administrator') setActiveAdminSidebar('lagging-indicator');
+  }, [setActiveHomeSidebar, setActiveDashSidebar, setActiveDataEntrySidebar, setActiveAdminSidebar]);
 
   useEffect(() => {
     resetSidebar(activePage);
@@ -893,7 +901,7 @@ export default function Home() {
   const headerNav = ALL_HEADER_NAV.filter((item) => {
     if (role === 'employee') return item.key === 'home';
     if (item.key === 'administrator') return ['administrator', 'superuser'].includes(role || '');
-    if (item.key === 'data-entry') return ['pic', 'administrator', 'superuser'].includes(role || '');
+    if (item.key === 'data-entry') return ['pic', 'administrator', 'superuser', 'manager'].includes(role || '');
     return true;
   });
 
@@ -908,7 +916,12 @@ export default function Home() {
         return true;
       });
     }
-    if (activePage === 'data-entry') return DATA_ENTRY_SIDEBAR;
+    if (activePage === 'data-entry') {
+      return DATA_ENTRY_SIDEBAR.filter((item) => {
+        if (item.approverOnly && !['manager', 'superuser'].includes(role || '')) return false;
+        return true;
+      });
+    }
     // Administrator sidebar — filter by role
     return ADMIN_SIDEBAR.filter((item) => {
       if (item.superuserOnly && !isSuperuser) return false;
@@ -931,7 +944,7 @@ export default function Home() {
     if (role === 'employee' && tab !== 'home') return;
     // Prevent non-admins from going to administrator
     if (tab === 'administrator' && !['administrator', 'superuser'].includes(role || '')) return;
-    if (tab === 'data-entry' && !['pic', 'administrator', 'superuser'].includes(role || '')) return;
+    if (tab === 'data-entry' && !['pic', 'administrator', 'superuser', 'manager'].includes(role || '')) return;
     store.setActivePage(tab);
     setMobileOpen(false);
   };

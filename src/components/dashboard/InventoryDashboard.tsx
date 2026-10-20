@@ -46,13 +46,13 @@ export default function InventoryDashboard() {
 
   // Chart canvas refs
   const topExpiredCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const topHabisCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const stockStatusCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const topExpSoonCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const fastMovingCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Chart instances
   const topExpiredChart = useRef<ChartJS | null>(null);
-  const topHabisChart = useRef<ChartJS | null>(null);
+  const stockStatusChart = useRef<ChartJS | null>(null);
   const topExpSoonChart = useRef<ChartJS | null>(null);
   const fastMovingChart = useRef<ChartJS | null>(null);
 
@@ -60,7 +60,7 @@ export default function InventoryDashboard() {
     return () => {
       // Cleanup on full unmount
       if (topExpiredChart.current) topExpiredChart.current.destroy();
-      if (topHabisChart.current) topHabisChart.current.destroy();
+      if (stockStatusChart.current) stockStatusChart.current.destroy();
       if (topExpSoonChart.current) topExpSoonChart.current.destroy();
       if (fastMovingChart.current) fastMovingChart.current.destroy();
     };
@@ -304,7 +304,7 @@ export default function InventoryDashboard() {
         .sort((a, b) => (b.stock || 0) - (a.stock || 0))
         .slice(0, 10);
 
-      const labels = topExpired.map(i => i.name.length > 20 ? i.name.slice(0, 18) + '...' : i.name);
+      const labels = topExpired.map(i => i.name.length > 22 ? i.name.slice(0, 20) + '…' : i.name);
       const values = topExpired.map(i => i.stock || 0);
 
       const data: ChartData<'bar'> = {
@@ -312,10 +312,11 @@ export default function InventoryDashboard() {
         datasets: [
           {
             data: values,
-            backgroundColor: 'rgba(220, 38, 38, 0.85)',
+            backgroundColor: 'rgba(231, 76, 60, 0.85)',
+            hoverBackgroundColor: '#E74C3C',
             borderWidth: 0,
-            borderRadius: 6,
-            barThickness: 13,
+            borderRadius: 4,
+            maxBarThickness: 18,
           },
         ],
       };
@@ -343,12 +344,22 @@ export default function InventoryDashboard() {
         scales: {
           x: {
             beginAtZero: true,
+            grace: '15%',
             grid: { color: gridColor },
-            ticks: { color: textColor, font: { size: 10, family: fontFamily } },
+            ticks: { color: textColor, font: { size: 10, family: fontFamily }, padding: 4 },
           },
           y: {
+            beginAtZero: true,
             grid: { display: false },
-            ticks: { color: textColor, font: { size: 10, family: fontFamily } },
+            ticks: {
+              color: textColor,
+              font: { size: 10, family: fontFamily },
+              padding: 4,
+              callback: (value) => {
+                const label = labels[Number(value)] ?? String(value);
+                return label.length > 26 ? `${label.slice(0, 24)}…` : label;
+              },
+            },
           },
         },
       };
@@ -373,79 +384,91 @@ export default function InventoryDashboard() {
       }
     }
 
-    // 2. Top 10 Stok Habis (Horizontal Bar)
-    if (topHabisCanvasRef.current) {
+    // 2. Status Stok (doughnut, total di tengah) — menggantikan bar tanpa nama
+    if (stockStatusCanvasRef.current) {
 
-      const topHabis = items
-        .filter(i => (i.stock || 0) <= 0)
-        .sort((a, b) => (b.avg_monthly_usage || 0) - (a.avg_monthly_usage || 0))
-        .slice(0, 10);
+      const ORDER = ['Aman', 'Menipis', 'Kritis', 'Habis'] as const;
+      const COLOR: Record<string, string> = { Aman: '#00B894', Menipis: '#F39C12', Kritis: '#FF8C42', Habis: '#E74C3C' };
+      const counts: Record<string, number> = { Aman: 0, Menipis: 0, Kritis: 0, Habis: 0 };
+      items.forEach(i => {
+        const status = getStockStatus(i);
+        if (status in counts) counts[status]++;
+      });
+      const labels = ORDER.filter(k => counts[k] > 0) as unknown as string[];
+      const values = labels.map(k => counts[k]);
+      const total = values.reduce((a, b) => a + b, 0);
 
-      const labels = topHabis.map(i => i.name.length > 20 ? i.name.slice(0, 18) + '...' : i.name);
-      const values = topHabis.map(i => i.avg_monthly_usage || 0);
-
-      const data: ChartData<'bar'> = {
+      const data: ChartData<'doughnut'> = {
         labels,
-        datasets: [
-          {
-            data: values,
-            backgroundColor: 'rgba(255, 68, 68, 0.85)',
-            borderWidth: 0,
-            borderRadius: 6,
-            barThickness: 13,
-          },
-        ],
+        datasets: [{
+          data: values,
+          backgroundColor: labels.map(k => COLOR[k]),
+          borderColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.06)',
+          borderWidth: 1,
+          hoverOffset: 8,
+        }],
       };
 
-      const options: ChartOptions<'bar'> = {
-        indexAxis: 'y',
+      const options: ChartOptions<'doughnut'> = {
         responsive: true,
         maintainAspectRatio: false,
+        cutout: '62%',
+        radius: '82%',
         animation: animationSettings,
         plugins: {
-          legend: { display: false },
+          legend: {
+            display: true,
+            position: 'right',
+            labels: { color: textColor, font: { size: 10, weight: 'bold', family: fontFamily }, boxWidth: 12, usePointStyle: true },
+          },
           tooltip: {
             callbacks: {
-              label: (ctx) => ` ${ctx.parsed.x} ${topHabis[ctx.dataIndex]?.unit || 'satuan'}/bulan kebutuhan`,
+              label: (ctx) => ` ${ctx.label}: ${ctx.parsed}${total ? ` (${(ctx.parsed / total * 100).toFixed(1)}%)` : ''}`,
             },
           },
           datalabels: {
-            anchor: 'end',
-            align: 'right',
-            color: textColor,
+            display: (ctx) => Number(ctx.dataset.data[ctx.dataIndex]) > 0,
+            color: '#ffffff',
             font: { size: 10, weight: 'bold', family: fontFamily },
-            formatter: (v) => (v > 0 ? `${v}` : ''),
-          },
-        },
-        scales: {
-          x: {
-            beginAtZero: true,
-            grid: { color: gridColor },
-            ticks: { color: textColor, font: { size: 10, family: fontFamily } },
-          },
-          y: {
-            grid: { display: false },
-            ticks: { color: textColor, font: { size: 10, family: fontFamily } },
+            formatter: (v: number) => (total ? `${(v / total * 100).toFixed(0)}%` : ''),
           },
         },
       };
 
-      if (topHabisChart.current) {
+      if (stockStatusChart.current) {
         if (isDataChange) {
-          topHabisChart.current.destroy();
-          topHabisChart.current = null;
+          stockStatusChart.current.destroy();
+          stockStatusChart.current = null;
         }
       }
 
-      if (topHabisChart.current) {
-        topHabisChart.current.data = data;
-        topHabisChart.current.options = options;
-        topHabisChart.current.update('none');
+      if (stockStatusChart.current) {
+        stockStatusChart.current.data = data;
+        stockStatusChart.current.options = options;
+        stockStatusChart.current.update('none');
       } else {
-        topHabisChart.current = new ChartJS(topHabisCanvasRef.current, {
-          type: 'bar',
+        stockStatusChart.current = new ChartJS(stockStatusCanvasRef.current, {
+          type: 'doughnut',
           data,
           options,
+          plugins: [{
+            id: 'inv-center-total',
+            afterDraw: (chart) => {
+              const { left, right, top, bottom } = chart.chartArea;
+              const ctx = chart.ctx;
+              ctx.save();
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillStyle = textColor;
+              ctx.font = `bold 20px ${fontFamily}`;
+              ctx.fillText(String(total), (left + right) / 2, (top + bottom) / 2 - 6);
+              ctx.fillStyle = textColor;
+              ctx.globalAlpha = 0.6;
+              ctx.font = `600 9px ${fontFamily}`;
+              ctx.fillText('TOTAL ITEM', (left + right) / 2, (top + bottom) / 2 + 12);
+              ctx.restore();
+            },
+          }],
         });
       }
     }
@@ -459,7 +482,7 @@ export default function InventoryDashboard() {
         .sort((a, b) => (a.daysLeft ?? 999) - (b.daysLeft ?? 999))
         .slice(0, 10);
 
-      const labels = topExpSoon.map(i => i.name.length > 20 ? i.name.slice(0, 18) + '...' : i.name);
+      const labels = topExpSoon.map(i => i.name.length > 22 ? i.name.slice(0, 20) + '…' : i.name);
       const values = topExpSoon.map(i => i.stock || 0);
 
       const data: ChartData<'bar'> = {
@@ -467,10 +490,11 @@ export default function InventoryDashboard() {
         datasets: [
           {
             data: values,
-            backgroundColor: 'rgba(230, 126, 34, 0.85)',
+            backgroundColor: 'rgba(243, 156, 18, 0.85)',
+            hoverBackgroundColor: '#F39C12',
             borderWidth: 0,
-            borderRadius: 6,
-            barThickness: 13,
+            borderRadius: 4,
+            maxBarThickness: 18,
           },
         ],
       };
@@ -498,12 +522,22 @@ export default function InventoryDashboard() {
         scales: {
           x: {
             beginAtZero: true,
+            grace: '15%',
             grid: { color: gridColor },
-            ticks: { color: textColor, font: { size: 10, family: fontFamily } },
+            ticks: { color: textColor, font: { size: 10, family: fontFamily }, padding: 4 },
           },
           y: {
+            beginAtZero: true,
             grid: { display: false },
-            ticks: { color: textColor, font: { size: 10, family: fontFamily } },
+            ticks: {
+              color: textColor,
+              font: { size: 10, family: fontFamily },
+              padding: 4,
+              callback: (value) => {
+                const label = labels[Number(value)] ?? String(value);
+                return label.length > 26 ? `${label.slice(0, 24)}…` : label;
+              },
+            },
           },
         },
       };
@@ -535,30 +569,21 @@ export default function InventoryDashboard() {
         .sort((a, b) => (b.avg_monthly_usage || 0) - (a.avg_monthly_usage || 0))
         .slice(0, 10);
 
-      const labels = topFast.map(i => i.name.length > 20 ? i.name.slice(0, 18) + '...' : i.name);
+      const labels = topFast.map(i => i.name.length > 22 ? i.name.slice(0, 20) + '…' : i.name);
       const values = topFast.map(i => i.avg_monthly_usage || 0);
 
-      const paletteColors = [
-        'rgba(255, 77, 0, 0.85)',   // #1 Degirol: Oranye
-        'rgba(0, 188, 212, 0.85)',  // #2 Caviplex: Cyan
-        'rgba(155, 89, 182, 0.85)', // #3 Anadex: Ungu
-        'rgba(0, 184, 148, 0.85)',  // #4 Demacolin: Hijau
-        'rgba(255, 152, 0, 0.85)',  // #5 Paratusin: Amber
-        'rgba(233, 30, 99, 0.85)',   // #6 Vitacimin: Pink
-        'rgba(52, 152, 219, 0.85)',  // #7 Atorvastatin: Biru
-        'rgba(243, 156, 18, 0.85)',  // #8 Grantusif: Emas
-        'rgba(26, 188, 156, 0.85)',  // #9 Graxine: Teal
-        'rgba(230, 126, 34, 0.85)',  // #10 Paracetamol: Terracotta
-      ];
+      // Satu warna progresif (oranye → teal) agar tetap selaras dengan palet dashboard MCU.
+      const PACE = ['#FF4D00', '#FF8C42', '#FFD700', '#00B894', '#2ECC71', '#00BCD4', '#3498DB', '#9B59B6', '#E91E63', '#F39C12'];
+      const paletteColors = PACE.slice(0, values.length);
       const data: ChartData<'bar'> = {
         labels,
         datasets: [
           {
             data: values,
-            backgroundColor: paletteColors.slice(0, values.length),
+            backgroundColor: paletteColors,
             borderWidth: 0,
-            borderRadius: 6,
-            barThickness: 13,
+            borderRadius: 4,
+            maxBarThickness: 18,
           },
         ],
       };
@@ -586,12 +611,22 @@ export default function InventoryDashboard() {
         scales: {
           x: {
             beginAtZero: true,
+            grace: '15%',
             grid: { color: gridColor },
-            ticks: { color: textColor, font: { size: 10, family: fontFamily } },
+            ticks: { color: textColor, font: { size: 10, family: fontFamily }, padding: 4 },
           },
           y: {
+            beginAtZero: true,
             grid: { display: false },
-            ticks: { color: textColor, font: { size: 10, family: fontFamily } },
+            ticks: {
+              color: textColor,
+              font: { size: 10, family: fontFamily },
+              padding: 4,
+              callback: (value) => {
+                const label = labels[Number(value)] ?? String(value);
+                return label.length > 26 ? `${label.slice(0, 24)}…` : label;
+              },
+            },
           },
         },
       };
@@ -839,35 +874,35 @@ export default function InventoryDashboard() {
               </div>
 
               {/* Grid grafik — dua baris, kartu lebar agar grafik dominan */}
-              <div key="charts-grid" style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1.15fr 1fr', gap: 8 }}>
+              <div key="charts-grid" style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1.1fr 1fr', gap: 8 }}>
         {/* Chart 1: Top Sudah Expired */}
-        <div className="card glow-coral" style={{ padding: '8px 12px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: 11, fontWeight: 700, margin: '0 0 4px 0', color: 'var(--foreground)' }}>Stok Obat/BHP Expired</h3>
-          <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+        <div className="card mcu-dashboard-card glow-coral" data-chart="expired" style={{ padding: '3px 6px' }}>
+          <div className="card-head"><div><h2>Stok Obat/BHP Expired</h2><p className="mcu-dashboard-card-sub">10 item stok terbanyak, sudah kedaluwarsa</p></div></div>
+          <div className="mcu-dashboard-chart">
             <canvas ref={topExpiredCanvasRef} className="inventory-chart-canvas" />
           </div>
         </div>
 
-        {/* Chart 2: Top Stok Habis */}
-        <div className="card glow-orange" style={{ padding: '8px 12px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: 11, fontWeight: 700, margin: '0 0 4px 0', color: 'var(--foreground)' }}>Stok Habis (kebutuhan/bln)</h3>
-          <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-            <canvas ref={topHabisCanvasRef} className="inventory-chart-canvas" />
+        {/* Chart 2: Status Stok (donut, total di tengah) */}
+        <div className="card mcu-dashboard-card glow-orange" data-chart="status" style={{ padding: '3px 6px' }}>
+          <div className="card-head"><div><h2>Status Stok Obat & BHP</h2><p className="mcu-dashboard-card-sub">Aman · menipis · kritis · habis</p></div></div>
+          <div className="mcu-dashboard-chart">
+            <canvas ref={stockStatusCanvasRef} className="inventory-chart-canvas" />
           </div>
         </div>
 
         {/* Chart 3: Top Akan Expired < 3 Bulan */}
-        <div className="card glow-amber" style={{ padding: '8px 12px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: 11, fontWeight: 700, margin: '0 0 4px 0', color: 'var(--foreground)' }}>Stok Akan Expired &lt; 3 Bln</h3>
-          <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+        <div className="card mcu-dashboard-card glow-amber" data-chart="expsoon" style={{ padding: '3px 6px' }}>
+          <div className="card-head"><div><h2>Stok Akan Expired &lt; 3 Bulan</h2><p className="mcu-dashboard-card-sub">10 item terdekat masa kedaluwarsa</p></div></div>
+          <div className="mcu-dashboard-chart">
             <canvas ref={topExpSoonCanvasRef} className="inventory-chart-canvas" />
           </div>
         </div>
 
         {/* Chart 4: Top Fast Moving */}
-        <div className="card glow-teal" style={{ padding: '8px 12px', minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: 11, fontWeight: 700, margin: '0 0 4px 0', color: 'var(--foreground)' }}>Pemakaian per Bulan</h3>
-          <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+        <div className="card mcu-dashboard-card glow-teal" data-chart="fast" style={{ padding: '3px 6px' }}>
+          <div className="card-head"><div><h2>Pemakaian per Bulan</h2><p className="mcu-dashboard-card-sub">10 item fast-moving</p></div></div>
+          <div className="mcu-dashboard-chart">
             <canvas ref={fastMovingCanvasRef} className="inventory-chart-canvas" />
           </div>
         </div>

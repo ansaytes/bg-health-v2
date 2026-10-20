@@ -95,18 +95,18 @@ function NoiseTab({ areas, onMsg, onSaved }: { areas: Row[]; onMsg: (m: any) => 
             <Field label="Tanggal Pengukuran"><input type="date" className="admin-input" style={inputStyle} required value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
             <Field label="Jenis"><select className="admin-input" style={inputStyle} value={f.tipe} onChange={(e) => set('tipe', e.target.value)}>
               <option value="BERKALA">Berkala</option><option value="PERUBAHAN_PROSES">Perubahan mesin / proses</option></select></Field>
-            <Field label="Petugas Pengukur"><input className="admin-input" style={inputStyle} required placeholder="Nama petugas" value={f.petugas} onChange={(e) => set('petugas', e.target.value)} /></Field>
+            <Field label="Petugas Pengukur"><input className="admin-input" style={inputStyle} required placeholder="Nama lengkap petugas pengukur" value={f.petugas} onChange={(e) => set('petugas', e.target.value)} /></Field>
           </div>
         </Section>
 
         <Section title="Sound Level Meter & Kalibrasi">
           <div style={grid3}>
-            <Field label="Merk / Tipe SLM"><input className="admin-input" style={inputStyle} placeholder="mis. Rion NL-42" value={f.slm_merk_tipe} onChange={(e) => set('slm_merk_tipe', e.target.value)} /></Field>
-            <Field label="No. Seri"><input className="admin-input" style={inputStyle} placeholder="No. seri alat" value={f.slm_serial} onChange={(e) => set('slm_serial', e.target.value)} /></Field>
+            <Field label="Merk / Tipe SLM"><input className="admin-input" style={inputStyle} placeholder="Merk dan tipe alat, mis. Rion NL-42" value={f.slm_merk_tipe} onChange={(e) => set('slm_merk_tipe', e.target.value)} /></Field>
+            <Field label="No. Seri"><input className="admin-input" style={inputStyle} placeholder="Nomor seri yang tertera di alat" value={f.slm_serial} onChange={(e) => set('slm_serial', e.target.value)} /></Field>
             <Field label="Kelas SLM"><select className="admin-input" style={inputStyle} value={f.slm_kelas} onChange={(e) => set('slm_kelas', e.target.value)}><option value="1">Kelas 1</option><option value="2">Kelas 2</option></select></Field>
             <Field label="Sertifikat Kalibrasi Berlaku s/d"><input type="date" className="admin-input" style={inputStyle} value={f.sertifikat_kalibrasi_sd} onChange={(e) => set('sertifikat_kalibrasi_sd', e.target.value)} /></Field>
-            <Field label="Kalibrasi Sebelum (dB)"><input type="number" step="0.1" className="admin-input" style={inputStyle} placeholder="94.0" value={f.kalibrasi_sebelum_db} onChange={(e) => set('kalibrasi_sebelum_db', e.target.value)} /></Field>
-            <Field label="Kalibrasi Sesudah (dB)"><input type="number" step="0.1" className="admin-input" style={inputStyle} placeholder="94.0" value={f.kalibrasi_sesudah_db} onChange={(e) => set('kalibrasi_sesudah_db', e.target.value)} /></Field>
+            <Field label="Kalibrasi Sebelum (dB)"><input type="number" step="0.1" className="admin-input" style={inputStyle} placeholder="mis. 94.0 dB" value={f.kalibrasi_sebelum_db} onChange={(e) => set('kalibrasi_sebelum_db', e.target.value)} /></Field>
+            <Field label="Kalibrasi Sesudah (dB)"><input type="number" step="0.1" className="admin-input" style={inputStyle} placeholder="mis. 94.0 dB" value={f.kalibrasi_sesudah_db} onChange={(e) => set('kalibrasi_sesudah_db', e.target.value)} /></Field>
           </div>
         </Section>
 
@@ -115,10 +115,10 @@ function NoiseTab({ areas, onMsg, onSaved }: { areas: Row[]; onMsg: (m: any) => 
             const leq = parseFloat(p.leq_dba); const z = Number.isFinite(leq) ? zonaFromLeq(leq) : null;
             return (
               <div key={i} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 110px 110px 90px 32px', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-                <input style={smallInput} placeholder="T1" value={p.kode_titik} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, kode_titik: e.target.value } : x))} />
-                <input style={smallInput} placeholder="1 m dari genset" value={p.deskripsi} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, deskripsi: e.target.value } : x))} />
-                <input style={smallInput} type="number" step="0.1" placeholder="85.5" value={p.leq_dba} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, leq_dba: e.target.value } : x))} />
-                <input style={smallInput} type="number" placeholder="10" value={p.durasi_menit} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, durasi_menit: e.target.value } : x))} />
+                <input style={smallInput} placeholder="T1" title="Kode titik ukur" value={p.kode_titik} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, kode_titik: e.target.value } : x))} />
+                <input style={smallInput} placeholder="Lokasi titik, mis. 1 meter dari genset" value={p.deskripsi} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, deskripsi: e.target.value } : x))} />
+                <input style={smallInput} type="number" step="0.1" placeholder="85.5 dBA" title="Nilai Leq dalam dBA" value={p.leq_dba} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, leq_dba: e.target.value } : x))} />
+                <input style={smallInput} type="number" placeholder="10 Menit" title="Durasi pengukuran dalam menit (minimal 5)" value={p.durasi_menit} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, durasi_menit: e.target.value } : x))} />
                 <div>{z ? <Chip text={z} color={ZONA_COLOR[z]} /> : <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>-</span>}</div>
                 <button type="button" disabled={pts.length === 1} onClick={() => setPts(pts.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E63946' }}><Trash2 size={14} /></button>
               </div>
@@ -138,7 +138,7 @@ function NoiseTab({ areas, onMsg, onSaved }: { areas: Row[]; onMsg: (m: any) => 
           <div style={grid3}>
             <Field label="Rambu peringatan"><select className="admin-input" style={inputStyle} value={f.rambu_terpasang ? '1' : '0'} onChange={(e) => set('rambu_terpasang', e.target.value === '1')}><option value="0">Belum terpasang</option><option value="1">Terpasang</option></select></Field>
             <Field label="APT tersedia"><select className="admin-input" style={inputStyle} value={f.apt_tersedia ? '1' : '0'} onChange={(e) => set('apt_tersedia', e.target.value === '1')}><option value="0">Belum tersedia</option><option value="1">Tersedia</option></select></Field>
-            <Field label="NRR APT yang tersedia"><input type="number" className="admin-input" style={inputStyle} placeholder="25" value={f.apt_nrr_tersedia} onChange={(e) => set('apt_nrr_tersedia', e.target.value)} /></Field>
+            <Field label="NRR APT yang tersedia"><input type="number" className="admin-input" style={inputStyle} placeholder="mis. NRR 25 dB" value={f.apt_nrr_tersedia} onChange={(e) => set('apt_nrr_tersedia', e.target.value)} /></Field>
             <Field label="Catatan" full><textarea className="admin-input" style={{ ...inputStyle, height: 60, padding: 8 }} value={f.catatan} onChange={(e) => set('catatan', e.target.value)} /></Field>
           </div>
         </Section>
@@ -211,11 +211,11 @@ function ExposureTab({ areas, onMsg }: { areas: Row[]; onMsg: (m: any) => void }
               placeholder="NIK Karyawan / NIK KTP / Nama" label={<span className="admin-label" style={{ marginBottom: 0 }}>Karyawan</span>} />
             <Field label="Nama"><input className="admin-input" style={inputStyle} required placeholder="Nama karyawan" value={f.nama} onChange={(e) => set('nama', e.target.value)} /></Field>
             <Field label="Site"><select className="admin-input" style={inputStyle} value={f.site} onChange={(e) => set('site', e.target.value)}><option value="">-</option>{SITES.map((s) => <option key={s}>{s}</option>)}</select></Field>
-            <Field label="Departemen"><input className="admin-input" style={inputStyle} placeholder="Departemen" value={f.departemen} onChange={(e) => set('departemen', e.target.value)} /></Field>
-            <Field label="Jabatan"><input className="admin-input" style={inputStyle} placeholder="Mekanik" value={f.jabatan} onChange={(e) => set('jabatan', e.target.value)} /></Field>
+            <Field label="Departemen"><input className="admin-input" style={inputStyle} placeholder="Nama departemen" value={f.departemen} onChange={(e) => set('departemen', e.target.value)} /></Field>
+            <Field label="Jabatan"><input className="admin-input" style={inputStyle} placeholder="mis. Mekanik, Operator Crusher" value={f.jabatan} onChange={(e) => set('jabatan', e.target.value)} /></Field>
             <Field label="Area Kerja Utama"><select className="admin-input" style={inputStyle} value={f.area_id} onChange={(e) => set('area_id', e.target.value)}><option value="">-</option>{siteAreas.map((a) => <option key={a.area_id} value={a.area_id}>{a.site} — {a.nama_area}</option>)}</select></Field>
             <Field label="Kategori"><select className="admin-input" style={inputStyle} value={f.kategori} onChange={(e) => set('kategori', e.target.value)}>{Object.entries(KET).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
-            <Field label="Jam/hari di zona Kuning/Merah" hint={f.kategori === 'A' ? '(wajib ≥ 4)' : '(opsional)'}><input type="number" step="0.5" className="admin-input" style={inputStyle} placeholder="6" value={f.jam_per_hari_zona} onChange={(e) => set('jam_per_hari_zona', e.target.value)} /></Field>
+            <Field label="Jam/hari di zona Kuning/Merah" hint={f.kategori === 'A' ? '(wajib ≥ 4)' : '(opsional)'}><input type="number" step="0.5" className="admin-input" style={inputStyle} placeholder="6 Jam/Hari" value={f.jam_per_hari_zona} onChange={(e) => set('jam_per_hari_zona', e.target.value)} /></Field>
             <Field label="Tanggal Penetapan"><input type="date" className="admin-input" style={inputStyle} value={f.tanggal_penetapan} onChange={(e) => set('tanggal_penetapan', e.target.value)} /></Field>
             <Field label="Catatan"><input className="admin-input" style={inputStyle} placeholder="Keterangan tambahan" value={f.catatan} onChange={(e) => set('catatan', e.target.value)} /></Field>
           </div>
@@ -264,8 +264,8 @@ function AreaTab({ areas, onMsg, onChanged }: { areas: Row[]; onMsg: (m: any) =>
         <Section title="Tambah Area Kerja">
           <div style={grid3}>
             <Field label="Site"><select className="admin-input" style={inputStyle} required value={site} onChange={(e) => setSite(e.target.value)}><option value="">Pilih…</option>{SITES.map((s) => <option key={s}>{s}</option>)}</select></Field>
-            <Field label="Nama Area"><input className="admin-input" style={inputStyle} required value={nama} onChange={(e) => setNama(e.target.value)} placeholder="Workshop, Crusher, Genset" /></Field>
-            <Field label="Sumber Bising"><input className="admin-input" style={inputStyle} placeholder="Genset 500 kVA, kompresor" value={sumber} onChange={(e) => setSumber(e.target.value)} /></Field>
+            <Field label="Nama Area"><input className="admin-input" style={inputStyle} required value={nama} onChange={(e) => setNama(e.target.value)} placeholder="mis. Workshop, Crusher, Genset" /></Field>
+            <Field label="Sumber Bising"><input className="admin-input" style={inputStyle} placeholder="mis. Genset 500 kVA, kompresor" value={sumber} onChange={(e) => setSumber(e.target.value)} /></Field>
           </div>
         </Section>
         <Btn type="submit" kind="primary" size="md">Simpan Area</Btn>

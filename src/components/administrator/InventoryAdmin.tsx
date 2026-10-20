@@ -333,7 +333,7 @@ export default function InventoryAdmin() {
                 const exp = getExpiryStatus(item.tanggal_expired);
 
                 return (
-                  <tr key={item.id} style={{ borderBottom: '1px solid var(--border)', background: 'var(--card)' }}>
+                  <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td style={{ padding: '10px 12px', color: 'var(--muted-foreground)' }}>{idx + 1}</td>
                     <td style={{ padding: '10px 12px' }}>
                       <div style={{ fontWeight: 600 }}>{item.name}</div>

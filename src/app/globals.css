@@ -2292,8 +2292,13 @@ select.admin-input.compact-input {
   max-height: calc(100dvh - 350px);
   border: 1px solid var(--border);
   border-radius: 16px;
-  background: var(--card);
+  background: var(--background);
   isolation: isolate;
+}
+/* Tabel inventory di halaman Administrator ikut warna abu-abu halaman,
+   supaya sisa ruang di bawah baris terakhir tidak tampak sebagai blok putih. */
+.mcu-records-table-wrap:has(> .inventory-admin-table) {
+  background: var(--background);
 }
 .mcu-records-table {
   width: max-content;
@@ -2333,6 +2338,19 @@ select.admin-input.compact-input {
   margin-left: 5px;
   vertical-align: -2px;
   color: #ff4d00;
+}
+.inventory-admin-table {
+  width: 100%;
+}
+/* Baris kosong / tabel yang belum penuh mengikuti warna latar halaman, bukan putih.
+   Sel tanpa isi tetap memakai --card sehingga terlihat sebagai area putih terpisah. */
+.inventory-admin-table tbody tr,
+.inventory-admin-table tbody tr td,
+.mcu-records-table.inventory-admin-table tbody td {
+  background: var(--background);
+}
+.inventory-admin-table tbody tr:last-child td {
+  border-bottom: none;
 }
 .inventory-admin-table th:first-child,
 .inventory-admin-table td:first-child {

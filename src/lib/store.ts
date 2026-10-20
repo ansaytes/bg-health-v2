@@ -7,7 +7,7 @@ import { applyMCUCalculations, buildAutomaticFollowUpRecommendations } from './m
 export type PageTab = 'home' | 'dashboard' | 'data-entry' | 'administrator';
 export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan' | 'inventory-dashboard' | 'hearing-dashboard' | 'ergonomi-dashboard' | 'persetujuan-ergonomi';
 export type AdminSidebar = 'lagging-indicator' | 'review-mcu' | 'input-jadwal-mcu' | 'kunjungan-admin' | 'health-campaign' | 'kelola-pengguna' | 'hearing-conservation' | 'ergonomi';
-export type DataEntrySidebar = 'gangguan-tidur' | 'kesehatan-mental' | 'input-jadwal-mcu';
+export type DataEntrySidebar = 'gangguan-tidur' | 'kesehatan-mental' | 'input-jadwal-mcu' | 'persetujuan-ergonomi';
 export type HomeSidebar = 'semua-feed' | 'health-campaign' | 'health-talk' | 'podcast' | 'news';
 export type ReviewStep = 'search' | 'ocr' | 'form';
 

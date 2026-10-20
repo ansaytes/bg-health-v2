@@ -16,7 +16,7 @@ const KLAS_SHORT = ['Rendah', 'Sedang', 'Tinggi', 'Sgt Tinggi'];
 const BLN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
-function ChartCard({ title, sub, accent = '#ff4d00', tall, children }: { title: string; sub?: string; accent?: string; tall?: boolean; children: React.ReactNode }) {
+function ChartCard({ title, sub, accent = '#ff4d00', empty, tall, children }: { title: string; sub?: string; accent?: string; empty?: boolean; tall?: boolean; children: React.ReactNode }) {
   return (
     <div className="card" style={{ padding: '10px 12px', minHeight: 0 }}>
       <div className="card-head">
@@ -26,7 +26,14 @@ function ChartCard({ title, sub, accent = '#ff4d00', tall, children }: { title: 
           {sub && <p>{sub}</p>}
         </div>
       </div>
-      <div style={{ position: 'relative', flex: 1, minHeight: tall ? 220 : 190 }}>{children}</div>
+      <div style={{ position: 'relative', flex: 1, minHeight: tall ? 220 : 190 }}>
+        {empty ? (
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--muted-foreground)' }}>
+            <span style={{ width: 38, height: 38, borderRadius: '50%', border: `2px dashed ${accent}55`, display: 'grid', placeItems: 'center', fontSize: 15, fontWeight: 800, color: `${accent}99` }}>–</span>
+            <span style={{ fontSize: 11.5, fontWeight: 600 }}>Belum ada data</span>
+          </div>
+        ) : children}
+      </div>
     </div>
   );
 }
@@ -90,6 +97,7 @@ export default function ErgonomiDashboard() {
 
     // 1. Donut distribusi klasifikasi risiko (semua metode)
     const totKlas = KLAS.map((k) => (['RULA', 'ROSA', 'WERA'] as const).reduce((s, m) => s + (d.byKlas[m]?.[k] || 0), 0));
+    const grandTotal = totKlas.reduce((s, v) => s + v, 0);
     draw('klas', klasRef.current, () => new ChartJS(klasRef.current!, {
       type: 'doughnut',
       data: {
@@ -97,12 +105,30 @@ export default function ErgonomiDashboard() {
         datasets: [{ data: totKlas, backgroundColor: KLAS.map((k) => KLAS_COLOR[k]), borderWidth: 2, borderColor: cardBg, hoverOffset: 6 }],
       },
       options: {
-        responsive: true, maintainAspectRatio: false, animation: anim, cutout: '58%',
+        responsive: true, maintainAspectRatio: false, animation: anim, cutout: '62%', radius: '82%',
         plugins: {
           legend,
-          datalabels: { color: '#fff', font: { size: 11, weight: 'bold', family: FONT }, formatter: (v: number) => (v ? String(v) : '') },
+          tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${ctx.parsed}${grandTotal ? ` (${(ctx.parsed / grandTotal * 100).toFixed(1)}%)` : ''}` } },
+          datalabels: { color: '#fff', font: { size: 10, weight: 'bold', family: FONT }, formatter: (v: number) => (v ? String(v) : '') },
         },
       } as ChartOptions<'doughnut'>,
+      plugins: [{
+        id: 'ergo-center-total',
+        afterDraw: (chart) => {
+          const { left, right, top, bottom } = chart.chartArea;
+          const ctx = chart.ctx;
+          ctx.save();
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = text;
+          ctx.font = `bold 20px ${FONT}`;
+          ctx.fillText(String(grandTotal), (left + right) / 2, (top + bottom) / 2 - 6);
+          ctx.globalAlpha = 0.6;
+          ctx.font = `600 9px ${FONT}`;
+          ctx.fillText('TOTAL SURVEI', (left + right) / 2, (top + bottom) / 2 + 12);
+          ctx.restore();
+        },
+      }],
     }));
 
     // 2. Klasifikasi per metode (stacked horizontal)
@@ -193,79 +219,54 @@ export default function ErgonomiDashboard() {
   );
 
   const patuh = (d.kepatuhan || []) as D[];
+  // Nilai total untuk empty-state tiap kartu (data kosong tidak digambar sebagai sumbu 0–1).
+  const grandTotal = KLAS.reduce((s, k) => s + (['RULA', 'ROSA', 'WERA'] as const).reduce((t, m) => t + (d.byKlas[m]?.[k] || 0), 0), 0);
+  const rekomTotal = (d.rekomendasi?.open || 0) + (d.rekomendasi?.progress || 0) + (d.rekomendasi?.closed || 0);
+  const trendTotal = ((d.trend || []) as D[]).reduce((s, t) => s + (t.total || 0), 0);
+  const patuhTotal = patuh.reduce((s, k) => s + (k.internalBulanIni || 0) + (k.pihakKetiga12Bulan || 0), 0);
 
   return (
-    <div className="dashboard" style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div className="kunjungan-filter-bar">
+    <div className="dashboard" style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className="kunjungan-filter-bar" style={{ flexShrink: 0, flexWrap: 'wrap' }}>
         <select className="admin-filter-select" value={site} onChange={(e) => { setErr(''); setSite(e.target.value); }}><option value="">All Site</option>{SITES.map((s) => <option key={s}>{s}</option>)}</select>
-        <span className="kunjungan-total-right">Ergonomi RULA / ROSA / WERA — 12 bulan terakhir</span>
+        <span className="kunjungan-total-right" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span>Ergonomi RULA / ROSA / WERA · 12 bulan</span>
+          <span>Disetujui <b>{d.totalDisetujui}</b></span>
+          <span>Menunggu <b style={{ color: d.menungguPersetujuan ? '#F5A623' : 'inherit' }}>{d.menungguPersetujuan}</b></span>
+          <span>Tidak sah/ulang <b style={{ color: d.perluDiulang ? '#E63946' : 'inherit' }}>{d.perluDiulang}</b></span>
+          <span>Rekomendasi aktif <b>{d.rekomendasi.open + d.rekomendasi.progress}</b></span>
+          <span>Lewat tempo <b style={{ color: d.rekomendasi.lewatJatuhTempo ? '#E63946' : 'inherit' }}>{d.rekomendasi.lewatJatuhTempo}</b></span>
+        </span>
       </div>
 
-      {/* Ringkasan angka kunci */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
-        {[
-          { l: 'Survei Disetujui', v: d.totalDisetujui },
-          { l: 'Menunggu Persetujuan', v: d.menungguPersetujuan, c: d.menungguPersetujuan ? '#F5A623' : undefined },
-          { l: 'Hasil Tidak Sah / Ulang', v: d.perluDiulang, c: d.perluDiulang ? '#E63946' : undefined },
-          { l: 'Rekomendasi Aktif', v: d.rekomendasi.open + d.rekomendasi.progress, s: `${d.rekomendasi.closed} closed` },
-          { l: 'Lewat Jatuh Tempo', v: d.rekomendasi.lewatJatuhTempo, c: d.rekomendasi.lewatJatuhTempo ? '#E63946' : undefined },
-        ].map((s) => (
-          <div key={s.l} className="card" style={{ padding: '8px 10px', gap: 0 }}>
-            <span style={{ fontSize: 9.5, color: 'var(--muted-foreground)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.03em' }}>{s.l}</span>
-            <span style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.1, color: s.c || 'var(--foreground)' }}>{s.v}</span>
-            {s.s && <span style={{ fontSize: 9.5, color: 'var(--muted-foreground)' }}>{s.s}</span>}
-          </div>
-        ))}
-      </div>
-
-      {/* Grafik utama */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 10 }}>
-        <ChartCard title="Distribusi Klasifikasi Risiko" sub="Seluruh survei disetujui, semua metode" accent="#E63946"><canvas ref={klasRef} /></ChartCard>
-        <ChartCard title="Klasifikasi per Metode" sub="RULA · ROSA · WERA" accent="#F5A623"><canvas ref={metodeRef} /></ChartCard>
-        <ChartCard title="Status Rekomendasi" sub="Open · progress · closed · lewat tempo" accent="#00B894"><canvas ref={rekomRef} /></ChartCard>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 10 }}>
-        <ChartCard title="Tren Survei per Bulan" sub="Batang: total survei · garis: perlu PICA" accent="#2E86DE" tall><canvas ref={trendRef} /></ChartCard>
-        <ChartCard title="Kepatuhan Frekuensi Survei" sub="Internal bulan ini & pihak ketiga 12 bulan" accent="#778899" tall><canvas ref={patuhRef} /></ChartCard>
-      </div>
-
-      {/* Tabel pendukung: area risiko tinggi + kepatuhan detail */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 10 }}>
-        <div className="card" style={{ padding: '10px 12px', overflow: 'auto' }}>
-          <div className="card-head">
-            <span style={{ width: 4, height: 22, borderRadius: 2, background: '#E63946', flexShrink: 0 }} />
+      {/* Grafik utama — 3 kolom × 2 baris mengisi frame */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gridTemplateRows: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8, flex: 1, minHeight: 0 }}>
+        <ChartCard title="Distribusi Klasifikasi Risiko" sub="Seluruh survei disetujui, semua metode" accent="#E63946" empty={!grandTotal}><canvas ref={klasRef} /></ChartCard>
+        <ChartCard title="Klasifikasi per Metode" sub="RULA · ROSA · WERA" accent="#F5A623" empty={!grandTotal}><canvas ref={metodeRef} /></ChartCard>
+        <ChartCard title="Status Rekomendasi" sub="Open · progress · closed · lewat tempo" accent="#00B894" empty={!rekomTotal}><canvas ref={rekomRef} /></ChartCard>
+        <ChartCard title="Tren Survei per Bulan" sub="Batang: total survei · garis: perlu PICA" accent="#2E86DE" empty={!trendTotal}><canvas ref={trendRef} /></ChartCard>
+        <ChartCard title="Kepatuhan Frekuensi Survei" sub="Internal bulan ini & pihak ketiga 12 bulan" accent="#778899" empty={!patuhTotal}><canvas ref={patuhRef} /></ChartCard>
+        <div className="card" style={{ padding: '6px 10px', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div className="card-head" style={{ flexShrink: 0 }}>
+            <span style={{ width: 4, height: 20, borderRadius: 2, background: '#E63946', flexShrink: 0 }} />
             <div><h2>Risiko Tinggi Terbaru</h2><p>{d.risikoTinggi.length} survei</p></div>
           </div>
-          <table style={tableStyle}>
-            <thead><tr>{['Tanggal', 'Metode', 'Site / Area', 'Skor', 'Klasifikasi'].map((h) => <th key={h} style={thStyle}>{h}</th>)}</tr></thead>
-            <tbody>
-              {d.risikoTinggi.map((r: D) => (
-                <tr key={r.id}><td style={tdStyle}>{fmtDate(r.tanggal)}</td><td style={tdStyle}>{r.metode}</td><td style={tdStyle}>{r.site} — {r.area_kerja}</td><td style={tdStyle}>{r.skor_akhir}</td>
-                  <td style={tdStyle}><Chip text={String(r.klasifikasi).replace('_', ' ')} color={KLAS_COLOR[r.klasifikasi as Klasifikasi]} /></td></tr>
-              ))}
-              {!d.risikoTinggi.length && <tr><td style={tdStyle} colSpan={5}>Tidak ada.</td></tr>}
-            </tbody>
-          </table>
-        </div>
-        <div className="card" style={{ padding: '10px 12px', overflow: 'auto' }}>
-          <div className="card-head">
-            <span style={{ width: 4, height: 22, borderRadius: 2, background: '#778899', flexShrink: 0 }} />
-            <div><h2>Kepatuhan per Site</h2><p>Internal ≥1/bulan · pihak ketiga ≥1/12 bulan</p></div>
+          <div style={{ overflow: 'auto', flex: 1, minHeight: 0 }}>
+            <table style={tableStyle}>
+              <thead><tr>{['Tanggal', 'Metode', 'Site / Area', 'Skor', 'Klasifikasi'].map((h) => <th key={h} style={thStyle}>{h}</th>)}</tr></thead>
+              <tbody>
+                {d.risikoTinggi.map((r: D) => (
+                  <tr key={r.id}><td style={tdStyle}>{fmtDate(r.tanggal)}</td><td style={tdStyle}>{r.metode}</td><td style={tdStyle}>{r.site} — {r.area_kerja}</td><td style={tdStyle}>{r.skor_akhir}</td>
+                    <td style={tdStyle}><Chip text={String(r.klasifikasi).replace('_', ' ')} color={KLAS_COLOR[r.klasifikasi as Klasifikasi]} /></td></tr>
+                ))}
+                {!d.risikoTinggi.length && <tr><td style={tdStyle} colSpan={5}>Tidak ada.</td></tr>}
+              </tbody>
+            </table>
           </div>
-          <table style={tableStyle}>
-            <thead><tr>{['Site', 'Internal bulan ini', 'Pihak ketiga 12 bln'].map((h) => <th key={h} style={thStyle}>{h}</th>)}</tr></thead>
-            <tbody>
-              {patuh.map((k) => (
-                <tr key={k.site}><td style={tdStyle}>{k.site}</td>
-                  <td style={tdStyle}>{k.internalBulanIni} {k.internalBulanIni >= 1 ? <Chip text="OK" color="#00B894" /> : <Chip text="BELUM" color="#E63946" />}</td>
-                  <td style={tdStyle}>{k.pihakKetiga12Bulan} {k.pihakKetiga12Bulan >= 1 ? <Chip text="OK" color="#00B894" /> : <Chip text="BELUM" color="#E63946" />}</td></tr>
-              ))}
-              {!patuh.length && <tr><td style={tdStyle} colSpan={3}>Belum ada data.</td></tr>}
-            </tbody>
-          </table>
         </div>
       </div>
+
+      {/* Detail kepatuhan per site ada di tab Administrator → Ergonomi */}
     </div>
   );
 }

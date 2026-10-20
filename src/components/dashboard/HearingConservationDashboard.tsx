@@ -15,7 +15,7 @@ const KELAS_COLOR: Record<string, string> = { Normal: '#00B894', Ringan: '#F5C51
 const KELAS_ORDER = ['Normal', 'Ringan', 'Sedang', 'Berat', 'Sangat Berat'];
 const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
-function ChartCard({ title, sub, accent = '#ff4d00', children }: { title: string; sub?: string; accent?: string; children: React.ReactNode }) {
+function ChartCard({ title, sub, accent = '#ff4d00', empty, children }: { title: string; sub?: string; accent?: string; empty?: boolean; children: React.ReactNode }) {
   return (
     <div className="card" style={{ padding: '10px 12px', minHeight: 0 }}>
       <div className="card-head">
@@ -25,7 +25,14 @@ function ChartCard({ title, sub, accent = '#ff4d00', children }: { title: string
           {sub && <p>{sub}</p>}
         </div>
       </div>
-      <div style={{ position: 'relative', flex: 1, minHeight: 190 }}>{children}</div>
+      <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+        {empty ? (
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--muted-foreground)' }}>
+            <span style={{ width: 38, height: 38, borderRadius: '50%', border: `2px dashed ${accent}55`, display: 'grid', placeItems: 'center', fontSize: 15, fontWeight: 800, color: `${accent}99` }}>–</span>
+            <span style={{ fontSize: 11.5, fontWeight: 600 }}>Belum ada data</span>
+          </div>
+        ) : children}
+      </div>
     </div>
   );
 }
@@ -64,6 +71,7 @@ export default function HearingConservationDashboard() {
     const grid = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
     const cardBg = isDark ? '#1b1b1b' : '#ffffff';
     const anim = { duration: 800, easing: 'easeOutQuart' as const };
+    const nAreaTotRef = { current: [d.zona.MERAH || 0, d.zona.KUNING || 0, d.zona.HIJAU || 0, d.zona.BELUM || 0].reduce((a, b) => a + b, 0) };
     const legend = { position: 'bottom' as const, labels: { color: text, font: { size: 10, family: FONT }, boxWidth: 9, boxHeight: 9, padding: 8 } };
 
     /** Buat/segarkan chart pada canvas yang sama tanpa kebocoran instance. */
@@ -86,7 +94,7 @@ export default function HearingConservationDashboard() {
       scales: horizontal
         ? { x: { beginAtZero: true, max, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } },
             y: { grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false } } }
-        : { x: { grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false } },
+        : { x: { grid: { display: false }, ticks: { color: text, font: { size: 11, weight: 'bold' as const, family: FONT }, autoSkip: false } },
             y: { beginAtZero: true, max, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } } },
     } as ChartOptions<'bar'>);
 
@@ -102,9 +110,28 @@ export default function HearingConservationDashboard() {
         responsive: true, maintainAspectRatio: false, animation: anim, cutout: '58%',
         plugins: {
           legend,
-          datalabels: { color: '#fff', font: { size: 11, weight: 'bold', family: FONT }, formatter: (v: number) => (v ? String(v) : '') },
+          tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed}${nAreaTotRef.current ? ` (${(c.parsed / nAreaTotRef.current * 100).toFixed(1)}%)` : ''}` } },
+          // Label nilai ditempatkan di luar cincin agar tidak menyilang; total ditampilkan di tengah.
+          datalabels: { display: false },
         },
       } as ChartOptions<'doughnut'>,
+      plugins: [{
+        id: 'hc-center-total',
+        afterDraw: (chart) => {
+          const { left, right, top, bottom } = chart.chartArea;
+          const ctx = chart.ctx;
+          ctx.save();
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = text;
+          ctx.font = `bold 22px ${FONT}`;
+          ctx.fillText(String(nAreaTotRef.current), (left + right) / 2, (top + bottom) / 2 - 6);
+          ctx.globalAlpha = 0.6;
+          ctx.font = `600 9px ${FONT}`;
+          ctx.fillText('TOTAL AREA', (left + right) / 2, (top + bottom) / 2 + 12);
+          ctx.restore();
+        },
+      }],
     }));
 
     // 2. Karyawan terpajan per kategori
@@ -170,10 +197,10 @@ export default function HearingConservationDashboard() {
     draw('trend', trendRef.current, () => new ChartJS(trendRef.current!, {
       type: 'line',
       data: {
-        labels: surv.length ? surv.map((a) => String(a.nama_area)) : ['Belum ada pengukuran'],
+        labels: surv.length ? surv.map((a) => String(a.nama_area)) : ['Belum ada data pengukuran'],
         datasets: [{
           label: 'Leq maks dB(A)',
-          data: surv.length ? surv.map((a) => Number(a.leq_max)) : [0],
+          data: surv.length ? surv.map((a) => Number(a.leq_max)) : [],
           borderColor: '#ff4d00', backgroundColor: 'rgba(255,77,0,0.14)', fill: true, tension: 0.35, pointRadius: 4, pointHoverRadius: 6,
           pointBackgroundColor: surv.length ? surv.map((a) => ZONA_COLOR[(a.zona as Zona) || 'HIJAU']) : '#ff4d00',
         }],
@@ -187,7 +214,7 @@ export default function HearingConservationDashboard() {
         },
         scales: {
           x: { grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, maxRotation: 30 } },
-          y: { beginAtZero: false, suggestedMin: 60, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT } } },
+          y: { beginAtZero: true, suggestedMax: 100, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT } } },
         },
       } as ChartOptions<'line'>,
     }));
@@ -208,64 +235,35 @@ export default function HearingConservationDashboard() {
 
   const areas = (d.areas || []) as D[];
   const nAreaTot = Object.values(d.zona as Record<string, number>).reduce((a, b) => a + b, 0);
+  const kelasCount = Object.values((d.kelas || {}) as Record<string, number>).reduce((a, b) => a + b, 0);
+  const katTotal = (d.kategori.A || 0) + (d.kategori.B || 0) + (d.kategori.C || 0);
+  const cakTotal = ((d.cakupan || []) as D[]).reduce((s, c) => s + (c.total || 0), 0);
+  const stsTotal = (d.sts.suspek || 0) + (d.sts.retestDijadwalkan || 0) + (d.sts.terkonfirmasi || 0) + (d.sts.retestTerlambat || 0);
+  const adaUkur = areas.some((a) => a.tanggal_ukur && a.leq_max != null);
 
   return (
-    <div className="dashboard" style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div className="kunjungan-filter-bar">
+    <div className="dashboard hc-dash" style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* Ringkasan ringkas dalam satu baris, supaya 6 grafik mendapat ruang maksimum */}
+      <div className="kunjungan-filter-bar" style={{ flexShrink: 0, flexWrap: 'wrap' }}>
         <select className="admin-filter-select" value={site} onChange={(e) => { setErr(''); setSite(e.target.value); }}><option value="">All Site</option>{SITES.map((s) => <option key={s}>{s}</option>)}</select>
-        <span className="kunjungan-total-right">Konservasi Pendengaran</span>
+        <span className="kunjungan-total-right" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span>Konservasi Pendengaran</span>
+          <span>Zona merah <b style={{ color: ZONA_COLOR.MERAH }}>{d.zona.MERAH}</b>/{nAreaTot}</span>
+          <span>Ukur terlambat <b style={{ color: d.areaTerlambat ? '#E63946' : 'inherit' }}>{d.areaTerlambat}</b></span>
+          <span>STS belum ditindak <b style={{ color: d.sts.belumDitindaklanjuti ? '#E63946' : 'inherit' }}>{d.sts.belumDitindaklanjuti}</b></span>
+          <span>Audiometri tidak lengkap <b style={{ color: d.audiometri.tidakLengkap ? '#d97706' : 'inherit' }}>{d.audiometri.tidakLengkap}</b></span>
+          <span>Retest terlambat <b style={{ color: d.sts.retestTerlambat ? '#E63946' : 'inherit' }}>{d.sts.retestTerlambat}</b></span>
+        </span>
       </div>
 
-      {/* Ringkasan angka kunci — padat agar grafik lebih dominan */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
-        {[
-          { l: 'Area Zona Merah', v: d.zona.MERAH, s: `dari ${nAreaTot} area`, c: ZONA_COLOR.MERAH },
-          { l: 'Ukur Ulang Terlambat', v: d.areaTerlambat, s: `${d.zona.BELUM} area belum diukur`, c: d.areaTerlambat ? '#E63946' : undefined },
-          { l: 'STS Belum Ditindaklanjuti', v: d.sts.belumDitindaklanjuti, s: 'perlu tindak lanjut', c: d.sts.belumDitindaklanjuti ? '#E63946' : undefined },
-          { l: 'Audiometri Tidak Lengkap', v: d.audiometri.tidakLengkap, s: `dari ${d.audiometri.dengan} audiogram`, c: d.audiometri.tidakLengkap ? '#d97706' : undefined },
-          { l: 'Retest Terlambat', v: d.sts.retestTerlambat, s: '> 30 hari', c: d.sts.retestTerlambat ? '#E63946' : undefined },
-        ].map((s) => (
-          <div key={s.l} className="card" style={{ padding: '8px 10px', gap: 0 }}>
-            <span style={{ fontSize: 9.5, color: 'var(--muted-foreground)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.03em' }}>{s.l}</span>
-            <span style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.1, color: s.c || 'var(--foreground)' }}>{s.v}</span>
-            {s.s && <span style={{ fontSize: 9.5, color: 'var(--muted-foreground)' }}>{s.s}</span>}
-          </div>
-        ))}
-      </div>
-
-      {/* Grafik utama */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 10 }}>
-        <ChartCard title="Zona Kebisingan Area" sub="Area per zona hasil pengukuran terakhir" accent="#E63946"><canvas ref={zonaRef} /></ChartCard>
-        <ChartCard title="Karyawan Terpajan" sub="A rutin · B insidental · C tidak terpajan" accent="#F5A623"><canvas ref={kategoriRef} /></ChartCard>
-        <ChartCard title="Cakupan Audiometri Tahun Ini" sub="Kategori A & B — sudah vs belum diperiksa" accent="#2E86DE"><canvas ref={cakupanRef} /></ChartCard>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 10 }}>
-        <ChartCard title="Derajat Gangguan Pendengaran" sub="WHO · telinga yang lebih baik" accent="#8E44AD"><canvas ref={kelasRef} /></ChartCard>
-        <ChartCard title="Kasus STS" sub="Suspek, retest, terkonfirmasi, terlambat" accent="#E63946"><canvas ref={stsRef} /></ChartCard>
-        <ChartCard title="Leq Maks per Area" sub="Titik tertinggi (dB(A)) · warna titik = zona" accent="#ff4d00"><canvas ref={trendRef} /></ChartCard>
-      </div>
-
-      {/* Tabel pendukung */}
-      <div className="card" style={{ padding: '10px 12px', overflow: 'auto' }}>
-        <div className="card-head">
-          <span style={{ width: 4, height: 22, borderRadius: 2, background: '#778899', flexShrink: 0 }} />
-          <div><h2>Peta Kebisingan per Area</h2><p>{areas.length} area terdaftar</p></div>
-        </div>
-        <table style={tableStyle}>
-          <thead><tr>{['Site', 'Area', 'Leq maks', 'Zona', 'Ukur terakhir', 'Jatuh tempo', 'Rambu', 'APT'].map((h) => <th key={h} style={thStyle}>{h}</th>)}</tr></thead>
-          <tbody>
-            {areas.map((a) => (
-              <tr key={a.area_id}><td style={tdStyle}>{a.site}</td><td style={tdStyle}>{a.nama_area}</td><td style={tdStyle}>{a.leq_max ?? '-'}</td>
-                <td style={tdStyle}>{a.zona ? <Chip text={a.zona} color={ZONA_COLOR[a.zona as Zona]} /> : <Chip text="BELUM DIUKUR" color="#778899" />}</td>
-                <td style={tdStyle}>{fmtDate(a.tanggal_ukur)}</td>
-                <td style={tdStyle}>{a.jatuh_tempo ? fmtDate(a.jatuh_tempo) : '-'} {a.terlambat && a.zona && <Chip text="TERLAMBAT" color="#E63946" />}</td>
-                <td style={tdStyle}>{a.zona && a.zona !== 'HIJAU' ? (a.rambu_terpasang ? 'Ya' : <Chip text="BELUM" color="#E63946" />) : '-'}</td>
-                <td style={tdStyle}>{a.zona && a.zona !== 'HIJAU' ? (a.apt_tersedia ? `NRR ${a.apt_nrr_tersedia ?? '?'}` : <Chip text="BELUM" color="#E63946" />) : '-'}</td></tr>
-            ))}
-            {!areas.length && <tr><td style={tdStyle} colSpan={8}>Belum ada area terdaftar.</td></tr>}
-          </tbody>
-        </table>
+      {/* Enam grafik mengisi seluruh sisa frame — tanpa scroll halaman */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gridTemplateRows: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8, flex: 1, minHeight: 0 }}>
+        <ChartCard title="Zona Kebisingan Area" sub="Area per zona hasil pengukuran terakhir" accent="#E63946" empty={!nAreaTot}><canvas ref={zonaRef} /></ChartCard>
+        <ChartCard title="Karyawan Terpajan" sub="A rutin · B insidental · C tidak terpajan" accent="#F5A623" empty={!katTotal}><canvas ref={kategoriRef} /></ChartCard>
+        <ChartCard title="Cakupan Audiometri Tahun Ini" sub="Kategori A & B — sudah vs belum diperiksa" accent="#2E86DE" empty={!cakTotal}><canvas ref={cakupanRef} /></ChartCard>
+        <ChartCard title="Derajat Gangguan Pendengaran" sub="WHO · telinga yang lebih baik" accent="#8E44AD" empty={!kelasCount}><canvas ref={kelasRef} /></ChartCard>
+        <ChartCard title="Kasus STS" sub="Suspek, retest, terkonfirmasi, terlambat" accent="#E63946" empty={!stsTotal}><canvas ref={stsRef} /></ChartCard>
+        <ChartCard title="Leq Maks per Area" sub="Titik tertinggi (dB(A)) · warna titik = zona" accent="#ff4d00" empty={!adaUkur}><canvas ref={trendRef} /></ChartCard>
       </div>
     </div>
   );
