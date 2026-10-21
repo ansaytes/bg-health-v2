@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { DASS21_ITEMS, DASS21_SECTIONS, SDS_ITEMS, SRQ20_ITEMS } from '@/lib/questionnaire-items';
+import { DASS21_ITEMS, DASS21_SECTIONS, SDS_ITEMS, SDS_SECTIONS, SRQ20_ITEMS } from '@/lib/questionnaire-items';
 import { isDassActionable, scoreDass21, scoreSrq20, scoreSds } from '@/lib/questionnaire-scores';
 import { kesimpulanSrqDass } from '@/lib/questionnaire-conclusion';
 import {
@@ -26,7 +26,7 @@ const DATE_COLUMN = 'tgl_pemeriksaan';
  *   Dengan query → identitas dan riwayat milik pemanggil.
  *
  * POST /api/mental-health
- *   Menyimpan SRQ-20, DASS-21, dan Zung SDS sekaligus dalam satu baris.
+ *   Menyimpan SRQ-20, DASS-21, dan SDS-30 sekaligus dalam satu baris.
  *   Pengukuran ulang pada tanggal yang sama menimpa baris lama.
  *
  * Pengisian wajib memakai sesi yang valid. Akun Employee hanya boleh membuka
@@ -63,12 +63,14 @@ export async function GET(req: NextRequest) {
         },
         sds: {
           key: 'sds',
-          title: 'Zung SDS',
-          subtitle: 'Zung Self-Rating Depression Scale',
+          title: 'SDS-30',
+          subtitle: 'Survei Diagnosis Stres (Permenaker 5/2018)',
           description:
-            'Dua puluh pernyataan untuk mengukur tingkat depresi. Setiap jawaban dari 1 sampai 4, '
-            + 'dijumlahkan menjadi indeks 20 sampai 80. Normal sampai 49, mild 50 sampai 59, moderate 60 sampai 69, severe 70 ke atas.',
+            'Tiga puluh pernyataan tentang faktor psikologi kerja dalam 1 bulan terakhir. Nilai 1 sampai 7, '
+            + 'dikelompokkan menjadi 6 indikator × 5 item. Skor indikator 5–35: 5–9 stres rendah, '
+            + '10–24 stres sedang, 25–35 stres tinggi.',
           items: SDS_ITEMS,
+          sections: SDS_SECTIONS,
         },
       },
     });
@@ -210,7 +212,7 @@ export async function POST(req: NextRequest) {
     row.dass_tertinggi = dass.highest.domain;
   }
 
-  // ── Zung SDS: smallint 1-4 ───────────────────────────────────
+  // ── SDS-30: 30 item, skala 1-7, 6 indikator ────────────────
   const sdsAnswers: Record<string, string | number | null> = {};
   for (const item of SDS_ITEMS) {
     const raw = body[item.id];
@@ -219,7 +221,7 @@ export async function POST(req: NextRequest) {
       row[item.id.replace(/([a-z])(\d+)/, '_$2')] = null;
       continue;
     }
-    const value = readNumber(raw, 1, 4);
+    const value = readNumber(raw, 1, 7);
     if (value === null) {
       invalid.push(item.id);
       sdsAnswers[item.id] = null;
@@ -231,6 +233,7 @@ export async function POST(req: NextRequest) {
   const sds = scoreSds(sdsAnswers);
   row.psy_sds = sds.answered > 0;
   if (sds.answered > 0) {
+    // indeks_sds menyimpan total 30 item (30–210); kategori dinilai per indikator.
     row.indeks_sds = sds.rawIndex;
   }
 
@@ -250,19 +253,22 @@ export async function POST(req: NextRequest) {
   if (dass.answered > 0) {
     parts.push(`DASS-21 depresi ${dass.depresi.score}, ansietas ${dass.ansietas.score}, stres ${dass.stres.score}`);
   }
-  if (sds.answered > 0) parts.push(`SDS ${sds.rawIndex} (${sds.label})`);
+  if (sds.answered > 0) {
+    const ringkasIndikator = sds.indicators.map(ind => `${ind.title} ${ind.score} (${ind.label})`).join(', ');
+    parts.push(`SDS-30 ${sds.label}: ${ringkasIndikator}`);
+  }
   row.ringkasan_hasil = parts.join('; ');
   const ringkasan = row.ringkasan_hasil as string;
 
-  // Perlu rujukan bila ada instrumen yang masuk kategori "berat", memakai
-  // ambang per subskala dan ambang SDS 60. Bandingkan dengan DASS_BANDS di
-  // src/lib/questionnaire-scores.ts bila salah satu angka di sini diubah.
+  // Perlu rujukan bila ada instrumen yang masuk kategori tinggi: SRQ ≥6,
+  // DASS subskala berat, atau salah satu indikator SDS-30 masuk "Stres Tinggi"
+  // (skor 25–35). Bandingkan dengan ambang di questionnaire-scores.ts.
   const perluRujukan =
     srq.category === 'perlu-tindak-lanjut'
     || isDassActionable('depresi', dass.depresi.score)
     || isDassActionable('ansietas', dass.ansietas.score)
     || isDassActionable('stres', dass.stres.score)
-    || (sds.answered === SDS_ITEMS.length && sds.rawIndex >= 60);
+    || (sds.answered > 0 && sds.indicators.some(ind => ind.category === 'tinggi'));
   row.perlu_rujukan = perluRujukan;
 
   try {

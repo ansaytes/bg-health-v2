@@ -10,16 +10,17 @@
 //           Kemenkes RI yang dipakai Riskesdas sejak 1995, ambang batas ≥6.
 //   DASS-21 Depression Anxiety Stress Scales-21, Lovibond & Lovibond (1995).
 //           Skala 0–3, tiga subskala terpisah.
-//   SDS     Zung Self-Rating Depression Scale, Zung (1965). Skala 1–4,
-//           indeks kasar 20–80.
+//   SDS-30  Survei Diagnosis Stres 30 item — Lampiran Permenaker No. 5 Tahun 2018
+//           (K3 Lingkungan Kerja). Instrumen mengukur DOSA PSIKOLOGI KERJA,
+//           bukan depresi. Skala 1–7, enam indikator × 5 item, skor indikator 5–35.
 //
 // PENTING: skor dihitung dari NOMOR item dan SKALA jawaban. Ganti teks naskah
 // akan mengubah skor; mengganti urutan atau jumlah item tidak boleh dilakukan
 // tanpa mengganti juga tabel skor di questionnaire-scores.ts.
 //
-// Catatan klinis: keempat instrumen ini adalah INSTRUMEN SKRINING, bukan
-// alat diagnosis. Sesuai STD-006, konfirmasi diagnosis dan keputusan klinis
-// ditetapkan oleh dokter atau psikiater.
+// Catatan klinis: ESS, SRQ-20, dan DASS-21 adalah INSTRUMEN SKRINING, bukan
+// alat diagnosis. SDS-30 adalah PENGUKURAN FAKTOR PSIKOLOGI KERJA. Sesuai
+// STD-006, konfirmasi diagnosis dan keputusan klinis ditetapkan dokter.
 // ============================================================
 
 export interface ScaleOption {
@@ -153,59 +154,88 @@ export const DASS21_SECTIONS = [
 ];
 
 // ────────────────────────────────────────────────────────────
-// Zung Self-Rating Depression Scale — 20 item, skala 1–4
-// Indeks kasar 20–80
+// SDS-30 — Survei Diagnosis Stres, 30 item
+// Lampiran Permenaker No. 5 Tahun 2018 (K3 Lingkungan Kerja)
+// Skala 1–7 · 6 indikator × 5 item · skor indikator 5–35
 // ────────────────────────────────────────────────────────────
 //
-// Sepuluh item bernada positif dinilai TERBALIK (skor = 5 − jawaban). Daftar
-// item terbalik ada di SDS_REVERSED_ITEMS dan dipakai questionnaire-scores.ts.
-// Tanpa pembalikan itu indeks jadi tidak bermakna: skor depresi bisa terlihat rendah
-// justru pada orang yang paling depresif.
+// Instrumen ini mengukur FAKTOR PSIKOLOGI KERJA (ketaksaan peran, konflik
+// peran, beban kerja berlebih, pengembangan karir, tanggung jawab terhadap
+// orang lain) — BUKAN depresi. Tidak ada item yang dinilai terbalik.
 //
-// Jawab untuk kondisi MINGGUAN TERAKHIR.
+// Rentang waktu yang ditanyakan: 1 BULAN TERAKHIR.
 
 export const SDS_OPTIONS: ScaleOption[] = [
-  { value: 1, label: 'Tidak pernah atau sangat jarang' },
-  { value: 2, label: 'Kadang-kadang' },
-  { value: 3, label: 'Cukup sering' },
-  { value: 4, label: 'Hampir selalu atau selalu' },
+  { value: 1, label: 'Sangat tidak pernah / sangat tidak sesuai' },
+  { value: 2, label: 'Tidak pernah / tidak sesuai' },
+  { value: 3, label: 'Jarang / kurang sesuai' },
+  { value: 4, label: 'Kadang-kadang / agak sesuai' },
+  { value: 5, label: 'Sering / sesuai' },
+  { value: 6, label: 'Sangat sering / sangat sesuai' },
+  { value: 7, label: 'Selalu / sangat sesuai sekali' },
 ];
 
 /** Label ringkas untuk header kolom. */
-export const SDS_OPTION_LABELS = ['Tidak pernah', 'Kadang-kadang', 'Cukup sering', 'Hampir selalu'];
+export const SDS_OPTION_LABELS = ['1', '2', '3', '4', '5', '6', '7'];
 
 /**
- * Nomor item SDS yang bernada positif, jadi dinilai terbalik.
- * Delapan dari sepuluh item ini adalah item bermuatan negatif; yang positif
- * justru dihitung dengan 5 − jawaban.
+ * Enam indikator SDS-30, masing-masing 5 nomor item — sesuai Lampiran
+ * Permenaker 5/2018. Nomor 1-based mengikuti urutan pertanyaan kuesioner.
  */
-export const SDS_REVERSED_ITEMS = [2, 4, 6, 11, 12, 14, 16, 17, 18, 20];
+export const SDS_SECTIONS = [
+  { id: 'ketaksaan-peran' as const, title: 'Ketaksaan Peran', items: [1, 7, 13, 19, 25] },
+  { id: 'konflik-peran' as const, title: 'Konflik Peran', items: [2, 8, 14, 20, 26] },
+  { id: 'beban-kuantitatif' as const, title: 'Beban Kerja Kuantitatif Berlebih', items: [3, 9, 15, 21, 27] },
+  { id: 'beban-kualitatif' as const, title: 'Beban Kerja Kualitatif Berlebih', items: [4, 10, 16, 22, 28] },
+  { id: 'pengembangan-karir' as const, title: 'Pengembangan Karir', items: [5, 11, 17, 23, 29] },
+  { id: 'tanggung-jawab' as const, title: 'Tanggung Jawab Terhadap Orang Lain', items: [6, 12, 18, 24, 30] },
+];
 
-const S20 = (index: number, text: string): QuestionnaireItem => ({
+const S30 = (index: number, text: string): QuestionnaireItem => ({
   id: `sds${index}`,
   text,
   options: SDS_OPTIONS,
 });
 
 export const SDS_ITEMS: QuestionnaireItem[] = [
-  S20(1, 'Saya merasa tidak bersemangat dan sedih'),
-  S20(2, 'Saya merasa paling semangat pada pagi hari'),
-  S20(3, 'Saya menangis atau merasa seperti ingin menangis'),
-  S20(4, 'Saya makan sebanyak yang saya bisa makan'),
-  S20(5, 'Saya mengalami kesulitan tidur pada malam hari'),
-  S20(6, 'Saya masih menikmati seks'),
-  S20(7, 'Saya merasa berat badan saya turun'),
-  S20(8, 'Saya mengalami masalah pencernaan'),
-  S20(9, 'Jantung saya berdetak lebih cepat dari normal'),
-  S20(10, 'Saya merasa lelah tanpa alasan tertentu'),
-  S20(11, 'Pikiran saya jernih seperti biasanya'),
-  S20(12, 'Saya merasa mudah melakukan hal-hal yang biasa saya lakukan'),
-  S20(13, 'Saya merasa gelisah dan tidak dapat tenang'),
-  S20(14, 'Saya merasa penuh harapan akan masa depan'),
-  S20(15, 'Saya lebih mudah tersinggung daripada biasanya'),
-  S20(16, 'Saya merasa mudah membuat keputusan'),
-  S20(17, 'Saya merasa saya berguna dan dibutuhkan'),
-  S20(18, 'Hidup saya cukup bermakna'),
-  S20(19, 'Saya merasa orang lain akan lebih baik jika saya mati'),
-  S20(20, 'Saya masih menikmati hal-hal yang biasa saya lakukan'),
+  // Ketaksaan Peran
+  S30(1, 'Saya tidak tahu pasti apa yang menjadi tanggung jawab utama dalam pekerjaan saya'),
+  // Konflik Peran
+  S30(2, 'Saya harus melanggar prosedur atau aturan untuk menyelesaikan suatu pekerjaan'),
+  // Beban Kerja Kuantitatif Berlebih
+  S30(3, 'Saya memiliki terlalu banyak pekerjaan yang harus diselesaikan dalam kurun waktu singkat'),
+  // Beban Kerja Kualitatif Berlebih
+  S30(4, 'Tingkat kesulitan tugas saya berada di atas batas kemampuan atau keterampilan yang saya miliki'),
+  // Pengembangan Karir
+  S30(5, 'Peluang promosi atau kemajuan jenjang karir saya di perusahaan ini sangat terbatas'),
+  // Tanggung Jawab Terhadap Orang Lain
+  S30(6, 'Pekerjaan saya menuntut tanggung jawab besar atas keselamatan atau kesejahteraan orang lain'),
+
+  S30(7, 'Saya tidak mengerti bagaimana tugas-tugas saya saling berkaitan satu sama lain'),
+  S30(8, 'Saya menerima perintah atau permintaan yang bertentangan dari dua atasan atau lebih'),
+  S30(9, 'Waktu yang diberikan untuk menyelesaikan volume pekerjaan saya sangat terbatas'),
+  S30(10, 'Saya sering menghadapi tuntutan pekerjaan yang terlalu rumit atau kompleks'),
+  S30(11, 'Saya merasa cemas terhadap kepastian masa depan dan jaminan keberlanjutan pekerjaan saya'),
+  S30(12, 'Saya merasa terbeban karena harus memikirkan nasib, kinerja, atau masalah bawahan/rekan kerja'),
+
+  S30(13, 'Sasaran dan target kinerja pekerjaan saya tidak dijelaskan secara jernih oleh pimpinan'),
+  S30(14, 'Saya diminta melakukan hal-hal yang tidak sesuai atau bertentangan dengan prinsip pribadi saya'),
+  S30(15, 'Saya harus bekerja tergesa-gesa karena tumpukan volume pekerjaan yang sangat banyak'),
+  S30(16, 'Kurangnya pelatihan membuat saya kesulitan menyelesaikan tugas-tugas khusus'),
+  S30(17, 'Hasil kerja keras dan prestasi saya jarang diakui atau dihargai oleh pihak manajemen'),
+  S30(18, 'Kesalahan kecil yang saya buat dalam bekerja dapat berdampak fatal bagi orang lain'),
+
+  S30(19, 'Saya tidak yakin seberapa besar batasan wewenang yang saya miliki dalam pengambilan keputusan'),
+  S30(20, 'Saya sering diberikan tugas-tugas tambahan yang tidak relevan dengan posisi kerja saya'),
+  S30(21, 'Tingginya jumlah pekerjaan mengganggu mutu dan kualitas hasil kerja saya'),
+  S30(22, 'Saya dituntut membuat keputusan penting mengenai hal yang belum saya kuasai sepenuhnya'),
+  S30(23, 'Posisi saya saat ini tidak memberikan kesempatan untuk mengembangkan potensi diri'),
+  S30(24, 'Saya sering harus memediasi atau menangani konflik antarpekerja yang menguras energi'),
+
+  S30(25, 'Perencanaan kerja dan alokasi waktu penugasan tidak disampaikan dengan jelas'),
+  S30(26, 'Saya menerima penugasan tanpa didukung oleh fasilitas, peralatan, atau sumber daya yang memadai'),
+  S30(27, 'Saya tidak memiliki waktu istirahat yang cukup saat jam kerja akibat tumpukan tugas'),
+  S30(28, 'Standar kualitas hasil kerja yang ditetapkan perusahaan sangat tinggi dan sulit dicapai'),
+  S30(29, 'Penilaian kinerja pekerja dilakukan secara tidak adil atau tidak transparan'),
+  S30(30, 'Saya memikul beban tanggung jawab atas pembagian tugas dan hasil evaluasi kerja staf lain'),
 ];

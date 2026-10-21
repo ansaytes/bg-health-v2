@@ -31,6 +31,7 @@ import DataManPowerTable from '@/components/dashboard/DataManPowerTable';
 import InventoryDashboard from '@/components/dashboard/InventoryDashboard';
 import HearingConservationDashboard from '@/components/dashboard/HearingConservationDashboard';
 import ErgonomiDashboard from '@/components/dashboard/ErgonomiDashboard';
+import MentalHealthDashboard from '@/components/dashboard/MentalHealthDashboard';
 import ErgoApproval from '@/components/dashboard/ErgoApproval';
 import HcInputPage from '@/components/administrator/HcInputPage';
 import HcAudiometriEval from '@/components/administrator/HcAudiometriEval';
@@ -175,6 +176,52 @@ function IconInventory() {
   );
 }
 
+/** Headset — Program Konservasi Pendengaran (proteksi telinga di area bising). */
+function IconHearing() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 14v-2a8 8 0 0 1 16 0v2" />
+      <rect x="2" y="14" width="5" height="7" rx="2" />
+      <rect x="17" y="14" width="5" height="7" rx="2" />
+      <path d="M19.5 21h-3a3 3 0 0 1-3-3v-1" />
+    </svg>
+  );
+}
+
+/** Muskuloskeletal — tulang belakang dengan titik sendi (Ergonomi). */
+function IconErgonomi() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="3.6" r="1.8" />
+      <path d="M12 5.4v6" />
+      <path d="M12 11.4l-2.5 4" /><path d="M12 11.4l2.5 4" />
+      <path d="M9.5 15.4v5" /><path d="M14.5 15.4v5" />
+      <path d="M9 7.6H6.5" /><path d="M15 7.6h2.5" />
+      <circle cx="12" cy="11.4" r="1" />
+    </svg>
+  );
+}
+
+/** Bulan & bintang — Gangguan Tidur. */
+function IconTidur() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+      <path d="M18 3.5l.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6z" />
+    </svg>
+  );
+}
+
+/** Kepala dengan hati — Kesehatan Mental. */
+function IconMental() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15.5 21v-3.2a4.6 4.6 0 0 0 3.2-6.6 4 4 0 0 0-.6-6.2A4.8 4.8 0 0 0 13 5a4.2 4.2 0 0 0-3.2 1.2A4.6 4.6 0 0 0 5.6 12a4.6 4.6 0 0 0 3.4 6.2V21" />
+      <path d="M12 13.4l-1.1-1.1a1.6 1.6 0 0 1 2.2-2.2 1.6 1.6 0 0 1 2.2 2.2z" />
+    </svg>
+  );
+}
+
 /*   Sidebar Configs */
 
 const ALL_HEADER_NAV: { key: PageTab; label: string; adminOnly: boolean }[] = [
@@ -217,8 +264,9 @@ const DASH_SIDEBAR: SidebarItem[] = [
   { key: 'tindak-lanjut', label: 'Analisa & Tindak Lanjut MCU', icon: <IconTindakLanjut /> },
   { key: 'kunjungan', label: 'Kunjungan Berobat', icon: <IconKunjunganDash /> },
   { key: 'inventory-dashboard', label: 'Monitoring Obat & BHP', icon: <IconInventory />, adminOnly: true },
-  { key: 'hearing-dashboard', label: 'Hearing Conservation', icon: <IconMonitoring />, adminOnly: true },
-  { key: 'ergonomi-dashboard', label: 'Ergonomi', icon: <IconStatistik />, adminOnly: true },
+  { key: 'hearing-dashboard', label: 'Hearing Conservation', icon: <IconHearing />, adminOnly: true },
+  { key: 'ergonomi-dashboard', label: 'Ergonomi', icon: <IconErgonomi />, adminOnly: true },
+  { key: 'mental-health-dashboard', label: 'Kesehatan Mental', icon: <IconMental />, adminOnly: true },
 ];
 
 const ADMIN_SIDEBAR: SidebarItem[] = [
@@ -227,14 +275,14 @@ const ADMIN_SIDEBAR: SidebarItem[] = [
   { key: 'health-campaign', label: 'Health Campaign', icon: <IconCampaignAdmin /> },
   { key: 'kunjungan-admin', label: 'Kunjungan Berobat', icon: <IconKunjunganAdmin /> },
   { key: 'inventory', label: 'Inventory', icon: <IconInventory /> },
-  { key: 'hearing-conservation', label: 'Hearing Conservation', icon: <IconMonitoring /> },
-  { key: 'ergonomi', label: 'Ergonomi', icon: <IconStatistik /> },
+  { key: 'hearing-conservation', label: 'Hearing Conservation', icon: <IconHearing /> },
+  { key: 'ergonomi', label: 'Ergonomi', icon: <IconErgonomi /> },
   { key: 'kelola-pengguna', label: 'Kelola Pengguna', icon: <IconUsers />, superuserOnly: true },
 ];
 const DATA_ENTRY_SIDEBAR: SidebarItem[] = [
   { key: 'input-jadwal-mcu', label: 'Input Jadwal MCU', icon: <IconReviewMCU /> },
-  { key: 'gangguan-tidur', label: 'Gangguan Tidur', icon: <IconQuestionnaire /> },
-  { key: 'kesehatan-mental', label: 'Kesehatan Mental', icon: <IconQuestionnaire /> },
+  { key: 'gangguan-tidur', label: 'Gangguan Tidur', icon: <IconTidur /> },
+  { key: 'kesehatan-mental', label: 'Kesehatan Mental', icon: <IconMental /> },
   { key: 'persetujuan-ergonomi', label: 'Persetujuan Survey Ergonomi (By Manager)', icon: <IconTindakLanjut />, approverOnly: true },
 ];
 
@@ -330,6 +378,7 @@ function DashContent() {
     case 'inventory-dashboard': return <InventoryDashboard />;
     case 'hearing-dashboard': return <HearingConservationDashboard />;
     case 'ergonomi-dashboard': return <ErgonomiDashboard />;
+    case 'mental-health-dashboard': return <MentalHealthDashboard />;
     default: return <DashboardView />;
   }
 }

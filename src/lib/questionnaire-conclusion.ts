@@ -93,7 +93,7 @@ export function kesimpulanEss(result: KesimpulanEss): string {
 }
 
 /**
- * Kesimpulan gabungan untuk SRQ-20, DASS-21, dan Zung SDS.
+ * Kesimpulan gabungan untuk SRQ-20, DASS-21, dan SDS-30.
  *
  * Hanya instrumen yang benar-benar diisi yang ikut dihitung dalam kesimpulan.
  * Skor 0 pada DASS-21 berarti "tidak ada gejala", bukan "tidak menjawab".

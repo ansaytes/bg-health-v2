@@ -11,8 +11,8 @@
 //               Skor ≥6 → kemungkinan gangguan mental emosional
 //   • DASS-21— Depression Anxiety Stress Scales-21, 21 item skala 0–3
 //               Depresi, ansietas, dan stres dinilai terpisah
-//   • SDS    — Zung Self-Rating Depression Scale, 20 item skala 1–4
-//               Indeks ≤49 normal · 50–59 mild · 60–69 moderate · ≥70 severe
+//   • SDS-30 — Survei Diagnosis Stres (Permenaker 5/2018), 30 item skala 1–7
+//               6 indikator × 5 item; skor indikator 5–9 rendah · 10–24 sedang · 25–35 tinggi
 //
 // Naskah item ada di questionnaire-items.ts. Modul ini hanya menghitung
 // skor, jadi mengganti naskah item tidak mengubah hasil perhitungan.
@@ -22,7 +22,7 @@
 // aplikasi memakai perhitungan yang persis sama.
 // ============================================================
 
-import { DASS21_SECTIONS, SDS_REVERSED_ITEMS } from '@/lib/questionnaire-items';
+import { DASS21_SECTIONS, SDS_SECTIONS } from '@/lib/questionnaire-items';
 
 // ────────────────────────────────────────────────────────────
 // Epworth Sleepiness Scale (ESS)
@@ -284,42 +284,90 @@ export function scoreDass21(answers: Record<string, string | number | null | und
 }
 
 // ────────────────────────────────────────────────────────────
-// Zung Self-Rating Depression Scale (SDS)
+// SDS-30 — Survei Diagnosis Stres (Lampiran Permenaker 5/2018)
+// 30 item, skala 1–7, 6 indikator × 5 item, skor indikator 5–35
 // ────────────────────────────────────────────────────────────
 
-export const SDS_ITEM_COUNT = 20;
+export const SDS_ITEM_COUNT = 30;
+export const SDS_SCALE_MIN = 1;
+export const SDS_SCALE_MAX = 7;
+/** Skor per indikator: 5 item × rentang 1–7. */
+export const SDS_INDICATOR_MIN = 5;
+export const SDS_INDICATOR_MAX = 35;
 
-export type SdsCategory = 'normal' | 'mild' | 'moderate' | 'severe' | 'tidak-lengkap';
+export type SdsCategory = 'rendah' | 'sedang' | 'tinggi' | 'tidak-lengkap';
+
+export interface SdsIndicatorResult {
+  id: string;
+  title: string;
+  /** Jumlah 5 item indikator, 5–35. */
+  score: number;
+  category: SdsCategory;
+  label: string;
+  answered: number;
+}
 
 export interface SdsResult {
-  /** Indeks kasar 20–80. */
+  /** Total 30 item (30–210). Bukan dasar kategori; hanya ringkasan. */
   rawIndex: number;
+  /** Kategori keseluruhan = tingkat terburuk antarindikator. */
   category: SdsCategory;
   label: string;
   answered: number;
   total: number;
+  /** Hasil per indikator, untuk tabel dan dashboard. */
+  indicators: SdsIndicatorResult[];
 }
 
-export function sdsBandLabel(rawIndex: number): string {
-  if (rawIndex >= 70) return 'Severe Depression';
-  if (rawIndex >= 60) return 'Moderate Depression';
-  if (rawIndex >= 50) return 'Mild Depression';
-  return 'Normal (No Depression)';
+/**
+ * Kategori risiko per indikator (Lampiran Permenaker 5/2018):
+ * 5–9 rendah · 10–24 sedang · 25–35 tinggi.
+ */
+export function sdsBandLabel(score: number): string {
+  if (score >= 25) return 'Stres Tinggi';
+  if (score >= 10) return 'Stres Sedang';
+  return 'Stres Rendah';
+}
+
+function sdsBandCategory(score: number): SdsCategory {
+  if (score >= 25) return 'tinggi';
+  if (score >= 10) return 'sedang';
+  return 'rendah';
 }
 
 export function scoreSds(answers: Record<string, string | number | null | undefined>): SdsResult {
   let total = 0;
   let answered = 0;
   for (let i = 1; i <= SDS_ITEM_COUNT; i += 1) {
-    const value = readScale(answers[`sds${i}`], 1, 4);
+    const value = readScale(answers[`sds${i}`], SDS_SCALE_MIN, SDS_SCALE_MAX);
     if (value === null) continue;
-    // Sepuluh item bernada positif dinilai terbalik (5 − jawaban). Tanpa ini
-    // indeks salah arah: orang yang paling depresif bisa mendapat skor rendah.
-    total += SDS_REVERSED_ITEMS.includes(i) ? 5 - value : value;
+    // Tidak ada item terbalik pada SDS-30: semua pertanyaan bernada negatif.
+    total += value;
     answered += 1;
   }
+
+  const indicators: SdsIndicatorResult[] = SDS_SECTIONS.map((section) => {
+    let score = 0;
+    let filled = 0;
+    for (const no of section.items) {
+      const value = readScale(answers[`sds${no}`], SDS_SCALE_MIN, SDS_SCALE_MAX);
+      if (value === null) continue;
+      score += value;
+      filled += 1;
+    }
+    const complete = filled === section.items.length;
+    return {
+      id: section.id,
+      title: section.title,
+      score,
+      category: complete ? sdsBandCategory(score) : 'tidak-lengkap',
+      label: complete ? sdsBandLabel(score) : `Belum lengkap (${filled}/${section.items.length})`,
+      answered: filled,
+    };
+  });
+
   if (answered === 0) {
-    return { rawIndex: 0, category: 'tidak-lengkap', label: 'Belum diisi', answered, total: SDS_ITEM_COUNT };
+    return { rawIndex: 0, category: 'tidak-lengkap', label: 'Belum diisi', answered, total: SDS_ITEM_COUNT, indicators };
   }
   if (answered < SDS_ITEM_COUNT) {
     return {
@@ -328,10 +376,17 @@ export function scoreSds(answers: Record<string, string | number | null | undefi
       label: `Belum lengkap (${answered}/${SDS_ITEM_COUNT} item)`,
       answered,
       total: SDS_ITEM_COUNT,
+      indicators,
     };
   }
-  const category: SdsCategory = total >= 70 ? 'severe' : total >= 60 ? 'moderate' : total >= 50 ? 'mild' : 'normal';
-  return { rawIndex: total, category, label: sdsBandLabel(total), answered, total: SDS_ITEM_COUNT };
+
+  // Kategori keseluruhan ditentukan indikator terburuk — sesuai praktik
+  // pengendalian risiko K3: satu indikator tinggi sudah butuh intervensi.
+  const rank: Record<SdsCategory, number> = { rendah: 0, sedang: 1, tinggi: 2, 'tidak-lengkap': -1 };
+  const worst = indicators.reduce<SdsCategory>((acc, ind) =>
+    rank[ind.category] > rank[acc] ? ind.category : acc, 'rendah');
+
+  return { rawIndex: total, category: worst, label: sdsBandLabel(worst === 'tinggi' ? 25 : worst === 'sedang' ? 10 : 5), answered, total: SDS_ITEM_COUNT, indicators };
 }
 
 // ────────────────────────────────────────────────────────────

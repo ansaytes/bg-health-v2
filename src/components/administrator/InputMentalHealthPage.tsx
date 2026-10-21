@@ -1,7 +1,7 @@
 'use client';
 
 // ============================================================
-// Halaman Input Kesehatan Mental — SRQ-20, DASS-21, Zung SDS
+// Halaman Input Kesehatan Mental — SRQ-20, DASS-21, SDS-30
 // ============================================================
 //
 // Ketiganya menilai kondisi mental yang sama dan sering diisi dalam satu sesi,
@@ -36,7 +36,7 @@ type Section = 'srq20' | 'dass21' | 'sds';
 const SECTION_LABEL: Record<Section, string> = {
   srq20: 'SRQ-20',
   dass21: 'DASS-21',
-  sds: 'Zung SDS',
+  sds: 'SDS-30',
 };
 
 function today(): string {
@@ -86,10 +86,18 @@ function barisHasil(body: any): ScoreLine[] {
 
   if (body.sds?.answered > 0) {
     lines.push({
-      label: 'Zung SDS',
-      value: `${body.sds.rawIndex} — ${body.sds.label}`,
+      label: 'SDS-30',
+      value: `${body.sds.label} · total ${body.sds.rawIndex}/210`,
       tone: toneFor(body.sds.category),
     });
+    // Rincian per indikator — inti penilaian SDS-30 ada di sini, bukan di total.
+    for (const ind of (body.sds.indicators || [])) {
+      lines.push({
+        label: `· ${ind.title}`,
+        value: `${ind.score}/35 — ${ind.label}`,
+        tone: toneFor(ind.category),
+      });
+    }
   }
 
   lines.push({
@@ -175,7 +183,7 @@ export default function InputMentalHealthPage() {
       <header className="qh-page-head">
         <h2>Input Kesehatan Mental</h2>
         <p>
-          SRQ-20, DASS-21, dan Zung SDS — parameter MENTAL HEALTH pada STD-006 Rev001.
+          SRQ-20, DASS-21, dan SDS-30 — parameter MENTAL HEALTH pada STD-006 Rev001.
         </p>
       </header>
 
@@ -259,9 +267,9 @@ export default function InputMentalHealthPage() {
 
       {active === 'sds' && (
         <ItemGroup
-          title="Zung SDS"
-          subtitle="Zung Self-Rating Depression Scale"
-          description="Dua puluh pernyataan, jawaban 1 sampai 4, dijumlahkan menjadi indeks 20 sampai 80. Normal sampai 49, mild 50 sampai 59, moderate 60 sampai 69, severe 70 ke atas."
+          title="SDS-30"
+          subtitle="Survei Diagnosis Stres (Permenaker 5/2018)"
+          description="Tiga puluh pernyataan tentang faktor psikologi kerja dalam 1 bulan terakhir. Nilai 1 sampai 7, dikelompokkan menjadi 6 indikator × 5 item. Skor indikator 5–35: 5–9 rendah, 10–24 sedang, 25–35 tinggi."
           items={SDS_ITEMS}
           values={values}
           onChange={setAnswer}

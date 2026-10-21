@@ -353,8 +353,8 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('dassStres', 'Skor DASS-21 Stres', 'anamnesis', 'number', {
     unit: 'skor', normalRange: '0-11', min: 0, max: 15,
   }),
-  f('sdsScore', 'Indeks SDS (Zung Depression Scale)', 'anamnesis', 'number', {
-    unit: 'indeks', normalRange: '20-49', min: 20, max: 80,
+  f('sdsScore', 'Total Skor SDS-30 (Survei Diagnosis Stres)', 'anamnesis', 'number', {
+    unit: 'skor', normalRange: '30-210', min: 30, max: 210,
   }),
 
   // BV–CE Spirometry

@@ -2481,10 +2481,20 @@ select.admin-input.compact-input {
   word-break: break-word;
 }
 .mcu-entry-modern-shell {
-  overflow: auto;
+  /* Jangan `overflow: auto`: ancestor yang scroll mematikan `position: sticky`
+     pada thead tabel jadwal, sehingga header ikut tergulung. */
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .mcu-entry-modern-card {
   padding: 4px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .mcu-entry-modern-card > .mcu-entry-page {
   border-radius: 18px;

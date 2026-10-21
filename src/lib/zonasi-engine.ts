@@ -337,13 +337,11 @@ function assessQuestionnaireZonasi(ctx: AssessCtx) {
     });
   }
   const sds = toNumber(d.sdsScore);
-  if (sds !== null && sds >= 60) {
-    const severe = sds >= 70;
-    (severe ? ctx.merah : ctx.kuning).push({
-      label: `Depressive Disorder (SDS ${sds}, ${severe ? 'Severe' : 'Moderate'}) (${severe ? 'Merah' : 'Kuning'})`,
-      severity: severe ? 'merah' : 'kuning',
-    });
-  }
+  // SDS-30 mengukur FAKTOR PSIKOLOGI KERJA, bukan depresi. Nilai yang tersimpan
+  // adalah total 30 item (30–210), bukan skor indikator, sehingga tidak dipakai
+  // untuk menetapkan zona. Penilaian risiko SDS-30 dilakukan per indikator di
+  // halaman Input Kesehatan Mental (rendah 5–9 / sedang 10–24 / tinggi 25–35).
+  void sds;
 }
 
 /** Membangun ZonasiResult akhir dari temuan yang terkumpul. */

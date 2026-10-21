@@ -304,7 +304,14 @@ export default function InventoryDashboard() {
         .sort((a, b) => (b.stock || 0) - (a.stock || 0))
         .slice(0, 10);
 
-      const labels = topExpired.map(i => i.name.length > 22 ? i.name.slice(0, 20) + '…' : i.name);
+      // Nama item bisa berulang (varian/kemasan) — beri penomoran agar label sumbu tetap unik.
+      const rawExpired = topExpired.map(i => i.name.length > 22 ? i.name.slice(0, 20) + '…' : i.name);
+      const dupExpired = new Map<string, number>();
+      const labels = rawExpired.map(name => {
+        const n = (dupExpired.get(name) || 0) + 1;
+        dupExpired.set(name, n);
+        return n > 1 ? `${name} (${n})` : name;
+      });
       const values = topExpired.map(i => i.stock || 0);
 
       const data: ChartData<'bar'> = {
@@ -312,8 +319,8 @@ export default function InventoryDashboard() {
         datasets: [
           {
             data: values,
-            backgroundColor: 'rgba(231, 76, 60, 0.85)',
-            hoverBackgroundColor: '#E74C3C',
+            backgroundColor: 'rgba(231, 76, 60, 0.62)',
+            hoverBackgroundColor: 'rgba(231, 76, 60, 0.85)',
             borderWidth: 0,
             borderRadius: 4,
             maxBarThickness: 18,
@@ -355,6 +362,7 @@ export default function InventoryDashboard() {
               color: textColor,
               font: { size: 10, family: fontFamily },
               padding: 4,
+              autoSkip: false,
               callback: (value) => {
                 const label = labels[Number(value)] ?? String(value);
                 return label.length > 26 ? `${label.slice(0, 24)}…` : label;
@@ -482,7 +490,13 @@ export default function InventoryDashboard() {
         .sort((a, b) => (a.daysLeft ?? 999) - (b.daysLeft ?? 999))
         .slice(0, 10);
 
-      const labels = topExpSoon.map(i => i.name.length > 22 ? i.name.slice(0, 20) + '…' : i.name);
+      const rawExpSoon = topExpSoon.map(i => i.name.length > 22 ? i.name.slice(0, 20) + '…' : i.name);
+      const dupExpSoon = new Map<string, number>();
+      const labels = rawExpSoon.map(name => {
+        const n = (dupExpSoon.get(name) || 0) + 1;
+        dupExpSoon.set(name, n);
+        return n > 1 ? `${name} (${n})` : name;
+      });
       const values = topExpSoon.map(i => i.stock || 0);
 
       const data: ChartData<'bar'> = {
@@ -490,8 +504,8 @@ export default function InventoryDashboard() {
         datasets: [
           {
             data: values,
-            backgroundColor: 'rgba(243, 156, 18, 0.85)',
-            hoverBackgroundColor: '#F39C12',
+            backgroundColor: 'rgba(243, 156, 18, 0.62)',
+            hoverBackgroundColor: 'rgba(243, 156, 18, 0.85)',
             borderWidth: 0,
             borderRadius: 4,
             maxBarThickness: 18,
@@ -533,6 +547,7 @@ export default function InventoryDashboard() {
               color: textColor,
               font: { size: 10, family: fontFamily },
               padding: 4,
+              autoSkip: false,
               callback: (value) => {
                 const label = labels[Number(value)] ?? String(value);
                 return label.length > 26 ? `${label.slice(0, 24)}…` : label;
@@ -569,18 +584,30 @@ export default function InventoryDashboard() {
         .sort((a, b) => (b.avg_monthly_usage || 0) - (a.avg_monthly_usage || 0))
         .slice(0, 10);
 
-      const labels = topFast.map(i => i.name.length > 22 ? i.name.slice(0, 20) + '…' : i.name);
+      // Label sumbu harus unik: dua item berjulukan sama (mis. "Caviplex" ganda) tidak boleh
+      // bertabrakan, karena Chart.js memakai indeks baris untuk memetakan label.
+      const rawFast = topFast.map(i => i.name.length > 22 ? i.name.slice(0, 20) + '…' : i.name);
+      const dupFast = new Map<string, number>();
+      const labels = rawFast.map(name => {
+        const n = (dupFast.get(name) || 0) + 1;
+        dupFast.set(name, n);
+        return n > 1 ? `${name} (${n})` : name;
+      });
       const values = topFast.map(i => i.avg_monthly_usage || 0);
 
-      // Satu warna progresif (oranye → teal) agar tetap selaras dengan palet dashboard MCU.
-      const PACE = ['#FF4D00', '#FF8C42', '#FFD700', '#00B894', '#2ECC71', '#00BCD4', '#3498DB', '#9B59B6', '#E91E63', '#F39C12'];
-      const paletteColors = PACE.slice(0, values.length);
+      // Satu warna tergradasi (oranye brand → oranye pudar). Tiap bar tidak mewakili kategori
+      // berbeda — nama item sudah ada di sumbu Y — sehingga palet warna-warni hanya menambah ramai.
+      const paletteColors = values.map((_, idx) => {
+        const fade = values.length > 1 ? idx / (values.length - 1) : 0;
+        return `rgba(255, 77, 0, ${(0.90 - fade * 0.40).toFixed(2)})`;
+      });
       const data: ChartData<'bar'> = {
         labels,
         datasets: [
           {
             data: values,
             backgroundColor: paletteColors,
+            hoverBackgroundColor: '#FF4D00',
             borderWidth: 0,
             borderRadius: 4,
             maxBarThickness: 18,
@@ -622,6 +649,7 @@ export default function InventoryDashboard() {
               color: textColor,
               font: { size: 10, family: fontFamily },
               padding: 4,
+              autoSkip: false,
               callback: (value) => {
                 const label = labels[Number(value)] ?? String(value);
                 return label.length > 26 ? `${label.slice(0, 24)}…` : label;
