@@ -13,7 +13,7 @@
 // Dua perlakuan berbeda atas data kosong, sesuai instruksi QSHE:
 //
 //   1. Parameteranamnesis dan kuesioner (riwayat epilepsi, jantung,
-//      stroke, asma, sleep apnea, LBP, ESS, SRQ-20, DASS-21, SDS)
+//      stroke, asma, sleep apnea, LBP, ESS, SRQ-20, DASS-21)
 //      dikosongkan = TIDAK ADA = normal. Data ini tidak boleh
 //      menggagalkan penilaian zona.
 //
@@ -336,12 +336,11 @@ function assessQuestionnaireZonasi(ctx: AssessCtx) {
       severity,
     });
   }
-  const sds = toNumber(d.sdsScore);
-  // SDS-30 mengukur FAKTOR PSIKOLOGI KERJA, bukan depresi. Nilai yang tersimpan
-  // adalah total 30 item (30–210), bukan skor indikator, sehingga tidak dipakai
-  // untuk menetapkan zona. Penilaian risiko SDS-30 dilakukan per indikator di
-  // halaman Input Kesehatan Mental (rendah 5–9 / sedang 10–24 / tinggi 25–35).
-  void sds;
+  // SDS-30 TIDAK dipakai untuk menetapkan zona MCU. Instrumen ini mengukur
+  // FAKTOR PSIKOLOGI KERJA (Permenaker 5/2018), bukan gejala klinis, dan
+  // hasilnya dipakai terpisah untuk pemetaan risiko psikologis lingkungan kerja.
+  // Kategori dinilai per indikator (5–9 rendah / 10–24 sedang / 25–35 tinggi)
+  // dan tersedia di halaman Input Kesehatan Mental serta dashboard.
 }
 
 /** Membangun ZonasiResult akhir dari temuan yang terkumpul. */

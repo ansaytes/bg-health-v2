@@ -67,8 +67,8 @@ export async function GET(req: NextRequest) {
           subtitle: 'Survei Diagnosis Stres (Permenaker 5/2018)',
           description:
             'Tiga puluh pernyataan tentang faktor psikologi kerja dalam 1 bulan terakhir. Nilai 1 sampai 7, '
-            + 'dikelompokkan menjadi 6 indikator × 5 item. Skor indikator 5–35: 5–9 stres rendah, '
-            + '10–24 stres sedang, 25–35 stres tinggi.',
+            + 'dikelompokkan menjadi 6 indikator × 5 item. Skor indikator 5–35: ≤ 9 stres ringan, '
+            + '10–24 stres sedang, > 24 stres berat.',
           items: SDS_ITEMS,
           sections: SDS_SECTIONS,
         },
@@ -255,20 +255,20 @@ export async function POST(req: NextRequest) {
   }
   if (sds.answered > 0) {
     const ringkasIndikator = sds.indicators.map(ind => `${ind.title} ${ind.score} (${ind.label})`).join(', ');
-    parts.push(`SDS-30 ${sds.label}: ${ringkasIndikator}`);
+    parts.push(`SDS-30 (pemetaan risiko psikologis kerja) ${sds.label}: ${ringkasIndikator}`);
   }
   row.ringkasan_hasil = parts.join('; ');
   const ringkasan = row.ringkasan_hasil as string;
 
-  // Perlu rujukan bila ada instrumen yang masuk kategori tinggi: SRQ ≥6,
-  // DASS subskala berat, atau salah satu indikator SDS-30 masuk "Stres Tinggi"
-  // (skor 25–35). Bandingkan dengan ambang di questionnaire-scores.ts.
+  // Perlu rujukan HANYA dari instrumen klinis: SRQ ≥6 atau DASS subskala berat.
+  // Bandingkan dengan ambang di questionnaire-scores.ts. SDS-30 tidak ikut
+  // karena mengukur faktor psikologi kerja, bukan gejala klinis; hasilnya
+  // dipakai terpisah untuk pemetaan risiko psikologis lingkungan kerja.
   const perluRujukan =
     srq.category === 'perlu-tindak-lanjut'
     || isDassActionable('depresi', dass.depresi.score)
     || isDassActionable('ansietas', dass.ansietas.score)
-    || isDassActionable('stres', dass.stres.score)
-    || (sds.answered > 0 && sds.indicators.some(ind => ind.category === 'tinggi'));
+    || isDassActionable('stres', dass.stres.score);
   row.perlu_rujukan = perluRujukan;
 
   try {
@@ -289,7 +289,7 @@ export async function POST(req: NextRequest) {
       // "Hasil Tersimpan" selalu menampilkan tanda hubung.
       ringkasan,
       perluRujukan,
-      kesimpulan: kesimpulanSrqDass(srq, dass, sds, perluRujukan),
+      kesimpulan: kesimpulanSrqDass(srq, dass, perluRujukan),
       zonaMCU: sync.zonasi,
       mcuUpdated: sync.updated,
       // `zonasi` dipertahankan sebagai alias agar klien lama tidak ikut rusak.

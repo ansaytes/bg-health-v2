@@ -5,6 +5,32 @@ import { adminClient, getCaller, pesanGalat } from '@/lib/questionnaire-store';
 export const dynamic = 'force-dynamic';
 
 /**
+ * Ambil baris mcu_mental_health dengan kolom SDS yang tersedia.
+ *
+ * Database lama (sebelum migrasi SDS-30) hanya punya sds_1..sds_20. Meminta
+ * sds_21..sds_30 sekaligus membuat SELURUH query gagal dengan
+ * "column sds_21 does not exist". Di sini jumlah kolom SDS diturunkan bertahap
+ * (30 → 20 → 10 → 0) sehingga dashboard tetap tampil walau migrasi belum jalan.
+ */
+async function fetchRows(client: ReturnType<typeof adminClient>, base: string) {
+  const attempts = [30, 20, 10, 0];
+  let lastError: string | null = null;
+  for (const n of attempts) {
+    const sdsCols = Array.from({ length: n }, (_, i) => `sds_${i + 1}`).join(',');
+    const cols = sdsCols ? `${base},${sdsCols}` : base;
+    const { data, error } = await client
+      .from('mcu_mental_health')
+      .select(cols)
+      .order('tgl_pemeriksaan', { ascending: false });
+    if (!error) return { rows: (data || []) as Row[], sdsKolomTersedia: n, error: null as string | null };
+    lastError = error.message;
+    // Hanya mundur bila penyebabnya kolom tidak ada; error lain langsung dilaporkan.
+    if (!/does not exist|PGRST204|42703/i.test(error.message)) break;
+  }
+  return { rows: [] as Row[], sdsKolomTersedia: 0, error: lastError };
+}
+
+/**
  * GET /api/mental-health/dashboard?site=
  *
  * Agregat kuesioner kesehatan mental (SRQ-20, DASS-21, SDS-30) dari tabel
@@ -46,11 +72,11 @@ function dassBand(depresi: number, ansietas: number, stres: number): string {
   return ['Normal', 'Ringan', 'Sedang', 'Berat', 'Sangat Berat'][worst];
 }
 
-/** SDS-30: kategori per indikator, skor 5–35. */
+/** SDS-30: kategori per indikator, skor 5–35 — mengikuti Lampiran Permenaker 5/2018. */
 function sdsBand(score: number): string {
-  if (score >= 25) return 'Stres Tinggi';
+  if (score > 24) return 'Stres Berat';
   if (score >= 10) return 'Stres Sedang';
-  return 'Stres Rendah';
+  return 'Stres Ringan';
 }
 
 /** Nomor item (1-based) milik tiap indikator SDS-30 — Permenaker 5/2018. */
@@ -74,12 +100,9 @@ export async function GET(req: NextRequest) {
     const site = new URL(req.url).searchParams.get('site')?.trim() || '';
     const client = adminClient();
 
-    const sdsItemCols = Array.from({ length: 30 }, (_, i) => `sds_${i + 1}`).join(',');
-    const { data, error } = await client
-      .from('mcu_mental_health')
-      .select(`nik_karyawan_hash,site,tgl_pemeriksaan,skor_srq20,dass_depresi,dass_ansietas,dass_stres,${sdsItemCols}`)
-      .order('tgl_pemeriksaan', { ascending: false });
-    if (error) throw new Error(error.message);
+    const fetched = await fetchRows(client, 'nik_karyawan_hash,site,tgl_pemeriksaan,skor_srq20,dass_depresi,dass_ansietas,dass_stres');
+    if (fetched.error) throw new Error(fetched.error);
+    const data = fetched.rows;
 
     // Satu baris terbaru per karyawan, agar tren tidak dobel bila diisi ulang.
     const latest = new Map<string, Row>();
@@ -110,9 +133,9 @@ export async function GET(req: NextRequest) {
         id: ind.id,
         title: ind.title,
         terisi: scores.length,
-        tinggi: scores.filter(v => v >= 25).length,
-        sedang: scores.filter(v => v >= 10 && v < 25).length,
-        rendah: scores.filter(v => v < 10).length,
+        berat: scores.filter(v => v > 24).length,
+        sedang: scores.filter(v => v >= 10 && v <= 24).length,
+        ringan: scores.filter(v => v < 10).length,
         rataRata: scores.length ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)) : 0,
       };
     });
@@ -171,7 +194,7 @@ export async function GET(req: NextRequest) {
           sds: {
             terisi: sdsResponden,
             perIndikator: sdsPerIndikator,
-            tinggi: sdsPerIndikator.reduce((a, i) => a + i.tinggi, 0),
+            berat: sdsPerIndikator.reduce((a, i) => a + i.berat, 0),
           },
         },
         trend,

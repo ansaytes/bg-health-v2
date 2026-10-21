@@ -8,8 +8,7 @@ import { useMCUStore, type PageTab, type DashSidebar, type AdminSidebar, type Da
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import DashboardView from '@/components/dashboard/DashboardView';
-import MonitoringMCU from '@/components/dashboard/MonitoringMCU';
-import HasilTindakLanjutMCU from '@/components/dashboard/HasilTindakLanjutMCU';
+import MonitoringMCUTabs from '@/components/dashboard/MonitoringMCUTabs';
 import KunjunganBerobat from '@/components/dashboard/KunjunganBerobat';
 import ReviewMCU from '@/components/review-mcu/ReviewMCU';
 import InputLaggingIndicator from '@/components/administrator/InputLaggingIndicator';
@@ -32,6 +31,7 @@ import InventoryDashboard from '@/components/dashboard/InventoryDashboard';
 import HearingConservationDashboard from '@/components/dashboard/HearingConservationDashboard';
 import ErgonomiDashboard from '@/components/dashboard/ErgonomiDashboard';
 import MentalHealthDashboard from '@/components/dashboard/MentalHealthDashboard';
+import HigieneIndustriTabs from '@/components/dashboard/HigieneIndustriTabs';
 import ErgoApproval from '@/components/dashboard/ErgoApproval';
 import HcInputPage from '@/components/administrator/HcInputPage';
 import HcAudiometriEval from '@/components/administrator/HcAudiometriEval';
@@ -222,6 +222,18 @@ function IconMental() {
   );
 }
 
+/** Higiene Industri — kacamata pelindung (proteksi di tempat kerja). */
+function IconHigiene() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 13h20" />
+      <path d="M4 13a3 3 0 0 1 6 0v1a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-1z" />
+      <path d="M14 13a3 3 0 0 1 6 0v1a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-1z" />
+      <path d="M10 13h4" />
+    </svg>
+  );
+}
+
 /*   Sidebar Configs */
 
 const ALL_HEADER_NAV: { key: PageTab; label: string; adminOnly: boolean }[] = [
@@ -261,11 +273,8 @@ const HOME_SIDEBAR: SidebarItem[] = [
 const DASH_SIDEBAR: SidebarItem[] = [
   { key: 'statistik', label: 'Statistik Kesehatan', icon: <IconStatistik /> },
   { key: 'monitoring', label: 'Monitoring MCU', icon: <IconMonitoring /> },
-  { key: 'tindak-lanjut', label: 'Analisa & Tindak Lanjut MCU', icon: <IconTindakLanjut /> },
-  { key: 'kunjungan', label: 'Kunjungan Berobat', icon: <IconKunjunganDash /> },
   { key: 'inventory-dashboard', label: 'Monitoring Obat & BHP', icon: <IconInventory />, adminOnly: true },
-  { key: 'hearing-dashboard', label: 'Hearing Conservation', icon: <IconHearing />, adminOnly: true },
-  { key: 'ergonomi-dashboard', label: 'Ergonomi', icon: <IconErgonomi />, adminOnly: true },
+  { key: 'higiene-industri', label: 'Higiene Industri', icon: <IconHigiene />, adminOnly: true },
   { key: 'mental-health-dashboard', label: 'Kesehatan Mental', icon: <IconMental />, adminOnly: true },
 ];
 
@@ -372,13 +381,17 @@ function DashContent() {
 
   switch (activeDashSidebar) {
     case 'statistik': return <DashboardView />;
-    case 'monitoring': return <MonitoringMCU />;
-    case 'tindak-lanjut': return <HasilTindakLanjutMCU />;
+    case 'monitoring': return <MonitoringMCUTabs />;
+    case 'tindak-lanjut': return <MonitoringMCUTabs initialTab="tindak-lanjut" />;
     case 'kunjungan': return <KunjunganBerobat />;
     case 'inventory-dashboard': return <InventoryDashboard />;
     case 'hearing-dashboard': return <HearingConservationDashboard />;
     case 'ergonomi-dashboard': return <ErgonomiDashboard />;
     case 'mental-health-dashboard': return <MentalHealthDashboard />;
+    case 'higiene-industri': return <HigieneIndustriTabs />;
+    case 'hearing-dashboard': return <HigieneIndustriTabs initialTab="hearing" />;
+    case 'ergonomi-dashboard': return <HigieneIndustriTabs initialTab="ergonomi" />;
+    case 'pemetaan-psikologis': return <HigieneIndustriTabs initialTab="psikososial" />;
     default: return <DashboardView />;
   }
 }

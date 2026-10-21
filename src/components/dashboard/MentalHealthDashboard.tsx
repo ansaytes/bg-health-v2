@@ -33,12 +33,15 @@ function ChartCard({ title, sub, accent = '#ff4d00', empty, children }: { title:
         </div>
       </div>
       <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
-        {empty ? (
-          <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--muted-foreground)' }}>
+        {/* Canvas SELALU dirender (hanya disembunyikan) supaya ref tidak null saat
+            data datang belakangan. Tanpa ini chart tidak pernah tergambar. */}
+        <div style={{ position: 'absolute', inset: 0, visibility: empty ? 'hidden' : 'visible' }}>{children}</div>
+        {empty && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--muted-foreground)' }}>
             <span style={{ width: 38, height: 38, borderRadius: '50%', border: `2px dashed ${accent}55`, display: 'grid', placeItems: 'center', fontSize: 15, fontWeight: 800, color: `${accent}99` }}>–</span>
             <span style={{ fontSize: 11.5, fontWeight: 600 }}>Belum ada data</span>
           </div>
-        ) : children}
+        )}
       </div>
     </div>
   );
@@ -56,6 +59,7 @@ export default function MentalHealthDashboard() {
   const trendRef = useRef<HTMLCanvasElement | null>(null);
   const siteRef = useRef<HTMLCanvasElement | null>(null);
   const charts = useRef<Record<string, ChartJS | null>>({});
+  const lastSignature = useRef<string | null>(null);
 
   useEffect(() => {
     const id = setTimeout(() => setIsDark(document.documentElement.classList.contains('dark')), 0);
@@ -75,7 +79,12 @@ export default function MentalHealthDashboard() {
     const text = isDark ? '#F9FAFB' : '#111827';
     const grid = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
     const cardBg = isDark ? '#1b1b1b' : '#ffffff';
-    const anim = { duration: 800, easing: 'easeOutQuart' as const };
+    // Animasi hanya saat ISI DATA berubah (muat awal / ganti site), bukan saat tema
+    // berganti. Tanpa penanda ini chart dibuat ulang terus dan animasinya terasa mati.
+    const signature = JSON.stringify(d);
+    const isDataChange = lastSignature.current !== signature;
+    lastSignature.current = signature;
+    const anim = isDataChange ? { duration: 800, easing: 'easeOutQuart' as const } : (false as const);
 
     const draw = (key: string, el: HTMLCanvasElement | null, make: () => ChartJS) => {
       if (!el) return;
@@ -93,9 +102,9 @@ export default function MentalHealthDashboard() {
       Ringan: 'rgba(241, 196, 15, 0.72)',
       Sedang: AMBER,
       Berat: RED,
-      'Stres Rendah': GREEN,
+      'Stres Ringan': GREEN,
       'Stres Sedang': AMBER,
-      'Stres Tinggi': RED,
+      'Stres Berat': RED,
     };
 
     /** Donut dengan total di tengah — pola sama dengan kartu MCU. */
@@ -162,11 +171,11 @@ export default function MentalHealthDashboard() {
     // 3. SDS-30 — 6 indikator faktor psikologi kerja (skor 5–35).
     //    Dihitung per indikator, bukan dari total 30 item.
     const ind = (d.instrumen.sds.perIndikator || []) as D[];
-    const sdsLow = ind.reduce((a, i) => a + (i.rendah || 0), 0);
-    const sdsMid = ind.reduce((a, i) => a + (i.sedang || 0), 0);
-    const sdsHigh = ind.reduce((a, i) => a + (i.tinggi || 0), 0);
+    const sdsR = ind.reduce((a, i) => a + (i.ringan || 0), 0);
+    const sdsS = ind.reduce((a, i) => a + (i.sedang || 0), 0);
+    const sdsB = ind.reduce((a, i) => a + (i.berat || 0), 0);
     const sdsBand: [string, number][] = [
-      ['Stres Rendah', sdsLow], ['Stres Sedang', sdsMid], ['Stres Tinggi', sdsHigh],
+      ['Stres Ringan', sdsR], ['Stres Sedang', sdsS], ['Stres Berat', sdsB],
     ];
     doughnut('sds', sdsRef.current, sdsBand.map(([k]) => k), sdsBand.map(([, v]) => v), String(d.instrumen.sds.terisi), 'RESPONDEN');
 
@@ -223,7 +232,6 @@ export default function MentalHealthDashboard() {
       Object.values(charts.current).forEach((c) => c?.destroy());
       charts.current = {};
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [d, isDark]);
 
   if (err) return <div style={{ padding: 20, color: '#E63946', fontSize: 13 }}>{err}</div>;
@@ -283,7 +291,7 @@ export default function MentalHealthDashboard() {
 
       <div style={{ fontSize: 9.5, color: 'var(--muted-foreground)', lineHeight: 1.5, flexShrink: 0 }}>
         Catatan: SDS-30 adalah Survei Diagnosis Stres (Lampiran Permenaker 5/2018) yang mengukur faktor psikologi kerja,
-        bukan depresi. Skor per indikator 5–35: 5–9 rendah, 10–24 sedang, 25–35 tinggi.
+        bukan depresi. Skor tiap indikator 5–35: ≤ 9 ringan, 10–24 sedang, &gt; 24 berat.
         SRQ-20 dan DASS-21 bersifat skrining — diagnosis tetap ditetapkan dokter.
       </div>
     </div>

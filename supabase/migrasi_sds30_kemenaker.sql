@@ -9,6 +9,8 @@
 --   (Zung Self-Rating Depression Scale, indeks 20-80). Program diganti ke
 --   SDS-30 sesuai Lampiran Permenaker No. 5 Tahun 2018 (K3 Lingkungan Kerja):
 --   30 item skala 1-7, 6 indikator x 5 item, skor indikator 5-35.
+--   Kategori derajat stres per indikator (halaman 207):
+--     skor <= 9   ringan | skor 10-24 sedang | skor > 24 berat
 --   Instrumen ini mengukur FAKTOR PSIKOLOGI KERJA, bukan depresi.
 --
 -- PENTING: jalankan SELURUH file ini sekaligus. Perintah pertama menghapus
@@ -198,7 +200,7 @@ comment on table public.mcu_mental_health is
 comment on column public.mcu_mental_health.sds_1 is
   'SDS-30 item 1..30, skala 1-7 (1=sangat tidak pernah, 7=selalu).';
 comment on column public.mcu_mental_health.indeks_sds is
-  'Total 30 item SDS-30: 30-210. Kategori risiko dinilai per indikator: 5-9 rendah, 10-24 sedang, 25-35 tinggi.';
+  'Total 30 item SDS-30: 30-210. Kategori dinilai per indikator: <=9 ringan, 10-24 sedang, >24 berat.';
 
 commit;
 

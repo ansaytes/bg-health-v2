@@ -335,11 +335,11 @@ function buildQuestionnaireEntries(values: MCURaw): DiagnosisEntry[] {
 
   // sdsScore menyimpan TOTAL 30 item (30–210). Kategori resmi SDS-30 dinilai per
   // indikator, jadi di sini total hanya dipakai sebagai penanda kasar:
-  // total > 120 menyiratkan rata-rata per indikator di atas batas sedang.
+  // total > 120 (rata-rata > 4 per item) menyiratkan tekanan psikologis kerja.
   const sds = toNumber(values.sdsScore);
   if (sds !== null && sds > 120) {
     entries.push({
-      diagnosis: 'Faktor Psikologi Kerja Tinggi (SDS-30)',
+      diagnosis: 'Tekanan Psikologis Kerja (SDS-30)',
       evidence: `Total SDS-30 ${sds} dari 210 — lihat rincian per indikator`,
       severity: sds > 150 ? 'merah' : 'kuning',
       system: 'Kesehatan Mental',

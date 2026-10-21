@@ -183,7 +183,7 @@ interface ItemGroupProps {
   options?: ScaleOption[];
   /** Ganti label kolom pilihan, mis. "Ya / Tidak" untuk SRQ-20. */
   optionLabels?: string[];
-  columns?: 1 | 2 | 3 | 4 | 5;
+  columns?: 1 | 2 | 3 | 4 | 5 | 6 | 7;
 }
 
 /**
@@ -278,7 +278,9 @@ export function toneFor(category: string): Tone {
 }
 
 function gridTemplate(columns: number): string {
-  return `repeat(${columns}, minmax(72px, 1fr))`;
+  // Skala 7 (SDS-30) butuh sel lebih rapat; skala lain tetap lega.
+  const min = columns >= 7 ? 34 : columns >= 5 ? 56 : 72;
+  return `repeat(${columns}, minmax(${min}px, 1fr))`;
 }
 
 /* ------------------------------------------------------------------ */

@@ -12,7 +12,7 @@
 //   • DASS-21— Depression Anxiety Stress Scales-21, 21 item skala 0–3
 //               Depresi, ansietas, dan stres dinilai terpisah
 //   • SDS-30 — Survei Diagnosis Stres (Permenaker 5/2018), 30 item skala 1–7
-//               6 indikator × 5 item; skor indikator 5–9 rendah · 10–24 sedang · 25–35 tinggi
+//               6 indikator × 5 item; skor indikator ≤9 ringan · 10–24 sedang · >24 berat
 //
 // Naskah item ada di questionnaire-items.ts. Modul ini hanya menghitung
 // skor, jadi mengganti naskah item tidak mengubah hasil perhitungan.
@@ -295,7 +295,7 @@ export const SDS_SCALE_MAX = 7;
 export const SDS_INDICATOR_MIN = 5;
 export const SDS_INDICATOR_MAX = 35;
 
-export type SdsCategory = 'rendah' | 'sedang' | 'tinggi' | 'tidak-lengkap';
+export type SdsCategory = 'ringan' | 'sedang' | 'berat' | 'tidak-lengkap';
 
 export interface SdsIndicatorResult {
   id: string;
@@ -320,19 +320,25 @@ export interface SdsResult {
 }
 
 /**
- * Kategori risiko per indikator (Lampiran Permenaker 5/2018):
- * 5–9 rendah · 10–24 sedang · 25–35 tinggi.
+ * Kategori derajat stres per indikator — disalin apa adanya dari bagian
+ * "Kesimpulan" pada Lampiran Permenaker 5/2018 (halaman 207):
+ *   skor ≤ 9    : derajat stres RINGAN
+ *   skor 10–24  : derajat stres SEDANG
+ *   skor > 24   : derajat stres BERAT
+ * Catatan: dokumen memakai kata RINGAN/SEDANG/BERAT (bukan rendah/tinggi)
+ * dan ambang atasnya "> 24", yaitu sama dengan ≥ 25 pada skor bilangan bulat.
+ * Jangan diubah tanpa merujuk ulang dokumennya.
  */
 export function sdsBandLabel(score: number): string {
-  if (score >= 25) return 'Stres Tinggi';
+  if (score > 24) return 'Stres Berat';
   if (score >= 10) return 'Stres Sedang';
-  return 'Stres Rendah';
+  return 'Stres Ringan';
 }
 
 function sdsBandCategory(score: number): SdsCategory {
-  if (score >= 25) return 'tinggi';
+  if (score > 24) return 'berat';
   if (score >= 10) return 'sedang';
-  return 'rendah';
+  return 'ringan';
 }
 
 export function scoreSds(answers: Record<string, string | number | null | undefined>): SdsResult {
@@ -381,12 +387,12 @@ export function scoreSds(answers: Record<string, string | number | null | undefi
   }
 
   // Kategori keseluruhan ditentukan indikator terburuk — sesuai praktik
-  // pengendalian risiko K3: satu indikator tinggi sudah butuh intervensi.
-  const rank: Record<SdsCategory, number> = { rendah: 0, sedang: 1, tinggi: 2, 'tidak-lengkap': -1 };
+  // pengendalian risiko K3: satu indikator berat sudah butuh intervensi.
+  const rank: Record<SdsCategory, number> = { ringan: 0, sedang: 1, berat: 2, 'tidak-lengkap': -1 };
   const worst = indicators.reduce<SdsCategory>((acc, ind) =>
-    rank[ind.category] > rank[acc] ? ind.category : acc, 'rendah');
+    rank[ind.category] > rank[acc] ? ind.category : acc, 'ringan');
 
-  return { rawIndex: total, category: worst, label: sdsBandLabel(worst === 'tinggi' ? 25 : worst === 'sedang' ? 10 : 5), answered, total: SDS_ITEM_COUNT, indicators };
+  return { rawIndex: total, category: worst, label: sdsBandLabel(worst === 'berat' ? 25 : worst === 'sedang' ? 10 : 5), answered, total: SDS_ITEM_COUNT, indicators };
 }
 
 // ────────────────────────────────────────────────────────────
@@ -441,8 +447,11 @@ export function summariseQuestionnaires(input: QuestionnaireSnapshot): string {
     parts.push(`DASS-21 ${worst[1]} ${worst[2]} (${dassBandLabel(worst[0], worst[2])})`);
   }
 
+  // sdsScore di mcu_records adalah TOTAL 30 item (30–210), bukan skor indikator.
+  // Kategori resmi SDS-30 hanya berlaku per indikator, jadi di sini total dicatat
+  // apa adanya tanpa diberi label derajat stres yang menyesatkan.
   if (input.sdsScore !== null) {
-    parts.push(`SDS ${input.sdsScore} (${sdsBandLabel(input.sdsScore)})`);
+    parts.push(`SDS-30 total ${input.sdsScore}/210 (pemetaan risiko psikologis kerja)`);
   }
 
   return parts.join(', ');

@@ -16,7 +16,7 @@
 
 import { useState } from 'react';
 
-import { DASS21_ITEMS, DASS21_SECTIONS, SDS_ITEMS, SRQ20_ITEMS } from '@/lib/questionnaire-items';
+import { DASS21_ITEMS, DASS21_SECTIONS, SDS_ITEMS, SDS_OPTIONS, SDS_SECTIONS, SRQ20_ITEMS } from '@/lib/questionnaire-items';
 import {
   IdentityPanel,
   ItemGroup,
@@ -183,7 +183,8 @@ export default function InputMentalHealthPage() {
       <header className="qh-page-head">
         <h2>Input Kesehatan Mental</h2>
         <p>
-          SRQ-20, DASS-21, dan SDS-30 — parameter MENTAL HEALTH pada STD-006 Rev001.
+          SRQ-20 dan DASS-21 menjadi dasar penilaian parameter MENTAL HEALTH pada STD-006 Rev001.
+          SDS-30 tersedia di tab paling kanan untuk pemetaan risiko psikologis lingkungan kerja.
         </p>
       </header>
 
@@ -258,24 +259,47 @@ export default function InputMentalHealthPage() {
               })}
               values={values}
               onChange={setAnswer}
-              columns={4}
-              optionLabels={['Tidak pernah', 'Jarang', 'Kadang', 'Hampir selalu']}
+              columns={7}
+              optionLabels={['1', '2', '3', '4', '5', '6', '7']}
             />
           ))}
         </>
       )}
 
       {active === 'sds' && (
-        <ItemGroup
-          title="SDS-30"
-          subtitle="Survei Diagnosis Stres (Permenaker 5/2018)"
-          description="Tiga puluh pernyataan tentang faktor psikologi kerja dalam 1 bulan terakhir. Nilai 1 sampai 7, dikelompokkan menjadi 6 indikator × 5 item. Skor indikator 5–35: 5–9 rendah, 10–24 sedang, 25–35 tinggi."
-          items={SDS_ITEMS}
-          values={values}
-          onChange={setAnswer}
-          columns={4}
-          optionLabels={['Tidak pernah', 'Kadang', 'Sering', 'Hampir selalu']}
-        />
+        <>
+          <div className="qh-description" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span>
+              30 pernyataan tentang faktor psikologi kerja dalam <b>1 bulan terakhir</b>.
+              Pilih angka <b>1–7</b> sesuai keterangan di bawah. Dikelompokkan menjadi 6 indikator × 5 item;
+              skor indikator 5–35: <b>≤ 9 ringan</b> · <b>10–24 sedang</b> · <b>24 berat</b>.
+            </span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', fontSize: 11, lineHeight: 1.5 }}>
+              {SDS_OPTIONS.map((o) => (
+                <span key={o.value} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <b style={{ display: 'inline-grid', placeItems: 'center', width: 18, height: 18, borderRadius: 4, background: 'var(--accent)', color: '#ff4d00', fontSize: 10 }}>{o.value}</b>
+                  {o.label}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {SDS_SECTIONS.map((section) => (
+            <ItemGroup
+              key={section.id}
+              title={`SDS-30 — ${section.title}`}
+              subtitle={`Item ${section.items.join(', ')} · skor maksimal 35`}
+              items={SDS_ITEMS.filter((item) => {
+                const number = Number(item.id.replace('sds', ''));
+                return section.items.includes(number);
+              })}
+              values={values}
+              onChange={setAnswer}
+              columns={7}
+              optionLabels={['1', '2', '3', '4', '5', '6', '7']}
+            />
+          ))}
+        </>
       )}
 
       <SubmitBar

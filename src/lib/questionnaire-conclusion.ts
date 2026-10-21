@@ -25,12 +25,15 @@
 //     Kuning 11 sampai 15
 //     Merah  > 15
 //
-//   Parameter KESEHATAN MENTAL (SRQ-20 / DASS-21 / SDS)
+//   Parameter KESEHATAN MENTAL (SRQ-20 / DASS-21)
 //     SRQ-20 6 atau lebih   -> Possible Mental Disorder -> Kuning
 //     DASS-21 "berat"        -> Yellow Flag             -> Kuning
 //     DASS-21 "sangat berat" -> Red Flag                -> Merah
-//     SDS 60 sampai 69       -> Depressive Disorder     -> Kuning
-//     SDS 70 atau lebih      -> Depressive Disorder     -> Merah
+//
+// SDS-30 TIDAK dinilai di lapisan ini. Sesuai Lampiran Permenaker 5/2018,
+// SDS-30 mengukur FAKTOR PSIKOLOGI KERJA (ketaksaan peran, konflik peran,
+// beban kerja, pengembangan karir, tanggung jawab) — bukan gejala klinis.
+// Hasilnya dipakai terpisah untuk pemetaan risiko psikologis lingkungan kerja.
 //
 // Ambang DASS-21 ditentukan dari KATEGORI, bukan angka tetap, karena batas
 // "berat" tiap subskala berbeda: depresi mulai 22, ansietas 20, stres 26.
@@ -62,6 +65,8 @@ export interface SkorSds {
   rawIndex: number;
   category: string;
   answered: number;
+  /** Skor per indikator (5–35) untuk pemetaan risiko psikologis kerja. */
+  indicators?: { id: string; title: string; score: number; category: string; label: string }[];
 }
 
 /**
@@ -93,16 +98,17 @@ export function kesimpulanEss(result: KesimpulanEss): string {
 }
 
 /**
- * Kesimpulan gabungan untuk SRQ-20, DASS-21, dan SDS-30.
+ * Kesimpulan gabungan untuk SRQ-20 dan DASS-21.
  *
  * Hanya instrumen yang benar-benar diisi yang ikut dihitung dalam kesimpulan.
  * Skor 0 pada DASS-21 berarti "tidak ada gejala", bukan "tidak menjawab".
- * Mencantumkan 0 untuk instrumen yang tidak diisi akan menyesatkan pembaca.
+ *
+ * SDS-30 sengaja TIDAK ikut dinilai di sini: instrumen itu mengukur faktor
+ * psikologi kerja, bukan gejala klinis, dan memiliki halaman pemetaan sendiri.
  */
 export function kesimpulanSrqDass(
   srq: SkorSrq20,
   dass: SkorDass21,
-  sds: SkorSds,
   perluRujukan: boolean,
 ): string {
   const merah: string[] = [];
@@ -121,9 +127,6 @@ export function kesimpulanSrqDass(
     if (hasil.category === 'sangat-berat') merah.push(`DASS-21 ${nama} sangat berat (${hasil.score})`);
     else if (hasil.category === 'berat') kuning.push(`DASS-21 ${nama} berat (${hasil.score})`);
   }
-
-  if (sds.answered > 0 && sds.rawIndex >= 70) merah.push(`SDS ${sds.rawIndex} - gejala depresi berat`);
-  else if (sds.answered > 0 && sds.rawIndex >= 60) kuning.push(`SDS ${sds.rawIndex} - gejala depresi sedang`);
 
   if (merah.length > 0) {
     return `Perlu tindakan segera. ${merah.join('; ')}. `
@@ -150,7 +153,6 @@ export function kesimpulanSrqDass(
  */
 export function zonaDariKuesioner(
   dass: SkorDass21,
-  sds: SkorSds,
   srq: SkorSrq20,
 ): 'Merah' | 'Kuning' | null {
   if (dass.depresi.category === 'sangat-berat'
@@ -158,13 +160,11 @@ export function zonaDariKuesioner(
     || dass.stres.category === 'sangat-berat') {
     return 'Merah';
   }
-  if (sds.answered > 0 && sds.rawIndex >= 70) return 'Merah';
   if (srq.answered > 0 && srq.category === 'perlu-tindak-lanjut') return 'Kuning';
   if (dassCategory('depresi', dass.depresi.score) === 'berat'
     || dassCategory('ansietas', dass.ansietas.score) === 'berat'
     || dassCategory('stres', dass.stres.score) === 'berat') {
     return 'Kuning';
   }
-  if (sds.answered > 0 && sds.rawIndex >= 60) return 'Kuning';
   return null;
 }
