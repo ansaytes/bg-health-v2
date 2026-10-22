@@ -19,6 +19,7 @@ import UserManagement from '@/components/administrator/UserManagement';
 import InputJadwalMCU from '@/components/administrator/InputJadwalMCUModern';
 import GangguanTidurPage from '@/components/administrator/GangguanTidurPage';
 import InputMentalHealthPage from '@/components/administrator/InputMentalHealthPage';
+import InputPsikologiLingkunganPage from '@/components/administrator/InputPsikologiLingkunganPage';
 import InventoryAdmin from '@/components/administrator/InventoryAdmin';
 import { clearDashboardDataCache, preloadDashboardData } from '@/lib/dashboard-data';
 import { clearMCUDashboardData } from '@/components/dashboard/MCUDashboardShared';
@@ -38,6 +39,84 @@ import HcInputPage from '@/components/administrator/HcInputPage';
 import HcAudiometriEval from '@/components/administrator/HcAudiometriEval';
 import ErgoSurveyForm from '@/components/administrator/ErgoSurveyForm';
 import ErgoSurveyTable from '@/components/administrator/ErgoSurveyTable';
+import CenteredTabs from '@/components/ui/centered-tabs';
+
+/*   Admin sub-tab containers (Layanan Kuratif & Higiene Industri)   */
+
+/**
+ * Administrator → Layanan Kuratif: form input Kunjungan Berobat dan
+ * Inventory dalam satu menu bertab (sama seperti sisi dashboard).
+ * Tab tetap di TENGAH halaman agar simetris.
+ */
+function AdminLayananKuratif() {
+  const { isAdmin } = useAuth();
+  const [tab, setTab] = useState<'kunjungan' | 'inventory'>('kunjungan');
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <CenteredTabs
+        tabs={[
+          { key: 'kunjungan', label: 'Kunjungan Berobat' },
+          { key: 'inventory', label: 'Inventory' },
+        ]}
+        active={tab}
+        onChange={setTab}
+        ariaLabel="Layanan Kuratif — Input"
+        compact
+      />
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {tab === 'kunjungan' ? (
+          <AdminTogglePanel
+            formContent={<KunjunganBerobatForm />}
+            tableContents={[<div className="admin-form-container" key="kunjungan"><DataKunjunganTable canEdit={isAdmin} /></div>]}
+            hasTable
+            stepLabels={['Form Input', 'Data Kunjungan']}
+          />
+        ) : (
+          <InventoryAdmin />
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Administrator → Higiene Industri: input Hearing Conservation dan Ergonomi
+ * dalam satu menu bertab (sama seperti sisi dashboard).
+ */
+function AdminHigieneIndustri() {
+  const [tab, setTab] = useState<'hearing' | 'ergonomi'>('hearing');
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <CenteredTabs
+        tabs={[
+          { key: 'hearing', label: 'Hearing Conservation' },
+          { key: 'ergonomi', label: 'Ergonomi' },
+        ]}
+        active={tab}
+        onChange={setTab}
+        ariaLabel="Higiene Industri — Input"
+        compact
+      />
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {tab === 'hearing' ? (
+          <AdminTogglePanel
+            formContent={<HcInputPage />}
+            tableContents={[<HcAudiometriEval key="hc-audio" />]}
+            hasTable
+            stepLabels={['Input HC', 'Evaluasi Audiometri & STS']}
+          />
+        ) : (
+          <AdminTogglePanel
+            formContent={<ErgoSurveyForm />}
+            tableContents={[<ErgoSurveyTable key="ergo-table" />]}
+            hasTable
+            stepLabels={['Input Survei', 'Data Survei & PICA']}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
 
 /*   Sidebar Icon Components */
 
@@ -57,17 +136,6 @@ function IconMonitoring() {
       <path d="M7 9l2 2-2 2" />
       <path d="M13 13h2" />
       <path d="M17 9l-2 2 2 2" />
-    </svg>
-  );
-}
-function IconTindakLanjut() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-      <rect x="8" y="2" width="8" height="4" rx="1" />
-      <line x1="8" y1="10" x2="16" y2="10" />
-      <line x1="8" y1="14" x2="16" y2="14" />
-      <line x1="8" y1="18" x2="12" y2="18" />
     </svg>
   );
 }
@@ -150,13 +218,6 @@ function IconCampaignAdmin() {
     </svg>
   );
 }
-function IconKunjunganAdmin() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
-    </svg>
-  );
-}
 function IconUsers() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -164,41 +225,6 @@ function IconUsers() {
       <circle cx="9" cy="7" r="4" />
       <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
-}
-function IconInventory() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-      <line x1="12" y1="22.08" x2="12" y2="12" />
-    </svg>
-  );
-}
-
-/** Headset — Program Konservasi Pendengaran (proteksi telinga di area bising). */
-function IconHearing() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 14v-2a8 8 0 0 1 16 0v2" />
-      <rect x="2" y="14" width="5" height="7" rx="2" />
-      <rect x="17" y="14" width="5" height="7" rx="2" />
-      <path d="M19.5 21h-3a3 3 0 0 1-3-3v-1" />
-    </svg>
-  );
-}
-
-/** Muskuloskeletal — tulang belakang dengan titik sendi (Ergonomi). */
-function IconErgonomi() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="3.6" r="1.8" />
-      <path d="M12 5.4v6" />
-      <path d="M12 11.4l-2.5 4" /><path d="M12 11.4l2.5 4" />
-      <path d="M9.5 15.4v5" /><path d="M14.5 15.4v5" />
-      <path d="M9 7.6H6.5" /><path d="M15 7.6h2.5" />
-      <circle cx="12" cy="11.4" r="1" />
     </svg>
   );
 }
@@ -223,14 +249,17 @@ function IconMental() {
   );
 }
 
-/** Higiene Industri — kacamata pelindung (proteksi di tempat kerja). */
+/** Higiene Industri — menara pengukuran + gelombang (monitoring faktor lingkungan kerja). */
 function IconHigiene() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 13h20" />
-      <path d="M4 13a3 3 0 0 1 6 0v1a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-1z" />
-      <path d="M14 13a3 3 0 0 1 6 0v1a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-1z" />
-      <path d="M10 13h4" />
+      <path d="M6 21h6" />
+      <path d="M9 21V9" />
+      <circle cx="9" cy="7" r="2" />
+      <path d="M14 9c2 0 3 1.5 3 3s-1 3-3 3" />
+      <path d="M17.5 5.5c3 1 4.5 3.8 4.5 6.5s-1.5 5.5-4.5 6.5" />
+      <path d="M4 21V15" />
+      <path d="M2 15h4" />
     </svg>
   );
 }
@@ -292,21 +321,70 @@ const DASH_SIDEBAR: SidebarItem[] = [
   { key: 'mental-health-dashboard', label: 'Kesehatan Mental', icon: <IconMental />, adminOnly: true },
 ];
 
+/** Kepala dengan otak — Kesehatan Mental (input). */
+function IconBrain() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9.5 4.5A2.5 2.5 0 0 0 7 7v.2A2.8 2.8 0 0 0 5 10a2.8 2.8 0 0 0 1 2.1A2.8 2.8 0 0 0 5.6 15 2.8 2.8 0 0 0 8 17.7v.3a2.5 2.5 0 0 0 5 .2V4.8a2 2 0 0 0-3.5-1.3z" />
+      <path d="M14.5 4.5A2.5 2.5 0 0 1 17 7v.2A2.8 2.8 0 0 1 19 10a2.8 2.8 0 0 1-1 2.1 2.8 2.8 0 0 1 .4 2.9A2.8 2.8 0 0 1 16 17.7v.3a2.5 2.5 0 0 1-5 .2" />
+      <path d="M12 8.5h1.5M12 12h2M12 15.5h1.5M10.5 8.5H9M10 12H8" />
+    </svg>
+  );
+}
+
+/** Checklist — Input Jadwal MCU. */
+function IconChecklist() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 4H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2" />
+      <rect x="9" y="2" width="6" height="4" rx="1" />
+      <path d="M8.5 11l1.6 1.6L13 9.8" />
+      <path d="M8.5 16h8" />
+      <path d="M13 13.6h3.5" />
+    </svg>
+  );
+}
+
+/** Pena di atas lembar — Approval Survey Ergonomi. */
+function IconPena() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 3h5a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-5" />
+      <path d="M3 21l1.2-4.6L15 5.6a1.7 1.7 0 0 1 2.4 0l1 1a1.7 1.7 0 0 1 0 2.4L7.6 19.8 3 21z" />
+      <path d="M13.4 7.2l3.4 3.4" />
+    </svg>
+  );
+}
+
+/** Orang dalam lingkaran berpikir — Psikologi Lingkungan Kerja. */
+function IconPsikologiLingkungan() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 17v-1.5" />
+      <path d="M9.6 9.8a2.4 2.4 0 1 1 3.4 2.2c-.7.4-1 .9-1 1.5" />
+      <path d="M3.5 8.5c1.6.6 3 .4 4-.5" />
+    </svg>
+  );
+}
+
 const ADMIN_SIDEBAR: SidebarItem[] = [
   { key: 'lagging-indicator', label: 'Lagging Indicator', icon: <IconInputLagging /> },
   { key: 'review-mcu', label: 'Review MCU', icon: <IconReviewMCU /> },
   { key: 'health-campaign', label: 'Health Campaign', icon: <IconCampaignAdmin /> },
-  { key: 'kunjungan-admin', label: 'Kunjungan Berobat', icon: <IconKunjunganAdmin /> },
-  { key: 'inventory', label: 'Inventory', icon: <IconInventory /> },
-  { key: 'hearing-conservation', label: 'Hearing Conservation', icon: <IconHearing /> },
-  { key: 'ergonomi', label: 'Ergonomi', icon: <IconErgonomi /> },
+  // Kunjungan Berobat + Inventory digabung menjadi satu menu "Layanan Kuratif"
+  // (tab di dalamnya), konsisten dengan sisi dashboard.
+  { key: 'layanan-kuratif-admin', label: 'Layanan Kuratif', icon: <IconKuratif /> },
+  // Hearing Conservation + Ergonomi masuk ke menu Higiene Industri.
+  { key: 'higiene-industri-admin', label: 'Higiene Industri', icon: <IconHigiene /> },
   { key: 'kelola-pengguna', label: 'Kelola Pengguna', icon: <IconUsers />, superuserOnly: true },
 ];
 const DATA_ENTRY_SIDEBAR: SidebarItem[] = [
-  { key: 'input-jadwal-mcu', label: 'Input Jadwal MCU', icon: <IconReviewMCU /> },
+  { key: 'input-jadwal-mcu', label: 'Input Jadwal MCU', icon: <IconChecklist /> },
   { key: 'gangguan-tidur', label: 'Gangguan Tidur', icon: <IconTidur /> },
-  { key: 'kesehatan-mental', label: 'Kesehatan Mental', icon: <IconMental /> },
-  { key: 'persetujuan-ergonomi', label: 'Persetujuan Survey Ergonomi (By Manager)', icon: <IconTindakLanjut />, approverOnly: true },
+  { key: 'kesehatan-mental', label: 'Kesehatan Mental', icon: <IconBrain /> },
+  { key: 'psikologi-lingkungan', label: 'Psikologi Lingkungan Kerja', icon: <IconPsikologiLingkungan /> },
+  { key: 'persetujuan-ergonomi', label: 'Approval Survey Ergonomi', icon: <IconPena />, approverOnly: true },
 ];
 
 /*   Content Routers */
@@ -338,6 +416,10 @@ function DataEntryContent() {
   }
   if (activeDataEntrySidebar === 'kesehatan-mental') {
     return <div className="admin-form-container"><InputMentalHealthPage /></div>;
+  }
+  // SDS-30 = faktor psikologi lingkungan kerja → menu sendiri (bukan di Kesehatan Mental).
+  if (activeDataEntrySidebar === 'psikologi-lingkungan') {
+    return <div className="admin-form-container"><InputPsikologiLingkunganPage /></div>;
   }
   if (activeDataEntrySidebar === 'persetujuan-ergonomi') {
     return <div className="admin-form-container" style={{ overflow: 'hidden' }}><ErgoApproval /></div>;
@@ -482,6 +564,14 @@ function AdminContent() {
     return <div className="admin-form-container"><UserManagement /></div>;
   }
 
+  if (activeAdminSidebar === 'layanan-kuratif-admin') {
+    return <AdminLayananKuratif />;
+  }
+
+  if (activeAdminSidebar === 'higiene-industri-admin') {
+    return <AdminHigieneIndustri />;
+  }
+
   const panels: Record<string, { form: React.ReactNode; tables: React.ReactNode[]; hasTable: boolean; labels?: string[] }> = {
     'lagging-indicator': {
       hasTable: true,
@@ -506,29 +596,6 @@ function AdminContent() {
       hasTable: false,
       form: <HealthCampaignForm />,
       tables: [],
-    },
-    'kunjungan-admin': {
-      hasTable: true,
-      labels: ['Form Input', 'Data Kunjungan'],
-      form: <KunjunganBerobatForm />,
-      tables: [<div className="admin-form-container" key="kunjungan"><DataKunjunganTable canEdit={isAdmin} /></div>],
-    },
-    'inventory': {
-      hasTable: false,
-      form: <InventoryAdmin />,
-      tables: [],
-    },
-    'hearing-conservation': {
-      hasTable: true,
-      labels: ['Input HC', 'Evaluasi Audiometri & STS'],
-      form: <HcInputPage />,
-      tables: [<HcAudiometriEval key="hc-audio" />],
-    },
-    'ergonomi': {
-      hasTable: true,
-      labels: ['Input Survei', 'Data Survei & PICA'],
-      form: <ErgoSurveyForm />,
-      tables: [<ErgoSurveyTable key="ergo-table" />],
     },
   };
 

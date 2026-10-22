@@ -8,6 +8,7 @@ import {
   MCURefreshButton,
   useMCUDashboardData,
 } from '@/components/dashboard/MCUDashboardShared';
+import { warnaBar } from '@/lib/chart-standard';
 
 const RESULT_ORDER = [
   'Fit To Work', 'Fit With Note', 'Fit With Restriction', 'Currently Unfit',
@@ -176,23 +177,25 @@ export default function HasilTindakLanjutMCU() {
   }, [filtered]);
 
   const palette = ['#3498DB', '#00B894', '#FF8C42', '#FF4444', '#9B59B6', '#00BCD4', '#F39C12', '#E91E63', '#2ECC71', '#778899'];
+  const harmonis = diseases.map((_, index) => warnaBar(index));
   const resultColors = resultDistribution.map(([label]) => RESULT_COLORS[label.toLowerCase()] || '#616161');
   const frsColors = frsDistribution.map(([label]) => {
     const normalized = label.toLowerCase();
     // Oranye gelap untuk "cek parameter" agar tidak tertukar dengan kuning.
-    if (normalized.includes('cek parameter')) return 'rgba(214, 108, 0, 0.92)';
+    if (normalized.includes('cek parameter')) return 'rgba(198, 92, 0, 0.95)';
     if (normalized.includes('no data') || normalized.includes('tidak ada data') || normalized.includes('belum')) return '#616161';
-    if (normalized.includes('high')) return 'rgba(255, 62, 48, 0.95)';
-    if (normalized.includes('intermediate')) return 'rgba(255, 196, 0, 0.95)';
+    // High Risk = MERAH CERAH, Intermediate = KUNING CERAH (kontras jelas).
+    if (normalized.includes('high')) return '#FF2D2D';
+    if (normalized.includes('intermediate')) return '#FFD400';
     if (normalized.includes('low')) return '#00B894';
     return '#616161';
   });
   const riskColors = riskDistribution.map(([label], index) => {
     const normalized = label.toLowerCase();
-    if (normalized.includes('belum lengkap')) return 'rgba(214, 108, 0, 0.92)';
+    if (normalized.includes('belum lengkap')) return 'rgba(198, 92, 0, 0.95)';
     if (normalized.includes('no data') || normalized.includes('tidak ada data') || normalized.includes('belum')) return '#616161';
-    if (normalized === 'merah') return 'rgba(255, 62, 48, 0.95)';
-    if (normalized === 'kuning') return 'rgba(255, 196, 0, 0.95)';
+    if (normalized === 'merah') return '#FF2D2D';
+    if (normalized === 'kuning') return '#FFD400';
     if (normalized === 'hijau') return '#00B894';
     return palette[index % palette.length];
   });
@@ -212,7 +215,7 @@ export default function HasilTindakLanjutMCU() {
         <div className="mcu-total-bar">
           <span className="mcu-total-label">Total:</span>
           <span className="mcu-total-num">{followUpSummary.total}</span>
-          <span className="mcu-total-fu">Perlu FU: {followUpSummary.needs}</span>
+          <span className="mcu-total-fu" style={{ color: '#B8860B' }}>Perlu FU: {followUpSummary.needs}</span>
           <span className="mcu-total-done">Selesai FU: {followUpSummary.done}</span>
           <span className="mcu-total-nodata">Belum Review: {followUpSummary.noReview}</span>
           <span className="mcu-total-exempt">Exempt: {followUpSummary.exempt}</span>
@@ -232,10 +235,10 @@ export default function HasilTindakLanjutMCU() {
           : <>
             <div className="mcu-row1 mcu-live-chart-row">
               <MCUChartCard title="Top 10 Diseases">
-                <MCUChart type="bar" horizontal labels={diseases.map(([name]) => name)} values={diseases.map(([, count]) => count)} colors={diseases.map((_, index) => palette[index % palette.length])} legendLabel="Karyawan dengan diagnosis" />
+                <MCUChart type="bar" horizontal labels={diseases.map(([name]) => name)} values={diseases.map(([, count]) => count)} colors={harmonis} legendLabel="Karyawan dengan diagnosis" />
               </MCUChartCard>
               <MCUChartCard title="Status Follow Up" className="glow-amber">
-                <MCUChart type="doughnut" labels={['Selesai FU', 'Perlu FU']} values={[followUpSummary.done, followUpSummary.needs]} colors={['#00B894', 'rgba(255, 196, 0, 0.95)']} centerText={`${followUpSummary.done + followUpSummary.needs}`} percentLabels />
+                <MCUChart type="doughnut" labels={['Selesai FU', 'Perlu FU']} values={[followUpSummary.done, followUpSummary.needs]} colors={['#00B894', '#FFD400']} centerText={`${followUpSummary.done + followUpSummary.needs}`} percentLabels />
               </MCUChartCard>
               <MCUChartCard title="Framingham Risk Score" className="glow-steel">
                 <MCUChart type="doughnut" labels={frsDistribution.map(([name]) => name)} values={frsDistribution.map(([, count]) => count)} colors={frsColors} centerText={`${frsDistribution.reduce((sum, [, count]) => sum + count, 0)}`} percentLabels />
@@ -247,7 +250,7 @@ export default function HasilTindakLanjutMCU() {
                 <MCUChart type="bar" labels={resultDistribution.map(([name]) => name)} values={resultDistribution.map(([, count]) => count)} colors={resultColors} legendLabel="Jumlah karyawan" />
               </MCUChartCard>
               <MCUChartCard title="10 Peringkat Konsultasi Dokter" className="glow-teal">
-                <MCUChart type="bar" horizontal labels={doctorTypes.map(([name]) => name)} values={doctorTypes.map(([, count]) => count)} colors={Array(10).fill('#2ECC71')} legendLabel="Jumlah konsultasi" />
+                <MCUChart type="bar" horizontal labels={doctorTypes.map(([name]) => name)} values={doctorTypes.map(([, count]) => count)} colors={doctorTypes.map((_, index) => warnaBar(index))} legendLabel="Jumlah konsultasi" />
               </MCUChartCard>
               <MCUChartCard title="Profil Zona Risiko" className="glow-steel">
                 <MCUChart type="doughnut" labels={riskDistribution.map(([name]) => name)} values={riskDistribution.map(([, count]) => count)} colors={riskColors} centerText={`${riskDistribution.reduce((sum, [, count]) => sum + count, 0)}`} percentLabels />

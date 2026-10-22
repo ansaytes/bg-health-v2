@@ -14,7 +14,7 @@ import QuestionnaireRouteGuard from '@/components/questionnaire/QuestionnaireRou
 
 export const metadata: Metadata = {
   title: 'Kuesioner Kesehatan Mental — BG-Health',
-  description: 'SRQ-20, DASS-21, dan SDS-30 untuk skrining kesehatan mental karyawan.',
+  description: 'SRQ-20 dan DASS-21 untuk skrining kesehatan mental karyawan.',
 };
 
 export default function KuesionerKesehatanMentalPage() {

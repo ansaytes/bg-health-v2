@@ -50,6 +50,62 @@ export const STANDAR_ANIMASI_BAR = {
 /** Jarak seragam antarbatang, dalam piksel. */
 export const BAR_GAP = 10;
 
+/**
+ * Opsi batang yang dipakai SEMUA diagram batang aplikasi.
+ *
+ * Chart.js tidak punya "jarak antarbatang" dalam piksel; jarak diatur lewat
+ * categoryPercentage/barPercentage relatif terhadap lebar slot kategori.
+ * Nilai di bawah = pola diagram "Distribusi Department" (Kunjungan Berobat)
+ * yang sudah rapi — slot 72% tinggi area, batang mengisi 86% slot sehingga
+ * tersisa celah seragam (BAR_GAP) di antara batang, berapa pun jumlah bar.
+ * `maxBarThickness` membatasi batang agar tidak melebar pada diagram pendek.
+ */
+export const BAR_LAYOUT = {
+  categoryPercentage: 0.72,
+  barPercentage: 0.86,
+  maxBarThickness: 18,
+} as const;
+
+/** Opsi elemen batang: sudut lembut + hover tanpa border tambahan. */
+export const BAR_ELEMENT = {
+  borderRadius: 4,
+  borderSkipped: false as const,
+};
+
+/**
+ * Palet "harmonis": bar bersebelahan tidak kontras tajam.
+ * Warna bergerak melalui satu rentang hangat → dingin dengan langkah kecil,
+ * jadi tetap bisa dibedakan tanpa terasa ramai.
+ */
+export const PALET_HARMONIS = [
+  'rgba(52, 152, 219, 0.78)',
+  'rgba(41, 164, 196, 0.78)',
+  'rgba(26, 176, 166, 0.78)',
+  'rgba(46, 175, 128, 0.78)',
+  'rgba(120, 175, 84, 0.78)',
+  'rgba(176, 168, 70, 0.78)',
+  'rgba(214, 152, 64, 0.78)',
+  'rgba(226, 132, 74, 0.78)',
+  'rgba(222, 116, 100, 0.78)',
+  'rgba(196, 108, 136, 0.78)',
+];
+
+/** Warna bar ke-i dari palet harmonis (berulang). */
+export function warnaBar(index: number): string {
+  return PALET_HARMONIS[index % PALET_HARMONIS.length];
+}
+
+/**
+ * Rata kiri-kanan kategori/sumbu nilai untuk bar horizontal.
+ * Kembalikan objek yang siap disebar ke `scales`.
+ */
+export function opsiBarHorizontal(H: string, V: string): Record<string, unknown> {
+  return {
+    x: { beginAtZero: true, grace: '12%', grid: { color: V }, border: { display: false }, ticks: { precision: 0 } },
+    y: { grid: { display: false }, border: { display: false }, ticks: { autoSkip: false, padding: 6, maxRotation: 0 } },
+  };
+}
+
 /** Palet lembut untuk batang berkategori. */
 export const PALET_SOFT = [
   'rgba(52, 152, 219, 0.78)',   // biru
@@ -88,6 +144,10 @@ export function skalaBar(opts: {
   max?: number;
   suggestedMax?: number;
   labelOf?: (index: number) => string;
+  /** Judul sumbu nilai, mis. "Hari sakit" / "Jumlah kunjungan". */
+  valueTitle?: string;
+  /** Judul sumbu kategori, mis. "Nama karyawan" / "Departemen". */
+  categoryTitle?: string;
 }): ChartOptions<'bar'>['scales'] {
   const font = opts.fontFamily ?? "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
   const categoryAxis = {
@@ -101,6 +161,11 @@ export function skalaBar(opts: {
         return label.length > 22 ? `${label.slice(0, 20)}…` : label;
       }) as never,
     },
+    // Keterangan sumbu wajib ada: tanpa ini banyak diagram tampil sebagai
+    // deretan angka tanpa konteks.
+    title: opts.categoryTitle
+      ? { display: true, text: opts.categoryTitle, color: opts.textColor, font: { size: 9, family: font, weight: 'bold' as const } }
+      : undefined,
   };
   const valueAxis = {
     beginAtZero: true,
@@ -108,6 +173,9 @@ export function skalaBar(opts: {
     suggestedMax: opts.suggestedMax,
     grid: { color: opts.gridColor },
     ticks: { color: opts.textColor, font: { size: 9, family: font }, precision: 0 as const },
+    title: opts.valueTitle
+      ? { display: true, text: opts.valueTitle, color: opts.textColor, font: { size: 9, family: font, weight: 'bold' as const } }
+      : undefined,
   };
   return (opts.horizontal
     ? { x: valueAxis, y: categoryAxis }

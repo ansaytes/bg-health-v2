@@ -478,8 +478,8 @@ export default function RecordMCUTableModern() {
   return (
     <div className="mcu-records-modern">
       <div className="mcu-records-card">
-        {/* Tab nav — Monitor MCU di kiri, Record MCU di kanan */}
-        <div className="flex border-b border-gray-200 dark:border-gray-800 mb-4" role="tablist">
+        {/* Tab nav — Monitor MCU / Record MCU, di tengah halaman */}
+        <div className="flex justify-center border-b border-gray-200 dark:border-gray-800 mb-4" role="tablist">
           <button
             type="button"
             role="tab"

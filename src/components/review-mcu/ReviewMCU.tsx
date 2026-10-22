@@ -8,7 +8,7 @@ import {
   User, Activity, Eye, HeartPulse, Droplets, FlaskConical,
   Shield, Pill, ScanLine, Wind, Ear, Brain, Dumbbell,
   ClipboardCheck, Calculator, Zap, Save, RotateCcw,
-  ChevronRight, Loader2, AlertCircle, CheckCircle2, FileText,
+  ChevronRight, Loader2, AlertCircle, CheckCircle2, FileText, Lightbulb,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -247,6 +247,15 @@ export default function ReviewMCU() {
     },
     [store]
   );
+
+  // Saklar lampu OCR: saat dinyalakan, langkah input dibuka ke form scan OCR;
+  // saat padam tidak ada form OCR sama sekali (langsung input manual).
+  const toggleOcrLamp = useCallback(() => {
+    const next = !store.ocrEnabled;
+    store.setOcrEnabled(next);
+    if (next && store.reviewStep === 'form') goStep('ocr', -1);
+    if (!next && store.reviewStep === 'ocr') goStep('form', 1);
+  }, [store, goStep]);
 
   // Step 1: Search employee
   const handleSearch = useCallback(async () => {
@@ -558,11 +567,11 @@ export default function ReviewMCU() {
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <motion.div {...buttonTap} style={{ flex: 1 }}>
                     <button
-                      onClick={() => goStep('ocr')}
+                      onClick={() => goStep(store.ocrEnabled ? 'ocr' : 'form')}
                       style={{
                         width: '100%', height: 38, borderRadius: 10, border: 'none',
                         background: store.employee ? 'linear-gradient(135deg, #ff4d00, #ff6b2b)' : 'var(--muted)',
-                        color: store.employee ? '#fff' : 'var(--foreground)', 
+                        color: store.employee ? '#fff' : 'var(--foreground)',
                         fontSize: 12, fontWeight: 600, cursor: 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                         fontFamily: 'inherit',
@@ -589,13 +598,36 @@ export default function ReviewMCU() {
                     </motion.div>
                   )}
                 </div>
+
+                {/* Saklar lampu untuk form scan OCR — default padam, tanpa teks. */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+                  <button
+                    type="button"
+                    onClick={toggleOcrLamp}
+                    title={store.ocrEnabled ? 'Scan OCR aktif' : 'Scan OCR nonaktif'}
+                    aria-label={store.ocrEnabled ? 'Matikan scan OCR' : 'Aktifkan scan OCR'}
+                    aria-pressed={store.ocrEnabled}
+                    style={{
+                      width: 42, height: 42, borderRadius: '50%',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: `1px solid ${store.ocrEnabled ? 'rgba(255,193,7,0.55)' : 'var(--border)'}`,
+                      background: store.ocrEnabled ? 'rgba(255,193,7,0.16)' : 'var(--background)',
+                      color: store.ocrEnabled ? '#FFC107' : 'var(--fg-dim)',
+                      cursor: 'pointer',
+                      boxShadow: store.ocrEnabled ? '0 0 16px 2px rgba(255,193,7,0.45)' : 'none',
+                      transition: 'all .22s ease',
+                    }}
+                  >
+                    <Lightbulb size={20} fill={store.ocrEnabled ? 'currentColor' : 'none'} />
+                  </button>
+                </div>
               </div>
             )}
           </motion.div>
         )}
 
-        {/* ─── STEP 2: OCR ─── */}
-        {store.reviewStep === 'ocr' && (
+        {/* ─── STEP 2: OCR (hanya ada bila saklar lampu menyala) ─── */}
+        {store.reviewStep === 'ocr' && store.ocrEnabled && (
           <motion.div
             key="ocr"
             custom={direction}

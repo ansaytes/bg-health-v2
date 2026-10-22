@@ -11,7 +11,7 @@ import {
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { supabase } from '@/lib/supabase';
-import { STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT } from '@/lib/chart-standard';
+import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, skalaBar } from '@/lib/chart-standard';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -360,7 +360,10 @@ export function MCUChart({
           borderColor: type === 'doughnut' ? 'rgba(128,128,128,0.18)' : colors,
           borderWidth: type === 'doughnut' ? 1 : 0,
           borderRadius: type === 'bar' ? 4 : undefined,
-          maxBarThickness: 20,
+          // Jarak & lebar batang seragam untuk SEMUA diagram batang aplikasi.
+          categoryPercentage: type === 'bar' ? BAR_LAYOUT.categoryPercentage : undefined,
+          barPercentage: type === 'bar' ? BAR_LAYOUT.barPercentage : undefined,
+          maxBarThickness: type === 'bar' ? BAR_LAYOUT.maxBarThickness : undefined,
           hoverOffset: type === 'doughnut' ? 8 : undefined,
         }],
       },
@@ -392,6 +395,9 @@ export function MCUChart({
                 return ` ${context.label}: ${value}${suffix}`;
               },
             },
+            // Angka total ditulis di tengah cincin; tooltip tetap disembunyikan
+            // karena tidak ada nilai yang perlu dibaca di area tengah.
+            enabled: !(type === 'doughnut' && centerText),
           },
           datalabels: {
             display: type === 'doughnut' ? (context: { dataset: { data: unknown[] }; dataIndex: number }) => {
@@ -418,30 +424,16 @@ export function MCUChart({
             clip: false,
           },
         },
-        scales: type === 'bar' ? {
-          x: {
-            beginAtZero: true,
-            grace: horizontal ? '15%' : undefined,
-            grid: { color: horizontal ? gridColor : 'transparent' },
-            ticks: { color: textColor, font: { size: 10, family: fontFamily }, padding: 4 },
-          },
-          y: {
-            beginAtZero: true,
-            grid: { color: horizontal ? 'transparent' : gridColor },
-            ticks: {
-              color: textColor,
-              font: { size: 10, family: fontFamily },
-              padding: 4,
-              callback: (value: string | number) => {
-                const categoryIndex = Number(value);
-                const label = horizontal
-                  ? (labels[categoryIndex] ?? String(value))
-                  : String(value);
-                return label.length > 26 ? `${label.slice(0, 24)}…` : label;
-              },
-            },
-          },
-        } : undefined,
+        scales: type === 'bar' ? skalaBar({
+          horizontal,
+          textColor,
+          gridColor,
+          fontFamily,
+          // Keterangan sumbu: kategori (nama/label) dan nilai (jumlah/%).
+          categoryTitle: 'Kategori',
+          valueTitle: percentLabels ? 'Persentase (%)' : 'Jumlah',
+          labelOf: (categoryIndex) => labels[categoryIndex] ?? '',
+        }) : undefined,
       },
       plugins: centerText ? [{
         id: 'mcu-center-text',
@@ -455,6 +447,24 @@ export function MCUChart({
           ctx.font = 'bold 18px sans-serif';
           ctx.fillText(centerText, (left + right) / 2, (top + bottom) / 2);
           ctx.restore();
+        },
+        // Tampilkan angka di tengah saat cincin beranimasi berputar (bukan
+        // hanya setelah animasi selesai) supaya total tidak "kosong" sesaat.
+        beforeInit: (chart: ChartInstance) => {
+          const original = chart.draw;
+          chart.draw = function (this: ChartInstance, ...args: unknown[]) {
+            const result = (original as (...a: unknown[]) => unknown).apply(this, args);
+            const { left, right, top, bottom } = this.chartArea;
+            const ctx = this.ctx;
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = textColor;
+            ctx.font = 'bold 18px sans-serif';
+            ctx.fillText(centerText, (left + right) / 2, (top + bottom) / 2);
+            ctx.restore();
+            return result;
+          };
         },
       }] : [],
     };

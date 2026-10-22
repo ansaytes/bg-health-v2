@@ -1,12 +1,16 @@
 'use client';
 
 // ============================================================
-// Halaman Input Kesehatan Mental — SRQ-20, DASS-21, SDS-30
+// Halaman Input Kesehatan Mental — SRQ-20 dan DASS-21
 // ============================================================
 //
-// Ketiganya menilai kondisi mental yang sama dan sering diisi dalam satu sesi,
-// jadi digabung dalam satu halaman dengan tiga bagian. Assessor boleh mengisi
+// Keduanya menilai gejala klinis yang sama dan sering diisi dalam satu sesi,
+// jadi digabung dalam satu halaman dengan dua bagian. Assessor boleh mengisi
 // sebagian saja; yang tidak diisi tidak dihitung.
+//
+// SDS-30 TIDAK di sini: instrumen itu mengukur faktor psikologi lingkungan
+// kerja (bukan gejala klinis) dan memiliki menu sendiri di Data Entry, yaitu
+// "Psikologi Lingkungan Kerja".
 //
 // Semua instrumen disimpan pada satu baris per karyawan per tanggal.
 // Pengukuran ulang pada tanggal yang sama menimpa baris lama. Setelah
@@ -16,7 +20,7 @@
 
 import { useState } from 'react';
 
-import { DASS21_ITEMS, DASS21_SECTIONS, SDS_ITEMS, SDS_OPTIONS, SDS_SECTIONS, SRQ20_ITEMS } from '@/lib/questionnaire-items';
+import { DASS21_ITEMS, DASS21_SECTIONS, SRQ20_ITEMS } from '@/lib/questionnaire-items';
 import {
   IdentityPanel,
   ItemGroup,
@@ -31,12 +35,11 @@ import {
   type ScoreLine,
 } from '@/components/questionnaire/QuestionnaireUI';
 
-type Section = 'srq20' | 'dass21' | 'sds';
+type Section = 'srq20' | 'dass21';
 
 const SECTION_LABEL: Record<Section, string> = {
   srq20: 'SRQ-20',
   dass21: 'DASS-21',
-  sds: 'SDS-30',
 };
 
 function today(): string {
@@ -86,7 +89,7 @@ function barisHasil(body: any): ScoreLine[] {
 
   if (body.sds?.answered > 0) {
     lines.push({
-      label: 'SDS-30',
+      label: 'SDS-30 (Psikologi Lingkungan Kerja)',
       value: `${body.sds.label} · total ${body.sds.rawIndex}/210`,
       tone: toneFor(body.sds.category),
     });
@@ -120,7 +123,6 @@ export default function InputMentalHealthPage() {
 
   const srqFilled = countFilled(SRQ20_ITEMS, values);
   const dassFilled = countFilled(DASS21_ITEMS, values);
-  const sdsFilled = countFilled(SDS_ITEMS, values);
 
   function setAnswer(id: string, value: string) {
     setValues((prev) => ({ ...prev, [id]: value }));
@@ -175,7 +177,7 @@ export default function InputMentalHealthPage() {
     }
   }
 
-  const anyFilled = srqFilled + dassFilled + sdsFilled > 0;
+  const anyFilled = srqFilled + dassFilled > 0;
   const canSave = !!identity && anyFilled && submit.status !== 'saving';
 
   return (
@@ -184,7 +186,7 @@ export default function InputMentalHealthPage() {
         <h2>Input Kesehatan Mental</h2>
         <p>
           SRQ-20 dan DASS-21 menjadi dasar penilaian parameter MENTAL HEALTH pada STD-006 Rev001.
-          SDS-30 tersedia di tab paling kanan untuk pemetaan risiko psikologis lingkungan kerja.
+          SDS-30 (faktor psikologi lingkungan kerja) berada di menu Data Entry → Psikologi Lingkungan Kerja.
         </p>
       </header>
 
@@ -212,9 +214,8 @@ export default function InputMentalHealthPage() {
       </IdentityPanel>
 
       <nav className="qh-tabs">
-        {(['srq20', 'dass21', 'sds'] as Section[]).map((section) => {
-          const filled =
-            section === 'srq20' ? srqFilled : section === 'dass21' ? dassFilled : sdsFilled;
+        {(['srq20', 'dass21'] as Section[]).map((section) => {
+          const filled = section === 'srq20' ? srqFilled : dassFilled;
           return (
             <button
               key={section}
@@ -255,42 +256,6 @@ export default function InputMentalHealthPage() {
               subtitle={section.subtitle}
               items={DASS21_ITEMS.filter((item) => {
                 const number = Number(item.id.replace('dass', ''));
-                return section.items.includes(number);
-              })}
-              values={values}
-              onChange={setAnswer}
-              columns={7}
-              optionLabels={['1', '2', '3', '4', '5', '6', '7']}
-            />
-          ))}
-        </>
-      )}
-
-      {active === 'sds' && (
-        <>
-          <div className="qh-description" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span>
-              30 pernyataan tentang faktor psikologi kerja dalam <b>1 bulan terakhir</b>.
-              Pilih angka <b>1–7</b> sesuai keterangan di bawah. Dikelompokkan menjadi 6 indikator × 5 item;
-              skor indikator 5–35: <b>≤ 9 ringan</b> · <b>10–24 sedang</b> · <b>24 berat</b>.
-            </span>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', fontSize: 11, lineHeight: 1.5 }}>
-              {SDS_OPTIONS.map((o) => (
-                <span key={o.value} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                  <b style={{ display: 'inline-grid', placeItems: 'center', width: 18, height: 18, borderRadius: 4, background: 'var(--accent)', color: '#ff4d00', fontSize: 10 }}>{o.value}</b>
-                  {o.label}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {SDS_SECTIONS.map((section) => (
-            <ItemGroup
-              key={section.id}
-              title={`SDS-30 — ${section.title}`}
-              subtitle={`Item ${section.items.join(', ')} · skor maksimal 35`}
-              items={SDS_ITEMS.filter((item) => {
-                const number = Number(item.id.replace('sds', ''));
                 return section.items.includes(number);
               })}
               values={values}

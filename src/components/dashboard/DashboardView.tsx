@@ -5,7 +5,7 @@ import { Chart as ChartJS, registerables } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { MONTHS, JOBSITES } from '@/lib/lagging-data';
 import { fetchDashboardData } from '@/lib/dashboard-data';
-import { STANDAR_ANIMASI_BAR, skalaBar } from '@/lib/chart-standard';
+import { STANDAR_ANIMASI_BAR, BAR_LAYOUT, skalaBar } from '@/lib/chart-standard';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -287,7 +287,11 @@ export default function DashboardView() {
     setChartReady(false);
   }, []);
 
-  /* ─── Chart canvas drawing with smooth growth animation ────────────────── */
+  /* ──────────────────────────────────────────────────────────────
+   Chart canvas drawing with STANDAR animation
+   Animasi sama dengan diagram lain: batang tumbuh dari garis dasar
+   (padding kiri), bertahap atas→bawah, easing easeOutQuart.
+   ────────────────────────────────────────────────────────────── */
   const asrRank = asrRanking.slice(0, 10);
   const animFrameRef = useRef<number | null>(null);
 
@@ -308,7 +312,7 @@ export default function DashboardView() {
 
     const W = rect.width;
     const H = rect.height;
-    const pad = { top: 8, right: 64, bottom: 22, left: 110 };
+    const pad = { top: 8, right: 64, bottom: 34, left: 110 };
     const chartW = Math.max(W - pad.left - pad.right, 10);
     const chartH = Math.max(H - pad.top - pad.bottom, 10);
 
@@ -324,13 +328,14 @@ export default function DashboardView() {
     }
 
     const startTime = performance.now();
-    const duration = 1000;
+    // Durasi & easing sama dengan STANDAR_ANIMASI_BAR (800ms, easeOutQuart),
+    // delay bertahap per batang 55ms — animasi standar seluruh aplikasi.
+    const duration = 800;
+    const barDelay = 55;
 
     const render = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // easeOutCubic curve
-      const ease = 1 - Math.pow(1 - progress, 3);
 
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -353,11 +358,18 @@ export default function DashboardView() {
         ctx.textAlign = 'center';
         ctx.fillText(val.toLocaleString('id-ID'), x, pad.top + chartH + 12);
       }
+      // Keterangan sumbu nilai ASR.
+      ctx.fillStyle = textCol;
+      ctx.font = 'bold 8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('ASR', pad.left + chartW / 2, pad.top + chartH + 21);
 
       // Grow bars from baseline (x: pad.left)
       asrRank.forEach((d, i) => {
         const y = pad.top + gap * i + (gap - barH) / 2;
         const targetW = (d.asr / maxVal) * chartW;
+        const barProgress = Math.min(Math.max((elapsed - i * barDelay) / duration, 0), 1);
+        const ease = 1 - Math.pow(1 - barProgress, 3);
         const currentW = targetW * ease;
 
         // Site name on the left
@@ -459,7 +471,14 @@ export default function DashboardView() {
     // Batang tetap memperlihatkan episode A/B/C (dasar analisa spell); angka
     // spell ditulis di ujung batang. Mode hanya menentukan urutan peringkat.
     const labels = sickRanking.map((r) => r.nama);
-    const stackProps = { stack: 's', maxBarThickness: 16, categoryPercentage: 0.72, barPercentage: 0.92 };
+    // Jarak batang seragam seperti diagram lain (BAR_LAYOUT).
+    const stackProps = {
+      stack: 's',
+      categoryPercentage: BAR_LAYOUT.categoryPercentage,
+      barPercentage: BAR_LAYOUT.barPercentage,
+      maxBarThickness: BAR_LAYOUT.maxBarThickness,
+      borderRadius: 4,
+    };
     const datasets = [
       { label: 'Hari A', data: sickRanking.map((r) => r.hariA), backgroundColor: 'rgba(231,76,60,0.82)', ...stackProps },
       { label: 'Hari B', data: sickRanking.map((r) => r.hariB), backgroundColor: 'rgba(243,156,18,0.82)', ...stackProps },
@@ -509,7 +528,15 @@ export default function DashboardView() {
             formatter: (v: number) => (v > 0 ? String(v) : ''),
           },
         },
-        scales: skalaBar({ horizontal: true, textColor: text, gridColor: grid, suggestedMax: maxTotal * 1.3 }),
+        scales: skalaBar({
+          horizontal: true,
+          textColor: text,
+          gridColor: grid,
+          suggestedMax: maxTotal * 1.3,
+          categoryTitle: 'Karyawan',
+          valueTitle: 'Hari sakit',
+          labelOf: (i) => labels[i] ?? '',
+        }),
       },
       plugins: [{
         id: 'sick-total-label',
@@ -681,7 +708,7 @@ export default function DashboardView() {
                 <h2>Peringkat Karyawan Sakit</h2>
                 <p>{isYTD
                   ? 'Harap Pilih Periode Bulan'
-                  : `${sickListCount} karyawan ${selectedSite !== 'All Site' ? `(${selectedSite})` : ''} - ${periodLabel} · ${sickMode === 'spell' ? 'urut spell' : 'urut total hari'}`}</p>
+                  : `${sickListCount} karyawan ${selectedSite !== 'All Site' ? `(${selectedSite})` : ''} - ${periodLabel} · ${sickMode === 'spell' ? 'urut jumlah spell' : 'urut total hari sakit (A + B + C)'}`}</p>
               </div>
               {!isYTD && (
                 <select

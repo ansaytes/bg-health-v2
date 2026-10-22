@@ -219,7 +219,7 @@ export default function InventoryAdmin() {
     
     if (diffMonths < 0) return { label: 'Expired', color: 'white', bg: 'black', isAlert: true };
     if (diffMonths < 1) return { label: '< 1 Bulan', color: 'white', bg: '#ef4444', isAlert: true };
-    if (diffMonths < 3) return { label: '< 3 Bulan', color: '#854d0e', bg: '#fef08a', isAlert: true };
+    if (diffMonths < 3) return { label: '< 3 Bulan', color: '#3a2a00', bg: '#FFD000', isAlert: true };
     return { label: 'Aman', color: '#10b981', bg: 'transparent', isAlert: false };
   };
 
@@ -251,7 +251,7 @@ export default function InventoryAdmin() {
 
   return (
     <div className="admin-form-container" style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '0 24px 8px 24px', height: '100%', minHeight: 0 }}>
-      
+
       {/* HEADER LAYOUT: SYMMETRICAL & APPLE-LIKE */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid var(--border)' }}>
         <div>
@@ -266,17 +266,17 @@ export default function InventoryAdmin() {
       <div className="mcu-records-toolbar" style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'var(--card)', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border)', flexWrap: 'nowrap' }}>
         <div className="mcu-records-search" style={{ flex: '1 1 0px', minWidth: 0, display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--background)', padding: '0 12px', height: '38px', borderRadius: '6px', border: '1px solid var(--border)', boxSizing: 'border-box' }}>
           <Search size={16} className="text-muted-foreground" style={{ flexShrink: 0 }} />
-          <input 
-            type="text" 
-            placeholder="Cari nama obat atau bahan medis..." 
+          <input
+            type="text"
+            placeholder="Cari nama obat atau bahan medis..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontSize: '13px', height: '100%' }}
           />
         </div>
         <div style={{ flexShrink: 0, width: '180px' }}>
-          <select 
-            value={categoryFilter} 
+          <select
+            value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
             style={{ width: '100%', height: '38px', padding: '0 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--background)', fontSize: '13px', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
           >
@@ -343,30 +343,30 @@ export default function InventoryAdmin() {
                     <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
                       {item.tanggal_masuk ? new Date(item.tanggal_masuk).toLocaleDateString('id-ID') : '-'}
                     </td>
-                    
+
                     <td style={{ padding: '10px 12px' }}>
                       <div style={{ fontWeight: 500 }}>{item.tanggal_expired ? new Date(item.tanggal_expired).toLocaleDateString('id-ID') : '-'}</div>
                       {exp.isAlert && (
-                        <div style={{ 
+                        <div style={{
                           display: 'inline-flex', alignItems: 'center', gap: '4px',
-                          background: exp.bg, color: exp.color, 
-                          padding: '2px 6px', borderRadius: '4px', fontSize: '10px', 
-                          fontWeight: 700, marginTop: '4px' 
+                          background: exp.bg, color: exp.color,
+                          padding: '2px 6px', borderRadius: '4px', fontSize: '10px',
+                          fontWeight: 700, marginTop: '4px'
                         }}>
                           <AlertTriangle size={10} /> {exp.label}
                         </div>
                       )}
                     </td>
-                    
+
                     <td style={{ padding: '10px 12px' }}>
                       <div style={{ fontWeight: 700, fontSize: '14px' }}>{item.stock} <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--muted-foreground)' }}>{item.unit}</span></div>
                       <div style={{ fontSize: '10px', color: 'var(--muted-foreground)', marginTop: '2px' }}>Aman: ≥ {safeLimit}</div>
                     </td>
-                    
+
                     <td style={{ padding: '10px 12px' }}>
                       {isLowStock ? (
-                        <span style={{ color: '#ef4444', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }}>
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444' }}></span> Menipis
+                        <span style={{ color: '#F5B000', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#F5B000' }}></span> Menipis
                         </span>
                       ) : (
                         <span style={{ color: '#10b981', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }}>

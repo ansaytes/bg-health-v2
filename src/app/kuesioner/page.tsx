@@ -27,10 +27,11 @@ const KUESIONER = [
   {
     href: '/kuesioner/kesehatan-mental',
     title: 'Kesehatan Mental',
-    subtitle: 'SRQ-20, DASS-21, dan SDS-30',
-    detail: 'Tiga instrumen untuk menilai gejala depresi, ansietas, dan stres. '
-      + 'Boleh diisi sebagian saja, misalnya hanya SRQ-20 yang paling singkat.',
-    waktu: 'sekitar 6 menit',
+    subtitle: 'SRQ-20 dan DASS-21',
+    detail: 'Dua instrumen untuk menilai gejala depresi, ansietas, dan stres. '
+      + 'Boleh diisi sebagian saja, misalnya hanya SRQ-20 yang paling singkat. '
+      + 'Instrumen SDS-30 (psikologi lingkungan kerja) diisi petugas di Data Entry.',
+    waktu: 'sekitar 5 menit',
   },
 ];
 

@@ -14,8 +14,9 @@ import {
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 const PALETTE = ['#00B894', 'rgba(255,62,48,0.95)', '#616161', '#778899'];
-// "Belum terlaksana" dan "Expired" memakai merah cerah agar langsung terlihat.
-const CHART_COLORS = ['#00B894', '#F39C12', 'rgba(255,62,48,0.92)'];
+// "Belum terlaksana" dan "Expired" memakai MERAH CERAH agar langsung terlihat.
+const MERAH_CERAH = '#FF2D2D';
+const CHART_COLORS = ['#00B894', '#F39C12', MERAH_CERAH];
 // Setiap batang pada "10 Jobsite MCU Tidak Ditemukan Terbanyak" memakai warna berbeda.
 const SITE_BAR_COLORS = [
   '#E74C3C', '#F39C12', '#F1C40F', '#2ECC71', '#1ABC9C',
@@ -153,7 +154,7 @@ export default function MonitoringMCU() {
           <span className="mcu-total-label">Total:</span>
           <span className="mcu-total-num">{summary.total}</span>
           <span className="mcu-total-valid">Valid: {summary.valid}</span>
-          <span className="mcu-total-expired">Expired: {summary.expired}</span>
+          <span className="mcu-total-expired" style={{ color: MERAH_CERAH }}>Expired: {summary.expired}</span>
           <span className="mcu-total-nodata">No Data: {summary.noData}</span>
           <span className="mcu-total-exempt">Exempt: {summary.exempt}</span>
           <MCURefreshButton loading={loading} onClick={refresh} />
@@ -184,7 +185,7 @@ export default function MonitoringMCU() {
                 <MCUChart type="doughnut" labels={['Tepat Waktu', 'Terlambat', 'Belum Terlaksana']} values={[coverage.onTime, coverage.late, coverage.pending]} colors={CHART_COLORS} centerText={`${coverage.total}`} percentLabels />
               </MCUChartCard>
               <MCUChartCard title="Tren Expired" className="glow-amber">
-                <MCUChart type="bar" labels={MONTH_LABELS} values={expiredTrend} colors={Array(12).fill('rgba(255,62,48,0.92)')} legendLabel="MCU kedaluwarsa" />
+                <MCUChart type="bar" labels={MONTH_LABELS} values={expiredTrend} colors={Array(12).fill(MERAH_CERAH)} legendLabel="MCU kedaluwarsa" />
               </MCUChartCard>
             </div>
 

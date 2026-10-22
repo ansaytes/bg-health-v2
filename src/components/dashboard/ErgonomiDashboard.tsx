@@ -7,6 +7,7 @@ import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { authFetch } from '@/lib/api-client';
 import { KLAS_COLOR, type Klasifikasi } from '@/lib/hc-ergo';
 import { Chip, SITES, fmtDate, tableStyle, tdStyle, thStyle } from '@/components/administrator/hc-ergo-ui';
+import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT } from '@/lib/chart-standard';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -70,7 +71,7 @@ export default function ErgonomiDashboard() {
     const text = isDark ? '#F9FAFB' : '#111827';
     const grid = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
     const cardBg = isDark ? '#1b1b1b' : '#ffffff';
-    const anim = { duration: 800, easing: 'easeOutQuart' as const };
+    const anim = STANDAR_ANIMASI_BAR;
     const legend = { position: 'bottom' as const, labels: { color: text, font: { size: 10, family: FONT }, boxWidth: 9, boxHeight: 9, padding: 8 } };
 
     const draw = (key: string, el: HTMLCanvasElement | null, make: () => ChartJS) => {
@@ -89,10 +90,10 @@ export default function ErgonomiDashboard() {
         },
       },
       scales: horizontal
-        ? { x: { stacked, beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } },
-            y: { stacked, grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false } } }
-        : { x: { stacked, grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false } },
-            y: { stacked, beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } } },
+        ? { x: { stacked, beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah survei', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+            y: { stacked, grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false }, title: { display: true, text: 'Metode', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } } }
+        : { x: { stacked, grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false }, title: { display: true, text: 'Kategori', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+            y: { stacked, beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah survei', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } } },
     } as ChartOptions<'bar'>);
 
     // 1. Donut distribusi klasifikasi risiko (semua metode)
@@ -105,7 +106,7 @@ export default function ErgonomiDashboard() {
         datasets: [{ data: totKlas, backgroundColor: KLAS.map((k) => KLAS_COLOR[k]), borderWidth: 2, borderColor: cardBg, hoverOffset: 6 }],
       },
       options: {
-        responsive: true, maintainAspectRatio: false, animation: anim, cutout: '62%', radius: '82%',
+        responsive: true, maintainAspectRatio: false, animation: STANDAR_ANIMASI_DONUT, cutout: '62%', radius: '82%', rotation: 0, circumference: 360,
         plugins: {
           legend,
           tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${ctx.parsed}${grandTotal ? ` (${(ctx.parsed / grandTotal * 100).toFixed(1)}%)` : ''}` } },
@@ -140,7 +141,7 @@ export default function ErgonomiDashboard() {
         datasets: KLAS.map((k) => ({
           label: String(k).replace('_', ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()),
           data: metode.map((m) => d.byKlas[m]?.[k] || 0),
-          backgroundColor: KLAS_COLOR[k], borderRadius: 3, maxBarThickness: 26,
+          backgroundColor: KLAS_COLOR[k], borderRadius: 3, maxBarThickness: BAR_LAYOUT.maxBarThickness,
         })),
       },
       options: barOpts(true, true),
@@ -152,7 +153,7 @@ export default function ErgonomiDashboard() {
       data: {
         labels: trend.length ? trend.map((t) => BLN[Number(String(t.bulan).slice(5)) - 1]) : ['-'],
         datasets: [
-          { type: 'bar' as const, label: 'Total survei', data: trend.length ? trend.map((t) => t.total) : [0], backgroundColor: 'rgba(46,134,222,0.75)', borderRadius: 5, maxBarThickness: 34, order: 2 },
+          { type: 'bar' as const, label: 'Total survei', data: trend.length ? trend.map((t) => t.total) : [0], backgroundColor: 'rgba(46,134,222,0.75)', borderRadius: 4, categoryPercentage: BAR_LAYOUT.categoryPercentage, barPercentage: BAR_LAYOUT.barPercentage, maxBarThickness: 34, order: 2 },
           { type: 'line' as const, label: 'Perlu PICA', data: trend.length ? trend.map((t) => t.sedangKeAtas) : [0], borderColor: '#E63946', backgroundColor: '#E63946', tension: 0.35, pointRadius: 3, borderWidth: 2, order: 1 },
         ],
       },
@@ -163,8 +164,8 @@ export default function ErgonomiDashboard() {
           datalabels: { display: false },
         },
         scales: {
-          x: { grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT } } },
-          y: { beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } },
+          x: { grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT } }, title: { display: true, text: 'Bulan', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+          y: { beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah survei', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
         },
       } as ChartOptions,
     }));
@@ -175,7 +176,7 @@ export default function ErgonomiDashboard() {
       type: 'bar',
       data: {
         labels: ['Open', 'Progress', 'Closed', 'Lewat tempo'],
-        datasets: [{ data: [rk.open || 0, rk.progress || 0, rk.closed || 0, rk.lewatJatuhTempo || 0], backgroundColor: ['#E63946', '#F5A623', '#00B894', '#B91C1C'], borderRadius: 5, maxBarThickness: 40 }],
+        datasets: [{ data: [rk.open || 0, rk.progress || 0, rk.closed || 0, rk.lewatJatuhTempo || 0], backgroundColor: ['#E63946', '#F5A623', '#00B894', '#B91C1C'], borderRadius: 4, ...BAR_LAYOUT }],
       },
       options: barOpts(false),
     }));
@@ -187,8 +188,8 @@ export default function ErgonomiDashboard() {
       data: {
         labels: patuh.length ? patuh.map((k) => String(k.site)) : ['Belum ada data'],
         datasets: [
-          { label: 'Internal bulan ini', data: patuh.length ? patuh.map((k) => k.internalBulanIni) : [0], backgroundColor: '#2E86DE', borderRadius: 4, maxBarThickness: 26 },
-          { label: 'Pihak ketiga 12 bln', data: patuh.length ? patuh.map((k) => k.pihakKetiga12Bulan) : [0], backgroundColor: '#00B894', borderRadius: 4, maxBarThickness: 26 },
+          { label: 'Internal bulan ini', data: patuh.length ? patuh.map((k) => k.internalBulanIni) : [0], backgroundColor: '#2E86DE', borderRadius: 4, ...BAR_LAYOUT },
+          { label: 'Pihak ketiga 12 bln', data: patuh.length ? patuh.map((k) => k.pihakKetiga12Bulan) : [0], backgroundColor: '#00B894', borderRadius: 4, ...BAR_LAYOUT },
         ],
       },
       options: {
@@ -198,8 +199,8 @@ export default function ErgonomiDashboard() {
           datalabels: { display: false },
         },
         scales: {
-          x: { beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } },
-          y: { grid: { display: false }, ticks: { color: text, font: { size: 10, family: FONT }, autoSkip: false } },
+          x: { beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah survei', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+          y: { grid: { display: false }, ticks: { color: text, font: { size: 10, family: FONT }, autoSkip: false }, title: { display: true, text: 'Site', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
         },
       } as ChartOptions<'bar'>,
     }));

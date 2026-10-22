@@ -7,6 +7,7 @@ import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { authFetch } from '@/lib/api-client';
 import { ZONA_COLOR, type Zona } from '@/lib/hc-ergo';
 import { Chip, SITES, fmtDate, tableStyle, tdStyle, thStyle } from '@/components/administrator/hc-ergo-ui';
+import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT } from '@/lib/chart-standard';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -70,7 +71,7 @@ export default function HearingConservationDashboard() {
     const text = isDark ? '#F9FAFB' : '#111827';
     const grid = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
     const cardBg = isDark ? '#1b1b1b' : '#ffffff';
-    const anim = { duration: 800, easing: 'easeOutQuart' as const };
+    const anim = STANDAR_ANIMASI_BAR;
     const nAreaTotRef = { current: [d.zona.MERAH || 0, d.zona.KUNING || 0, d.zona.HIJAU || 0, d.zona.BELUM || 0].reduce((a, b) => a + b, 0) };
     const legend = { position: 'bottom' as const, labels: { color: text, font: { size: 10, family: FONT }, boxWidth: 9, boxHeight: 9, padding: 8 } };
 
@@ -92,10 +93,10 @@ export default function HearingConservationDashboard() {
         },
       },
       scales: horizontal
-        ? { x: { beginAtZero: true, max, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } },
-            y: { grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false } } }
-        : { x: { grid: { display: false }, ticks: { color: text, font: { size: 11, weight: 'bold' as const, family: FONT }, autoSkip: false } },
-            y: { beginAtZero: true, max, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } } },
+        ? { x: { beginAtZero: true, max, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+            y: { grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false }, title: { display: true, text: 'Kategori', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } } }
+        : { x: { grid: { display: false }, ticks: { color: text, font: { size: 11, weight: 'bold' as const, family: FONT }, autoSkip: false }, title: { display: true, text: 'Kategori', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+            y: { beginAtZero: true, max, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah karyawan', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } } },
     } as ChartOptions<'bar'>);
 
     // 1. Donut zona kebisingan area
@@ -107,7 +108,7 @@ export default function HearingConservationDashboard() {
         datasets: [{ data: zonaVals, backgroundColor: ['#E63946', '#F5C518', '#00B894', '#B0B7C3'], borderWidth: 2, borderColor: cardBg, hoverOffset: 6 }],
       },
       options: {
-        responsive: true, maintainAspectRatio: false, animation: anim, cutout: '58%',
+        responsive: true, maintainAspectRatio: false, animation: STANDAR_ANIMASI_DONUT, cutout: '58%', rotation: 0, circumference: 360,
         plugins: {
           legend,
           tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed}${nAreaTotRef.current ? ` (${(c.parsed / nAreaTotRef.current * 100).toFixed(1)}%)` : ''}` } },
@@ -138,7 +139,7 @@ export default function HearingConservationDashboard() {
     const katVals = [d.kategori.A || 0, d.kategori.B || 0, d.kategori.C || 0];
     draw('kategori', kategoriRef.current, () => new ChartJS(kategoriRef.current!, {
       type: 'bar',
-      data: { labels: ['A · rutin', 'B · insidental', 'C · tidak terpajan'], datasets: [{ data: katVals, backgroundColor: ['#E63946', '#F5A623', '#00B894'], borderRadius: 5, maxBarThickness: 46 }] },
+      data: { labels: ['A · rutin', 'B · insidental', 'C · tidak terpajan'], datasets: [{ data: katVals, backgroundColor: ['#E63946', '#F5A623', '#00B894'], borderRadius: 4, ...BAR_LAYOUT }] },
       options: barOpts(false),
     }));
 
@@ -149,8 +150,8 @@ export default function HearingConservationDashboard() {
       data: {
         labels: cak.length ? cak.map((c) => `Kategori ${c.kategori}`) : ['Belum ada data'],
         datasets: [
-          { label: 'Sudah tahun ini', data: cak.length ? cak.map((c) => c.sudahTahunIni) : [0], backgroundColor: '#2E86DE', borderRadius: 4, maxBarThickness: 52 },
-          { label: 'Belum tahun ini', data: cak.length ? cak.map((c) => Math.max(0, c.total - c.sudahTahunIni)) : [0], backgroundColor: isDark ? 'rgba(255,255,255,0.16)' : '#DDE3EA', borderRadius: 4, maxBarThickness: 52 },
+          { label: 'Sudah tahun ini', data: cak.length ? cak.map((c) => c.sudahTahunIni) : [0], backgroundColor: '#2E86DE', borderRadius: 4, ...BAR_LAYOUT },
+          { label: 'Belum tahun ini', data: cak.length ? cak.map((c) => Math.max(0, c.total - c.sudahTahunIni)) : [0], backgroundColor: isDark ? 'rgba(255,255,255,0.16)' : '#DDE3EA', borderRadius: 4, ...BAR_LAYOUT },
         ],
       },
       options: {
@@ -160,8 +161,8 @@ export default function HearingConservationDashboard() {
           datalabels: { color: text, anchor: 'center', align: 'center', font: { size: 10, weight: 'bold', family: FONT }, formatter: (v: number) => (v ? String(v) : '') },
         },
         scales: {
-          x: { stacked: true, beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } },
-          y: { stacked: true, grid: { display: false }, ticks: { color: text, font: { size: 10, family: FONT } } },
+          x: { stacked: true, beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah karyawan', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+          y: { stacked: true, grid: { display: false }, ticks: { color: text, font: { size: 10, family: FONT } }, title: { display: true, text: 'Kategori pajanan', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
         },
       } as ChartOptions<'bar'>,
     }));
@@ -173,7 +174,7 @@ export default function HearingConservationDashboard() {
       type: 'bar',
       data: {
         labels: kelasLabels.length ? kelasLabels : ['Belum ada data'],
-        datasets: [{ data: kelasLabels.length ? kelasLabels.map((k) => kelasMap[k] || 0) : [0], backgroundColor: kelasLabels.length ? kelasLabels.map((k) => KELAS_COLOR[k] || '#778899') : ['#B0B7C3'], borderRadius: 5, maxBarThickness: 44 }],
+        datasets: [{ data: kelasLabels.length ? kelasLabels.map((k) => kelasMap[k] || 0) : [0], backgroundColor: kelasLabels.length ? kelasLabels.map((k) => KELAS_COLOR[k] || '#778899') : ['#B0B7C3'], borderRadius: 4, ...BAR_LAYOUT }],
       },
       options: barOpts(false),
     }));
@@ -183,7 +184,7 @@ export default function HearingConservationDashboard() {
       type: 'bar',
       data: {
         labels: ['Suspek', 'Retest', 'Konfirmasi', 'Terlambat'],
-        datasets: [{ data: [d.sts.suspek || 0, d.sts.retestDijadwalkan || 0, d.sts.terkonfirmasi || 0, d.sts.retestTerlambat || 0], backgroundColor: ['#E63946', '#F5A623', '#8E44AD', '#B91C1C'], borderRadius: 5, maxBarThickness: 40 }],
+        datasets: [{ data: [d.sts.suspek || 0, d.sts.retestDijadwalkan || 0, d.sts.terkonfirmasi || 0, d.sts.retestTerlambat || 0], backgroundColor: ['#E63946', '#F5A623', '#8E44AD', '#B91C1C'], borderRadius: 4, ...BAR_LAYOUT }],
       },
       options: barOpts(false),
     }));

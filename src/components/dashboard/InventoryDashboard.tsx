@@ -396,7 +396,9 @@ export default function InventoryDashboard() {
     if (stockStatusCanvasRef.current) {
 
       const ORDER = ['Aman', 'Menipis', 'Kritis', 'Habis'] as const;
-      const COLOR: Record<string, string> = { Aman: '#00B894', Menipis: '#F39C12', Kritis: '#FF8C42', Habis: '#E74C3C' };
+      // Warna status tegas dan mudah dibedakan:
+      // Habis = merah cerah, Menipis = kuning cerah, Kritis = oranye, Aman = hijau.
+      const COLOR: Record<string, string> = { Aman: '#00C853', Menipis: '#FFD000', Kritis: '#FF7A00', Habis: '#FF2D2D' };
       const counts: Record<string, number> = { Aman: 0, Menipis: 0, Kritis: 0, Habis: 0 };
       items.forEach(i => {
         const status = getStockStatus(i);
@@ -436,7 +438,13 @@ export default function InventoryDashboard() {
           },
           datalabels: {
             display: (ctx) => Number(ctx.dataset.data[ctx.dataIndex]) > 0,
-            color: '#ffffff',
+            // Label % bisa berada di atas kuning cerah → pakai warna kontras otomatis.
+            color: (ctx) => {
+              const bg = String((ctx.dataset.backgroundColor as string[])?.[ctx.dataIndex] ?? '#fff');
+              const hex = bg.replace('#', '');
+              const r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
+              return (0.299 * r + 0.587 * g + 0.114 * b) > 170 ? '#3a2a00' : '#ffffff';
+            },
             font: { size: 10, weight: 'bold', family: fontFamily },
             formatter: (v: number) => (total ? `${(v / total * 100).toFixed(0)}%` : ''),
           },
@@ -595,11 +603,11 @@ export default function InventoryDashboard() {
       });
       const values = topFast.map(i => i.avg_monthly_usage || 0);
 
-      // Satu warna tergradasi (oranye brand → oranye pudar). Tiap bar tidak mewakili kategori
-      // berbeda — nama item sudah ada di sumbu Y — sehingga palet warna-warni hanya menambah ramai.
+      // Satu batang = satu item; warna bergerak halus dari oranye brand ke kuning
+      // sehingga tiap batang berbeda namun tidak kontras berdekatan.
       const paletteColors = values.map((_, idx) => {
         const fade = values.length > 1 ? idx / (values.length - 1) : 0;
-        return `rgba(255, 77, 0, ${(0.90 - fade * 0.40).toFixed(2)})`;
+        return `hsl(${22 + fade * 26}, 88%, ${50 + fade * 8}%)`;
       });
       const data: ChartData<'bar'> = {
         labels,
@@ -811,19 +819,19 @@ export default function InventoryDashboard() {
                   style={{
                     padding: '8px 10px',
                     cursor: 'pointer',
-                    border: actionTab === 'kritis' ? '2px solid #FF9800' : undefined,
+                    border: actionTab === 'kritis' ? '2px solid #FFD000' : undefined,
                     transition: 'all 0.15s ease',
                   }}
                   title="Klik untuk melihat daftar obat yang stoknya menipis"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 10, color: '#d97706', fontWeight: 700 }}>Stok Menipis</span>
-                    <AlertTriangle size={14} color="#FF9800" />
+                    <span style={{ fontSize: 10, color: '#9a6b00', fontWeight: 700 }}>Stok Menipis</span>
+                    <AlertTriangle size={14} color="#E6B800" />
                   </div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#FF9800', marginTop: 2, lineHeight: 1.1 }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#E6B800', marginTop: 2, lineHeight: 1.1 }}>
                     {kritisItems.length}
                   </div>
-                  <div style={{ fontSize: 10, color: '#b45309', marginTop: 2, fontWeight: 500 }}>
+                  <div style={{ fontSize: 10, color: '#9a6b00', marginTop: 2, fontWeight: 500 }}>
                     &lt; 3 bulan pemakaian
                   </div>
                 </div>
@@ -929,7 +937,7 @@ export default function InventoryDashboard() {
 
         {/* Chart 4: Top Fast Moving */}
         <div className="card mcu-dashboard-card glow-teal" data-chart="fast" style={{ padding: '3px 6px' }}>
-          <div className="card-head"><div><h2>Pemakaian per Bulan</h2><p className="mcu-dashboard-card-sub">10 item fast-moving</p></div></div>
+          <div className="card-head"><div><h2>Peringkat Fast-Moving</h2><p className="mcu-dashboard-card-sub">10 item dengan pemakaian rata-rata tertinggi per bulan</p></div></div>
           <div className="mcu-dashboard-chart">
             <canvas ref={fastMovingCanvasRef} className="inventory-chart-canvas" />
           </div>

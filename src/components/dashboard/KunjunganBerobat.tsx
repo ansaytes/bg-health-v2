@@ -9,6 +9,7 @@ import {
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { fetchDashboardData } from '@/lib/dashboard-data';
+import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, warnaBar } from '@/lib/chart-standard';
 
 // Register Chart.js plugins and all controllers/scales/elements
 ChartJS.register(...registerables, ChartDataLabels);
@@ -69,6 +70,30 @@ interface MedItem {
   nama: string;
   aturan?: string;
   jumlah?: string | number;
+}
+
+/**
+ * Nama singkat departemen untuk SUMBU diagram.
+ * Nama panjang memakan hampir seluruh lebar kartu, sehingga label singkat di
+ * dalam kurung yang dipakai. Departemen di luar daftar ditampilkan apa adanya.
+ */
+const DEPT_SHORT: { match: RegExp; short: string }[] = [
+  { match: /^plant$/i, short: 'Plant' },
+  { match: /^supply\s*chain/i, short: 'SCM' },
+  { match: /^quality$/i, short: 'Quality' },
+  { match: /^qshe|safety,?\s*health/i, short: 'QSHE' },
+  { match: /^operation/i, short: 'Operation' },
+  { match: /^human\s*capital|^hcgs/i, short: 'HCGS' },
+  { match: /^training|^tdc/i, short: 'TDC' },
+  { match: /^finance|^fat$/i, short: 'FAT' },
+  { match: /^management$/i, short: 'Management' },
+  { match: /^lainnya|^magang|^intern/i, short: 'Lainnya' },
+];
+
+function deptShortName(raw: string): string {
+  const name = raw.trim();
+  if (!name) return 'Lainnya';
+  return DEPT_SHORT.find((d) => d.match.test(name))?.short ?? name;
 }
 
 function parseMedications(val: unknown): MedItem[] {
@@ -227,9 +252,7 @@ export default function KunjunganBerobat() {
     const isDataChange = lastAnimatedSignature.current !== dataSignature;
     lastAnimatedSignature.current = dataSignature;
 
-    const animationSettings = isDataChange
-      ? { duration: 900, easing: 'easeOutQuart' as const }
-      : false as const;
+    const animationSettings = isDataChange ? STANDAR_ANIMASI_BAR : false as const;
     const lineAnimationSettings = isDataChange
       ? { duration: 1000, easing: 'easeOutQuart' as const }
       : false as const;
@@ -371,10 +394,11 @@ export default function KunjunganBerobat() {
           {
             label: 'Jumlah Kunjungan',
             data: labels.length > 0 ? dataValues : [0],
-            backgroundColor: '#FF9800',
-            hoverBackgroundColor: '#FFB74D',
+            // Warna berbeda per batang, harmonis (tidak kontras berdekatan).
+            backgroundColor: (labels.length > 0 ? dataValues : [0]).map((_, i) => warnaBar(i)),
+            hoverBackgroundColor: '#FF8C42',
             borderRadius: 4,
-            barThickness: 14,
+            ...BAR_LAYOUT,
           },
         ],
       };
@@ -405,16 +429,20 @@ export default function KunjunganBerobat() {
         scales: {
           x: {
             beginAtZero: true,
+            grace: '12%',
             grid: { color: gridColor },
             ticks: { color: textColor, font: { size: 10, family: fontFamily }, precision: 0 },
+            title: { display: true, text: 'Jumlah kunjungan', color: textColor, font: { size: 9, weight: 'bold' as const, family: fontFamily } },
           },
           y: {
             grid: { display: false },
+            border: { display: false },
             ticks: {
               color: textColor,
               font: { size: 9, family: fontFamily },
               autoSkip: false,
             },
+            title: { display: true, text: 'Nama pasien', color: textColor, font: { size: 9, weight: 'bold' as const, family: fontFamily } },
           },
         },
       };
@@ -468,10 +496,10 @@ export default function KunjunganBerobat() {
           {
             label: 'Kasus',
             data: diagLabels.length > 0 ? diagValues : [0],
-            backgroundColor: '#E91E63',
-            hoverBackgroundColor: '#F06292',
+            backgroundColor: (diagLabels.length > 0 ? diagValues : [0]).map((_, i) => warnaBar(i)),
+            hoverBackgroundColor: '#E91E63',
             borderRadius: 4,
-            barThickness: 13,
+            ...BAR_LAYOUT,
           },
         ],
       };
@@ -502,11 +530,14 @@ export default function KunjunganBerobat() {
         scales: {
           x: {
             beginAtZero: true,
+            grace: '12%',
             grid: { color: gridColor },
             ticks: { color: textColor, font: { size: 10, family: fontFamily }, precision: 0 },
+            title: { display: true, text: 'Jumlah kasus', color: textColor, font: { size: 9, weight: 'bold' as const, family: fontFamily } },
           },
           y: {
             grid: { display: false },
+            border: { display: false },
             ticks: {
               color: textColor,
               font: { size: 10, family: fontFamily },
@@ -515,6 +546,7 @@ export default function KunjunganBerobat() {
                 return label.length > 22 ? label.slice(0, 20) + '...' : label;
               },
             },
+            title: { display: true, text: 'Diagnosa', color: textColor, font: { size: 9, weight: 'bold' as const, family: fontFamily } },
           },
         },
       };
@@ -569,10 +601,10 @@ export default function KunjunganBerobat() {
           {
             label: 'Jumlah Keluar',
             data: obatLabels.length > 0 ? obatValues : [0],
-            backgroundColor: '#00BCD4',
-            hoverBackgroundColor: '#26C6DA',
+            backgroundColor: (obatLabels.length > 0 ? obatValues : [0]).map((_, i) => warnaBar(i)),
+            hoverBackgroundColor: '#00BCD4',
             borderRadius: 4,
-            barThickness: 13,
+            ...BAR_LAYOUT,
           },
         ],
       };
@@ -603,11 +635,14 @@ export default function KunjunganBerobat() {
         scales: {
           x: {
             beginAtZero: true,
+            grace: '12%',
             grid: { color: gridColor },
             ticks: { color: textColor, font: { size: 10, family: fontFamily }, precision: 0 },
+            title: { display: true, text: 'Jumlah keluar (pcs/tablet)', color: textColor, font: { size: 9, weight: 'bold' as const, family: fontFamily } },
           },
           y: {
             grid: { display: false },
+            border: { display: false },
             ticks: {
               color: textColor,
               font: { size: 10, family: fontFamily },
@@ -616,6 +651,7 @@ export default function KunjunganBerobat() {
                 return label.length > 22 ? label.slice(0, 20) + '...' : label;
               },
             },
+            title: { display: true, text: 'Jenis obat', color: textColor, font: { size: 9, weight: 'bold' as const, family: fontFamily } },
           },
         },
       };
@@ -647,7 +683,7 @@ export default function KunjunganBerobat() {
 
       const deptCounts: Record<string, number> = {};
       filteredRecords.forEach(r => {
-        const d = (r.departemen || '').trim() || 'Lainnya / Magang';
+        const d = deptShortName(r.departemen || '') || 'Lainnya';
         deptCounts[d] = (deptCounts[d] || 0) + 1;
       });
 
@@ -664,10 +700,10 @@ export default function KunjunganBerobat() {
           {
             label: 'Kunjungan',
             data: deptLabels.length > 0 ? deptValues : [0],
-            backgroundColor: '#9B59B6',
-            hoverBackgroundColor: '#AF7AC5',
+            backgroundColor: (deptLabels.length > 0 ? deptValues : [0]).map((_, i) => warnaBar(i)),
+            hoverBackgroundColor: '#9B59B6',
             borderRadius: 4,
-            barThickness: 13,
+            ...BAR_LAYOUT,
           },
         ],
       };
@@ -698,19 +734,24 @@ export default function KunjunganBerobat() {
         scales: {
           x: {
             beginAtZero: true,
+            grace: '12%',
             grid: { color: gridColor },
             ticks: { color: textColor, font: { size: 10, family: fontFamily }, precision: 0 },
+            title: { display: true, text: 'Jumlah kunjungan', color: textColor, font: { size: 9, weight: 'bold' as const, family: fontFamily } },
           },
           y: {
             grid: { display: false },
+            border: { display: false },
             ticks: {
               color: textColor,
               font: { size: 10, family: fontFamily },
+              autoSkip: false,
               callback: function(val) {
                 const label = this.getLabelForValue(Number(val));
                 return label.length > 22 ? label.slice(0, 20) + '...' : label;
               },
             },
+            title: { display: true, text: 'Departemen', color: textColor, font: { size: 9, weight: 'bold' as const, family: fontFamily } },
           },
         },
       };

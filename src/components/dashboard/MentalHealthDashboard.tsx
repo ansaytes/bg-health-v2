@@ -1,13 +1,16 @@
 'use client';
 // Dashboard > Kesehatan Mental. Data dari /api/mental-health/dashboard.
-// Gaya visual mengikuti Monitoring MCU / Hearing Conservation / Ergonomi:
-// grid 3×2 grafik, ringkasan di bar atas, empty-state rapi bila belum ada data.
+//
+// Fokus halaman ini HANYA pada hasil skrining: SRQ-20 dan DASS-21.
+// Tren pengisian sengaja tidak ditampilkan (bukan statistik yang dipakai untuk
+// tindak lanjut). Tiga kartu (SRQ-20, DASS-21, skor subskala) disusun dalam satu
+// baris sehingga memenuhi layar tanpa ruang kosong dan tanpa perlu scroll.
 import { useEffect, useRef, useState } from 'react';
 import { Chart as ChartJS, registerables, type ChartOptions } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { authFetch } from '@/lib/api-client';
-import { sdsBandLabel } from '@/lib/questionnaire-scores';
 import { SITES } from '@/components/administrator/hc-ergo-ui';
+import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT } from '@/lib/chart-standard';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -55,8 +58,7 @@ export default function MentalHealthDashboard() {
 
   const srqRef = useRef<HTMLCanvasElement | null>(null);
   const dassRef = useRef<HTMLCanvasElement | null>(null);
-  const sdsRef = useRef<HTMLCanvasElement | null>(null);
-  const trendRef = useRef<HTMLCanvasElement | null>(null);
+  const subskalaRef = useRef<HTMLCanvasElement | null>(null);
   const siteRef = useRef<HTMLCanvasElement | null>(null);
   const charts = useRef<Record<string, ChartJS | null>>({});
   const lastSignature = useRef<string | null>(null);
@@ -84,7 +86,8 @@ export default function MentalHealthDashboard() {
     const signature = JSON.stringify(d);
     const isDataChange = lastSignature.current !== signature;
     lastSignature.current = signature;
-    const anim = isDataChange ? { duration: 800, easing: 'easeOutQuart' as const } : (false as const);
+    const anim = isDataChange ? STANDAR_ANIMASI_BAR : (false as const);
+    const donutAnim = isDataChange ? STANDAR_ANIMASI_DONUT : (false as const);
 
     const draw = (key: string, el: HTMLCanvasElement | null, make: () => ChartJS) => {
       if (!el) return;
@@ -123,7 +126,7 @@ export default function MentalHealthDashboard() {
           }],
         },
         options: {
-          responsive: true, maintainAspectRatio: false, animation: anim, cutout: '62%', radius: '82%',
+          responsive: true, maintainAspectRatio: false, animation: donutAnim, cutout: '62%', radius: '82%', rotation: 0, circumference: 360,
           plugins: {
             legend: legendRight,
             tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed}${total ? ` (${(c.parsed / total * 100).toFixed(1)}%)` : ''}` } },
@@ -169,18 +172,18 @@ export default function MentalHealthDashboard() {
     doughnut('dass', dassRef.current, dassBand.map(([k]) => k), dassBand.map(([, v]) => v), String(d.instrumen.dass21.terisi), 'RESPONDEN');
 
     // 3. Rata-rata skor DASS-21 per subskala (skala 0–21).
-    //    SDS-30 tidak lagi di halaman ini: instrumen itu mengukur faktor
-    //    psikologi lingkungan kerja dan berada di Higiene Industri.
+    //    SDS-30 tidak di halaman ini: instrumen itu mengukur faktor psikologi
+    //    lingkungan kerja dan berada di Higiene Industri.
     const d21 = d.instrumen.dass21 || {};
-    draw('sds', sdsRef.current, () => new ChartJS(sdsRef.current!, {
+    draw('subskala', subskalaRef.current, () => new ChartJS(subskalaRef.current!, {
       type: 'bar',
       data: {
         labels: ['Depresi', 'Ansietas', 'Stres'],
         datasets: [{
           data: [d21.rataDepresi || 0, d21.rataAnsietas || 0, d21.rataStres || 0],
-          backgroundColor: ['rgba(52,152,219,0.72)', 'rgba(243,156,18,0.72)', 'rgba(231,76,60,0.72)'],
-          borderRadius: 5,
-          maxBarThickness: 40,
+          backgroundColor: ['rgba(52,152,219,0.78)', 'rgba(243,156,18,0.78)', 'rgba(231,76,60,0.78)'],
+          borderRadius: 4,
+          ...BAR_LAYOUT,
         }],
       },
       options: {
@@ -191,33 +194,34 @@ export default function MentalHealthDashboard() {
           datalabels: { color: text, anchor: 'end', align: 'top', clamp: true, clip: false, font: { size: 10, weight: 'bold' as const, family: FONT }, formatter: (v: number) => (v ? String(v) : '') },
         },
         scales: {
-          x: { grid: { display: false }, ticks: { color: text, font: { size: 10, family: FONT }, autoSkip: false } },
-          y: { beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT } } },
+          x: { grid: { display: false }, ticks: { color: text, font: { size: 10, family: FONT }, autoSkip: false }, title: { display: true, text: 'Subskala DASS-21', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+          y: { beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT } }, title: { display: true, text: 'Rata-rata skor', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
         },
       } as ChartOptions<'bar'>,
     }));
 
-    // 5. Tren pengisian SRQ-20 per bulan (batang total, garis perlu tindak lanjut)
-    const trend = (d.trend || []) as D[];
-    draw('trend', siteRef.current, () => new ChartJS(siteRef.current!, {
+    // 4. Sebaran SRQ-20 per site (bukan tren — hanya distribusi wilayah).
+    const perSiteData = (d.perSite || []) as D[];
+    draw('site', siteRef.current, () => new ChartJS(siteRef.current!, {
+      type: 'bar',
       data: {
-        labels: trend.map(t => d.bulan[Number(String(t.bulan).slice(5)) - 1]),
+        labels: perSiteData.length ? perSiteData.map((s) => String(s.site)) : ['Belum ada data'],
         datasets: [
-          { type: 'bar' as const, label: 'Diisi', data: trend.map(t => t.srq), backgroundColor: BLUE, borderRadius: 4, maxBarThickness: 26, order: 2 },
-          { type: 'line' as const, label: 'Perlu tindak lanjut', data: trend.map(t => t.perluTindakLanjut), borderColor: '#E74C3C', backgroundColor: '#E74C3C', tension: 0.35, pointRadius: 3, borderWidth: 2, order: 1 },
+          { label: 'Responden', data: perSiteData.length ? perSiteData.map((s) => s.total || 0) : [0], backgroundColor: 'rgba(52,152,219,0.78)', borderRadius: 4, ...BAR_LAYOUT },
+          { label: 'SRQ-20 ≥ 6', data: perSiteData.length ? perSiteData.map((s) => s.perluTindakLanjut || 0) : [0], backgroundColor: 'rgba(231,76,60,0.80)', borderRadius: 4, ...BAR_LAYOUT },
         ],
       },
       options: {
-        responsive: true, maintainAspectRatio: false, animation: anim,
+        responsive: true, maintainAspectRatio: false, animation: anim, indexAxis: 'y',
         plugins: {
-          legend: { position: 'bottom', labels: { color: text, font: { size: 9.5, family: FONT }, boxWidth: 10, usePointStyle: true } },
+          legend: { position: 'bottom', labels: { color: text, font: { size: 10, family: FONT }, boxWidth: 10, usePointStyle: true } },
           datalabels: { display: false },
         },
         scales: {
-          x: { grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT } } },
-          y: { beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } },
+          x: { beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah orang', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+          y: { grid: { display: false }, ticks: { color: text, font: { size: 10, family: FONT }, autoSkip: false }, title: { display: true, text: 'Site', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
         },
-      } as ChartOptions,
+      } as ChartOptions<'bar'>,
     }));
 
     return () => {
@@ -236,52 +240,54 @@ export default function MentalHealthDashboard() {
 
   const perSite = (d.perSite || []) as D[];
   const i = d.instrumen;
+  // Ringkasan SRQ-20 ditonjolkan sebagai angka besar di bar atas agar hasil
+  // skrining langsung terbaca sebelum melihat diagram.
+  const srqPerlu = Number(i.srq20.perluTindakLanjut || 0);
+  const srqTerisi = Number(i.srq20.terisi || 0);
+  const srqPersen = srqTerisi ? (srqPerlu / srqTerisi) * 100 : 0;
+  const dassPerlu = Object.entries((i.dass21.band || {}) as Record<string, number>)
+    .filter(([k]) => ['Sedang', 'Berat', 'Sangat Berat'].includes(k))
+    .reduce((sum, [, v]) => sum + Number(v || 0), 0);
+  const dassTerisi = Number(i.dass21.terisi || 0);
 
   return (
-    <div className="dashboard mh-dash" style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className="dashboard mh-dash" style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: 10, display: 'flex', flexDirection: 'column', gap: 8, height: '100%' }}>
       <div className="kunjungan-filter-bar" style={{ flexShrink: 0, flexWrap: 'wrap' }}>
         <select className="admin-filter-select" value={site} onChange={(e) => setSite(e.target.value)}><option value="">All Site</option>{SITES.map((s) => <option key={s}>{s}</option>)}</select>
         <span className="kunjungan-total-right" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <span>Kesehatan Mental · SRQ-20 · DASS-21</span>
           <span>Responden <b>{d.totalResponden}</b></span>
-          <span>SRQ ≥6 <b style={{ color: i.srq20.perluTindakLanjut ? '#E74C3C' : 'inherit' }}>{i.srq20.perluTindakLanjut}</b></span>
+          <span>SRQ ≥6 <b style={{ color: i.srq20.perluTindakLanjut ? '#FF2D2D' : 'inherit' }}>{i.srq20.perluTindakLanjut}</b></span>
           <span>DASS terisi <b>{i.dass21.terisi}</b></span>
         </span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gridTemplateRows: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8, flex: 1, minHeight: 0 }}>
+      {/* Highlight hasil skrining — yang paling penting untuk tindak lanjut. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, flexShrink: 0 }}>
+        {[
+          { label: 'SRQ-20 Terisi', value: srqTerisi, caption: 'responden', color: '#E74C3C' },
+          { label: 'SRQ-20 ≥ 6', value: srqPerlu, caption: `${srqPersen.toFixed(1)}% perlu tindak lanjut`, color: '#E74C3C' },
+          { label: 'DASS-21 Terisi', value: dassTerisi, caption: 'responden', color: '#F39C12' },
+          { label: 'DASS-21 Perlu Perhatian', value: dassPerlu, caption: 'keparahan sedang ke atas', color: '#F39C12' },
+        ].map((kpi) => (
+          <div key={kpi.label} className="card" style={{ padding: '8px 12px', minHeight: 0 }}>
+            <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--muted-foreground)' }}>{kpi.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.15, color: kpi.color }}>{kpi.value}</div>
+            <div style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>{kpi.caption}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gridTemplateRows: 'minmax(0, 1.2fr) minmax(0, 1fr)', gap: 8, flex: 1, minHeight: 0 }}>
         <ChartCard title="SRQ-20" sub="Ambang ≥ 6 = perlu tindak lanjut" accent="#E74C3C" empty={!i.srq20.terisi}><canvas ref={srqRef} /></ChartCard>
         <ChartCard title="DASS-21" sub="Keparahan terburuk dari depresi, ansietas, stres" accent="#F39C12" empty={!i.dass21.terisi}><canvas ref={dassRef} /></ChartCard>
-        <ChartCard title="Rata-rata Skor DASS-21" sub="Depresi · ansietas · stres (skala 0–21)" accent="#3498DB" empty={!i.dass21.terisi}><canvas ref={sdsRef} /></ChartCard>
-
-        <ChartCard title="Tren Pengisian & Kasus SRQ-20" sub="12 bulan terakhir" accent="#2E86DE" empty={!d.trend.some((t: D) => t.srq)}><canvas ref={trendRef} /></ChartCard>
-
-        <div className="card" style={{ padding: '6px 10px', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          <div className="card-head" style={{ flexShrink: 0 }}>
-            <span style={{ width: 4, height: 20, borderRadius: 2, background: '#778899', flexShrink: 0 }} />
-            <div><h2>Sebaran per Site</h2><p>Responden &amp; kasus SRQ-20</p></div>
-          </div>
-          <div style={{ overflow: 'auto', flex: 1, minHeight: 0 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5 }}>
-              <thead><tr>{['Site', 'Responden', 'SRQ ≥6'].map(h => <th key={h} style={{ textAlign: 'left', padding: '5px 8px', borderBottom: '1px solid var(--border)', color: 'var(--muted-foreground)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>)}</tr></thead>
-              <tbody>
-                {perSite.map((s) => (
-                  <tr key={s.site}>
-                    <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--border)' }}>{s.site}</td>
-                    <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--border)', fontWeight: 700 }}>{s.total}</td>
-                    <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--border)', fontWeight: 700, color: s.perluTindakLanjut ? '#E74C3C' : 'inherit' }}>{s.perluTindakLanjut}</td>
-                  </tr>
-                ))}
-                {!perSite.length && <tr><td colSpan={3} style={{ padding: 16, textAlign: 'center', color: 'var(--muted-foreground)' }}>Belum ada data.</td></tr>}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <ChartCard title="Rata-rata Skor DASS-21" sub="Depresi · ansietas · stres (skala 0–21)" accent="#3498DB" empty={!i.dass21.terisi}><canvas ref={subskalaRef} /></ChartCard>
+        <ChartCard title="Sebaran SRQ-20 per Site" sub="Responden &amp; kasus perlu tindak lanjut" accent="#2E86DE" empty={!perSite.length}><canvas ref={siteRef} /></ChartCard>
       </div>
 
       <div style={{ fontSize: 9.5, color: 'var(--muted-foreground)', lineHeight: 1.5, flexShrink: 0 }}>
         Catatan: SRQ-20 dan DASS-21 adalah instrumen skrining klinis per individu — diagnosis tetap ditetapkan dokter.
-        Faktor psikologi lingkungan kerja (SDS-30) ada di Dashboard → Higiene Industri → Psikologi Lingkungan.
+        Faktor psikologi lingkungan kerja (SDS-30) ada di Data Entry → Psikologi Lingkungan Kerja.
       </div>
     </div>
   );

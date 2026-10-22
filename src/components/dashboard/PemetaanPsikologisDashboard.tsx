@@ -7,6 +7,7 @@ import { Chart as ChartJS, registerables, type ChartOptions } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { authFetch } from '@/lib/api-client';
 import { SITES } from '@/components/administrator/hc-ergo-ui';
+import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT } from '@/lib/chart-standard';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -88,7 +89,8 @@ export default function PemetaanPsikologisDashboard() {
     const signature = JSON.stringify(d);
     const isDataChange = lastSignature.current !== signature;
     lastSignature.current = signature;
-    const anim = isDataChange ? { duration: 800, easing: 'easeOutQuart' as const } : (false as const);
+    const anim = isDataChange ? STANDAR_ANIMASI_BAR : (false as const);
+    const donutAnim = isDataChange ? STANDAR_ANIMASI_DONUT : (false as const);
 
     const draw = (key: string, el: HTMLCanvasElement | null, make: () => ChartJS) => {
       if (!el) return;
@@ -106,9 +108,9 @@ export default function PemetaanPsikologisDashboard() {
       data: {
         labels: memadai.map((j: D) => j.nama),
         datasets: [
-          { label: 'Ringan', data: memadai.map((j: D) => j.jumlahPerTingkat.RINGAN), backgroundColor: GREEN, borderRadius: 2, maxBarThickness: 22, stack: 's' },
-          { label: 'Sedang', data: memadai.map((j: D) => j.jumlahPerTingkat.SEDANG), backgroundColor: AMBER, borderRadius: 2, maxBarThickness: 22, stack: 's' },
-          { label: 'Berat', data: memadai.map((j: D) => j.jumlahPerTingkat.BERAT), backgroundColor: RED, borderRadius: 2, maxBarThickness: 22, stack: 's' },
+          { label: 'Ringan', data: memadai.map((j: D) => j.jumlahPerTingkat.RINGAN), backgroundColor: GREEN, borderRadius: 2, maxBarThickness: BAR_LAYOUT.maxBarThickness, stack: 's' },
+          { label: 'Sedang', data: memadai.map((j: D) => j.jumlahPerTingkat.SEDANG), backgroundColor: AMBER, borderRadius: 2, maxBarThickness: BAR_LAYOUT.maxBarThickness, stack: 's' },
+          { label: 'Berat', data: memadai.map((j: D) => j.jumlahPerTingkat.BERAT), backgroundColor: RED, borderRadius: 2, maxBarThickness: BAR_LAYOUT.maxBarThickness, stack: 's' },
         ],
       },
       options: {
@@ -120,7 +122,7 @@ export default function PemetaanPsikologisDashboard() {
         },
         scales: {
           x: { stacked: true, beginAtZero: true, max: indikator.length, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } },
-          y: { stacked: true, grid: { display: false }, ticks: { color: text, font: { size: 9.5, family: FONT }, autoSkip: false } },
+          y: { stacked: true, grid: { display: false }, ticks: { color: text, font: { size: 9.5, family: FONT }, autoSkip: false }, title: { display: true, text: 'Departemen', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
         },
       } as ChartOptions<'bar'>,
     }));
@@ -145,7 +147,7 @@ export default function PemetaanPsikologisDashboard() {
         }],
       },
       options: {
-        responsive: true, maintainAspectRatio: false, animation: anim, cutout: '62%', radius: '82%',
+        responsive: true, maintainAspectRatio: false, animation: donutAnim, cutout: '62%', radius: '82%', rotation: 0, circumference: 360,
         plugins: {
           legend: { position: 'right', labels: { color: text, font: { size: 9.5, weight: 'bold' as const, family: FONT }, boxWidth: 10, usePointStyle: true } },
           tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed} indikator${total ? ` (${(c.parsed / total * 100).toFixed(1)}%)` : ''}` } },
@@ -185,7 +187,7 @@ export default function PemetaanPsikologisDashboard() {
         datasets: [{
           data: memadai.map((j: D) => j.tertinggi.rataRata),
           backgroundColor: memadai.map((j: D) => (j.tingkat ? TINGKAT_COLOR[j.tingkat] : STEEL)),
-          borderRadius: 4, maxBarThickness: 22,
+          borderRadius: 4, maxBarThickness: BAR_LAYOUT.maxBarThickness,
         }],
       },
       options: {
@@ -206,8 +208,8 @@ export default function PemetaanPsikologisDashboard() {
           },
         },
         scales: {
-          x: { beginAtZero: true, max: 35, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT } } },
-          y: { grid: { display: false }, ticks: { color: text, font: { size: 9.5, family: FONT }, autoSkip: false } },
+          x: { beginAtZero: true, max: 35, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT } }, title: { display: true, text: 'Rata-rata skor indikator', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+          y: { grid: { display: false }, ticks: { color: text, font: { size: 9.5, family: FONT }, autoSkip: false }, title: { display: true, text: 'Departemen', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
         },
       } as ChartOptions<'bar'>,
     }));
@@ -239,7 +241,7 @@ export default function PemetaanPsikologisDashboard() {
           <option value="departemen">Per Departemen</option>
           <option value="jabatan">Per Jabatan</option>
         </select>
-        <select className="admin-filter-select" value={minResponden} onChange={(e) => setMinResponden(Number(e.target.value))} title="Ambang minimum responden per departemen">
+        <select className="admin-filter-select" value={minResponden} onChange={(e) => setMinResponden(Number(e.target.value))} title="Ambang minimum responden per kelompok">
           {[10, 15, 20, 25, 30].map(n => <option key={n} value={n}>Min. {n} responden</option>)}
         </select>
         {/* Baseline: periode pembanding. Kosong = tanpa pembanding. */}
@@ -331,11 +333,6 @@ export default function PemetaanPsikologisDashboard() {
             </div>
           )}
         </div>
-      </div>
-
-      <div style={{ fontSize: 9.5, color: 'var(--muted-foreground)', lineHeight: 1.5, flexShrink: 0 }}>
-        Ambang tingkat: ≤ 9 ringan · 10–24 sedang · &gt; 24 berat (Lampiran Permenaker 5/2018 hal. 207).
-        Agregasi per {kelompok} dan ambang minimum {d.minResponden} responden adalah <b>kebijakan internal</b> — Permenaker hanya mengatur penilaian tingkat individu.
       </div>
     </div>
   );
