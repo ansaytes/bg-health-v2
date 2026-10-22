@@ -13,8 +13,9 @@ import {
 } from '@/components/dashboard/MCUDashboardShared';
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-const PALETTE = ['#00B894', '#FF4444', '#616161', '#778899'];
-const CHART_COLORS = ['#00B894', '#F39C12', '#FF6B6B'];
+const PALETTE = ['#00B894', 'rgba(255,62,48,0.95)', '#616161', '#778899'];
+// "Belum terlaksana" dan "Expired" memakai merah cerah agar langsung terlihat.
+const CHART_COLORS = ['#00B894', '#F39C12', 'rgba(255,62,48,0.92)'];
 // Setiap batang pada "10 Jobsite MCU Tidak Ditemukan Terbanyak" memakai warna berbeda.
 const SITE_BAR_COLORS = [
   '#E74C3C', '#F39C12', '#F1C40F', '#2ECC71', '#1ABC9C',
@@ -183,7 +184,7 @@ export default function MonitoringMCU() {
                 <MCUChart type="doughnut" labels={['Tepat Waktu', 'Terlambat', 'Belum Terlaksana']} values={[coverage.onTime, coverage.late, coverage.pending]} colors={CHART_COLORS} centerText={`${coverage.total}`} percentLabels />
               </MCUChartCard>
               <MCUChartCard title="Tren Expired" className="glow-amber">
-                <MCUChart type="bar" labels={MONTH_LABELS} values={expiredTrend} colors={Array(12).fill('#E74C3C')} legendLabel="MCU kedaluwarsa" />
+                <MCUChart type="bar" labels={MONTH_LABELS} values={expiredTrend} colors={Array(12).fill('rgba(255,62,48,0.92)')} legendLabel="MCU kedaluwarsa" />
               </MCUChartCard>
             </div>
 

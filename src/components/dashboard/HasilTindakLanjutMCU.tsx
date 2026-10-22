@@ -179,19 +179,20 @@ export default function HasilTindakLanjutMCU() {
   const resultColors = resultDistribution.map(([label]) => RESULT_COLORS[label.toLowerCase()] || '#616161');
   const frsColors = frsDistribution.map(([label]) => {
     const normalized = label.toLowerCase();
-    if (normalized.includes('cek parameter')) return '#F39C12';
+    // Oranye gelap untuk "cek parameter" agar tidak tertukar dengan kuning.
+    if (normalized.includes('cek parameter')) return 'rgba(214, 108, 0, 0.92)';
     if (normalized.includes('no data') || normalized.includes('tidak ada data') || normalized.includes('belum')) return '#616161';
-    if (normalized.includes('high')) return '#E74C3C';
-    if (normalized.includes('intermediate')) return '#FFD700';
+    if (normalized.includes('high')) return 'rgba(255, 62, 48, 0.95)';
+    if (normalized.includes('intermediate')) return 'rgba(255, 196, 0, 0.95)';
     if (normalized.includes('low')) return '#00B894';
     return '#616161';
   });
   const riskColors = riskDistribution.map(([label], index) => {
     const normalized = label.toLowerCase();
-    if (normalized.includes('belum lengkap')) return '#F39C12';
+    if (normalized.includes('belum lengkap')) return 'rgba(214, 108, 0, 0.92)';
     if (normalized.includes('no data') || normalized.includes('tidak ada data') || normalized.includes('belum')) return '#616161';
-    if (normalized === 'merah') return '#FF4444';
-    if (normalized === 'kuning') return '#FFD700';
+    if (normalized === 'merah') return 'rgba(255, 62, 48, 0.95)';
+    if (normalized === 'kuning') return 'rgba(255, 196, 0, 0.95)';
     if (normalized === 'hijau') return '#00B894';
     return palette[index % palette.length];
   });
@@ -234,7 +235,7 @@ export default function HasilTindakLanjutMCU() {
                 <MCUChart type="bar" horizontal labels={diseases.map(([name]) => name)} values={diseases.map(([, count]) => count)} colors={diseases.map((_, index) => palette[index % palette.length])} legendLabel="Karyawan dengan diagnosis" />
               </MCUChartCard>
               <MCUChartCard title="Status Follow Up" className="glow-amber">
-                <MCUChart type="doughnut" labels={['Selesai FU', 'Perlu FU']} values={[followUpSummary.done, followUpSummary.needs]} colors={['#00B894', '#FF8C42']} centerText={`${followUpSummary.done + followUpSummary.needs}`} percentLabels />
+                <MCUChart type="doughnut" labels={['Selesai FU', 'Perlu FU']} values={[followUpSummary.done, followUpSummary.needs]} colors={['#00B894', 'rgba(255, 196, 0, 0.95)']} centerText={`${followUpSummary.done + followUpSummary.needs}`} percentLabels />
               </MCUChartCard>
               <MCUChartCard title="Framingham Risk Score" className="glow-steel">
                 <MCUChart type="doughnut" labels={frsDistribution.map(([name]) => name)} values={frsDistribution.map(([, count]) => count)} colors={frsColors} centerText={`${frsDistribution.reduce((sum, [, count]) => sum + count, 0)}`} percentLabels />

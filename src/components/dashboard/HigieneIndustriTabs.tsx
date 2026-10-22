@@ -16,7 +16,7 @@ export type HigieneTab = 'hearing' | 'ergonomi' | 'psikologi';
 const TABS: { key: HigieneTab; label: string }[] = [
   { key: 'hearing', label: 'Hearing Conservation' },
   { key: 'ergonomi', label: 'Ergonomi' },
-  { key: 'psikologi', label: 'Psikologi Lingkungan' },
+  { key: 'psikologi', label: 'Psikologi Lingkungan Kerja' },
 ];
 
 export default function HigieneIndustriTabs({ initialTab = 'hearing' }: { initialTab?: HigieneTab }) {
@@ -27,7 +27,7 @@ export default function HigieneIndustriTabs({ initialTab = 'hearing' }: { initia
       <div
         role="tablist"
         aria-label="Higiene Industri"
-        style={{ display: 'flex', gap: 4, padding: '8px 12px 0', flexShrink: 0, borderBottom: '1px solid var(--border)' }}
+        style={{ display: 'flex', gap: 4, padding: '8px 12px 0', justifyContent: 'center', flexShrink: 0, borderBottom: '1px solid var(--border)' }}
       >
         {TABS.map((t) => {
           const active = tab === t.key;

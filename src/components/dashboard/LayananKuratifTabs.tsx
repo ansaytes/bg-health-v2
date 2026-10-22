@@ -23,7 +23,7 @@ export default function LayananKuratifTabs({ initialTab = 'kunjungan' }: { initi
       <div
         role="tablist"
         aria-label="Layanan Kuratif"
-        style={{ display: 'flex', gap: 4, padding: '8px 12px 0', flexShrink: 0, borderBottom: '1px solid var(--border)' }}
+        style={{ display: 'flex', gap: 4, padding: '8px 12px 0', justifyContent: 'center', flexShrink: 0, borderBottom: '1px solid var(--border)' }}
       >
         {TABS.map((t) => {
           const active = tab === t.key;

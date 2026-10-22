@@ -11,6 +11,7 @@ import {
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { supabase } from '@/lib/supabase';
+import { STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT } from '@/lib/chart-standard';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -343,11 +344,10 @@ export function MCUChart({
     const isDataChange = lastAnimatedSignature.current !== dataSignature;
     lastAnimatedSignature.current = dataSignature;
 
-    const animation = isDataChange ? {
-      duration: type === 'doughnut' ? 1000 : 900,
-      easing: 'easeOutQuart' as const,
-      ...(type === 'doughnut' ? { animateRotate: true, animateScale: false } : {}),
-    } : false;
+    // Standar animasi aplikasi:
+    //  - donut : berputar SEARAH JARUM JAM mulai dari pukul 12 (rotation 0)
+    //  - bar   : tumbuh DARI GARIS DASAR (vertikal: dari bawah, horizontal: dari kiri)
+    const animation = isDataChange ? (type === 'doughnut' ? STANDAR_ANIMASI_DONUT : STANDAR_ANIMASI_BAR) : false;
 
     const config: ChartConfiguration = {
       type,
@@ -370,10 +370,10 @@ export function MCUChart({
         maintainAspectRatio: false,
         // Mengikuti dashboard GAS: chart dibuat ulang dan dianimasikan setiap DATA berubah
         // (ganti halaman, filter, refresh). Ganti tema tidak mengulang animasi.
-        //  - donut : berputar (animateRotate), tanpa scale, 600 ms, easeOutQuart
-        //  - bar   : tumbuh dari garis dasar, 500 ms, easeOutQuart
+        //  - donut : STANDAR_ANIMASI_DONUT (berputar searah jarum jam)
+        //  - bar   : STANDAR_ANIMASI_BAR (tumbuh dari garis dasar, regrow)
         animation: animation as ChartOptions['animation'],
-        ...(type === 'doughnut' ? { cutout: '62%', radius: '82%' } : {}),
+        ...(type === 'doughnut' ? { cutout: '62%', radius: '82%', rotation: 0, circumference: 360 } : {}),
         plugins: {
           legend: {
             display: type === 'doughnut',

@@ -1,8 +1,15 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { Chart as ChartJS, registerables } from 'chart.js';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { MONTHS, JOBSITES } from '@/lib/lagging-data';
 import { fetchDashboardData } from '@/lib/dashboard-data';
+import { STANDAR_ANIMASI_BAR, skalaBar } from '@/lib/chart-standard';
+
+ChartJS.register(...registerables, ChartDataLabels);
+
+const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
 /* ──────────────────────────────────────────────────────────────
    Types
@@ -85,6 +92,9 @@ export default function DashboardView() {
   const [kpiData, setKpiData] = useState<KpiRow[]>([]);
   const [asrRanking, setAsrRanking] = useState<AsrRankRow[]>([]);
   const [sickList, setSickList] = useState<SickEmployee[]>([]);
+  const [sickMode, setSickMode] = useState<'hari' | 'spell'>('hari');
+  const sickCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const sickChartRef = useRef<import('chart.js').Chart | null>(null);
   const [loadingKpi, setLoadingKpi] = useState(true);
   const [loadingSick, setLoadingSick] = useState(false);
   const [loadingAsr, setLoadingAsr] = useState(false);
@@ -402,6 +412,135 @@ export default function DashboardView() {
 
   const sickListCount = sickList.length;
 
+  // Peringkat karyawan sakit. Ada DUA dasar peringkat (bukan filter):
+  //  - 'hari'  : jumlah hari sakit A + B + C
+  //  - 'spell' : jumlah spell (episode sakit)
+  // A/B/C adalah EPISODE penyakit dalam periode (Kepdirjen 185/2019): episode
+  // pertama = A, sembuh → masuk → sakit lagi = B, dst. Jumlah spell diturunkan
+  // dari banyaknya episode, jadi rincian A/B/C selalu ikut ditampilkan.
+  const sickRanking = useMemo(() => {
+    const rows = sickList.map((e) => {
+      const hari = [Number(e.hari_a || 0), Number(e.hari_b || 0), Number(e.hari_c || 0)];
+      return {
+        nama: e.nama || '-',
+        hari,
+        hariA: hari[0],
+        hariB: hari[1],
+        hariC: hari[2],
+        // Episode yang benar-benar berisi hari sakit (A/B/C kosong tidak dihitung).
+        episode: hari.filter((h) => h > 0).length,
+        spell: Number(e.jumlah_spell || 0),
+        total: hari[0] + hari[1] + hari[2],
+      };
+    });
+    return rows
+      .filter((r) => (sickMode === 'spell' ? r.spell > 0 || r.episode > 0 : r.total > 0))
+      .sort((a, b) => (sickMode === 'spell'
+        ? b.spell - a.spell || b.episode - a.episode || b.total - a.total
+        : b.total - a.total || b.spell - a.spell))
+      .slice(0, 10);
+  }, [sickList, sickMode]);
+
+  // Urutan peringkat dijadikan tanda animasi: setiap mode/ganti periode/filter
+  // merubah baris mapun urutan → grafik dibuat ulang dan dianimasikan lagi.
+  const sickSignature = sickRanking.map((r) => `${r.nama}|${r.hariA}|${r.hariB}|${r.hariC}|${r.spell}`).join(';');
+
+  useEffect(() => {
+    const canvas = sickCanvasRef.current;
+    // Canvas baru ada setelah state "tidak ada data" hilang, jadi chart lama
+    // wajib dihancurkan lebih dulu sebelum keluar lebih awal.
+    if (!canvas || !sickRanking.length) {
+      sickChartRef.current?.destroy();
+      sickChartRef.current = null;
+      return;
+    }
+    const text = isDark ? '#F9FAFB' : '#111827';
+    const grid = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+    // Batang tetap memperlihatkan episode A/B/C (dasar analisa spell); angka
+    // spell ditulis di ujung batang. Mode hanya menentukan urutan peringkat.
+    const labels = sickRanking.map((r) => r.nama);
+    const stackProps = { stack: 's', maxBarThickness: 16, categoryPercentage: 0.72, barPercentage: 0.92 };
+    const datasets = [
+      { label: 'Hari A', data: sickRanking.map((r) => r.hariA), backgroundColor: 'rgba(231,76,60,0.82)', ...stackProps },
+      { label: 'Hari B', data: sickRanking.map((r) => r.hariB), backgroundColor: 'rgba(243,156,18,0.82)', ...stackProps },
+      { label: 'Hari C', data: sickRanking.map((r) => r.hariC), backgroundColor: 'rgba(52,152,219,0.78)', ...stackProps },
+    ];
+    // Ruang untuk label total + angka spell di ujung batang.
+    const maxTotal = Math.max(...sickRanking.map((r) => r.total), 1);
+
+    if (sickChartRef.current) {
+      sickChartRef.current.destroy();
+      sickChartRef.current = null;
+    }
+    sickChartRef.current = new ChartJS(canvas, {
+      type: 'bar',
+      data: { labels, datasets },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        // Regrow dari garis dasar setiap data/mode/urutan berubah.
+        animation: STANDAR_ANIMASI_BAR,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { color: text, font: { size: 9.5, family: FONT }, boxWidth: 10, usePointStyle: true },
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            bodyFont: { size: 10, family: FONT },
+            titleFont: { size: 10, family: FONT },
+            callbacks: {
+              title: (items) => items[0]?.label ?? '',
+              footer: (items) => {
+                const row = sickRanking[items[0]?.dataIndex ?? 0];
+                if (!row) return '';
+                return `Total ${row.total} hari • ${row.spell} spell • ${row.episode} episode`;
+              },
+            },
+          },
+          datalabels: {
+            // Label nurut dalam segmen hanya untuk episode yang punya hari;
+            // nilai total + spell ditulis di ujung batang.
+            display: (c) => Number(c.dataset.data[c.dataIndex]) > 0,
+            color: '#fff',
+            font: { size: 8.5, weight: 'bold' as const, family: FONT },
+            formatter: (v: number) => (v > 0 ? String(v) : ''),
+          },
+        },
+        scales: skalaBar({ horizontal: true, textColor: text, gridColor: grid, suggestedMax: maxTotal * 1.3 }),
+      },
+      plugins: [{
+        id: 'sick-total-label',
+        afterDatasetsDraw: (chart) => {
+          const ctx = chart.ctx;
+          ctx.save();
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          // Ujung batang bertumpuk = batas kanan dataset teratas.
+          const meta = chart.getDatasetMeta(chart.data.datasets.length - 1);
+          meta.data.forEach((el, i) => {
+            const row = sickRanking[i];
+            if (!row || row.total <= 0) return;
+            const x = el.x + 4;
+            ctx.fillStyle = text;
+            ctx.font = `bold 9px ${FONT}`;
+            ctx.fillText(`${row.total} hari`, x, el.y - 4);
+            ctx.fillStyle = 'rgba(255, 77, 0, 1)';
+            ctx.font = `bold 8px ${FONT}`;
+            ctx.fillText(`${row.spell} spell`, x, el.y + 5);
+          });
+          ctx.restore();
+        },
+      }],
+    });
+    return () => {
+      sickChartRef.current?.destroy();
+      sickChartRef.current = null;
+    };
+  }, [sickSignature, isDark, sickMode]);
+
   return (
     <div className="dashboard">
       {/* Header filter bar */}
@@ -531,65 +670,51 @@ export default function DashboardView() {
           </div>
         </div>
 
-        {/* RIGHT column - Sick list */}
+        {/* RIGHT column — peringkat karyawan sakit (diagram) */}
         <div className="card glow-coral sick-list-card">
           <div className="card-head" style={{ flexShrink: 0 }}>
             <div className="card-icon" style={{ background: 'rgba(255,99,71,.1)' }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="#ff6347" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" /></svg>
             </div>
-            <div>
-              <h2>List Karyawan Sakit</h2>
-              <p>{isYTD
-                ? 'Harap Pilih Periode Bulan'
-                : `${sickListCount} karyawan ${selectedSite !== 'All Site' ? `(${selectedSite})` : ''} - ${periodLabel}`}</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flex: 1, minWidth: 0 }}>
+              <div style={{ minWidth: 0 }}>
+                <h2>Peringkat Karyawan Sakit</h2>
+                <p>{isYTD
+                  ? 'Harap Pilih Periode Bulan'
+                  : `${sickListCount} karyawan ${selectedSite !== 'All Site' ? `(${selectedSite})` : ''} - ${periodLabel} · ${sickMode === 'spell' ? 'urut spell' : 'urut total hari'}`}</p>
+              </div>
+              {!isYTD && (
+                <select
+                  value={sickMode}
+                  onChange={(e) => setSickMode(e.target.value as 'hari' | 'spell')}
+                  title="Dasar peringkat karyawan sakit"
+                  style={{ height: 26, fontSize: 10, flexShrink: 0 }}
+                >
+                  <option value="hari">Jumlah hari sakit</option>
+                  <option value="spell">Jumlah spell</option>
+                </select>
+              )}
             </div>
           </div>
-          <div className="sick-list-scroll">
+          <div className="sick-list-scroll" style={{ overflow: 'hidden' }}>
             {isYTD ? (
               <div className="sick-empty-state">
-                Harap Pilih Periode Bulan Untuk Menampilkan List Karyawan Sakit
+                Harap Pilih Periode Bulan Untuk Menampilkan Peringkat Karyawan Sakit
               </div>
             ) : loadingSick ? (
-              <div style={{ padding: 0 }}>
-                <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data karyawan sakit">
-                  <div className="bm-loading-spinner">
-                    <div className="bm-loading-ring" aria-hidden="true" />
-                    <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
-                  </div>
-                  <p className="bm-loading-label">Memuat data karyawan sakit…</p>
+              <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data karyawan sakit">
+                <div className="bm-loading-spinner">
+                  <div className="bm-loading-ring" aria-hidden="true" />
+                  <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
                 </div>
+                <p className="bm-loading-label">Memuat data karyawan sakit…</p>
               </div>
-            ) : sickList.length === 0 ? (
-              <div className="sick-empty-state">Tidak ada karyawan sakit untuk periode ini.</div>
+            ) : !sickRanking.length ? (
+              <div className="sick-empty-state">Tidak ada karyawan sakit untuk filter ini.</div>
             ) : (
-              <table className="sick-table">
-                <thead>
-                  <tr>
-                    <th>NIK</th>
-                    <th>Nama</th>
-                    <th>Jobsite</th>
-                    <th>Jabatan</th>
-                    <th className="num-col">Hari A</th>
-                    <th className="num-col">Hari B</th>
-                    <th className="num-col">Hari C</th>
-                    <th className="num-col">Spell</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sickList.map((emp, idx) => (
-                    <tr key={emp.id ?? idx}>
-                      <td className="nik-cell">{emp.nik || '-'}</td>
-                      <td className="nama-cell">{emp.nama}</td>
-                      <td>{emp.jobsite}</td>
-                      <td>{emp.jabatan || '-'}</td>
-                      <td className="num-col">{emp.hari_a || '-'}</td>
-                      <td className="num-col">{emp.hari_b || '-'}</td>
-                      <td className="num-col">{emp.hari_c || '-'}</td>
-                      <td className="num-col spell-cell">{emp.jumlah_spell}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="sick-chart-wrap">
+                <canvas ref={sickCanvasRef} />
+              </div>
             )}
           </div>
         </div>

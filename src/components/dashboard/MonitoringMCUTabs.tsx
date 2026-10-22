@@ -24,7 +24,7 @@ export default function MonitoringMCUTabs({ initialTab = 'monitoring' }: { initi
         role="tablist"
         aria-label="Halaman MCU"
         style={{
-          display: 'flex', gap: 4, padding: '8px 12px 0', flexShrink: 0,
+          display: 'flex', gap: 4, padding: '8px 12px 0', justifyContent: 'center', flexShrink: 0,
           borderBottom: '1px solid var(--border)',
         }}
       >
