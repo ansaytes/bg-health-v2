@@ -32,6 +32,7 @@ import HearingConservationDashboard from '@/components/dashboard/HearingConserva
 import ErgonomiDashboard from '@/components/dashboard/ErgonomiDashboard';
 import MentalHealthDashboard from '@/components/dashboard/MentalHealthDashboard';
 import HigieneIndustriTabs from '@/components/dashboard/HigieneIndustriTabs';
+import LayananKuratifTabs from '@/components/dashboard/LayananKuratifTabs';
 import ErgoApproval from '@/components/dashboard/ErgoApproval';
 import HcInputPage from '@/components/administrator/HcInputPage';
 import HcAudiometriEval from '@/components/administrator/HcAudiometriEval';
@@ -234,6 +235,19 @@ function IconHigiene() {
   );
 }
 
+/** Layanan Kuratif — stetoskop. */
+function IconKuratif() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4.8 4v5a4.2 4.2 0 0 0 8.4 0V4" />
+      <path d="M9 13.2V15a5 5 0 0 0 5 5 4 4 0 0 0 4-4v-2" />
+      <circle cx="18" cy="7" r="2" />
+      <path d="M3.4 4h2.8" />
+      <path d="M11.8 4h2.8" />
+    </svg>
+  );
+}
+
 /*   Sidebar Configs */
 
 const ALL_HEADER_NAV: { key: PageTab; label: string; adminOnly: boolean }[] = [
@@ -273,7 +287,7 @@ const HOME_SIDEBAR: SidebarItem[] = [
 const DASH_SIDEBAR: SidebarItem[] = [
   { key: 'statistik', label: 'Statistik Kesehatan', icon: <IconStatistik /> },
   { key: 'monitoring', label: 'Monitoring MCU', icon: <IconMonitoring /> },
-  { key: 'inventory-dashboard', label: 'Monitoring Obat & BHP', icon: <IconInventory />, adminOnly: true },
+  { key: 'layanan-kuratif', label: 'Layanan Kuratif', icon: <IconKuratif /> },
   { key: 'higiene-industri', label: 'Higiene Industri', icon: <IconHigiene />, adminOnly: true },
   { key: 'mental-health-dashboard', label: 'Kesehatan Mental', icon: <IconMental />, adminOnly: true },
 ];
@@ -383,15 +397,15 @@ function DashContent() {
     case 'statistik': return <DashboardView />;
     case 'monitoring': return <MonitoringMCUTabs />;
     case 'tindak-lanjut': return <MonitoringMCUTabs initialTab="tindak-lanjut" />;
-    case 'kunjungan': return <KunjunganBerobat />;
-    case 'inventory-dashboard': return <InventoryDashboard />;
-    case 'hearing-dashboard': return <HearingConservationDashboard />;
-    case 'ergonomi-dashboard': return <ErgonomiDashboard />;
-    case 'mental-health-dashboard': return <MentalHealthDashboard />;
+    case 'layanan-kuratif': return <LayananKuratifTabs />;
+    case 'kunjungan': return <LayananKuratifTabs initialTab="kunjungan" />;
+    case 'inventory-dashboard': return <LayananKuratifTabs initialTab="inventory" />;
     case 'higiene-industri': return <HigieneIndustriTabs />;
     case 'hearing-dashboard': return <HigieneIndustriTabs initialTab="hearing" />;
     case 'ergonomi-dashboard': return <HigieneIndustriTabs initialTab="ergonomi" />;
-    case 'pemetaan-psikologis': return <HigieneIndustriTabs initialTab="psikososial" />;
+    // SDS-30 = faktor psikologi lingkungan kerja → bagian Higiene Industri.
+    case 'mental-health-dashboard': return <MentalHealthDashboard />;
+    case 'pemetaan-psikologis': return <HigieneIndustriTabs initialTab="psikologi" />;
     default: return <DashboardView />;
   }
 }

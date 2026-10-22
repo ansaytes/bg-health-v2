@@ -45,6 +45,13 @@ function ChartCard({ title, sub, accent = '#ff4d00', empty, children }: { title:
   );
 }
 
+/** Gaya kecil seragam untuk input tanggal di bar filter. */
+const dateStyle: React.CSSProperties = {
+  height: 28, padding: '0 8px', borderRadius: 7, border: '1px solid var(--border)',
+  background: 'var(--background)', color: 'var(--foreground)', fontSize: 10,
+  fontFamily: 'inherit', cursor: 'pointer', boxSizing: 'border-box',
+};
+
 export default function PemetaanPsikologisDashboard() {
   const [d, setD] = useState<D | null>(null);
   const [site, setSite] = useState('');
@@ -225,7 +232,7 @@ export default function PemetaanPsikologisDashboard() {
   const indikator = (d.indikator || []) as D[];
 
   return (
-    <div className="dashboard" style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className="dashboard" style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div className="kunjungan-filter-bar" style={{ flexShrink: 0, flexWrap: 'wrap' }}>
         <select className="admin-filter-select" value={site} onChange={(e) => setSite(e.target.value)}><option value="">All Site</option>{SITES.map((s) => <option key={s}>{s}</option>)}</select>
         <select className="admin-filter-select" value={kelompok} onChange={(e) => setKelompok(e.target.value as 'departemen' | 'jabatan')} title="Kelompokkan hasil per">
@@ -236,8 +243,12 @@ export default function PemetaanPsikologisDashboard() {
           {[10, 15, 20, 25, 30].map(n => <option key={n} value={n}>Min. {n} responden</option>)}
         </select>
         {/* Baseline: periode pembanding. Kosong = tanpa pembanding. */}
-        <input className="admin-filter-select" type="date" value={baselineDari} onChange={(e) => setBaselineDari(e.target.value)} title="Baseline — tanggal mulai" style={{ width: 140 }} />
-        <input className="admin-filter-select" type="date" value={baselineSampai} onChange={(e) => setBaselineSampai(e.target.value)} title="Baseline — tanggal akhir" style={{ width: 140 }} />
+        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }} title="Periode pembanding untuk melihat perubahan skor">Baseline</span>
+        <input type="date" value={baselineDari} onChange={(e) => setBaselineDari(e.target.value)} title="Baseline — tanggal mulai"
+          style={dateStyle} />
+        <span style={{ fontSize: 10, color: 'var(--muted-foreground)', fontWeight: 700 }}>s.d.</span>
+        <input type="date" value={baselineSampai} onChange={(e) => setBaselineSampai(e.target.value)} title="Baseline — tanggal akhir"
+          style={dateStyle} />
         {(baselineDari || baselineSampai) && (
           <button type="button" onClick={() => { setBaselineDari(''); setBaselineSampai(''); }}
             style={{ height: 28, padding: '0 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--foreground)', fontSize: 10, cursor: 'pointer' }}>
@@ -254,7 +265,7 @@ export default function PemetaanPsikologisDashboard() {
         </span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8, flexShrink: 0, height: 300 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8, flex: 1, minHeight: 0 }}>
         <ChartCard title="Komposisi Indikator" sub="6 indikator × 5 item · warna = tingkat risiko" accent="#E74C3C"
           empty={!memadai.length}>
           <canvas ref={heatRef} />
@@ -265,7 +276,7 @@ export default function PemetaanPsikologisDashboard() {
         </ChartCard>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flexShrink: 0, height: 300 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flex: 1, minHeight: 0 }}>
         <ChartCard title="Prioritas Intervensi" sub="Rata-rata indikator tertinggi (skala 5–35)" accent="#ff4d00"
           empty={!memadai.length}>
           <canvas ref={rankRef} />

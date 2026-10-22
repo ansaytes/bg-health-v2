@@ -1,22 +1,22 @@
 'use client';
-// Dashboard > Higiene Industri.
-// Tiga halaman yang sebelumnya berdiri sendiri digabung menjadi tab:
-//   1. Hearing Conservation
-//   2. Ergonomi
-//   3. Psikososial (pemetaan risiko SDS-30 per departemen)
+// Dashboard > Higiene Industri (faktor lingkungan kerja — Permenaker 5/2018 Pasal 5).
+//   1. Hearing Conservation — faktor FISIKA (bising)
+//   2. Ergonomi              — faktor ERGONOMI
+//   3. Psikologi Lingkungan  — faktor PSIKOLOGI (SDS-30, pemetaan per departemen/jabatan)
 //
-// Komponen aslinya tidak diubah; tab hanya mengganti yang dirender.
+// Catatan: SRQ-20 dan DASS-21 TIDAK di sini. Keduanya instrumen skrining klinis
+// per individu, sehingga berada di menu Dashboard > Kesehatan Mental.
 import { useState } from 'react';
 import HearingConservationDashboard from '@/components/dashboard/HearingConservationDashboard';
 import ErgonomiDashboard from '@/components/dashboard/ErgonomiDashboard';
 import PemetaanPsikologisDashboard from '@/components/dashboard/PemetaanPsikologisDashboard';
 
-export type HigieneTab = 'hearing' | 'ergonomi' | 'psikososial';
+export type HigieneTab = 'hearing' | 'ergonomi' | 'psikologi';
 
 const TABS: { key: HigieneTab; label: string }[] = [
   { key: 'hearing', label: 'Hearing Conservation' },
   { key: 'ergonomi', label: 'Ergonomi' },
-  { key: 'psikososial', label: 'Psikososial' },
+  { key: 'psikologi', label: 'Psikologi Lingkungan' },
 ];
 
 export default function HigieneIndustriTabs({ initialTab = 'hearing' }: { initialTab?: HigieneTab }) {
@@ -63,7 +63,7 @@ export default function HigieneIndustriTabs({ initialTab = 'hearing' }: { initia
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {tab === 'hearing' && <HearingConservationDashboard />}
         {tab === 'ergonomi' && <ErgonomiDashboard />}
-        {tab === 'psikososial' && <PemetaanPsikologisDashboard />}
+        {tab === 'psikologi' && <PemetaanPsikologisDashboard />}
       </div>
     </div>
   );

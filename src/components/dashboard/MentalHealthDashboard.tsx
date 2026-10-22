@@ -168,39 +168,31 @@ export default function MentalHealthDashboard() {
     const dassBand = bandEntries(d.instrumen.dass21.band || {}, ['Normal', 'Ringan', 'Sedang', 'Berat', 'Sangat Berat']);
     doughnut('dass', dassRef.current, dassBand.map(([k]) => k), dassBand.map(([, v]) => v), String(d.instrumen.dass21.terisi), 'RESPONDEN');
 
-    // 3. SDS-30 — 6 indikator faktor psikologi kerja (skor 5–35).
-    //    Dihitung per indikator, bukan dari total 30 item.
-    const ind = (d.instrumen.sds.perIndikator || []) as D[];
-    const sdsR = ind.reduce((a, i) => a + (i.ringan || 0), 0);
-    const sdsS = ind.reduce((a, i) => a + (i.sedang || 0), 0);
-    const sdsB = ind.reduce((a, i) => a + (i.berat || 0), 0);
-    const sdsBand: [string, number][] = [
-      ['Stres Ringan', sdsR], ['Stres Sedang', sdsS], ['Stres Berat', sdsB],
-    ];
-    doughnut('sds', sdsRef.current, sdsBand.map(([k]) => k), sdsBand.map(([, v]) => v), String(d.instrumen.sds.terisi), 'RESPONDEN');
-
-    // 4. Rata-rata skor per indikator SDS-30 (skala 5–35)
-    draw('avg', trendRef.current, () => new ChartJS(trendRef.current!, {
+    // 3. Rata-rata skor DASS-21 per subskala (skala 0–21).
+    //    SDS-30 tidak lagi di halaman ini: instrumen itu mengukur faktor
+    //    psikologi lingkungan kerja dan berada di Higiene Industri.
+    const d21 = d.instrumen.dass21 || {};
+    draw('sds', sdsRef.current, () => new ChartJS(sdsRef.current!, {
       type: 'bar',
       data: {
-        labels: ind.map(i => String(i.title)),
+        labels: ['Depresi', 'Ansietas', 'Stres'],
         datasets: [{
-          data: ind.map(i => i.rataRata || 0),
-          backgroundColor: ind.map(i => BAND_COLOR[sdsBandLabel(Number(i.rataRata || 0))] || STEEL),
+          data: [d21.rataDepresi || 0, d21.rataAnsietas || 0, d21.rataStres || 0],
+          backgroundColor: ['rgba(52,152,219,0.72)', 'rgba(243,156,18,0.72)', 'rgba(231,76,60,0.72)'],
           borderRadius: 5,
-          maxBarThickness: 30,
+          maxBarThickness: 40,
         }],
       },
       options: {
         responsive: true, maintainAspectRatio: false, animation: anim,
         plugins: {
           legend: { display: false },
-          tooltip: { callbacks: { label: (c) => ` Rata-rata ${c.parsed.y} dari 35` } },
-          datalabels: { color: text, anchor: 'end', align: 'top', clamp: true, clip: false, font: { size: 9.5, weight: 'bold' as const, family: FONT }, formatter: (v: number) => (v ? String(v) : '') },
+          tooltip: { callbacks: { label: (c) => ` Rata-rata ${c.parsed.y}` } },
+          datalabels: { color: text, anchor: 'end', align: 'top', clamp: true, clip: false, font: { size: 10, weight: 'bold' as const, family: FONT }, formatter: (v: number) => (v ? String(v) : '') },
         },
         scales: {
-          x: { grid: { display: false }, ticks: { color: text, font: { size: 8.5, family: FONT }, autoSkip: false, maxRotation: 40, minRotation: 0 } },
-          y: { beginAtZero: true, suggestedMax: 35, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT } } },
+          x: { grid: { display: false }, ticks: { color: text, font: { size: 10, family: FONT }, autoSkip: false } },
+          y: { beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT } } },
         },
       } as ChartOptions<'bar'>,
     }));
@@ -250,21 +242,19 @@ export default function MentalHealthDashboard() {
       <div className="kunjungan-filter-bar" style={{ flexShrink: 0, flexWrap: 'wrap' }}>
         <select className="admin-filter-select" value={site} onChange={(e) => setSite(e.target.value)}><option value="">All Site</option>{SITES.map((s) => <option key={s}>{s}</option>)}</select>
         <span className="kunjungan-total-right" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span>Kesehatan Mental · SRQ-20 · DASS-21 · SDS-30</span>
+          <span>Kesehatan Mental · SRQ-20 · DASS-21</span>
           <span>Responden <b>{d.totalResponden}</b></span>
           <span>SRQ ≥6 <b style={{ color: i.srq20.perluTindakLanjut ? '#E74C3C' : 'inherit' }}>{i.srq20.perluTindakLanjut}</b></span>
           <span>DASS terisi <b>{i.dass21.terisi}</b></span>
-          <span>SDS-30 terisi <b>{i.sds.terisi}</b></span>
         </span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gridTemplateRows: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8, flex: 1, minHeight: 0 }}>
         <ChartCard title="SRQ-20" sub="Ambang ≥ 6 = perlu tindak lanjut" accent="#E74C3C" empty={!i.srq20.terisi}><canvas ref={srqRef} /></ChartCard>
         <ChartCard title="DASS-21" sub="Keparahan terburuk dari depresi, ansietas, stres" accent="#F39C12" empty={!i.dass21.terisi}><canvas ref={dassRef} /></ChartCard>
-        <ChartCard title="SDS-30" sub="6 indikator × 5 item · skor 5–35" accent="#8E44AD" empty={!i.sds.terisi}><canvas ref={sdsRef} /></ChartCard>
+        <ChartCard title="Rata-rata Skor DASS-21" sub="Depresi · ansietas · stres (skala 0–21)" accent="#3498DB" empty={!i.dass21.terisi}><canvas ref={sdsRef} /></ChartCard>
 
-        <ChartCard title="Rata-rata Skor Indikator SDS-30" sub="Skor indikator 5–35 · makin tinggi makin berat" accent="#3498DB" empty={!i.sds.terisi}><canvas ref={trendRef} /></ChartCard>
-        <ChartCard title="Tren Pengisian & Kasus SRQ-20" sub="12 bulan terakhir" accent="#2E86DE" empty={!d.trend.some((t: D) => t.srq)}><canvas ref={siteRef} /></ChartCard>
+        <ChartCard title="Tren Pengisian & Kasus SRQ-20" sub="12 bulan terakhir" accent="#2E86DE" empty={!d.trend.some((t: D) => t.srq)}><canvas ref={trendRef} /></ChartCard>
 
         <div className="card" style={{ padding: '6px 10px', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <div className="card-head" style={{ flexShrink: 0 }}>
@@ -290,9 +280,8 @@ export default function MentalHealthDashboard() {
       </div>
 
       <div style={{ fontSize: 9.5, color: 'var(--muted-foreground)', lineHeight: 1.5, flexShrink: 0 }}>
-        Catatan: SDS-30 adalah Survei Diagnosis Stres (Lampiran Permenaker 5/2018) yang mengukur faktor psikologi kerja,
-        bukan depresi. Skor tiap indikator 5–35: ≤ 9 ringan, 10–24 sedang, &gt; 24 berat.
-        SRQ-20 dan DASS-21 bersifat skrining — diagnosis tetap ditetapkan dokter.
+        Catatan: SRQ-20 dan DASS-21 adalah instrumen skrining klinis per individu — diagnosis tetap ditetapkan dokter.
+        Faktor psikologi lingkungan kerja (SDS-30) ada di Dashboard → Higiene Industri → Psikologi Lingkungan.
       </div>
     </div>
   );
