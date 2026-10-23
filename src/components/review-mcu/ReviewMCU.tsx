@@ -257,6 +257,15 @@ export default function ReviewMCU() {
     if (!next && store.reviewStep === 'ocr') goStep('form', 1);
   }, [store, goStep]);
 
+  // Jaring pengaman: bila status langkah tertinggal di 'ocr' padahal lampu
+  // padam (mis. state tersimpan / navigasi lama), kembalikan ke form manual
+  // agar tidak pernah tampil halaman kosong tanpa jalan keluar.
+  useEffect(() => {
+    if (!store.ocrEnabled && store.reviewStep === 'ocr') {
+      store.setReviewStep('form');
+    }
+  }, [store.ocrEnabled, store.reviewStep, store]);
+
   // Step 1: Search employee
   const handleSearch = useCallback(async () => {
     if (!nikInput.trim()) return;
@@ -747,15 +756,17 @@ export default function ReviewMCU() {
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             className="space-y-4 pb-4"
           >
-            {/* Back button */}
+            {/* Back button — kembali ke langkah sebelumnya yang BENAR-BENAR ada.
+                Bila saklar OCR padam, langkah OCR tidak di-render; menuju ke sana
+                akan menampilkan halaman kosong tanpa jalan keluar. */}
             <motion.div {...buttonTap}>
               <Button
                 variant="ghost"
-                onClick={() => goStep('ocr', -1)}
+                onClick={() => goStep(store.ocrEnabled ? 'ocr' : 'search', -1)}
                 className="h-9 rounded-xl gap-2 text-muted-foreground px-3"
               >
                 <ArrowLeft className="size-4" />
-                <span className="text-sm">OCR</span>
+                <span className="text-sm">{store.ocrEnabled ? 'OCR' : 'Kembali'}</span>
               </Button>
             </motion.div>
 

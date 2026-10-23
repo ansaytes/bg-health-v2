@@ -20,8 +20,12 @@
 // karyawan per tanggal), hanya dengan item SDS yang terisi.
 
 import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useAuth } from '@/lib/auth-context';
 
-import { SDS_ITEMS, SDS_OPTIONS, SDS_SECTIONS } from '@/lib/questionnaire-items';
+import { SDS_ITEMS, SDS_OPTIONS } from '@/lib/questionnaire-items';
+import SdsAnswersTable from '@/components/administrator/SdsAnswersTable';
+import ConsentGate, { EMPTY_CONSENT, type ConsentState } from '@/components/questionnaire/ConsentGate';
 import {
   IdentityPanel,
   ItemGroup,
@@ -29,11 +33,9 @@ import {
   StatusBanner,
   SubmitBar,
   questionnaireAuthHeaders,
-  toneFor,
   useEmployeeLookup,
   useSubmitStatus,
   type ResultDialogData,
-  type ScoreLine,
 } from '@/components/questionnaire/QuestionnaireUI';
 
 function today(): string {
@@ -44,38 +46,20 @@ function countFilled(items: { id: string }[], values: Record<string, string>): n
   return items.filter((item) => values[item.id] !== undefined && values[item.id] !== '').length;
 }
 
-function barisHasil(body: any): ScoreLine[] {
-  const lines: ScoreLine[] = [];
-  const sds = body.sds;
-
-  if (sds?.answered > 0) {
-    lines.push({
-      label: 'SDS-30',
-      value: `${sds.label} · total ${sds.rawIndex}/210`,
-      tone: toneFor(sds.category),
-    });
-    for (const ind of (sds.indicators || [])) {
-      lines.push({
-        label: `· ${ind.title}`,
-        value: `${ind.score}/35 — ${ind.label}`,
-        tone: toneFor(ind.category),
-      });
-    }
-  }
-
-  return lines;
-}
-
 export default function InputPsikologiLingkunganPage() {
   const { query, setQuery, identity, searching, error, search } = useEmployeeLookup('/api/mental-health');
   const submit = useSubmitStatus();
+  const { role } = useAuth();
+  // Tabel data jawaban hanya untuk superuser & administrator.
+  const canViewData = role === 'superuser' || role === 'administrator';
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [tglPemeriksaan, setTglPemeriksaan] = useState(today());
   const [resultDialog, setResultDialog] = useState<ResultDialogData | null>(null);
-  // Petunjuk penilaian per indikator hanya untuk PETUGAS, bisa dibuka-tutup dan
-  // tertutup secara default agar responden tidak melihatnya saat mengisi.
-  const [showGuidance, setShowGuidance] = useState(false);
+  const [showData, setShowData] = useState(false);
+  const [rotation, setRotation] = useState(0);
+  // Persetujuan (FORM/098) wajib sebelum pengisian.
+  const [consent, setConsent] = useState<ConsentState>(EMPTY_CONSENT);
 
   const sdsFilled = countFilled(SDS_ITEMS, values);
 
@@ -86,6 +70,7 @@ export default function InputPsikologiLingkunganPage() {
   function clearForm() {
     setValues({});
     setResultDialog(null);
+    setConsent(EMPTY_CONSENT);
     submit.setStatus('idle');
     submit.setMessage('');
   }
@@ -93,6 +78,10 @@ export default function InputPsikologiLingkunganPage() {
   async function handleSave() {
     if (!identity) {
       submit.failure('Cari karyawan lebih dulu.');
+      return;
+    }
+    if (!consent.accepted) {
+      submit.failure('Persetujuan (FORM/098) wajib diberikan sebelum menyimpan hasil skrining.');
       return;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(tglPemeriksaan)) {
@@ -107,7 +96,16 @@ export default function InputPsikologiLingkunganPage() {
       const res = await fetch('/api/mental-health', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ query, tglPemeriksaan, ...values }),
+        body: JSON.stringify({
+          query,
+          tglPemeriksaan,
+          ...values,
+          consent: {
+            acceptedAt: consent.acceptedAt,
+            shareItems: consent.shareItems,
+            declineShare: consent.declineShare,
+          },
+        }),
       });
       const body = await res.json();
       if (!res.ok) {
@@ -115,28 +113,56 @@ export default function InputPsikologiLingkunganPage() {
         return;
       }
 
+      // SDS-30 menilai LINGKUNGAN KERJA, bukan individu. Karena itu hasilnya
+      // tidak ditampilkan sebagai "nilai" kepada pengisi: skor individual baru
+      // bermakna setelah diagregasi per departemen/jabatan. Peserta cukup
+      // menerima ucapan terima kasih dan penjelasan penggunaan datanya.
       setResultDialog({
         nama: identity.nama,
         tanggal: tglPemeriksaan,
-        lines: barisHasil(body),
-        kesimpulan: body.kesimpulan ?? '',
-        zonaMCU: body.zonasi ?? null,
-        mcuUpdated: body.mcuUpdated ?? 0,
+        lines: [],
+        kesimpulan:
+          `Terima kasih atas partisipasi Anda dalam proses pemetaan psikologi lingkungan kerja. `
+          + `Hasil pengisian ini akan dijadikan sebagai acuan pengelolaan kesehatan kerja `
+          + `PT. Bagong Dekaka Makmur.`,
+        zonaMCU: null,
+        mcuUpdated: 0,
       });
     } catch {
       submit.failure('Gagal menghubungi server. Coba lagi.');
     }
   }
 
-  const canSave = !!identity && sdsFilled > 0 && submit.status !== 'saving';
+  const canSave = !!identity && sdsFilled > 0 && consent.accepted && submit.status !== 'saving';
+
+  // Gerbang persetujuan wajib sebelum pengisian (FORM/098).
+  if (!consent.accepted) {
+    return (
+      <ConsentGate
+        instrumen="SDS-30 (Psikologi Lingkungan Kerja)"
+        onAccept={(c) => setConsent(c)}
+      />
+    );
+  }
 
   return (
-    <div className="qh-page">
-      <header className="qh-page-head">
+    <div className="qh-page" style={{ position: 'relative', height: '100%', overflow: 'hidden' }}>
+      <AnimatePresence mode="wait">
+        {!showData ? (
+          <motion.div
+            key="form"
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -30 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            style={{ height: '100%', overflowY: 'auto' }}
+          >
+            <div>
+              <header className="qh-page-head">
         <h2>Psikologi Lingkungan Kerja — SDS-30</h2>
         <p>
-          30 pernyataan tentang kondisi kerja dalam <b>1 bulan terakhir</b>. Skor dipakai untuk
-          pemetaan risiko psikologis per departemen (Higiene Industri), bukan diagnosis klinis.
+          30 pernyataan kondisi kerja <b>1 bulan terakhir</b>. Skor dan kategori dihitung
+          otomatis oleh sistem untuk pemetaan risiko psikologis per departemen (Higiene Industri).
         </p>
       </header>
 
@@ -163,55 +189,17 @@ export default function InputPsikologiLingkunganPage() {
         </div>
       </IdentityPanel>
 
-      <div className="qh-description" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <span>
-          Pilih angka <b>1–7</b> untuk setiap pernyataan sesuai keterangan di bawah.
-        </span>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', fontSize: 11, lineHeight: 1.6 }}>
-          {SDS_OPTIONS.map((o) => (
-            <span key={o.value} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <b style={{ display: 'inline-grid', placeItems: 'center', width: 18, height: 18, borderRadius: 4, background: 'var(--accent)', color: '#ff4d00', fontSize: 10 }}>{o.value}</b>
-              {o.label}
-            </span>
+      <div className="qh-description">
+        {/* Petunjuk diringkas satu baris agar tidak memakan tempat.
+            Kategori/indikator TIDAK ditampilkan di samping soal: skor
+            dihitung otomatis oleh sistem, sehingga responden tidak bisa
+            menebak arah jawaban yang "diinginkan". */}
+        <span style={{ fontSize: 10, lineHeight: 1.5, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+          Pilih <b>1–7</b> tiap pernyataan (kondisi <b>1 bulan terakhir</b>):
+          {SDS_OPTIONS.map((o, i) => (
+            <span key={o.value}>·{i === 0 ? ' ' : ' '}<b>{o.value}</b> {o.label} </span>
           ))}
-        </div>
-
-        {/* Petunjuk penilaian (untuk petugas) — disembunyikan dari pandangan responden. */}
-        <div>
-          <button
-            type="button"
-            onClick={() => setShowGuidance((v) => !v)}
-            className="qh-btn"
-            style={{ height: 28, padding: '0 12px', fontSize: 11.5 }}
-            aria-expanded={showGuidance}
-          >
-            {showGuidance ? 'Sembunyikan' : 'Tampilkan'} petunjuk penilaian (petugas)
-          </button>
-          {showGuidance && (
-            <div
-              style={{
-                marginTop: 8,
-                padding: '8px 12px',
-                borderRadius: 8,
-                border: '1px dashed var(--border)',
-                background: 'var(--accent)',
-                fontSize: 11.5,
-                lineHeight: 1.7,
-              }}
-            >
-              <div style={{ fontWeight: 700, marginBottom: 4 }}>Pembagian item untuk penilaian (Lampiran Permenaker 5/2018)</div>
-              {SDS_SECTIONS.map((section) => (
-                <div key={section.id}>
-                  <b>{section.title}</b>: item {section.items.join(', ')}
-                </div>
-              ))}
-              <div style={{ marginTop: 4, color: 'var(--muted-foreground)' }}>
-                Skor indikator 5–35: ≤ 9 ringan · 10–24 sedang · &gt; 24 berat. Kategori tidak
-                ditampilkan saat pengisian agar jawaban tidak terarah.
-              </div>
-            </div>
-          )}
-        </div>
+        </span>
       </div>
 
       {/* Satu daftar 1–30, tanpa judul kategori per blok. */}
@@ -234,6 +222,45 @@ export default function InputPsikologiLingkunganPage() {
       />
 
       <ResultDialog data={resultDialog} onClose={() => setResultDialog(null)} />
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="data"
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 30 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            style={{ height: '100%', overflow: 'auto', paddingRight: 32 }}
+          >
+            <SdsAnswersTable />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Tombol panah hanya terlihat untuk superuser & administrator. */}
+      {canViewData && (
+        <button
+          type="button"
+          onClick={() => { setRotation((r) => r + 180); setShowData((v) => !v); }}
+          className="admin-toggle-arrow"
+          title={showData ? 'Kembali ke form' : 'Lihat data jawaban'}
+          aria-label={showData ? 'Kembali ke form' : 'Lihat data jawaban'}
+        >
+          <motion.svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            animate={{ rotate: rotation }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+          >
+            <polyline points="9 6 15 12 9 18" />
+          </motion.svg>
+        </button>
+      )}
     </div>
   );
 }

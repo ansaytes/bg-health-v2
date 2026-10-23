@@ -2,9 +2,8 @@
 
 // Tab bar standar seluruh aplikasi.
 //
-// Posisi tab sengaja DITENGAH halaman (simetris) agar tidak menempel ke kiri dan
-// terlihat seimbang pada semua lebar layar. Semua menu dengan beberapa tab
-// memakai komponen ini supaya gaya & posisinya seragam.
+// Posisi tab di KIRI halaman (seperti versi awal aplikasi). Semua menu dengan
+// beberapa tab memakai komponen ini supaya gaya & posisinya seragam.
 
 export interface CenteredTabItem<K extends string> {
   key: K;

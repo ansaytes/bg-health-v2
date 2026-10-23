@@ -11,11 +11,18 @@
 // ============================================================
 
 import {
+  ARTRITIS_URAT_OPTIONS,
   ASTHMA_OPTIONS,
   CARDIAC_OPTIONS,
+  DIAGNOSIS_HATI_OPTIONS,
+  DM_KOMPLIKASI_OPTIONS,
+  EPILEPSI_KEPATUHAN_OPTIONS,
   EPILEPSY_OPTIONS,
   LBP_OPTIONS,
+  MENTAL_KONFIRMASI_OPTIONS,
+  OBESITAS_FUNGSIONAL_OPTIONS,
   SLEEP_APNEA_OPTIONS,
+  STATUS_TERAPI_ESS_OPTIONS,
   STROKE_OPTIONS,
 } from '@/lib/clinical-classification';
 
@@ -356,6 +363,44 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('sdsScore', 'Total Skor SDS-30 (Survei Diagnosis Stres)', 'anamnesis', 'number', {
     unit: 'skor', normalRange: '30-210', min: 30, max: 210,
   }),
+  // STD/006 Rev.002 poin 6.1.8 — Tanda Bahaya Kesehatan Jiwa.
+  // "Ya" pada butir 17 SRQ-20 (pikiran untuk mengakhiri hidup) memaksa Zona
+  // Merah + status Currently Unfit sampai dinilai dokter, BERAPA PUN skor
+  // totalnya. Dibuat field tersendiri agar tidak bergantung pada input skor.
+  f('srq17Bahaya', 'Tanda Bahaya Kesehatan Jiwa (SRQ-20 butir 17 = Ya)', 'anamnesis', 'select', {
+    options: ['Tidak', 'Ya'],
+    textNA: false,
+  }),
+
+  // Kualifikasi Klinis Tambahan — STD-006 Rev.002
+  f('dmKomplikasi', 'Komplikasi Diabetes Melitus (Neuropati/Retinopati/Nefropati/Ulkus)', 'anamnesis', 'select', {
+    options: [...DM_KOMPLIKASI_OPTIONS],
+    textNA: false,
+  }),
+  f('mentalKonfirmasi', 'Status Konfirmasi Diagnosa Gangguan Jiwa', 'anamnesis', 'select', {
+    options: [...MENTAL_KONFIRMASI_OPTIONS],
+    textNA: false,
+  }),
+  f('artritisUrat', 'Riwayat Artritis Gout / Nyeri Sendi Asam Urat Berulang', 'anamnesis', 'select', {
+    options: [...ARTRITIS_URAT_OPTIONS],
+    textNA: false,
+  }),
+  f('diagnosisHati', 'Diagnosis Klinis Penyakit Hati', 'anamnesis', 'select', {
+    options: [...DIAGNOSIS_HATI_OPTIONS],
+    textNA: false,
+  }),
+  f('obesitasFungsional', 'Keterbatasan Fungsional Obesitas (IMT ≥35)', 'anamnesis', 'select', {
+    options: [...OBESITAS_FUNGSIONAL_OPTIONS],
+    textNA: false,
+  }),
+  f('statusTerapiEss', 'Status Terapi Gangguan Tidur / Kantuk Berlebih (ESS >15)', 'anamnesis', 'select', {
+    options: [...STATUS_TERAPI_ESS_OPTIONS],
+    textNA: false,
+  }),
+  f('epilepsiKepatuhan', 'Kepatuhan Terapi Antiepilepsi / Bebas Bangkitan', 'anamnesis', 'select', {
+    options: [...EPILEPSI_KEPATUHAN_OPTIONS],
+    textNA: false,
+  }),
 
   // BV–CE Spirometry
   f('fvcPred', 'Spirometry FVC PRED', 'spirometry', 'number', { unit: 'L' }),
@@ -408,7 +453,6 @@ f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoC
   // Ringkasan otomatis dari tes kebugaran. Tes ini BUKAN parameter zonasi
   // menurut SOP, tetapi hasilnya tetap dicatat sebagai temuan.
   f('hasilKebugaran', 'Hasil Uji Kebugaran (Otomatis)', 'fitness', 'text', { autoCalc: true }),
-  f('pemeriksaanLain', 'Pemeriksaan Lain', 'assessment', 'textarea'),
   f('dugaanPAK', 'Dugaan PAK', 'assessment', 'select', { options: ['Ya', 'Tidak'] }),
 
   // DF–DS Penilaian dan kalkulasi
@@ -456,25 +500,7 @@ f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoC
   // 10,0-10,9 g/dL. Tidak memengaruhi zona, tapi wajib ditinjau QSHE Medic.
   f('catatanSOP', 'Catatan di Luar Rentang Tabel SOP', 'calculated', 'textarea', { autoCalc: true }),
 
-  // DT–EL Follow-up
-  f('tglFU1', 'Tanggal Follow Up I', 'assessment', 'date', { textNA: false }),
-  f('lokasiFU1', 'Lokasi Follow Up I', 'assessment'),
-  f('hasilFU1', 'Hasil Follow Up I', 'assessment', 'textarea'),
-  f('kesimpulanFU1', 'Kesimpulan Setelah Follow Up I', 'assessment', 'select', { options: kesimpulanOptions }),
-  f('linkFU1', 'Link File Hasil Follow Up I', 'assessment'),
-  f('rekFU2', 'Rekomendasi FU II', 'assessment', 'textarea'),
-  f('tglFU2', 'Tanggal Follow Up II', 'assessment', 'date', { textNA: false }),
-  f('lokasiFU2', 'Lokasi Follow Up II', 'assessment'),
-  f('hasilFU2', 'Hasil Follow Up II', 'assessment', 'textarea'),
-  f('kesimpulanFU2', 'Kesimpulan Setelah Follow Up II', 'assessment', 'select', { options: kesimpulanOptions }),
-  f('linkFU2', 'Link File Hasil Follow Up II', 'assessment'),
-  f('rekFU3', 'Rekomendasi FU III', 'assessment', 'textarea'),
-  f('tglFU3', 'Tanggal Follow Up III', 'assessment', 'date', { textNA: false }),
-  f('lokasiFU3', 'Lokasi Follow Up III', 'assessment'),
-  f('hasilFU3', 'Hasil Follow Up III', 'assessment', 'textarea'),
-  f('kesimpulanFU3', 'Kesimpulan Setelah Follow Up III', 'assessment', 'select', { options: kesimpulanOptions }),
-  f('linkFU3', 'Link File Hasil Follow Up III', 'assessment'),
-  f('rekFU4', 'Rekomendasi FU IV', 'assessment', 'textarea'),
+  // Catatan & Rekomendasi MCU
   f('catatan', 'Catatan & Rekomendasi', 'assessment', 'textarea', { textNA: false }),
 ];
 

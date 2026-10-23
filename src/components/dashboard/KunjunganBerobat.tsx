@@ -251,9 +251,13 @@ export default function KunjunganBerobat() {
 
     const isDataChange = lastAnimatedSignature.current !== dataSignature;
     lastAnimatedSignature.current = dataSignature;
+    // Animasi juga WAJIB berjalan saat chart baru pertama kali dibuat, walaupun
+    // signature-nya tidak berubah (data sudah tersedia sebelum mount).
+    const isFirstPaint = !trendChartInst.current;
+    const shouldAnimate = isDataChange || isFirstPaint;
 
-    const animationSettings = isDataChange ? STANDAR_ANIMASI_BAR : false as const;
-    const lineAnimationSettings = isDataChange
+    const animationSettings = shouldAnimate ? STANDAR_ANIMASI_BAR : false as const;
+    const lineAnimationSettings = shouldAnimate
       ? { duration: 1000, easing: 'easeOutQuart' as const }
       : false as const;
 
@@ -345,7 +349,7 @@ export default function KunjunganBerobat() {
       };
 
       if (trendChartInst.current) {
-        if (isDataChange) {
+        if (shouldAnimate) {
           trendChartInst.current.destroy();
           trendChartInst.current = null;
         }
@@ -448,7 +452,7 @@ export default function KunjunganBerobat() {
       };
 
       if (ulangChartInst.current) {
-        if (isDataChange) {
+        if (shouldAnimate) {
           ulangChartInst.current.destroy();
           ulangChartInst.current = null;
         }
@@ -552,7 +556,7 @@ export default function KunjunganBerobat() {
       };
 
       if (diagChartInst.current) {
-        if (isDataChange) {
+        if (shouldAnimate) {
           diagChartInst.current.destroy();
           diagChartInst.current = null;
         }
@@ -657,7 +661,7 @@ export default function KunjunganBerobat() {
       };
 
       if (obatChartInst.current) {
-        if (isDataChange) {
+        if (shouldAnimate) {
           obatChartInst.current.destroy();
           obatChartInst.current = null;
         }
@@ -757,7 +761,7 @@ export default function KunjunganBerobat() {
       };
 
       if (deptChartInst.current) {
-        if (isDataChange) {
+        if (shouldAnimate) {
           deptChartInst.current.destroy();
           deptChartInst.current = null;
         }

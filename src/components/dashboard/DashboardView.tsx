@@ -92,7 +92,7 @@ export default function DashboardView() {
   const [kpiData, setKpiData] = useState<KpiRow[]>([]);
   const [asrRanking, setAsrRanking] = useState<AsrRankRow[]>([]);
   const [sickList, setSickList] = useState<SickEmployee[]>([]);
-  const [sickMode, setSickMode] = useState<'hari' | 'spell'>('hari');
+  const [sickMode, setSickMode] = useState<'hari' | 'periode'>('hari');
   const sickCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const sickChartRef = useRef<import('chart.js').Chart | null>(null);
   const [loadingKpi, setLoadingKpi] = useState(true);
@@ -424,12 +424,15 @@ export default function DashboardView() {
 
   const sickListCount = sickList.length;
 
-  // Peringkat karyawan sakit. Ada DUA dasar peringkat (bukan filter):
-  //  - 'hari'  : jumlah hari sakit A + B + C
-  //  - 'spell' : jumlah spell (episode sakit)
-  // A/B/C adalah EPISODE penyakit dalam periode (Kepdirjen 185/2019): episode
-  // pertama = A, sembuh → masuk → sakit lagi = B, dst. Jumlah spell diturunkan
-  // dari banyaknya episode, jadi rincian A/B/C selalu ikut ditampilkan.
+  // Peringkat karyawan sakit. Filter menentukan DASAR peringkat:
+  //  - 'hari'    : total hari sakit Periode 1 + 2 + 3
+  //  - 'periode' : banyaknya periode sakit yang terisi (1, 2, atau 3)
+  //
+  // "Periode 1/2/3" adalah periode sakit berurutan dalam periode laporan,
+  // bukan definisi SPELL pada Kepdirjen. Menurut Kepdirjen, spell dihitung
+  // ketika sakit periode berikutnya MASIH BERKAITAN dengan periode sebelumnya
+  // (dianggap satu spell); kolom di sini tidak menyimpan hubungan itu, jadi
+  // penamaan filter tidak boleh memakai kata "spell" agar tidak menyesatkan.
   const sickRanking = useMemo(() => {
     const rows = sickList.map((e) => {
       const hari = [Number(e.hari_a || 0), Number(e.hari_b || 0), Number(e.hari_c || 0)];
@@ -439,17 +442,17 @@ export default function DashboardView() {
         hariA: hari[0],
         hariB: hari[1],
         hariC: hari[2],
-        // Episode yang benar-benar berisi hari sakit (A/B/C kosong tidak dihitung).
+        // Periode yang benar-benar berisi hari sakit (kosong tidak dihitung).
         episode: hari.filter((h) => h > 0).length,
         spell: Number(e.jumlah_spell || 0),
         total: hari[0] + hari[1] + hari[2],
       };
     });
     return rows
-      .filter((r) => (sickMode === 'spell' ? r.spell > 0 || r.episode > 0 : r.total > 0))
-      .sort((a, b) => (sickMode === 'spell'
-        ? b.spell - a.spell || b.episode - a.episode || b.total - a.total
-        : b.total - a.total || b.spell - a.spell))
+      .filter((r) => (sickMode === 'periode' ? r.episode > 0 : r.total > 0))
+      .sort((a, b) => (sickMode === 'periode'
+        ? b.episode - a.episode || b.total - a.total
+        : b.total - a.total || b.episode - a.episode))
       .slice(0, 10);
   }, [sickList, sickMode]);
 
@@ -468,8 +471,8 @@ export default function DashboardView() {
     }
     const text = isDark ? '#F9FAFB' : '#111827';
     const grid = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
-    // Batang tetap memperlihatkan episode A/B/C (dasar analisa spell); angka
-    // spell ditulis di ujung batang. Mode hanya menentukan urutan peringkat.
+    // Batang tetap memperlihatkan rincian hari per periode (Periode 1/2/3);
+    // banyaknya periode ditulis di ujung batang. Mode hanya menentukan urutan.
     const labels = sickRanking.map((r) => r.nama);
     // Jarak batang seragam seperti diagram lain (BAR_LAYOUT).
     const stackProps = {
@@ -480,9 +483,9 @@ export default function DashboardView() {
       borderRadius: 4,
     };
     const datasets = [
-      { label: 'Hari A', data: sickRanking.map((r) => r.hariA), backgroundColor: 'rgba(231,76,60,0.82)', ...stackProps },
-      { label: 'Hari B', data: sickRanking.map((r) => r.hariB), backgroundColor: 'rgba(243,156,18,0.82)', ...stackProps },
-      { label: 'Hari C', data: sickRanking.map((r) => r.hariC), backgroundColor: 'rgba(52,152,219,0.78)', ...stackProps },
+      { label: 'Periode 1', data: sickRanking.map((r) => r.hariA), backgroundColor: 'rgba(214,88,32,0.88)', ...stackProps },
+      { label: 'Periode 2', data: sickRanking.map((r) => r.hariB), backgroundColor: 'rgba(255,161,66,0.88)', ...stackProps },
+      { label: 'Periode 3', data: sickRanking.map((r) => r.hariC), backgroundColor: 'rgba(255,214,102,0.92)', ...stackProps },
     ];
     // Ruang untuk label total + angka spell di ujung batang.
     const maxTotal = Math.max(...sickRanking.map((r) => r.total), 1);
@@ -515,15 +518,18 @@ export default function DashboardView() {
               footer: (items) => {
                 const row = sickRanking[items[0]?.dataIndex ?? 0];
                 if (!row) return '';
-                return `Total ${row.total} hari • ${row.spell} spell • ${row.episode} episode`;
+                return `Total ${row.total} hari • ${row.episode} periode sakit`;
               },
             },
           },
           datalabels: {
-            // Label nurut dalam segmen hanya untuk episode yang punya hari;
-            // nilai total + spell ditulis di ujung batang.
+            // Label nilai hanya untuk segmen yang punya hari; total + jumlah
+            // periode ditulis di ujung batang.
             display: (c) => Number(c.dataset.data[c.dataIndex]) > 0,
-            color: '#fff',
+            color: (c) => {
+              // Periode 3 kuning terang → teks gelap agar tetap terbaca.
+              return c.datasetIndex === 2 ? '#3a2a00' : '#fff';
+            },
             font: { size: 8.5, weight: 'bold' as const, family: FONT },
             formatter: (v: number) => (v > 0 ? String(v) : ''),
           },
@@ -556,7 +562,7 @@ export default function DashboardView() {
             ctx.fillText(`${row.total} hari`, x, el.y - 4);
             ctx.fillStyle = 'rgba(255, 77, 0, 1)';
             ctx.font = `bold 8px ${FONT}`;
-            ctx.fillText(`${row.spell} spell`, x, el.y + 5);
+            ctx.fillText(`${row.episode} periode`, x, el.y + 5);
           });
           ctx.restore();
         },
@@ -708,17 +714,17 @@ export default function DashboardView() {
                 <h2>Peringkat Karyawan Sakit</h2>
                 <p>{isYTD
                   ? 'Harap Pilih Periode Bulan'
-                  : `${sickListCount} karyawan ${selectedSite !== 'All Site' ? `(${selectedSite})` : ''} - ${periodLabel} · ${sickMode === 'spell' ? 'urut jumlah spell' : 'urut total hari sakit (A + B + C)'}`}</p>
+                  : `${sickListCount} karyawan ${selectedSite !== 'All Site' ? `(${selectedSite})` : ''} - ${periodLabel} · ${sickMode === 'periode' ? 'urut jumlah periode sakit' : 'urut total hari sakit (Periode 1 + 2 + 3)'}`}</p>
               </div>
               {!isYTD && (
                 <select
                   value={sickMode}
-                  onChange={(e) => setSickMode(e.target.value as 'hari' | 'spell')}
+                  onChange={(e) => setSickMode(e.target.value as 'hari' | 'periode')}
                   title="Dasar peringkat karyawan sakit"
                   style={{ height: 26, fontSize: 10, flexShrink: 0 }}
                 >
                   <option value="hari">Jumlah hari sakit</option>
-                  <option value="spell">Jumlah spell</option>
+                  <option value="periode">Jumlah periode</option>
                 </select>
               )}
             </div>

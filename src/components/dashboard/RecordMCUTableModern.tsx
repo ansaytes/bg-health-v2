@@ -2,13 +2,14 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, ChevronRight, Search, Eye, Pin, SlidersHorizontal, Edit, Trash2, ChevronDown, X, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Eye, Pin, SlidersHorizontal, Edit, Trash2, ChevronDown, X, RefreshCw, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/lib/supabase';
 import { MCU_FIELDS } from '@/lib/mcu-fields';
 import { useAuth } from '@/lib/auth-context';
 import { useMCUStore } from '@/lib/store';
+import MCUFollowUpModal from '@/components/mcu/MCUFollowUpModal';
 
 type RecordRow = Record<string, any>;
 
@@ -194,6 +195,7 @@ export default function RecordMCUTableModern() {
   const [frozenColumnsMonitor, setFrozenColumnsMonitor] = useState<string[]>(['nik_karyawan', 'nama']);
   const [showFrozenPicker, setShowFrozenPicker] = useState(false);
   const [editingRow, setEditingRow] = useState<RecordRow | null>(null);
+  const [followUpTargetRow, setFollowUpTargetRow] = useState<RecordRow | null>(null);
   const [saving, setSaving] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'record' | 'monitor'>('monitor');
@@ -478,8 +480,8 @@ export default function RecordMCUTableModern() {
   return (
     <div className="mcu-records-modern">
       <div className="mcu-records-card">
-        {/* Tab nav — Monitor MCU / Record MCU, di tengah halaman */}
-        <div className="flex justify-center border-b border-gray-200 dark:border-gray-800 mb-4" role="tablist">
+        {/* Tab nav — Monitor MCU / Record MCU, di kiri halaman */}
+        <div className="flex border-b border-gray-200 dark:border-gray-800 mb-4" role="tablist">
           <button
             type="button"
             role="tab"
@@ -649,6 +651,7 @@ export default function RecordMCUTableModern() {
                       <td className="mcu-records-action">
                         <div className="mcu-records-action-inner">
                         <Button size="sm" variant="ghost" onClick={() => setExpanded(s => ({ ...s, [id]: !s[id] }))} title={isExp ? 'Tutup detail' : 'Lihat detail'}><Eye size={14} /></Button>
+                        <Button size="sm" variant="ghost" className="text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300" onClick={() => setFollowUpTargetRow(row)} title="Tindak Lanjut / Follow-Up MCU"><Activity size={14} /></Button>
                         {activeTab === 'record' && (isSuperuser || isAdmin) && (
                           <>
                             <Button size="sm" variant="ghost" onClick={() => handleEdit(row)} title="Edit data"><Edit size={14} /></Button>
@@ -716,6 +719,16 @@ export default function RecordMCUTableModern() {
             </div>
           </DialogContent>
         </Dialog>
+        {/* Follow-Up Modal */}
+        <MCUFollowUpModal
+          isOpen={!!followUpTargetRow}
+          onClose={() => setFollowUpTargetRow(null)}
+          mcuRecord={followUpTargetRow}
+          onSuccess={() => {
+            if (activeTab === 'record') void load();
+            else void loadMonitor(true);
+          }}
+        />
       </div>
     </div>
   );

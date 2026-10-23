@@ -344,10 +344,18 @@ export function MCUChart({
     const isDataChange = lastAnimatedSignature.current !== dataSignature;
     lastAnimatedSignature.current = dataSignature;
 
+    // Diagram dianggap "baru tampil" bila instance-nya belum ada. Pada kondisi
+    // ini animasi HARUS berjalan meski signature-nya sama dengan render pertama
+    // (mis. data sudah tersedia dari cache / preload sehingga tidak ada
+    // perubahan data setelah mount). Sebelumnya animasi hanya bergantung pada
+    // isDataChange, sehingga diagram yang datanya "langsung ada" tampil kaku.
+    const isFirstPaint = !chartRef.current;
+
     // Standar animasi aplikasi:
     //  - donut : berputar SEARAH JARUM JAM mulai dari pukul 12 (rotation 0)
     //  - bar   : tumbuh DARI GARIS DASAR (vertikal: dari bawah, horizontal: dari kiri)
-    const animation = isDataChange ? (type === 'doughnut' ? STANDAR_ANIMASI_DONUT : STANDAR_ANIMASI_BAR) : false;
+    const shouldAnimate = isDataChange || isFirstPaint;
+    const animation = shouldAnimate ? (type === 'doughnut' ? STANDAR_ANIMASI_DONUT : STANDAR_ANIMASI_BAR) : false;
 
     const config: ChartConfiguration = {
       type,
@@ -470,7 +478,9 @@ export function MCUChart({
     };
 
     if (chartRef.current) {
-      if (isDataChange) {
+      if (shouldAnimate) {
+        // Dibuat ulang agar animasi benar-benar berjalan dari nol. `update()`
+        // saja tidak memicu animasi masuk untuk chart lama.
         chartRef.current.destroy();
         chartRef.current = null;
       }

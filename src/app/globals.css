@@ -4560,8 +4560,8 @@ select.admin-input.compact-input {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  /* Tab selalu di tengah halaman (simetris). */
-  justify-content: center;
+  /* Tab di kiri halaman. */
+  justify-content: flex-start;
 }
 .qh-tab {
   display: flex;
@@ -4931,12 +4931,13 @@ select.admin-input.compact-input {
 .col-filter-footer .is-primary:hover { text-decoration: none; filter: brightness(1.08); }
 
 /* ═══════════════════════════════════════════════════════════════
-   Centered Tabs — tab menu selalu di tengah halaman (simetris)
+   Centered Tabs — tab menu selalu di kiri halaman
+   (Nama class dipertahankan agar tidak perlu ubah semua pemakai.)
    ═══════════════════════════════════════════════════════════════ */
 .centered-tabs {
   display: flex;
   align-items: flex-end;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 6px;
   padding: 8px 12px 0;
   flex-shrink: 0;

@@ -73,32 +73,38 @@ export const BAR_ELEMENT = {
 };
 
 /**
- * Palet "harmonis": bar bersebelahan tidak kontras tajam.
- * Warna bergerak melalui satu rentang hangat → dingin dengan langkah kecil,
- * jadi tetap bisa dibedakan tanpa terasa ramai.
+ * Palet batang aplikasi: SATU warna per batang, tetapi nada warnanya dijaga
+ * berdekatan (bukan pelangi). Warna berurutan berasal dari satu keluarga panas
+ * (oranye → amber → kuning lemon → olive) sehingga batang bersebelahan tetap
+ * serasi dan mudah dibedakan tanpa terasa ramai.
+ *
+ * Urutan dipilih bolak-balik (terang → gelap → terang) supaya batang sebelah
+ * tidak pernah memakai nada yang nyaris sama.
  */
-export const PALET_HARMONIS = [
-  'rgba(52, 152, 219, 0.78)',
-  'rgba(41, 164, 196, 0.78)',
-  'rgba(26, 176, 166, 0.78)',
-  'rgba(46, 175, 128, 0.78)',
-  'rgba(120, 175, 84, 0.78)',
-  'rgba(176, 168, 70, 0.78)',
-  'rgba(214, 152, 64, 0.78)',
-  'rgba(226, 132, 74, 0.78)',
-  'rgba(222, 116, 100, 0.78)',
-  'rgba(196, 108, 136, 0.78)',
+export const PALET_BAR = [
+  'rgba(255, 122, 61, 0.85)',   // oranye terang
+  'rgba(214, 88, 32, 0.85)',    // oranye tua
+  'rgba(255, 161, 66, 0.85)',   // amber terang
+  'rgba(196, 116, 28, 0.85)',   // amber tua
+  'rgba(255, 196, 74, 0.85)',   // kuning amber
+  'rgba(166, 124, 44, 0.85)',   // olive tua
+  'rgba(255, 214, 102, 0.85)',  // kuning lemon
+  'rgba(158, 132, 62, 0.85)',   // khaki
+  'rgba(245, 176, 122, 0.85)',  // peach
+  'rgba(172, 104, 70, 0.85)',   // terracotta
 ];
 
-/** Warna bar ke-i dari palet harmonis (berulang). */
+/** Warna bar ke-i (satu warna per batang, nada berdekatan). */
 export function warnaBar(index: number): string {
-  return PALET_HARMONIS[index % PALET_HARMONIS.length];
+  return PALET_BAR[index % PALET_BAR.length];
 }
 
-/**
- * Rata kiri-kanan kategori/sumbu nilai untuk bar horizontal.
- * Kembalikan objek yang siap disebar ke `scales`.
- */
+/** Versi koma: satu warna berbeda untuk setiap batang dalam satu diagram. */
+export function banyakWarnaBar(count: number): string[] {
+  return Array.from({ length: count }, (_, index) => warnaBar(index));
+}
+
+/** Gaya sumbu batang horizontal. */
 export function opsiBarHorizontal(H: string, V: string): Record<string, unknown> {
   return {
     x: { beginAtZero: true, grace: '12%', grid: { color: V }, border: { display: false }, ticks: { precision: 0 } },

@@ -239,16 +239,6 @@ function IconTidur() {
   );
 }
 
-/** Kepala dengan hati — Kesehatan Mental. */
-function IconMental() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M15.5 21v-3.2a4.6 4.6 0 0 0 3.2-6.6 4 4 0 0 0-.6-6.2A4.8 4.8 0 0 0 13 5a4.2 4.2 0 0 0-3.2 1.2A4.6 4.6 0 0 0 5.6 12a4.6 4.6 0 0 0 3.4 6.2V21" />
-      <path d="M12 13.4l-1.1-1.1a1.6 1.6 0 0 1 2.2-2.2 1.6 1.6 0 0 1 2.2 2.2z" />
-    </svg>
-  );
-}
-
 /** Higiene Industri — menara pengukuran + gelombang (monitoring faktor lingkungan kerja). */
 function IconHigiene() {
   return (
@@ -318,7 +308,7 @@ const DASH_SIDEBAR: SidebarItem[] = [
   { key: 'monitoring', label: 'Monitoring MCU', icon: <IconMonitoring /> },
   { key: 'layanan-kuratif', label: 'Layanan Kuratif', icon: <IconKuratif /> },
   { key: 'higiene-industri', label: 'Higiene Industri', icon: <IconHigiene />, adminOnly: true },
-  { key: 'mental-health-dashboard', label: 'Kesehatan Mental', icon: <IconMental />, adminOnly: true },
+  { key: 'mental-health-dashboard', label: 'Kesehatan Mental', icon: <IconBrain />, adminOnly: true },
 ];
 
 /** Kepala dengan otak — Kesehatan Mental (input). */

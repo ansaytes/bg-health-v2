@@ -106,7 +106,7 @@ export default function ErgoApproval() {
         </div>
       </div>
 
-      {/* ── Tab status (di tengah, simetris) ────────────────── */}
+      {/* ── Tab status (kiri) ─────────────────────────── */}
       <div style={{ margin: '0 -20px' }}>
         <CenteredTabs
           tabs={TABS}

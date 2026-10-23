@@ -86,8 +86,11 @@ export default function MentalHealthDashboard() {
     const signature = JSON.stringify(d);
     const isDataChange = lastSignature.current !== signature;
     lastSignature.current = signature;
-    const anim = isDataChange ? STANDAR_ANIMASI_BAR : (false as const);
-    const donutAnim = isDataChange ? STANDAR_ANIMASI_DONUT : (false as const);
+    // Saat chart pertama kali dibuat animasi juga harus berjalan.
+    const isFirstPaint = !charts.current.srq;
+    const shouldAnimate = isDataChange || isFirstPaint;
+    const anim = shouldAnimate ? STANDAR_ANIMASI_BAR : (false as const);
+    const donutAnim = shouldAnimate ? STANDAR_ANIMASI_DONUT : (false as const);
 
     const draw = (key: string, el: HTMLCanvasElement | null, make: () => ChartJS) => {
       if (!el) return;

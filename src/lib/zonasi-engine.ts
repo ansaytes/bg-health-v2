@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // Zonasi Assessment Engine — BG/QSHE/STD/006 Rev001
 // ============================================================
 //
@@ -44,14 +44,25 @@ import {
   classifyUricAcid,
   classifyVision,
   detectGender,
+  hasActiveLiverDisease,
+  hasArtritisUrat,
   hasAsthma,
   hasChronicLbp,
   hasControlledEpilepsy,
+  hasDmKomplikasi,
+  hasFunctionalObesityLimitation,
+  hasInactiveLiverCarrier,
   hasLbpWithNeurologicalDeficit,
   hasResidualCardiacSymptom,
   hasResidualStroke,
   hasSleepApnea,
   hasUncontrolledEpilepsy,
+  isEpilepsyCompliantAndSeizureFree,
+  isEpilepsyNonCompliantOrRecentSeizure,
+  isEssTreatedAndControlled,
+  isEssUncontrolledOrUntreated,
+  isMentalConfirmedStable,
+  isMentalConfirmedUnstable,
   isReactive,
   parseVisualAcuity,
   toNumber,
@@ -229,13 +240,37 @@ function assessObjectiveZonasi(ctx: AssessCtx) {
   const egfr = toNumber(d.egfr) ?? calcEgfrCkdEpi2021(d.kreatinin, d.usia, d.jenisKelamin);
   collect(classifyEgfr(egfr));
 
-  // -- 5. Asam urat
-  collect(classifyUricAcid(toNumber(d.au), detectGender(ctx.genderKey)));
+  // -- 5. Asam urat (STD-006 Rev.002: bila ada riwayat artritis urat, AU >=7 langsung Merah)
+  const auVal = toNumber(d.au);
+  const auClass = classifyUricAcid(auVal, detectGender(ctx.genderKey));
+  if (auClass) {
+    if (hasArtritisUrat(d.artritisUrat) && auVal !== null && auVal >= 7) {
+      ctx.merah.push({
+        label: 'Hyperuricemia with Recurrent Gouty Arthritis History (Merah)',
+        severity: 'merah',
+        detail: `${auClass.detail}, dengan riwayat artritis gout berulang`,
+      });
+    } else {
+      collect(auClass);
+    }
+  } else if (hasArtritisUrat(d.artritisUrat)) {
+    ctx.kuning.push({
+      label: 'History of Recurrent Gouty Arthritis (Kuning)',
+      severity: 'kuning',
+      detail: String(d.artritisUrat),
+    });
+  }
 
-  // -- 6. Indeks massa tubuh
+  // -- 6. Indeks massa tubuh & Keterbatasan Fungsional
   const bmi = toNumber(d.bmi);
   const weight = classifyBmi(bmi);
-  if (weight && weight.severity === 'merah') {
+  if (hasFunctionalObesityLimitation(d.obesitasFungsional)) {
+    ctx.merah.push({
+      label: 'Severe Obesity with Functional / Mobility Limitation (Merah)',
+      severity: 'merah',
+      detail: `${weight?.detail ?? 'IMT tinggi'}, ${d.obesitasFungsional}`,
+    });
+  } else if (weight && weight.severity === 'merah') {
     collect(weight);
   } else if (weight && weight.severity === 'kuning') {
     if (bmi !== null && bmi >= 30) {
@@ -267,8 +302,21 @@ function assessObjectiveZonasi(ctx: AssessCtx) {
   // -- 10. Pendengaran
   collect(classifyHearing(toNumber(d.pta), String(d.audInterp ?? '')));
 
-  // -- 11. Fungsi hati
+  // -- 11. Fungsi hati & Diagnosis Klinis Hati (STD-006 Rev.002)
   collect(classifyLiver(toNumber(d.sgot), toNumber(d.sgpt), isReactive(d.hbsag)));
+  if (hasActiveLiverDisease(d.diagnosisHati)) {
+    ctx.merah.push({
+      label: 'Active Liver Disease / Cirrhosis / Chronic Impairment (Merah)',
+      severity: 'merah',
+      detail: String(d.diagnosisHati),
+    });
+  } else if (hasInactiveLiverCarrier(d.diagnosisHati)) {
+    ctx.kuning.push({
+      label: 'Inactive / Healthy Hepatitis Carrier (Kuning)',
+      severity: 'kuning',
+      detail: String(d.diagnosisHati),
+    });
+  }
 
   // -- 12. Pneumokoniosis
   collect(classifyChestXr(d.chestXR));
@@ -278,11 +326,19 @@ function assessObjectiveZonasi(ctx: AssessCtx) {
 function assessAnamnesisZonasi(ctx: AssessCtx) {
   const { d } = ctx;
 
-  // -- 13. Epilepsi
-  if (hasUncontrolledEpilepsy(d.riwayatEpilepsi)) {
-    ctx.merah.push({ label: 'Epilepsy, Uncontrolled (Merah)', severity: 'merah', detail: String(d.riwayatEpilepsi) });
-  } else if (hasControlledEpilepsy(d.riwayatEpilepsi)) {
-    ctx.kuning.push({ label: 'Epilepsy, Controlled (Kuning)', severity: 'kuning', detail: String(d.riwayatEpilepsi) });
+  // -- 13. Epilepsi & Kepatuhan Terapi
+  if (hasUncontrolledEpilepsy(d.riwayatEpilepsi) || isEpilepsyNonCompliantOrRecentSeizure(d.epilepsiKepatuhan)) {
+    ctx.merah.push({
+      label: 'Epilepsy, Uncontrolled / Non-compliant (Merah)',
+      severity: 'merah',
+      detail: [d.riwayatEpilepsi, d.epilepsiKepatuhan].filter(Boolean).join(' | '),
+    });
+  } else if (hasControlledEpilepsy(d.riwayatEpilepsi) || isEpilepsyCompliantAndSeizureFree(d.epilepsiKepatuhan)) {
+    ctx.kuning.push({
+      label: 'Epilepsy, Controlled (Kuning)',
+      severity: 'kuning',
+      detail: [d.riwayatEpilepsi, d.epilepsiKepatuhan].filter(Boolean).join(' | '),
+    });
   }
 
   // -- 14. Riwayat jantung / stroke
@@ -299,23 +355,73 @@ function assessAnamnesisZonasi(ctx: AssessCtx) {
   } else if (hasChronicLbp(d.lbp)) {
     ctx.kuning.push({ label: 'Chronic Low Back Pain (Kuning)', severity: 'kuning', detail: String(d.lbp) });
   }
+
+  // -- 16. Komplikasi Diabetes Melitus (STD-006 Rev.002)
+  if (hasDmKomplikasi(d.dmKomplikasi)) {
+    ctx.merah.push({
+      label: 'Diabetes Melitus with Complications (Neuropathy/Retinopathy/Nephropathy) (Merah)',
+      severity: 'merah',
+      detail: String(d.dmKomplikasi),
+    });
+  }
 }
 
-/** Parameter 16-17: kuesioner -- kosong dianggap normal. */
+/** Parameter 17-18: kuesioner -- kosong dianggap normal. */
 function assessQuestionnaireZonasi(ctx: AssessCtx) {
   const { d } = ctx;
 
-  // -- 16. Kualitas tidur (ESS): Hijau <11 - Kuning 11-15 - Merah >15
+  // -- 17. Kualitas tidur (ESS & Status Terapi): Hijau <11 - Kuning 11-15 - Merah >15
   const ess = toNumber(d.essScore);
   if (ess !== null) {
-    if (ess > 15) ctx.merah.push({ label: `Excessive Daytime Sleepiness (Severe, ESS ${ess}) (Merah)`, severity: 'merah' });
-    else if (ess >= 11) ctx.kuning.push({ label: `Excessive Daytime Sleepiness (Mild to Moderate, ESS ${ess}) (Kuning)`, severity: 'kuning' });
+    if (ess > 15) {
+      if (isEssTreatedAndControlled(d.statusTerapiEss)) {
+        ctx.kuning.push({
+          label: `Excessive Daytime Sleepiness Under Treatment & Controlled (ESS ${ess}) (Kuning)`,
+          severity: 'kuning',
+          detail: 'Dalam terapi dan terkontrol, monitoring berkala',
+        });
+      } else {
+        ctx.merah.push({
+          label: `Excessive Daytime Sleepiness (Severe, Untreated/Uncontrolled, ESS ${ess}) (Merah)`,
+          severity: 'merah',
+          detail: d.statusTerapiEss ? String(d.statusTerapiEss) : 'Belum ada terapi / tidak patuh',
+        });
+      }
+    } else if (ess >= 11) {
+      ctx.kuning.push({ label: `Excessive Daytime Sleepiness (Mild to Moderate, ESS ${ess}) (Kuning)`, severity: 'kuning' });
+    }
   }
 
-  // -- 17. Kesehatan mental
+  // -- 18. Kesehatan mental (STD/006 Rev.002 poin 6.1.8 & ProKawan)
   const srq = toNumber(d.srq20Score);
+  // Tanda Bahaya Kesehatan Jiwa: butir 17 SRQ-20 = "Ya". Berapa pun skor
+  // totalnya, karyawan masuk Zona Merah DAN tidak boleh ditugaskan pada
+  // pekerjaan berisiko tinggi (termasuk mengemudi) sampai dinilai dokter.
+  if (d.srq17Bahaya === 'Ya' || String(d.srq17Bahaya) === 'true' || d.srq17Bahaya === 'ya') {
+    ctx.merah.push({
+      label: 'Tanda Bahaya Kesehatan Jiwa — SRQ-20 butir 17 = Ya (Merah)',
+      severity: 'merah',
+      detail: 'Penilaian dokter HARI YANG SAMA; sampai dinilai dokter karyawan tidak ditugaskan pada pekerjaan berisiko tinggi termasuk mengemudi',
+    });
+  }
+
+  // Status Konfirmasi Gangguan Jiwa (STD-006 Rev.002)
+  if (isMentalConfirmedUnstable(d.mentalKonfirmasi)) {
+    ctx.merah.push({
+      label: 'Gangguan Jiwa Terkonfirmasi Belum Stabil (Merah)',
+      severity: 'merah',
+      detail: 'Rujukan dokter spesialis jiwa (Sp.KJ) & pendampingan intensif ProKawan',
+    });
+  } else if (isMentalConfirmedStable(d.mentalKonfirmasi)) {
+    ctx.kuning.push({
+      label: 'Gangguan Jiwa Terkonfirmasi Stabil / Terkontrol (Kuning)',
+      severity: 'kuning',
+      detail: 'Monitoring kepatuhan pengobatan via ProKawan',
+    });
+  }
+
   if (srq !== null && srq >= SRQ20_THRESHOLD) {
-    ctx.kuning.push({ label: `Possible Mental Disorder (SRQ-20 ${srq}) (Kuning)`, severity: 'kuning' });
+    ctx.kuning.push({ label: `Terduga Gangguan Mental Emosional (SRQ-20 ${srq}) (Kuning)`, severity: 'kuning' });
   }
   // Ambang "berat" DASS-21 berbeda per subskala (depresi 22, ansietas 20,
   // stres 26), jadi penentuannya memakai kategori, bukan angka tetap.

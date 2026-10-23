@@ -86,6 +86,14 @@ export function scoreEss(answers: Record<string, string | number | null | undefi
 
 export const SRQ20_ITEM_COUNT = 20;
 export const SRQ20_THRESHOLD = 6;
+/**
+ * STD/006 Rev.002 poin 6.1.8 & Lampiran 2: jawaban "Ya" pada butir 17
+ * (pikiran untuk mengakhiri hidup) adalah TANDA BAHAYA KESEHATAN JIWA yang
+ * wajib ditindaklanjuti dokter pada HARI YANG SAMA, berapa pun skor totalnya.
+ * Sampai dinilai dokter, karyawan tidak ditugaskan pada pekerjaan berisiko
+ * tinggi (termasuk mengemudi).
+ */
+export const SRQ20_DANGER_ITEM = 'srq17';
 
 export type Srq20Category = 'normal' | 'perlu-tindak-lanjut' | 'tidak-lengkap';
 
@@ -95,6 +103,11 @@ export interface Srq20Result {
   label: string;
   answered: number;
   total: number;
+  /**
+   * true bila butir 17 dijawab "Ya" — memicu jalur Tanda Bahaya Kesehatan Jiwa
+   * yang tidak bergantung pada skor total (bisa tetap Zona Merah walau skor <6).
+   */
+  danger: boolean;
 }
 
 export function scoreSrq20(answers: Record<string, string | number | null | undefined>): Srq20Result {
@@ -108,9 +121,10 @@ export function scoreSrq20(answers: Record<string, string | number | null | unde
     score += value;
     answered += 1;
   }
+  const danger = readYesNo(answers[SRQ20_DANGER_ITEM]) === 1;
 
   if (answered === 0) {
-    return { score: 0, category: 'tidak-lengkap', label: 'Belum diisi', answered, total: SRQ20_ITEM_COUNT };
+    return { score: 0, category: 'tidak-lengkap', label: 'Belum diisi', answered, total: SRQ20_ITEM_COUNT, danger: false };
   }
   if (answered < SRQ20_ITEM_COUNT) {
     return {
@@ -119,6 +133,19 @@ export function scoreSrq20(answers: Record<string, string | number | null | unde
       label: `Belum lengkap (${answered}/${SRQ20_ITEM_COUNT} item)`,
       answered,
       total: SRQ20_ITEM_COUNT,
+      danger,
+    };
+  }
+  if (danger) {
+    // Tanda bahaya mengalahkan ambang skor: label harus memerintahkan tindakan
+    // hari yang sama, bukan sekadar "rujukan".
+    return {
+      score,
+      category: 'perlu-tindak-lanjut',
+      label: `TANDA BAHAYA KESEHATAN JIWA (butir 17 = Ya) — dokter menilai HARI INI; skor ${score}`,
+      answered,
+      total: SRQ20_ITEM_COUNT,
+      danger,
     };
   }
   if (score >= SRQ20_THRESHOLD) {
@@ -128,9 +155,10 @@ export function scoreSrq20(answers: Record<string, string | number | null | unde
       label: `Possible Mental Disorder (score ${score} >= ${SRQ20_THRESHOLD}) — rujuk psikolog atau psikiater`,
       answered,
       total: SRQ20_ITEM_COUNT,
+      danger,
     };
   }
-  return { score, category: 'normal', label: 'No Significant Psychological Distress', answered, total: SRQ20_ITEM_COUNT };
+  return { score, category: 'normal', label: 'No Significant Psychological Distress', answered, total: SRQ20_ITEM_COUNT, danger };
 }
 
 // ────────────────────────────────────────────────────────────
@@ -177,43 +205,64 @@ export interface Dass21Result {
  * tidak akan pernah muncul sama sekali — skor tertinggi yang mungkin dicapai
  * akan terbaca sebagai "berat".
  *
- * Karena itu banda teratas di sini dimulai tepat pada batas maksimum yang
- * mungkin dicapai. Semua batas di bawahnya tetap sama persis dengan tabel
- * asli; yang berubah hanya batas terakhir, dari 28 (tidak tercapai) menjadi
- * 27 / 21 / 15. Konsekuensinya: pada DASS-21, kategori tertinggi hanya bisa
- * dicapai bila SETIAP item berskor maksimum.
+ * Tabel di bawah adalah tabel RESMI DASS-21 (Lovibond & Lovibond 1995) yang
+ * berlaku untuk skor subskala yang SUDAH DIKALI 2 (rentang 0–42).
+ *
+ * AUDIT (STD/006 Rev.002 Lampiran 2):
+ *  - Depresi   : Normal 0–9, Ringan 10–13, Sedang 14–20, Berat 21–27, Sangat berat ≥28
+ *  - Ansietas  : Normal 0–7, Ringan 8–9, Sedang 10–14, Berat 15–19, Sangat berat ≥20
+ *  - Stres     : Normal 0–14, Ringan 15–18, Sedang 19–25, Berat 26–33, Sangat berat ≥34
+ *
+ * SEBELUMNYA ada dua kesalahan:
+ *  1. Fungsi pemanggil mengirim skor MENTAH (0–21) tanpa dikali 2, sehingga
+ *     hasil selalu terbaca terlalu ringan (mis. depresi skor mentah 10 = 20 →
+ *     harusnya "Sedang", tetapi dinilai dengan 10 → "Ringan").
+ *  2. Batas atas rentang tertinggi dipangkas ke 27/21/15 karena "tidak pernah
+ *     tercapai", padahal skor ×2 memang bisa mencapai 42.
+ * Keduanya dihapus: nilai di bawah ini harus sama persis dengan dokumen.
  */
 const DASS_BANDS: Record<DassDomain, { max: number; category: DassCategory; label: string }[]> = {
   depresi: [
     { max: 9, category: 'normal', label: 'Normal' },
-    { max: 13, category: 'ringan', label: 'Mild Depression' },
-    { max: 21, category: 'sedang', label: 'Moderate Depression' },
-    { max: 26, category: 'berat', label: 'Severe Depression' },
-    { max: 27, category: 'sangat-berat', label: 'Extremely Severe Depression' },
+    { max: 13, category: 'ringan', label: 'Ringan' },
+    { max: 20, category: 'sedang', label: 'Sedang' },
+    { max: 27, category: 'berat', label: 'Berat' },
+    { max: Number.POSITIVE_INFINITY, category: 'sangat-berat', label: 'Sangat Berat' },
   ],
   ansietas: [
     { max: 7, category: 'normal', label: 'Normal' },
-    { max: 14, category: 'ringan', label: 'Mild Anxiety' },
-    { max: 19, category: 'sedang', label: 'Moderate Anxiety' },
-    { max: 20, category: 'berat', label: 'Severe Anxiety' },
-    { max: 21, category: 'sangat-berat', label: 'Extremely Severe Anxiety' },
+    { max: 9, category: 'ringan', label: 'Ringan' },
+    { max: 14, category: 'sedang', label: 'Sedang' },
+    { max: 19, category: 'berat', label: 'Berat' },
+    { max: Number.POSITIVE_INFINITY, category: 'sangat-berat', label: 'Sangat Berat' },
   ],
   stres: [
-    { max: 11, category: 'normal', label: 'Normal' },
-    { max: 19, category: 'ringan', label: 'Mild Stress' },
-    { max: 25, category: 'sedang', label: 'Moderate Stress' },
-    { max: 26, category: 'berat', label: 'Severe Stress' },
-    { max: 27, category: 'sangat-berat', label: 'Extremely Severe Stress' },
+    { max: 14, category: 'normal', label: 'Normal' },
+    { max: 18, category: 'ringan', label: 'Ringan' },
+    { max: 25, category: 'sedang', label: 'Sedang' },
+    { max: 33, category: 'berat', label: 'Berat' },
+    { max: Number.POSITIVE_INFINITY, category: 'sangat-berat', label: 'Sangat Berat' },
   ],
 };
 
-export function dassBandLabel(domain: DassDomain, score: number): string {
+/**
+ * Kategori DASS-21.
+ *
+ * `rawScore` adalah skor MENTAH satu subskala (0–21, hasil penjumlahan 7 item
+ * skala 0–3). Sesuai STD/006 Lampiran 2 dan manual Lovibond, skor mentah
+ * DIKALI 2 lebih dulu baru dibaca pada tabel kategori. Pengalian dilakukan di
+ * dalam fungsi ini supaya tidak ada pemanggil yang lupa mengalikannya — itulah
+ * sumber kesalahan penilaian sebelum perbaikan ini.
+ */
+export function dassBandLabel(domain: DassDomain, rawScore: number): string {
   const bands = DASS_BANDS[domain];
+  const score = rawScore * 2;
   return bands.find((band) => score <= band.max)?.label ?? 'Normal';
 }
 
-export function dassCategory(domain: DassDomain, score: number): DassCategory {
+export function dassCategory(domain: DassDomain, rawScore: number): DassCategory {
   const bands = DASS_BANDS[domain];
+  const score = rawScore * 2;
   return bands.find((band) => score <= band.max)?.category ?? 'sangat-berat';
 }
 
@@ -222,8 +271,8 @@ export function dassCategory(domain: DassDomain, score: number): DassCategory {
  * Sesuai STD-006, depresi berat dengan risiko diri dan psikosis aktif
  * menurunkan zona, jadi ambangnya mengikuti kategori "berat".
  */
-export function isDassActionable(domain: DassDomain, score: number): boolean {
-  const category = dassCategory(domain, score);
+export function isDassActionable(domain: DassDomain, rawScore: number): boolean {
+  const category = dassCategory(domain, rawScore);
   return category === 'berat' || category === 'sangat-berat';
 }
 
@@ -249,6 +298,9 @@ function buildDassScore(domain: DassDomain, items: number[], answers: Record<str
     };
   }
   const category = dassCategory(domain, score);
+  // `score` yang dikembalikan tetap nilai mentah (0–21) agar dapat
+  // dibandingkan dengan kolom dass* pada MCU; fungsi kategori mengalikannya
+  // sendiri dengan 2 sesuai STD/006 Lampiran 2.
   return { score, category, label: dassBandLabel(domain, score), answered, total: items.length };
 }
 

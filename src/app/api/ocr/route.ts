@@ -288,7 +288,7 @@ export async function POST(req: Request) {
                   : conclusionOptions.includes(value) ? value : '';
       return normalized;
     };
-    for (const conclusionField of ['kesVendor', 'rekQSHE', 'kesimpulanFU1', 'kesimpulanFU2', 'kesimpulanFU3']) {
+    for (const conclusionField of ['kesVendor', 'rekQSHE']) {
       if (validData[conclusionField]) {
         validData[conclusionField] = normalizeConclusion(validData[conclusionField]);
       }

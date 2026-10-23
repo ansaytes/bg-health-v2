@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { MONTHS } from '@/lib/lagging-data';
+import { PALET_BAR } from '@/lib/chart-standard';
 import {
   MCUChart,
   MCUChartCard,
@@ -17,11 +18,9 @@ const PALETTE = ['#00B894', 'rgba(255,62,48,0.95)', '#616161', '#778899'];
 // "Belum terlaksana" dan "Expired" memakai MERAH CERAH agar langsung terlihat.
 const MERAH_CERAH = '#FF2D2D';
 const CHART_COLORS = ['#00B894', '#F39C12', MERAH_CERAH];
-// Setiap batang pada "10 Jobsite MCU Tidak Ditemukan Terbanyak" memakai warna berbeda.
-const SITE_BAR_COLORS = [
-  '#E74C3C', '#F39C12', '#F1C40F', '#2ECC71', '#1ABC9C',
-  '#3498DB', '#6C5CE7', '#9B59B6', '#E84393', '#778899',
-];
+// Setiap batang pada "10 Jobsite MCU Tidak Ditemukan Terbanyak" memakai warna
+// berbeda, tetapi nadanya tetap satu keluarga (tidak seperti pelangi).
+const SITE_BAR_COLORS = PALET_BAR;
 
 function monthIndex(value: string | null) {
   const parsed = parseRowDate(value);

@@ -119,9 +119,10 @@ export function classifyBmi(bmi: number | null): Classification | null {
 }
 
 // ────────────────────────────────────────────────────────────
-// 3. Hemoglobin — sesuai SOP Rev001 (Bab 7)
+// 3. Hemoglobin — STD/006 Rev.002 (Bab 7)
+//    Hijau : pria ≥13,5 · wanita ≥12,0
 //    Kuning: pria 11,0–13,4 · wanita 10,0–11,9
-//    Merah  : Hb <10,0
+//    Merah : Hb <10,0 (anemia sedang–berat)
 // =============================================================
 // Celah SOP: pria 10,0–10,9 tidak masuk Hijau/Kuning/Merah.
 // Dikembalikan severity 'tidak-dinilai' agar caller bisa memberi
@@ -149,40 +150,76 @@ export function classifyHemoglobin(hb: number | null, gender: Gender): Classific
 }
 
 // ────────────────────────────────────────────────────────────
-// 4. Gula Darah — PERKENI / Permenkes
-//    SOP Hijau HbA1c <7% & GDP <100 · Kuning GDP 100–125 · Merah ≥8% / ≥200
+// 4. Gula Darah — STD/006 Rev.002 + KMK HK.01.07/MENKES/302/2026
+//    HbA1c adalah acuan UTAMA kendali diabetes; GDS hanya untuk skrining
+//    dan mengenali hiperglikemia berat (>300 mg/dL).
+//
+//    Hijau : HbA1c <7% tanpa komplikasi · GDP <100 · HbA1c <5,7%
+//    Kuning: HbA1c 7,0–7,9% (DM terkontrol)
+//            HbA1c 5,7–6,4% / GDP 100–125 (prediabetes)
+//            GDP ≥126 · GDS ≥200 · HbA1c ≥6,5% → "Terduga DM baru" bila
+//            belum ada diagnosis (zona ditetapkan ulang setelah konfirmasi)
+//    Merah : HbA1c ≥8% atau glukosa darah >300 mg/dL (DM tidak terkontrol)
+//            DM dengan komplikasi (dinilai klinis oleh dokter)
+//
+// Rev.002 menetapkan rentang Zona Kuning HbA1c 7,0–7,9% (Rev.001 memakai
+// 7,0–<7,5). Karyawan terdiagnosis DM yang MCU-nya tidak memuat HbA1c
+// ditetapkan minimal Zona Kuning (poin 6.1.6) lewat flag `sudahDiagnosisDM`.
 // ============================================================
 
 export function classifyGlucose(
   gdp: number | null,
   gdpSeSATA: number | null,
   hba1c: number | null,
+  sudahDiagnosisDM = false,
 ): Classification | null {
-  if (gdp === null && gdpSeSATA === null && hba1c === null) return null;
+  if (gdp === null && gdpSeSATA === null && hba1c === null) {
+    // Poin 6.1.6: DM terdiagnosis tanpa HbA1c pada MCU → minimal Zona Kuning.
+    if (sudahDiagnosisDM) {
+      return {
+        severity: 'kuning',
+        label: 'Diabetes Mellitus — HbA1c belum tersedia',
+        detail: 'Ditetapkan minimal Zona Kuning sampai HbA1c dari kontrol ProKawan tersedia (STD/006 poin 6.1.6)',
+      };
+    }
+    return null;
+  }
   const parts: string[] = [];
 
   if (hba1c !== null) {
-    if (hba1c >= 8) return { severity: 'merah', label: 'Uncontrolled Diabetes Mellitus', detail: `HbA1c ${fmt(hba1c)}%` };
-    if (hba1c >= 7.5) return { severity: 'merah', label: 'Uncontrolled Diabetes Mellitus', detail: `HbA1c ${fmt(hba1c)}%` };
-    if (hba1c >= 7) return { severity: 'kuning', label: 'Controlled Diabetes Mellitus', detail: `HbA1c ${fmt(hba1c)}%` };
+    if (hba1c >= 8) {
+      return { severity: 'merah', label: 'DM Tidak Terkontrol', detail: `HbA1c ${fmt(hba1c)}% (≥8%)` };
+    }
+    // Rentang 7,0–7,9% = DM terkontrol (Zona Kuning) — Rev.002.
+    if (hba1c >= 7) {
+      return { severity: 'kuning', label: 'DM Terkontrol', detail: `HbA1c ${fmt(hba1c)}% (7,0–7,9%)` };
+    }
     if (hba1c >= 6.5) {
-      return { severity: 'merah', label: 'Diabetes Mellitus', detail: `HbA1c ${fmt(hba1c)}%` };
+      return {
+        severity: 'kuning',
+        label: sudahDiagnosisDM ? 'DM Terkontrol — evaluasi dokter' : 'Terduga DM Baru',
+        detail: `HbA1c ${fmt(hba1c)}% (≥6,5%) — konfirmasi dokter ≤1 bulan`,
+      };
     }
     if (hba1c >= 5.7) {
-      return { severity: 'kuning', label: 'Prediabetes', detail: `HbA1c ${fmt(hba1c)}%` };
+      return { severity: 'kuning', label: 'Prediabetes', detail: `HbA1c ${fmt(hba1c)}% (5,7–6,4%)` };
     }
     parts.push(`HbA1c ${fmt(hba1c)}%`);
   }
 
-  const gdpValue = gdp ?? gdpSeSATA;
-  if (gdp !== null && gdp >= 200) {
-    return { severity: 'merah', label: 'Uncontrolled Diabetes Mellitus', detail: `GDP ${fmt(gdp)} mg/dL` };
+  // Hiperglikemia berat: berlaku untuk GDS maupun GDP (Rev.002 >300 mg/dL).
+  if (gdpSeSATA !== null && gdpSeSATA > 300) {
+    return { severity: 'merah', label: 'DM Tidak Terkontrol', detail: `GDS ${fmt(gdpSeSATA)} mg/dL (>300)` };
   }
-  if (gdpSeSATA !== null && gdpSeSATA >= 200) {
-    return { severity: 'merah', label: 'Uncontrolled Diabetes Mellitus', detail: `Gula Darah Sewaktu ${fmt(gdpSeSATA)} mg/dL` };
+  if (gdp !== null && gdp > 300) {
+    return { severity: 'merah', label: 'DM Tidak Terkontrol', detail: `GDP ${fmt(gdp)} mg/dL (>300)` };
   }
   if (gdp !== null && gdp >= 126) {
-    return { severity: 'merah', label: 'Diabetes Mellitus', detail: `GDP ${fmt(gdp)} mg/dL` };
+    return {
+      severity: 'kuning',
+      label: sudahDiagnosisDM ? 'DM Terkontrol — konfirmasi dokter' : 'Terduga DM Baru',
+      detail: `GDP ${fmt(gdp)} mg/dL (≥126) — konfirmasi dokter ≤1 bulan`,
+    };
   }
   if (gdp !== null && gdp >= 100 && gdp <= 125) {
     return { severity: 'kuning', label: 'Prediabetes', detail: `GDP ${fmt(gdp)} mg/dL` };
@@ -993,3 +1030,92 @@ export function classifyFitnessTest(value: string | null | undefined): Classific
   if (!/kurang|buruk|poor|abnormal/i.test(raw)) return null;
   return { severity: 'kuning', label: 'Impaired Physical Fitness', detail: raw };
 }
+
+// ────────────────────────────────────────────────────────────
+// 15. Kualifikasi Klinis Tambahan — STD-006 Rev.002
+// ============================================================
+
+export const DM_KOMPLIKASI_OPTIONS = [
+  'Tidak Ada',
+  'Ada (Neuropati/Retinopati/Nefropati/Ulkus)',
+] as const;
+
+export const MENTAL_KONFIRMASI_OPTIONS = [
+  'Tidak Ada',
+  'Skrining Saja',
+  'Terkonfirmasi Stabil (Dalam Pengobatan Teratur)',
+  'Terkonfirmasi Tidak Stabil / Belum Terkontrol',
+] as const;
+
+export const ARTRITIS_URAT_OPTIONS = [
+  'Tidak Ada',
+  'Ada Riwayat Artritis Gout / Nyeri Sendi Berulang',
+] as const;
+
+export const DIAGNOSIS_HATI_OPTIONS = [
+  'Normal / Tidak Ada',
+  'Inaktif / Carrier Sehat (Fungsi Hati Normal)',
+  'Hepatitis Aktif / Sirosis / Gangguan Fungsi Hati Kronis',
+] as const;
+
+export const OBESITAS_FUNGSIONAL_OPTIONS = [
+  'Tidak Ada Keterbatasan',
+  'Ada Keterbatasan Mobilitas / Fungsional',
+] as const;
+
+export const STATUS_TERAPI_ESS_OPTIONS = [
+  'Tidak Memerlukan Terapi',
+  'Dalam Terapi / Terkontrol',
+  'Belum Ada Terapi / Tidak Patuh Terapi',
+] as const;
+
+export const EPILEPSI_KEPATUHAN_OPTIONS = [
+  'Bukan Penyandang Epilepsi',
+  'Patuh Terapi & Bebas Kejang ≥1 Tahun',
+  'Tidak Patuh Terapi / Ada Kejang dalam 1 Tahun Terakhir',
+] as const;
+
+export function hasDmKomplikasi(value: MultiValue): boolean {
+  return matchesAny(value, /ada|neuropati|retinopati|nefropati|ulkus/i) && !matchesAny(value, /tidak ada/i);
+}
+
+export function hasArtritisUrat(value: MultiValue): boolean {
+  return matchesAny(value, /ada|gout|artritis|sendi/i) && !matchesAny(value, /tidak ada/i);
+}
+
+export function hasActiveLiverDisease(value: MultiValue): boolean {
+  return matchesAny(value, /aktif|sirosis|kronis/i);
+}
+
+export function hasInactiveLiverCarrier(value: MultiValue): boolean {
+  return matchesAny(value, /carrier|inaktif/i);
+}
+
+export function hasFunctionalObesityLimitation(value: MultiValue): boolean {
+  return matchesAny(value, /keterbatasan/i) && !matchesAny(value, /tidak ada keterbatasan/i);
+}
+
+export function isEssUncontrolledOrUntreated(value: MultiValue): boolean {
+  return matchesAny(value, /belum ada terapi|tidak patuh/i);
+}
+
+export function isEssTreatedAndControlled(value: MultiValue): boolean {
+  return matchesAny(value, /terkontrol/i);
+}
+
+export function isEpilepsyNonCompliantOrRecentSeizure(value: MultiValue): boolean {
+  return matchesAny(value, /tidak patuh|kejang dalam/i);
+}
+
+export function isEpilepsyCompliantAndSeizureFree(value: MultiValue): boolean {
+  return matchesAny(value, /bebas kejang/i);
+}
+
+export function isMentalConfirmedUnstable(value: MultiValue): boolean {
+  return matchesAny(value, /tidak stabil|belum terkontrol|akut/i);
+}
+
+export function isMentalConfirmedStable(value: MultiValue): boolean {
+  return matchesAny(value, /terkonfirmasi stabil|pengobatan teratur/i);
+}
+

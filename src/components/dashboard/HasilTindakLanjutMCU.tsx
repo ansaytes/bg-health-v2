@@ -176,7 +176,7 @@ export default function HasilTindakLanjutMCU() {
     return [...counts.entries()].sort((a, b) => b[1] - a[1]);
   }, [filtered]);
 
-  const palette = ['#3498DB', '#00B894', '#FF8C42', '#FF4444', '#9B59B6', '#00BCD4', '#F39C12', '#E91E63', '#2ECC71', '#778899'];
+  // Warna bar mengikuti palet aplikasi (satu warna per batang, nada berdekatan).
   const harmonis = diseases.map((_, index) => warnaBar(index));
   const resultColors = resultDistribution.map(([label]) => RESULT_COLORS[label.toLowerCase()] || '#616161');
   const frsColors = frsDistribution.map(([label]) => {
@@ -197,7 +197,7 @@ export default function HasilTindakLanjutMCU() {
     if (normalized === 'merah') return '#FF2D2D';
     if (normalized === 'kuning') return '#FFD400';
     if (normalized === 'hijau') return '#00B894';
-    return palette[index % palette.length];
+    return warnaBar(index);
   });
 
   return (

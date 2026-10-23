@@ -473,7 +473,7 @@ export function ResultDialog({
         onClick={(event) => event.stopPropagation()}
       >
         <header className="qh-modal-head">
-          <h3 id="qh-modal-title">Hasil Kuesioner</h3>
+          <h3 id="qh-modal-title">{data.lines.length > 0 ? 'Hasil Kuesioner' : 'Terima Kasih'}</h3>
           <button type="button" className="qh-modal-close" onClick={onClose} aria-label="Tutup">
             ×
           </button>
@@ -485,45 +485,54 @@ export function ResultDialog({
             <span>{data.tanggal}</span>
           </p>
 
-          <table className="qh-result-table">
-            <tbody>
-              {data.lines.map((line) => (
-                <tr key={line.label}>
-                  <td>{line.label}</td>
-                  <td>
-                    <strong className={`qh-tone-${line.tone ?? 'neutral'}`}>{line.value}</strong>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {data.lines.length > 0 && (
+            <table className="qh-result-table">
+              <tbody>
+                {data.lines.map((line) => (
+                  <tr key={line.label}>
+                    <td>{line.label}</td>
+                    <td>
+                      <strong className={`qh-tone-${line.tone ?? 'neutral'}`}>{line.value}</strong>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
 
           <div
             className="qh-modal-kesimpulan"
             style={{ background: warna.bg, borderColor: warna.border, color: warna.text }}
           >
-            <strong>Kesimpulan</strong>
+            <strong>{data.lines.length > 0 ? 'Kesimpulan' : 'Pesan'}</strong>
             <p>{data.kesimpulan}</p>
           </div>
 
-          <dl className="qh-modal-meta">
-            <div>
-              <dt>Zona MCU terbaru</dt>
-              <dd>{data.zonaMCU || 'Belum ada MCU yang memakai hasil ini'}</dd>
-            </div>
-            <div>
-              <dt>MCU yang ikut diperbarui</dt>
-              <dd>
-                {data.mcuUpdated} record
-                {data.mcuUpdated === 0 && ' — tidak ada MCU pada atau setelah tanggal ini'}
-              </dd>
-            </div>
-          </dl>
+          {/* Informasi MCU hanya relevan untuk instrumen klinis per individu.
+              Untuk instrumen yang menilai lingkungan kerja (SDS-30), baris ini
+              tidak ditampilkan karena tidak ada nilai individual yang dibaca. */}
+          {data.lines.length > 0 && (
+            <dl className="qh-modal-meta">
+              <div>
+                <dt>Zona MCU terbaru</dt>
+                <dd>{data.zonaMCU || 'Belum ada MCU yang memakai hasil ini'}</dd>
+              </div>
+              <div>
+                <dt>MCU yang ikut diperbarui</dt>
+                <dd>
+                  {data.mcuUpdated} record
+                  {data.mcuUpdated === 0 && ' — tidak ada MCU pada atau setelah tanggal ini'}
+                </dd>
+              </div>
+            </dl>
+          )}
 
-          <p className="qh-modal-warning">
-            Kuesioner ini merupakan <strong>skrining</strong>, bukan diagnosis. Diagnosis hanya
-            dapat ditegakkan setelah pemeriksaan dan konfirmasi tenaga kesehatan.
-          </p>
+          {data.lines.length > 0 && (
+            <p className="qh-modal-warning">
+              Kuesioner ini merupakan <strong>skrining</strong>, bukan diagnosis. Diagnosis hanya
+              dapat ditegakkan setelah pemeriksaan dan konfirmasi tenaga kesehatan.
+            </p>
+          )}
         </div>
 
         <footer className="qh-modal-foot">
@@ -551,6 +560,8 @@ export function useEmployeeLookup(endpoint: string) {
   const [historyAvailable, setHistoryAvailable] = useState(true);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
+  /** false untuk akun Employee: hasil hanya untuk petugas (lihat penjelasan di halaman). */
+  const [canSeeResult, setCanSeeResult] = useState(true);
 
   async function search(value?: string): Promise<EmployeeIdentityView | null> {
     const term = (value ?? query).trim();
@@ -575,6 +586,7 @@ export function useEmployeeLookup(endpoint: string) {
       setIdentity(body.identity as EmployeeIdentityView);
       setHistory(Array.isArray(body.history) ? body.history : []);
       setHistoryAvailable(body.historyAvailable !== false);
+      setCanSeeResult(body.canSeeResult !== false);
       setQuery(term);
       return body.identity as EmployeeIdentityView;
     } catch {
@@ -593,10 +605,11 @@ export function useEmployeeLookup(endpoint: string) {
     setIdentity(null);
     setHistory([]);
     setHistoryAvailable(true);
+    setCanSeeResult(true);
     setError('');
   }
 
-  return { query, setQuery, identity, history, historyAvailable, setHistory, searching, error, search, reset };
+  return { query, setQuery, identity, history, historyAvailable, setHistory, searching, error, search, reset, canSeeResult };
 }
 
 /** Pesan sukses atau galat yang otomatis hilang setelah beberapa detik. */

@@ -13,6 +13,7 @@ import ChartDataLabels from 'chartjs-plugin-datalabels';
 import DownloadButton from '@/components/ui/download-button';
 import { AlertTriangle, Clock, PackageCheck, AlertCircle, RefreshCw, ShieldAlert, Boxes } from 'lucide-react';
 import { fetchDashboardData } from '@/lib/dashboard-data';
+import { STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT } from '@/lib/chart-standard';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -136,7 +137,7 @@ export default function InventoryDashboard() {
   // KPIs
   const totalRagam = items.length;
   const totalStokFisik = useMemo(() => items.reduce((acc, i) => acc + (i.stock || 0), 0), [items]);
-  
+
   const perluRestockCount = useMemo(() => {
     return items.filter(i => {
       const status = getStockStatus(i);
@@ -288,10 +289,12 @@ export default function InventoryDashboard() {
 
     const isDataChange = lastAnimatedSignature.current !== chartDataSignature;
     lastAnimatedSignature.current = chartDataSignature;
+    // Animasi juga berjalan saat chart pertama kali dibuat.
+    const isFirstPaint = !topExpiredChart.current;
+    const shouldAnimate = isDataChange || isFirstPaint;
 
-    const animationSettings = isDataChange
-      ? ({ duration: 900, easing: 'easeOutQuart' } as const)
-      : (false as const);
+    const animationSettings = shouldAnimate ? STANDAR_ANIMASI_BAR : (false as const);
+    const donutAnimationSettings = shouldAnimate ? STANDAR_ANIMASI_DONUT : (false as const);
       const textColor = isDark ? '#F9FAFB' : '#111827';
       const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
       const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
@@ -373,7 +376,7 @@ export default function InventoryDashboard() {
       };
 
       if (topExpiredChart.current) {
-        if (isDataChange) {
+        if (shouldAnimate) {
           topExpiredChart.current.destroy();
           topExpiredChart.current = null;
         }
@@ -424,7 +427,9 @@ export default function InventoryDashboard() {
         maintainAspectRatio: false,
         cutout: '62%',
         radius: '82%',
-        animation: animationSettings,
+        rotation: 0,
+        circumference: 360,
+        animation: donutAnimationSettings,
         plugins: {
           legend: {
             display: true,
@@ -452,7 +457,7 @@ export default function InventoryDashboard() {
       };
 
       if (stockStatusChart.current) {
-        if (isDataChange) {
+        if (shouldAnimate) {
           stockStatusChart.current.destroy();
           stockStatusChart.current = null;
         }
@@ -566,7 +571,7 @@ export default function InventoryDashboard() {
       };
 
       if (topExpSoonChart.current) {
-        if (isDataChange) {
+        if (shouldAnimate) {
           topExpSoonChart.current.destroy();
           topExpSoonChart.current = null;
         }
@@ -668,7 +673,7 @@ export default function InventoryDashboard() {
       };
 
       if (fastMovingChart.current) {
-        if (isDataChange) {
+        if (shouldAnimate) {
           fastMovingChart.current.destroy();
           fastMovingChart.current = null;
         }

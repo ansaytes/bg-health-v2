@@ -34,6 +34,7 @@ import {
   type ResultDialogData,
   type ScoreLine,
 } from '@/components/questionnaire/QuestionnaireUI';
+import ConsentGate, { EMPTY_CONSENT, type ConsentState } from '@/components/questionnaire/ConsentGate';
 
 type Section = 'srq20' | 'dass21';
 
@@ -113,13 +114,16 @@ function barisHasil(body: any): ScoreLine[] {
 }
 
 export default function InputMentalHealthPage() {
-  const { query, setQuery, identity, searching, error, search } = useEmployeeLookup('/api/mental-health');
+  const { query, setQuery, identity, searching, error, search, canSeeResult } = useEmployeeLookup('/api/mental-health');
   const submit = useSubmitStatus();
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [active, setActive] = useState<Section>('srq20');
   const [tglPemeriksaan, setTglPemeriksaan] = useState(today());
   const [resultDialog, setResultDialog] = useState<ResultDialogData | null>(null);
+  // Persetujuan (FORM/098) wajib sebelum pengisian. Wajib diisi ulang setiap
+  // sesi pengisian baru — persetujuan berlaku untuk satu rujukan.
+  const [consent, setConsent] = useState<ConsentState>(EMPTY_CONSENT);
 
   const srqFilled = countFilled(SRQ20_ITEMS, values);
   const dassFilled = countFilled(DASS21_ITEMS, values);
@@ -131,6 +135,7 @@ export default function InputMentalHealthPage() {
   function clearForm() {
     setValues({});
     setResultDialog(null);
+    setConsent(EMPTY_CONSENT);
     submit.setStatus('idle');
     submit.setMessage('');
   }
@@ -138,6 +143,10 @@ export default function InputMentalHealthPage() {
   async function handleSave() {
     if (!identity) {
       submit.failure('Cari karyawan lebih dulu.');
+      return;
+    }
+    if (!consent.accepted) {
+      submit.failure('Persetujuan (FORM/098) wajib diberikan sebelum menyimpan hasil skrining.');
       return;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(tglPemeriksaan)) {
@@ -156,6 +165,12 @@ export default function InputMentalHealthPage() {
           query,
           tglPemeriksaan,
           ...values,
+          // FORM/098 — bukti persetujuan disimpan bersama hasil skrining.
+          consent: {
+            acceptedAt: consent.acceptedAt,
+            shareItems: consent.shareItems,
+            declineShare: consent.declineShare,
+          },
         }),
       });
       const body = await res.json();
@@ -164,6 +179,10 @@ export default function InputMentalHealthPage() {
         return;
       }
 
+      // Popup ringkasan hasil ditampilkan kepada PENGISI (termasuk karyawan):
+      // UU 27/2022 Pasal 5–13 memberi hak akses atas data pribadi sendiri, dan
+      // Permenkes 259/2008 mewajibkan hasil pemeriksaan disampaikan kepada
+      // tenaga kerja yang bersangkutan.
       setResultDialog({
         nama: identity.nama,
         tanggal: tglPemeriksaan,
@@ -178,15 +197,24 @@ export default function InputMentalHealthPage() {
   }
 
   const anyFilled = srqFilled + dassFilled > 0;
-  const canSave = !!identity && anyFilled && submit.status !== 'saving';
+  const canSave = !!identity && anyFilled && consent.accepted && submit.status !== 'saving';
+
+  // Gerbang persetujuan — karyawan/petugas wajib menyetujui FORM/098 dulu.
+  if (!consent.accepted) {
+    return (
+      <ConsentGate
+        instrumen="SRQ-20 & DASS-21"
+        onAccept={(c) => setConsent(c)}
+      />
+    );
+  }
 
   return (
     <div className="qh-page">
       <header className="qh-page-head">
         <h2>Input Kesehatan Mental</h2>
         <p>
-          SRQ-20 dan DASS-21 menjadi dasar penilaian parameter MENTAL HEALTH pada STD-006 Rev001.
-          SDS-30 (faktor psikologi lingkungan kerja) berada di menu Data Entry → Psikologi Lingkungan Kerja.
+          SRQ-20 dan DASS-21 menjadi dasar penilaian parameter Kesehatan Mental
         </p>
       </header>
 

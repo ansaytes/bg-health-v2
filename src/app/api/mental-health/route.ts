@@ -84,7 +84,8 @@ export async function GET(req: NextRequest) {
   if (identityDenied) return identityDenied;
 
   const client = adminClient();
-  if (!canWriteQuestionnaires(caller) && !caller?.employeeNikHash) {
+  const canSeeResult = canWriteQuestionnaires(caller);
+  if (!canSeeResult && !caller?.employeeNikHash) {
     return NextResponse.json({ identity, history: [], historyAvailable: false });
   }
 
@@ -106,6 +107,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     identity,
     historyAvailable: true,
+    canSeeResult,
     history: (rows ?? []).map((row) => ({
       tanggal: String(row.tgl_pemeriksaan ?? ''),
       skor_srq20: row.skor_srq20 ?? null,
