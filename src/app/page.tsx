@@ -11,6 +11,7 @@ import DashboardView from '@/components/dashboard/DashboardView';
 import MonitoringMCUTabs from '@/components/dashboard/MonitoringMCUTabs';
 import KunjunganBerobat from '@/components/dashboard/KunjunganBerobat';
 import ReviewMCU from '@/components/review-mcu/ReviewMCU';
+import FollowUpMCU from '@/components/review-mcu/FollowUpMCU';
 import InputLaggingIndicator from '@/components/administrator/InputLaggingIndicator';
 import LaggingIndicatorPage from '@/components/administrator/LaggingIndicatorPage';
 import KunjunganBerobatForm from '@/components/administrator/KunjunganBerobatForm';
@@ -484,6 +485,32 @@ function DashContent() {
 
 /*   Admin Toggle Panel — form/table switcher with smart rotating arrow */
 
+/**
+ * Review MCU + Follow Up MCU dalam satu tampilan bertab.
+ * Tab "Review MCU" = form input MCU (alur 3 langkah seperti sebelumnya).
+ * Tab "Follow Up MCU" = tindak lanjut parameter yang tidak normal.
+ */
+function ReviewMCUWithTabs() {
+  const [tab, setTab] = useState<'review' | 'followup'>('review');
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', width: '90%', margin: '0 auto', padding: 16, overflow: 'hidden', flex: 1, minHeight: 0 }}>
+      <CenteredTabs
+        tabs={[
+          { key: 'review', label: 'Review MCU' },
+          { key: 'followup', label: 'Follow Up MCU' },
+        ]}
+        active={tab}
+        onChange={setTab}
+        ariaLabel="Review dan Follow Up MCU"
+        compact
+      />
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingTop: 10 }}>
+        {tab === 'review' ? <ReviewMCU /> : <FollowUpMCU />}
+      </div>
+    </div>
+  );
+}
+
 function AdminTogglePanel({ formContent, tableContents, hasTable, stepLabels }: {
   formContent: React.ReactNode;
   tableContents: React.ReactNode[];
@@ -575,11 +602,7 @@ function AdminContent() {
     'review-mcu': {
       hasTable: true,
       labels: ['Form Input', 'DATABASE'],
-      form: (
-        <div style={{ display: 'flex', flexDirection: 'column', width: '90%', margin: '0 auto', padding: 16, overflow: 'auto', flex: 1, minHeight: 0 }}>
-          <ReviewMCU />
-        </div>
-      ),
+      form: <ReviewMCUWithTabs />,
       tables: [<div className="admin-form-container" key="mcu"><RecordMCUTable /></div>],
     },
     'health-campaign': {

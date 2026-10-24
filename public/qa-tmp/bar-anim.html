@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>bar-anim</title>
+</head>
+
+<body style="margin:0;padding:0">
+  <script src="./chart.umd.min.js"></script>
+  <script>
+    // Salinan persis STANDAR_ANIMASI_BAR dari src/lib/chart-standard.ts
+    const STANDAR_ANIMASI_BAR = {
+      duration: 800,
+      easing: 'easeOutQuart',
+      animateRotate: false,
+      animateScale: false,
+      delay: (ctx) => (ctx.type !== 'data' || ctx.mode !== 'default' ? 0 : ctx.dataIndex * 55),
+    };
+
+    // Episode: A = sakit pertama; sembuh, masuk, lalu sakit lagi = B; dst.
+    const rows = [
+      { nama: 'Ahmad Fauzi', hari: [9, 5, 3] },
+      { nama: 'Budi Santoso', hari: [7, 4, 2] },
+      { nama: 'Citra Dewi', hari: [6, 3, 3] },
+      { nama: 'Dedi Kurniawan', hari: [5, 2, 0] },
+      { nama: 'Eka Putri', hari: [4, 0, 0] },
+      { nama: 'Fajar Nugroho', hari: [3, 2, 1] },
+      { nama: 'Gita Lestari', hari: [2, 2, 0] },
+      { nama: 'Hari Wijaya', hari: [2, 1, 0] },
+    ].map((r) => ({ ...r, total: r.hari[0] + r.hari[1] + r.hari[2], spell: r.hari.filter((h) => h > 0).length }));
+
+    window.__harness = async (horizontal) => {
+      document.body.innerHTML = '';
+      const canvas = document.createElement('canvas');
+      canvas.style.cssText = horizontal ? 'width:360px;height:340px' : 'width:460px;height:300px';
+      document.body.appendChild(canvas);
+      const stackProps = { stack: 's', maxBarThickness: 16, categoryPercentage: 0.72, barPercentage: 0.92 };
+      const chart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: rows.map((r) => r.nama),
+          datasets: [
+            { label: 'Hari A', data: rows.map((r) => r.hari[0]), backgroundColor: 'rgba(231,76,60,0.82)', ...stackProps },
+            { label: 'Hari B', data: rows.map((r) => r.hari[1]), backgroundColor: 'rgba(243,156,18,0.82)', ...stackProps },
+            { label: 'Hari C', data: rows.map((r) => r.hari[2]), backgroundColor: 'rgba(52,152,219,0.78)', ...stackProps },
+          ],
+        },
+        options: {
+          indexAxis: horizontal ? 'y' : 'x',
+          responsive: false,
+          animation: STANDAR_ANIMASI_BAR,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { beginAtZero: true, stacked: true },
+            y: { beginAtZero: true, stacked: true, ticks: { autoSkip: false } },
+          },
+        },
+      });
+
+      // Panjang batang = |ujung - basis|; horizontal dari kiri, vertikal dari bawah.
+      const len = (i) => {
+        const el = chart.getDatasetMeta(0).data[i];
+        if (!el) return null;
+        return Math.round(horizontal ? Math.abs(el.x - el.base) : Math.abs(el.y - el.base));
+      };
+
+      await new Promise((r) => requestAnimationFrame(r));
+      const samples = [];
+      const t0 = performance.now();
+      for (let k = 0; k < 13; k++) {
+        samples.push({ t: Math.round(performance.now() - t0), bar0: len(0), bar7: len(7) });
+        await new Promise((r) => setTimeout(r, 90));
+      }
+      const finals = rows.map((_, i) => len(i));
+      chart.destroy();
+      return { horizontal, samples, finals, datapoints: rows.map((r) => r.hari[0]) };
+    };
+  </script>
+</body>
+
+</html>
