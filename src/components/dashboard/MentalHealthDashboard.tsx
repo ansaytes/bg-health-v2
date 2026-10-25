@@ -61,7 +61,6 @@ export default function MentalHealthDashboard() {
   const subskalaRef = useRef<HTMLCanvasElement | null>(null);
   const siteRef = useRef<HTMLCanvasElement | null>(null);
   const charts = useRef<Record<string, ChartJS | null>>({});
-  const lastSignature = useRef<string | null>(null);
 
   useEffect(() => {
     const id = setTimeout(() => setIsDark(document.documentElement.classList.contains('dark')), 0);
@@ -81,16 +80,11 @@ export default function MentalHealthDashboard() {
     const text = isDark ? '#F9FAFB' : '#111827';
     const grid = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
     const cardBg = isDark ? '#1b1b1b' : '#ffffff';
-    // Animasi hanya saat ISI DATA berubah (muat awal / ganti site), bukan saat tema
-    // berganti. Tanpa penanda ini chart dibuat ulang terus dan animasinya terasa mati.
-    const signature = JSON.stringify(d);
-    const isDataChange = lastSignature.current !== signature;
-    lastSignature.current = signature;
-    // Saat chart pertama kali dibuat animasi juga harus berjalan.
-    const isFirstPaint = !charts.current.srq;
-    const shouldAnimate = isDataChange || isFirstPaint;
-    const anim = shouldAnimate ? STANDAR_ANIMASI_BAR : (false as const);
-    const donutAnim = shouldAnimate ? STANDAR_ANIMASI_DONUT : (false as const);
+    // ANIMASI STANDAR APLIKASI: selalu berjalan. `draw()` selalu membuat chart
+    // baru (destroy + create), jadi animasi dari nol aman tanpa risiko kedip.
+    // Tanpa ini diagram terasa kaku bila data datang dari cache.
+    const anim = STANDAR_ANIMASI_BAR;
+    const donutAnim = STANDAR_ANIMASI_DONUT;
 
     const draw = (key: string, el: HTMLCanvasElement | null, make: () => ChartJS) => {
       if (!el) return;

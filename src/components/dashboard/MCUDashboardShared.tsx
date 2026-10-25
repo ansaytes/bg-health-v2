@@ -309,7 +309,6 @@ export function MCUChart({
   // (dengan animasi dari nol) tiap kali induk render -> layar berkedip. Karena itu
   // chart hanya dibangun ulang bila ISI datanya benar-benar berubah.
   const dataSignature = JSON.stringify([type, labels, values, colors, legendLabel, horizontal, centerText, percentLabels]);
-  const lastAnimatedSignature = useRef<string | null>(null);
   const [isDark, setIsDark] = useState(
     () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
   );
@@ -341,21 +340,11 @@ export function MCUChart({
     const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
     const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     const total = values.reduce((sum, value) => sum + value, 0);
-    const isDataChange = lastAnimatedSignature.current !== dataSignature;
-    lastAnimatedSignature.current = dataSignature;
 
-    // Diagram dianggap "baru tampil" bila instance-nya belum ada. Pada kondisi
-    // ini animasi HARUS berjalan meski signature-nya sama dengan render pertama
-    // (mis. data sudah tersedia dari cache / preload sehingga tidak ada
-    // perubahan data setelah mount). Sebelumnya animasi hanya bergantung pada
-    // isDataChange, sehingga diagram yang datanya "langsung ada" tampil kaku.
-    const isFirstPaint = !chartRef.current;
-
-    // Standar animasi aplikasi:
-    //  - donut : berputar SEARAH JARUM JAM mulai dari pukul 12 (rotation 0)
-    //  - bar   : tumbuh DARI GARIS DASAR (vertikal: dari bawah, horizontal: dari kiri)
-    const shouldAnimate = isDataChange || isFirstPaint;
-    const animation = shouldAnimate ? (type === 'doughnut' ? STANDAR_ANIMASI_DONUT : STANDAR_ANIMASI_BAR) : false;
+    // ANIMASI STANDAR APLIKASI: selalu berjalan. Chart dibuat ulang pada setiap
+    // perubahan data (destroy + create), jadi animasi dari nol aman tanpa risiko
+    // kedip, dan diagram tidak pernah terlihat kaku karena data dari cache.
+    const animation = type === 'doughnut' ? STANDAR_ANIMASI_DONUT : STANDAR_ANIMASI_BAR;
 
     const config: ChartConfiguration = {
       type,
@@ -477,29 +466,19 @@ export function MCUChart({
       }] : [],
     };
 
+    // Chart selalu dibuat ulang pada perubahan data — animasi dari nol dijamin
+    // berjalan setiap kali diagram tampil.
     if (chartRef.current) {
-      if (shouldAnimate) {
-        // Dibuat ulang agar animasi benar-benar berjalan dari nol. `update()`
-        // saja tidak memicu animasi masuk untuk chart lama.
-        chartRef.current.destroy();
-        chartRef.current = null;
-      }
+      chartRef.current.destroy();
+      chartRef.current = null;
     }
 
-    if (chartRef.current) {
-      chartRef.current.data = config.data;
-      if (config.options) {
-        chartRef.current.options = config.options;
-      }
-      chartRef.current.update('none');
-    } else {
-      chartRef.current = new ChartJS(canvasRef.current, config);
-    }
+    chartRef.current = new ChartJS(canvasRef.current, config);
 
     return () => {
       // Don't destroy on every re-render, only on full unmount
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [dataSignature, isDark]);
 
   return (

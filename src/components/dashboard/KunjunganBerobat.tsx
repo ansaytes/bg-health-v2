@@ -152,10 +152,6 @@ export default function KunjunganBerobat() {
     };
   }, []);
 
-  // Signature data terakhir yang sudah dianimasikan. Ganti tema tidak mengubah
-  // signature sehingga animasi tidak diulang; data baru selalu beranimasi.
-  const lastAnimatedSignature = useRef<string | null>(null);
-
   useEffect(() => {
     const root = document.documentElement;
     const syncTheme = () => setIsDark(root.classList.contains('dark'));
@@ -243,23 +239,13 @@ export default function KunjunganBerobat() {
 
   const totalRujukRS = rujukList.length;
 
-  // Render Charts using safe recreation
-  const dataSignature = JSON.stringify([filteredRecords.length, records.length, selectedDept]);
-
   useEffect(() => {
     if (loading) return;
 
-    const isDataChange = lastAnimatedSignature.current !== dataSignature;
-    lastAnimatedSignature.current = dataSignature;
-    // Animasi juga WAJIB berjalan saat chart baru pertama kali dibuat, walaupun
-    // signature-nya tidak berubah (data sudah tersedia sebelum mount).
-    const isFirstPaint = !trendChartInst.current;
-    const shouldAnimate = isDataChange || isFirstPaint;
-
-    const animationSettings = shouldAnimate ? STANDAR_ANIMASI_BAR : false as const;
-    const lineAnimationSettings = shouldAnimate
-      ? { duration: 1000, easing: 'easeOutQuart' as const }
-      : false as const;
+    // ANIMASI STANDAR APLIKASI: selalu berjalan (chart selalu dibuat ulang
+    // saat data berubah, dan dibuat baru saat pertama tampil).
+    const animationSettings = STANDAR_ANIMASI_BAR;
+    const lineAnimationSettings = { duration: 1000, easing: 'easeOutQuart' as const };
 
       // Common theme colors
       const textColor = isDark ? '#F9FAFB' : '#111827';
@@ -348,24 +334,16 @@ export default function KunjunganBerobat() {
         },
       };
 
+      // Chart selalu dibuat ulang — animasi dari nol dijamin berjalan.
       if (trendChartInst.current) {
-        if (shouldAnimate) {
-          trendChartInst.current.destroy();
-          trendChartInst.current = null;
-        }
+        trendChartInst.current.destroy();
+        trendChartInst.current = null;
       }
-
-      if (trendChartInst.current) {
-        trendChartInst.current.data = trendData;
-        trendChartInst.current.options = trendOptions;
-        trendChartInst.current.update('none');
-      } else {
-        trendChartInst.current = new ChartJS(trendCanvasRef.current, {
-          type: 'line',
-          data: trendData,
-          options: trendOptions,
-        });
-      }
+      trendChartInst.current = new ChartJS(trendCanvasRef.current, {
+        type: 'line',
+        data: trendData,
+        options: trendOptions,
+      });
     }
 
       // ───────────────────────────────────────────────
@@ -452,23 +430,15 @@ export default function KunjunganBerobat() {
       };
 
       if (ulangChartInst.current) {
-        if (shouldAnimate) {
-          ulangChartInst.current.destroy();
-          ulangChartInst.current = null;
-        }
+        ulangChartInst.current.destroy();
+        ulangChartInst.current = null;
       }
 
-      if (ulangChartInst.current) {
-        ulangChartInst.current.data = ulangData;
-        ulangChartInst.current.options = ulangOptions;
-        ulangChartInst.current.update('none');
-      } else {
-        ulangChartInst.current = new ChartJS(ulangCanvasRef.current, {
+      ulangChartInst.current = new ChartJS(ulangCanvasRef.current, {
           type: 'bar',
           data: ulangData,
           options: ulangOptions,
         });
-      }
     }
 
     // ───────────────────────────────────────────────
@@ -556,23 +526,15 @@ export default function KunjunganBerobat() {
       };
 
       if (diagChartInst.current) {
-        if (shouldAnimate) {
-          diagChartInst.current.destroy();
-          diagChartInst.current = null;
-        }
+        diagChartInst.current.destroy();
+        diagChartInst.current = null;
       }
 
-      if (diagChartInst.current) {
-        diagChartInst.current.data = diagData;
-        diagChartInst.current.options = diagOptions;
-        diagChartInst.current.update('none');
-      } else {
-        diagChartInst.current = new ChartJS(diagCanvasRef.current, {
+      diagChartInst.current = new ChartJS(diagCanvasRef.current, {
           type: 'bar',
           data: diagData,
           options: diagOptions,
         });
-      }
     }
 
     // ───────────────────────────────────────────────
@@ -661,23 +623,15 @@ export default function KunjunganBerobat() {
       };
 
       if (obatChartInst.current) {
-        if (shouldAnimate) {
-          obatChartInst.current.destroy();
-          obatChartInst.current = null;
-        }
+        obatChartInst.current.destroy();
+        obatChartInst.current = null;
       }
 
-      if (obatChartInst.current) {
-        obatChartInst.current.data = obatData;
-        obatChartInst.current.options = obatOptions;
-        obatChartInst.current.update('none');
-      } else {
-        obatChartInst.current = new ChartJS(obatCanvasRef.current, {
+      obatChartInst.current = new ChartJS(obatCanvasRef.current, {
           type: 'bar',
           data: obatData,
           options: obatOptions,
         });
-      }
     }
 
     // ───────────────────────────────────────────────
@@ -761,30 +715,22 @@ export default function KunjunganBerobat() {
       };
 
       if (deptChartInst.current) {
-        if (shouldAnimate) {
-          deptChartInst.current.destroy();
-          deptChartInst.current = null;
-        }
+        deptChartInst.current.destroy();
+        deptChartInst.current = null;
       }
 
-      if (deptChartInst.current) {
-        deptChartInst.current.data = deptData;
-        deptChartInst.current.options = deptOptions;
-        deptChartInst.current.update('none');
-      } else {
-        deptChartInst.current = new ChartJS(deptCanvasRef.current, {
+      deptChartInst.current = new ChartJS(deptCanvasRef.current, {
           type: 'bar',
           data: deptData,
           options: deptOptions,
         });
-      }
     }
 
     return () => {
       // Don't destroy on every re-render, only on full unmount
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataSignature, loading, isDark]);
+     
+  }, [filteredRecords, records, selectedDept, loading, isDark]);
 
   return (
     <div className="dashboard" ref={containerRef} style={{ overflowY: 'auto', overflowX: 'hidden' }}>

@@ -32,8 +32,8 @@ function canUseSite(user: { role: string; site?: string | null }, site: string) 
   return user.role !== 'pic' || (user.site || '').toLowerCase() === 'head office' || user.site === site;
 }
 
-async function fetchAllRows<T>(
-  fetchPage: (from: number, to: number) => Promise<{ data: T[] | null; error: { message: string } | null }>
+async function fetchAllRows<T = Record<string, any>>(
+  fetchPage: (from: number, to: number) => any,
 ) {
   const pageSize = 1000;
   const rows: T[] = [];

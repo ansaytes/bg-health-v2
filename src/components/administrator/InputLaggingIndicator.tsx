@@ -34,17 +34,20 @@ function PeriodBlock({ label, prefix, form, onChange }: {
   const daysKey = `${prefix}Days`;
   const diagKey = `${prefix}Diag`;
 
+  const aStart = form[`${prefix}Start`];
+  const aEnd = form[`${prefix}End`];
+
   const autoDays = useMemo(() => {
-    if (form[startKey] && form[endKey]) {
-      const s = new Date(form[startKey]);
-      const e = new Date(form[endKey]);
+    if (aStart && aEnd) {
+      const s = new Date(aStart);
+      const e = new Date(aEnd);
       if (!isNaN(s.getTime()) && !isNaN(e.getTime()) && e >= s) {
         const diff = Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
         return diff > 0 ? diff : 0;
       }
     }
     return 0;
-  }, [form[startKey], form[endKey]]);
+  }, [aStart, aEnd]);
 
   return (
     <div style={{
@@ -157,6 +160,8 @@ export default function InputLaggingIndicator() {
   const [mpForm, setMpForm] = useState<Record<string, string>>({});
   const [mpSaving, setMpSaving] = useState(false);
   const [mpSaved, setMpSaved] = useState(false);
+  /** Nama jobsite ketik-manual pada form Man Power (bila pilih "Lainnya"). */
+  const [customMpSite, setCustomMpSite] = useState('');
 
   const handleChange = (id: string, value: string) => {
     setForm(prev => ({ ...prev, [id]: value }));

@@ -17,6 +17,8 @@ import LaggingIndicatorPage from '@/components/administrator/LaggingIndicatorPag
 import KunjunganBerobatForm from '@/components/administrator/KunjunganBerobatForm';
 import HealthCampaignForm from '@/components/administrator/HealthCampaignForm';
 import UserManagement from '@/components/administrator/UserManagement';
+import AppSettingsPage from '@/components/settings/AppSettingsPage';
+import PakRegister from '@/components/pak/PakRegister';
 import InputJadwalMCU from '@/components/administrator/InputJadwalMCUModern';
 import GangguanTidurPage from '@/components/administrator/GangguanTidurPage';
 import InputMentalHealthPage from '@/components/administrator/InputMentalHealthPage';
@@ -359,6 +361,28 @@ function IconPsikologiLingkungan() {
   );
 }
 
+/** Roda gigi — Pengaturan aplikasi. */
+function IconSetting() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.82-.33 1.7 1.7 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.51 1.7 1.7 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .33-1.82 1.7 1.7 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.51-1 1.7 1.7 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.82.33h.01a1.7 1.7 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.51h.01a1.7 1.7 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.33 1.82v.01a1.7 1.7 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z" />
+    </svg>
+  );
+}
+
+/** Register PAK — clipboard dengan checkmark. */
+function IconPakRegister() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+      <rect x="8" y="2" width="8" height="4" rx="1" />
+      <path d="M9 13l1.5 1.5L13.5 11.5" />
+      <path d="M9 17h6" />
+    </svg>
+  );
+}
+
 const ADMIN_SIDEBAR: SidebarItem[] = [
   { key: 'lagging-indicator', label: 'Lagging Indicator', icon: <IconInputLagging /> },
   { key: 'review-mcu', label: 'Review MCU', icon: <IconReviewMCU /> },
@@ -368,7 +392,9 @@ const ADMIN_SIDEBAR: SidebarItem[] = [
   { key: 'layanan-kuratif-admin', label: 'Layanan Kuratif', icon: <IconKuratif /> },
   // Hearing Conservation + Ergonomi masuk ke menu Higiene Industri.
   { key: 'higiene-industri-admin', label: 'Higiene Industri', icon: <IconHigiene /> },
+  { key: 'pak-register', label: 'Register PAK', icon: <IconPakRegister /> },
   { key: 'kelola-pengguna', label: 'Kelola Pengguna', icon: <IconUsers />, superuserOnly: true },
+  { key: 'pengaturan', label: 'Pengaturan', icon: <IconSetting />, superuserOnly: true },
 ];
 const DATA_ENTRY_SIDEBAR: SidebarItem[] = [
   { key: 'input-jadwal-mcu', label: 'Input Jadwal MCU', icon: <IconChecklist /> },
@@ -581,12 +607,20 @@ function AdminContent() {
     return <div className="admin-form-container"><UserManagement /></div>;
   }
 
+  if (activeAdminSidebar === 'pengaturan') {
+    return <div className="admin-form-container"><AppSettingsPage /></div>;
+  }
+
   if (activeAdminSidebar === 'layanan-kuratif-admin') {
     return <AdminLayananKuratif />;
   }
 
   if (activeAdminSidebar === 'higiene-industri-admin') {
     return <AdminHigieneIndustri />;
+  }
+
+  if (activeAdminSidebar === 'pak-register') {
+    return <div className="admin-form-container"><PakRegister /></div>;
   }
 
   const panels: Record<string, { form: React.ReactNode; tables: React.ReactNode[]; hasTable: boolean; labels?: string[] }> = {

@@ -6,7 +6,7 @@ import { applyMCUCalculations, buildAutomaticFollowUpRecommendations } from './m
 
 export type PageTab = 'home' | 'dashboard' | 'data-entry' | 'administrator';
 export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan' | 'layanan-kuratif' | 'inventory-dashboard' | 'hearing-dashboard' | 'ergonomi-dashboard' | 'mental-health-dashboard' | 'pemetaan-psikologis' | 'higiene-industri' | 'persetujuan-ergonomi';
-export type AdminSidebar = 'lagging-indicator' | 'review-mcu' | 'input-jadwal-mcu' | 'kunjungan-admin' | 'health-campaign' | 'kelola-pengguna' | 'hearing-conservation' | 'ergonomi' | 'layanan-kuratif-admin' | 'higiene-industri-admin';
+export type AdminSidebar = 'lagging-indicator' | 'review-mcu' | 'input-jadwal-mcu' | 'kunjungan-admin' | 'health-campaign' | 'kelola-pengguna' | 'hearing-conservation' | 'ergonomi' | 'layanan-kuratif-admin' | 'higiene-industri-admin' | 'pak-register' | 'pengaturan';
 export type DataEntrySidebar = 'gangguan-tidur' | 'kesehatan-mental' | 'psikologi-lingkungan' | 'input-jadwal-mcu' | 'persetujuan-ergonomi';
 export type HomeSidebar = 'semua-feed' | 'health-campaign' | 'health-talk' | 'podcast' | 'news';
 export type ReviewStep = 'search' | 'ocr' | 'form';

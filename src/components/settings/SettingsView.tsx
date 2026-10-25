@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import {
   Plus, Trash2, Edit3, Check, X, Moon, Sun, Star, Table2,
 } from 'lucide-react';
@@ -28,12 +28,12 @@ function saveConfigs(configs: SheetConfig[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(configs));
 }
 
-const cardVariants = {
+const cardVariants: Variants = {
   hidden: { opacity: 0, y: 16 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.06, duration: 0.35, ease: 'easeOut' },
+    transition: { delay: i * 0.06, duration: 0.35, ease: 'easeOut' as const },
   }),
 };
 

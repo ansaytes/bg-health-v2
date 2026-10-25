@@ -67,10 +67,6 @@ export default function InventoryDashboard() {
     };
   }, []);
 
-  // Signature data terakhir yang sudah dianimasikan. Ganti tema tidak mengubah
-  // signature sehingga animasi tidak diulang; data baru selalu beranimasi.
-  const lastAnimatedSignature = useRef<string | null>(null);
-
   useEffect(() => {
     const root = document.documentElement;
     const syncTheme = () => setIsDark(root.classList.contains('dark'));
@@ -282,19 +278,13 @@ export default function InventoryDashboard() {
   }, [filteredItems]);
 
   // Render Charts
-  const chartDataSignature = JSON.stringify([items.length, chartRenderKey, isDashboardView]);
 
   useEffect(() => {
     if (loading || !isAuthorized || items.length === 0) return;
 
-    const isDataChange = lastAnimatedSignature.current !== chartDataSignature;
-    lastAnimatedSignature.current = chartDataSignature;
-    // Animasi juga berjalan saat chart pertama kali dibuat.
-    const isFirstPaint = !topExpiredChart.current;
-    const shouldAnimate = isDataChange || isFirstPaint;
-
-    const animationSettings = shouldAnimate ? STANDAR_ANIMASI_BAR : (false as const);
-    const donutAnimationSettings = shouldAnimate ? STANDAR_ANIMASI_DONUT : (false as const);
+    // ANIMASI STANDAR APLIKASI: selalu berjalan.
+    const animationSettings = STANDAR_ANIMASI_BAR;
+    const donutAnimationSettings = STANDAR_ANIMASI_DONUT;
       const textColor = isDark ? '#F9FAFB' : '#111827';
       const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
       const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
@@ -376,23 +366,15 @@ export default function InventoryDashboard() {
       };
 
       if (topExpiredChart.current) {
-        if (shouldAnimate) {
-          topExpiredChart.current.destroy();
-          topExpiredChart.current = null;
-        }
+        topExpiredChart.current.destroy();
+        topExpiredChart.current = null;
       }
 
-      if (topExpiredChart.current) {
-        topExpiredChart.current.data = data;
-        topExpiredChart.current.options = options;
-        topExpiredChart.current.update('none');
-      } else {
-        topExpiredChart.current = new ChartJS(topExpiredCanvasRef.current, {
+      topExpiredChart.current = new ChartJS(topExpiredCanvasRef.current, {
           type: 'bar',
           data,
           options,
         });
-      }
     }
 
     // 2. Status Stok (doughnut, total di tengah) — menggantikan bar tanpa nama
@@ -457,18 +439,11 @@ export default function InventoryDashboard() {
       };
 
       if (stockStatusChart.current) {
-        if (shouldAnimate) {
-          stockStatusChart.current.destroy();
-          stockStatusChart.current = null;
-        }
+        stockStatusChart.current.destroy();
+        stockStatusChart.current = null;
       }
 
-      if (stockStatusChart.current) {
-        stockStatusChart.current.data = data;
-        stockStatusChart.current.options = options;
-        stockStatusChart.current.update('none');
-      } else {
-        stockStatusChart.current = new ChartJS(stockStatusCanvasRef.current, {
+      stockStatusChart.current = new ChartJS(stockStatusCanvasRef.current, {
           type: 'doughnut',
           data,
           options,
@@ -491,7 +466,6 @@ export default function InventoryDashboard() {
             },
           }],
         });
-      }
     }
 
     // 3. Top 10 Akan Expired < 3 Bulan (Horizontal Bar)
@@ -571,23 +545,15 @@ export default function InventoryDashboard() {
       };
 
       if (topExpSoonChart.current) {
-        if (shouldAnimate) {
-          topExpSoonChart.current.destroy();
-          topExpSoonChart.current = null;
-        }
+        topExpSoonChart.current.destroy();
+        topExpSoonChart.current = null;
       }
 
-      if (topExpSoonChart.current) {
-        topExpSoonChart.current.data = data;
-        topExpSoonChart.current.options = options;
-        topExpSoonChart.current.update('none');
-      } else {
-        topExpSoonChart.current = new ChartJS(topExpSoonCanvasRef.current, {
+      topExpSoonChart.current = new ChartJS(topExpSoonCanvasRef.current, {
           type: 'bar',
           data,
           options,
         });
-      }
     }
 
     // 4. Top 10 Fast-Moving Items (Horizontal Bar)
@@ -673,30 +639,22 @@ export default function InventoryDashboard() {
       };
 
       if (fastMovingChart.current) {
-        if (shouldAnimate) {
-          fastMovingChart.current.destroy();
-          fastMovingChart.current = null;
-        }
+        fastMovingChart.current.destroy();
+        fastMovingChart.current = null;
       }
 
-      if (fastMovingChart.current) {
-        fastMovingChart.current.data = data;
-        fastMovingChart.current.options = options;
-        fastMovingChart.current.update('none');
-      } else {
-        fastMovingChart.current = new ChartJS(fastMovingCanvasRef.current, {
+      fastMovingChart.current = new ChartJS(fastMovingCanvasRef.current, {
           type: 'bar',
           data,
           options,
         });
-      }
     }
 
     return () => {
       // Don't destroy on every re-render, only on full unmount
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chartDataSignature, loading, isAuthorized, isDark, isDashboardView]);
+     
+  }, [items, chartRenderKey, loading, isAuthorized, isDark, isDashboardView]);
 
   // Access guard
   if (!isAuthorized) {

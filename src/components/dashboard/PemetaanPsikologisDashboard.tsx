@@ -67,7 +67,6 @@ export default function PemetaanPsikologisDashboard() {
   const rankRef = useRef<HTMLCanvasElement | null>(null);
   const distribRef = useRef<HTMLCanvasElement | null>(null);
   const charts = useRef<Record<string, ChartJS | null>>({});
-  const lastSignature = useRef<string | null>(null);
 
   useEffect(() => {
     const id = setTimeout(() => setIsDark(document.documentElement.classList.contains('dark')), 0);
@@ -86,14 +85,9 @@ export default function PemetaanPsikologisDashboard() {
     if (!d) return;
     const text = isDark ? '#F9FAFB' : '#111827';
     const grid = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
-    const signature = JSON.stringify(d);
-    const isDataChange = lastSignature.current !== signature;
-    lastSignature.current = signature;
-    // Saat pertama kali chart dibuat, animasi juga harus berjalan.
-    const isFirstPaint = !charts.current.rank;
-    const shouldAnimate = isDataChange || isFirstPaint;
-    const anim = shouldAnimate ? STANDAR_ANIMASI_BAR : (false as const);
-    const donutAnim = shouldAnimate ? STANDAR_ANIMASI_DONUT : (false as const);
+    // ANIMASI STANDAR APLIKASI: selalu berjalan (chart selalu dibuat baru oleh draw()).
+    const anim = STANDAR_ANIMASI_BAR;
+    const donutAnim = STANDAR_ANIMASI_DONUT;
 
     const draw = (key: string, el: HTMLCanvasElement | null, make: () => ChartJS) => {
       if (!el) return;

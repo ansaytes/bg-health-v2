@@ -150,10 +150,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (PREVIEW_MODE && PREVIEW_ROLE) {
       const role = PREVIEW_ROLE as UserRole;
-      setUser(buildMockUser());
-      setSession(buildMockSession());
-      setProfile(buildMockProfile(role));
-      setLoading(false);
+      // Preview mode: nilai mock ditetapkan lewat async microtask agar tidak
+      // memicu setState sinkron di dalam effect (cascading render).
+      void Promise.resolve().then(() => {
+        if (cancelled) return;
+        setUser(buildMockUser());
+        setSession(buildMockSession());
+        setProfile(buildMockProfile(role));
+        setLoading(false);
+      });
       return () => { cancelled = true; };
     }
 

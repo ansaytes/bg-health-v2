@@ -70,7 +70,6 @@ export default function ProKawanDashboard() {
   const statusRef = useRef<HTMLCanvasElement | null>(null);
   const siteRef = useRef<HTMLCanvasElement | null>(null);
   const charts = useRef<Record<string, ChartJS | null>>({});
-  const lastSignature = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -107,11 +106,9 @@ export default function ProKawanDashboard() {
     const text = isDark ? '#F9FAFB' : '#111827';
     const grid = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
     const cardBg = isDark ? '#1b1b1b' : '#ffffff';
-    const signature = JSON.stringify([ringkas.total, ringkas.byZona, ringkas.byJalur, ringkas.byStatus, ringkas.bySite]);
-    const shouldAnimate = lastSignature.current !== signature || !charts.current.zona;
-    lastSignature.current = signature;
-    const anim = shouldAnimate ? STANDAR_ANIMASI_BAR : (false as const);
-    const donutAnim = shouldAnimate ? STANDAR_ANIMASI_DONUT : (false as const);
+    // ANIMASI STANDAR APLIKASI: selalu berjalan (chart selalu dibuat baru oleh draw()).
+    const anim = STANDAR_ANIMASI_BAR;
+    const donutAnim = STANDAR_ANIMASI_DONUT;
 
     const draw = (key: string, el: HTMLCanvasElement | null, make: () => ChartJS) => {
       if (!el) return;
