@@ -3,24 +3,22 @@
 //   1. Hearing Conservation — faktor FISIKA (bising)
 //   2. Ergonomi              — faktor ERGONOMI
 //   3. Psikologi Lingkungan Kerja — faktor PSIKOLOGI (SDS-30, pemetaan per departemen/jabatan)
-//   4. HRA — Health Hazard Risk Assessment (FORM/069 Rev.001)
 //
 // Catatan: SRQ-20 dan DASS-21 TIDAK di sini. Keduanya instrumen skrining klinis
 // per individu, sehingga berada di menu Dashboard > Kesehatan Mental.
+// HRA (input) sudah dipindah ke halaman Administrator.
 import { useState } from 'react';
 import HearingConservationDashboard from '@/components/dashboard/HearingConservationDashboard';
 import ErgonomiDashboard from '@/components/dashboard/ErgonomiDashboard';
 import PemetaanPsikologisDashboard from '@/components/dashboard/PemetaanPsikologisDashboard';
-import HraInputPage from '@/components/administrator/HraInputPage';
 import CenteredTabs from '@/components/ui/centered-tabs';
 
-export type HigieneTab = 'hearing' | 'ergonomi' | 'psikologi' | 'hra';
+export type HigieneTab = 'hearing' | 'ergonomi' | 'psikologi';
 
 const TABS: { key: HigieneTab; label: string }[] = [
   { key: 'hearing', label: 'Hearing Conservation' },
   { key: 'ergonomi', label: 'Ergonomi' },
   { key: 'psikologi', label: 'Psikologi Lingkungan Kerja' },
-  { key: 'hra', label: 'HRA' },
 ];
 
 export default function HigieneIndustriTabs({ initialTab = 'hearing' }: { initialTab?: HigieneTab }) {
@@ -34,7 +32,6 @@ export default function HigieneIndustriTabs({ initialTab = 'hearing' }: { initia
         {tab === 'hearing' && <HearingConservationDashboard />}
         {tab === 'ergonomi' && <ErgonomiDashboard />}
         {tab === 'psikologi' && <PemetaanPsikologisDashboard />}
-        {tab === 'hra' && <HraInputPage />}
       </div>
     </div>
   );

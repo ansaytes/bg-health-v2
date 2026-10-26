@@ -73,25 +73,20 @@ export const BAR_ELEMENT = {
 };
 
 /**
- * Palet batang aplikasi: SATU warna per batang, tetapi nada warnanya dijaga
- * berdekatan (bukan pelangi). Warna berurutan berasal dari satu keluarga panas
- * (oranye → amber → kuning lemon → olive) sehingga batang bersebelahan tetap
- * serasi dan mudah dibedakan tanpa terasa ramai.
- *
- * Urutan dipilih bolak-balik (terang → gelap → terang) supaya batang sebelah
- * tidak pernah memakai nada yang nyaris sama.
+ * Palet batang aplikasi: SATU warna per batang, cerah dan mudah dibedakan.
+ * Warna sengaja penuh warna (bukan satu keluarga hangat) supaya tiap batang
+ * langsung terlihat berbeda pada latar terang maupun gelap, namun tetap
+ * dengan opacity seragam agar tidak terasa ramai seperti pelangi murni.
  */
 export const PALET_BAR = [
-  'rgba(255, 122, 61, 0.85)',   // oranye terang
-  'rgba(214, 88, 32, 0.85)',    // oranye tua
-  'rgba(255, 161, 66, 0.85)',   // amber terang
-  'rgba(196, 116, 28, 0.85)',   // amber tua
-  'rgba(255, 196, 74, 0.85)',   // kuning amber
-  'rgba(166, 124, 44, 0.85)',   // olive tua
-  'rgba(255, 214, 102, 0.85)',  // kuning lemon
-  'rgba(158, 132, 62, 0.85)',   // khaki
-  'rgba(245, 176, 122, 0.85)',  // peach
-  'rgba(172, 104, 70, 0.85)',   // terracotta
+  'rgba(52, 152, 219, 0.85)',   // biru cerah
+  'rgba(46, 204, 113, 0.85)',   // hijau cerah
+  'rgba(241, 196, 15, 0.88)',   // kuning cerah
+  'rgba(230, 126, 34, 0.85)',   // oranye
+  'rgba(155, 89, 182, 0.85)',   // ungu
+  'rgba(26, 188, 156, 0.85)',   // teal
+  'rgba(231, 76, 60, 0.85)',    // merah
+  'rgba(149, 165, 166, 0.85)',  // abu-abu
 ];
 
 /** Warna bar ke-i (satu warna per batang, nada berdekatan). */

@@ -37,6 +37,7 @@ import ErgonomiDashboard from '@/components/dashboard/ErgonomiDashboard';
 import MentalHealthDashboard from '@/components/dashboard/MentalHealthDashboard';
 import HigieneIndustriTabs from '@/components/dashboard/HigieneIndustriTabs';
 import LayananKuratifTabs from '@/components/dashboard/LayananKuratifTabs';
+import ProKawanDashboard from '@/components/dashboard/ProKawanDashboard';
 import ErgoApproval from '@/components/dashboard/ErgoApproval';
 import HcInputPage from '@/components/administrator/HcInputPage';
 import HcAudiometriEval from '@/components/administrator/HcAudiometriEval';
@@ -310,9 +311,21 @@ const DASH_SIDEBAR: SidebarItem[] = [
   { key: 'statistik', label: 'Statistik Kesehatan', icon: <IconStatistik /> },
   { key: 'monitoring', label: 'Monitoring MCU', icon: <IconMonitoring /> },
   { key: 'layanan-kuratif', label: 'Layanan Kuratif', icon: <IconKuratif /> },
+  { key: 'prokawan-dashboard', label: 'ProKawan', icon: <IconProkawan />, adminOnly: true },
   { key: 'higiene-industri', label: 'Higiene Industri', icon: <IconHigiene />, adminOnly: true },
   { key: 'mental-health-dashboard', label: 'Kesehatan Mental', icon: <IconBrain />, adminOnly: true },
 ];
+
+/** Ikut ProKawan — kelompok orang bertopeng satu sama lain. */
+function IconProkawan() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="7.5" r="2.6" /><circle cx="16.5" cy="8.5" r="2.2" />
+      <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
+      <path d="M14 20c0-2.4 1.9-4.4 4.3-4.4" />
+    </svg>
+  );
+}
 
 /** Kepala dengan otak — Kesehatan Mental (input). */
 function IconBrain() {
@@ -499,6 +512,7 @@ function DashContent() {
     case 'layanan-kuratif': return <LayananKuratifTabs />;
     case 'kunjungan': return <LayananKuratifTabs initialTab="kunjungan" />;
     case 'inventory-dashboard': return <LayananKuratifTabs initialTab="inventory" />;
+    case 'prokawan-dashboard': return <ProKawanDashboard />;
     case 'higiene-industri': return <HigieneIndustriTabs />;
     case 'hearing-dashboard': return <HigieneIndustriTabs initialTab="hearing" />;
     case 'ergonomi-dashboard': return <HigieneIndustriTabs initialTab="ergonomi" />;

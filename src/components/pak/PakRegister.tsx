@@ -8,7 +8,7 @@
 // Cetak PAK-01/02/03 via print CSS — nomor dokumen dari Setting.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2, Printer, Plus, AlertTriangle, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { Loader2, Printer, Plus, AlertTriangle, RefreshCw, Search, Trash2, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -58,6 +58,10 @@ interface PakCase {
   kesimpulan_bpjs_tgl: string | null;
   tahap2_selesai_tgl: string | null;
   status: string;
+  /** Verifikasi dokumen HRA: true = telah diperiksa dan sesuai (INK/017 Lampiran 1). */
+  hra_verified: boolean | null;
+  hra_verified_by: string | null;
+  hra_verified_tgl: string | null;
   deadline_info?: { triaseSisaJam: number | null; laporanMedisSisaJam: number | null; tahap1SisaJam: number | null };
 }
 
@@ -190,7 +194,7 @@ export default function PakRegister() {
   const td = 'px-3 py-2 text-[11px] border-b align-top';
 
   return (
-    <div className="relative review-mcu-page" style={{ overflowY: 'auto', maxHeight: '100%' }}>
+    <div className="admin-form-container" style={{ paddingBottom: 20 }}>
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
         <div>
@@ -229,6 +233,7 @@ export default function PakRegister() {
                 <th className={th}>ID Register</th>
                 <th className={th}>Karyawan</th>
                 <th className={th}>Sumber Dugaan</th>
+                <th className={th}>Verifikasi HRA</th>
                 <th className={th}>Diterima</th>
                 <th className={th}>Triase</th>
                 <th className={th}>Diagnosis</th>
@@ -247,6 +252,32 @@ export default function PakRegister() {
                     <td className={td} style={{ fontSize: 10 }}>
                       {SUMBER_DUGAAN.find((s) => s.v === c.sumber_dugaan)?.label.split('(')[0].trim() ?? c.sumber_dugaan}
                       {c.sumber_detail && <div style={{ fontSize: 9.5, color: 'var(--muted-foreground)' }}>{c.sumber_detail}</div>}
+                    </td>
+                    <td className={td}>
+                      {c.hra_verified ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9.5, fontWeight: 700, color: '#00895f', cursor: 'help' }}
+                          title={`Diverifikasi oleh ${c.hra_verified_by ?? '-'} pada ${fmtJam(c.hra_verified_tgl)}`}>
+                          <ShieldCheck size={13} /> Terverifikasi
+                          <div style={{ fontSize: 9, color: 'var(--muted-foreground)', fontWeight: 400 }}>{c.hra_verified_by}</div>
+                        </span>
+                      ) : (
+                        canWrite && ['BEROBAT_LUAR', 'PIHAK_LAIN', 'KLUSTER_HRA'].includes(c.sumber_dugaan) ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={saving}
+                            title="Klik bila Anda telah memeriksa dokumen HRA dan memastikan pajanan sesuai"
+                            onClick={() => patchCase(c.id, { action: 'verify_hra' })}
+                          >
+                            <ShieldAlert size={12} /> Konfirmasi HRA
+                          </Button>
+                        ) : (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 700, color: '#9a6b00', cursor: 'help' }}
+                            title="Periksa dokumen HRA (Health Risk Assessment) unit kerja karyawan sebagai rujukan klarifikasi pajanan — INK/017 Lampiran 1">
+                            <AlertTriangle size={10} /> Belum diverifikasi
+                          </span>
+                        )
+                      )}
                     </td>
                     <td className={td} style={{ whiteSpace: 'nowrap', fontSize: 10.5 }}>{fmtJam(c.tanggal_diterima)}<div style={{ fontSize: 9.5, color: 'var(--muted-foreground)' }}>{c.diterima_oleh}</div></td>
                     <td className={td} style={{ fontSize: 10 }}>
@@ -281,7 +312,7 @@ export default function PakRegister() {
                   </tr>
                 ))}
                 {!filtered.length && (
-                  <tr><td colSpan={canWrite ? 9 : 8} style={{ padding: 32, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>
+                  <tr><td colSpan={canWrite ? 10 : 9} style={{ padding: 32, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>
                     Belum ada kasus PAK pada filter ini.
                   </td></tr>
                 )}
@@ -355,6 +386,17 @@ function NewCaseForm({ saving, onCancel, onSubmit }: {
             {SUMBER_DUGAAN.map((s) => <option key={s.v} value={s.v}>{s.label}</option>)}
           </select>
         </label>
+        {/* Pengingat dokumen HRA sebagai rujukan klarifikasi pajanan (INK/017 Lampiran 1). */}
+        {['BEROBAT_LUAR', 'PIHAK_LAIN', 'KLUSTER_HRA'].includes(form.sumber_dugaan ?? 'MCU') && (
+          <div className="sm:col-span-3 flex items-start gap-2 p-3 rounded-lg text-xs" style={{ background: 'rgba(255,196,0,0.10)', border: '1px solid rgba(255,196,0,0.4)', color: '#9a6b00' }}>
+            <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span>
+              Periksa dokumen <b>HRA (Health Risk Assessment)</b> untuk memastikan hubungan pajanan
+              dengan keluhan/diagnosis sebelum menetapkan dugaan PAK (INK/017 Lampiran 1). Sumber
+              pajanan yang tercantum di HRA unit kerja karyawan menjadi dasar klarifikasi.
+            </span>
+          </div>
+        )}
         <label className="flex flex-col gap-1">
           <span className={label}>Jabatan</span>
           <Input value={form.jabatan ?? ''} onChange={(e) => set('jabatan', e.target.value)} className="h-9 rounded-lg text-sm" />

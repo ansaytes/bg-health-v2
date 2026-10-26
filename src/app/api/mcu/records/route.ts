@@ -116,7 +116,36 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query.maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (!data) return NextResponse.json({ record: null });
+  if (!data) {
+    // Fallback: NIK Karyawan di employees sebenarnya bisa berupa NIK KTP.
+    if (nik) {
+      const { data: byNationalId } = await client.from('mcu_records').select('*')
+        .eq('national_id_hash', hashField(nik))
+        .order('tgl_mcu', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (byNationalId) {
+        const record = decryptMCURecord(byNationalId);
+        const snakeToCamelMap: Record<string, string> = {};
+        for (const field of MCU_FIELDS) {
+          const snakeKey = field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase();
+          snakeToCamelMap[snakeKey] = field.id;
+        }
+        const formData: Record<string, string> = {};
+        for (const [key, value] of Object.entries(record)) {
+          if (['created_at', 'updated_at'].includes(key) || value == null) continue;
+          if (key === 'id') {
+            formData.id = String(value);
+            continue;
+          }
+          const camelKey = snakeToCamelMap[key] || key.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+          formData[camelKey] = String(value);
+        }
+        return NextResponse.json({ record: formData, updatedAt: byNationalId.updated_at || byNationalId.created_at });
+      }
+    }
+    return NextResponse.json({ record: null });
+  }
 
   const record = decryptMCURecord(data);
   const snakeToCamelMap: Record<string, string> = {};

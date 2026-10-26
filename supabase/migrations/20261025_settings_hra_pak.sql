@@ -176,6 +176,11 @@ CREATE TABLE IF NOT EXISTS pak_cases (
     tahap2_bukti JSONB DEFAULT '[]'::jsonb,
     -- Status lifecycle (turunan; diupdate aplikasi)
     status TEXT NOT NULL DEFAULT 'DITERIMA' CHECK (status IN ('DITERIMA','DITRIASE','PENEGAKAN','PAK','DUGAAN_PAK','BUKAN_PAK','TAHAP_I','TAHAP_II','DITUTUP')),
+    -- Verifikasi dokumen HRA unit kerja (INK/017 Lampiran 1): petugas konfirmasi
+    -- manual bahwa pajanan pada HRA sesuai dengan keluhan/diagnosis karyawan.
+    hra_verified BOOLEAN DEFAULT FALSE,
+    hra_verified_by TEXT,
+    hra_verified_tgl TIMESTAMPTZ,
     created_by TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

@@ -173,6 +173,19 @@ export async function PATCH(req: NextRequest) {
       else patch.status = 'DITRIASE';
     }
 
+    // Verifikasi dokumen HRA (INK/017 Lampiran 1) — konfirmasi manual petugas
+    // bahwa pajanan pada HRA unit kerja sesuai dengan keluhan/diagnosis.
+    if (b.action === 'verify_hra') {
+      patch.hra_verified = true;
+      patch.hra_verified_by = auth.caller.name;
+      patch.hra_verified_tgl = now.toISOString();
+    }
+    if (b.action === 'unverify_hra') {
+      patch.hra_verified = false;
+      patch.hra_verified_by = null;
+      patch.hra_verified_tgl = null;
+    }
+
     // Penegakan diagnosis (PAK-02 bagian E)
     if (b.action === 'diagnosis') {
       setIf('telaah7', b.telaah7);

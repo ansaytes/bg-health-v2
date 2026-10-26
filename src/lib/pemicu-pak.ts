@@ -157,14 +157,14 @@ function cekHati(history: McuLike[]): PemicuSaran[] {
   if (tinggi.length >= 2) {
     out.push({
       kriteria: 5, nama: 'Fungsi hati berulang',
-      alasan: `SGPT/SGOT melewati 60/55 U/L pada ${tinggi.length} pengukuran berulang pada pekerja terpapar solvent/hidrokarbon.`,
+      alasan: `SGPT/SGOT melewati 60/55 U/L pada ${tinggi.length} pengukuran berulang. KLARIFIKASI: periksa dokumen HRA untuk memastikan pajanan solvent/hidrokarbon pada unit kerja pekerja.`,
       data: tinggi.map((m) => `${m.tglMcu ?? '-'}: SGPT ${m.sgpt ?? 'n/a'}/SGOT ${m.sgot ?? 'n/a'}`).join(' · '),
     });
   }
   return out;
 }
 
-/** Kriteria 6 — kreatinin ≥1.5 atau eGFR <60 (kontekstual pajanan HRA). */
+/** Kriteria 6 — kreatinin ≥1.5 atau eGFR <60 (kontekstual pajanan — cek HRA). */
 function cekGinjal(history: McuLike[]): PemicuSaran[] {
   const out: PemicuSaran[] = [];
   const sorted = [...history].sort((a, b) => String(a.tglMcu ?? '').localeCompare(String(b.tglMcu ?? '')));
@@ -175,7 +175,7 @@ function cekGinjal(history: McuLike[]): PemicuSaran[] {
   if ((kre !== null && kre >= 1.5) || (egfr !== null && egfr < 60)) {
     out.push({
       kriteria: 6, nama: 'Fungsi ginjal',
-      alasan: `Kreatinin ${kre ?? 'n/a'} mg/dL${egfr !== null ? ` / eGFR ${egfr}` : ''} pada pekerja terpapar panas ekstrem/dehidrasi berulang/logam berat.`,
+      alasan: `Kreatinin ${kre ?? 'n/a'} mg/dL${egfr !== null ? ` / eGFR ${egfr}` : ''}. KLARIFIKASI: periksa dokumen HRA untuk memastikan pajanan panas ekstrem/dehidrasi berulang/logam berat pada unit kerja pekerja.`,
       data: `Kimia darah ${latest.tglMcu ?? '-'}`,
     });
   }
@@ -198,7 +198,7 @@ function cekHematologi(history: McuLike[]): PemicuSaran[] {
   if (findings.length) {
     out.push({
       kriteria: 7, nama: 'Hematologi',
-      alasan: `${findings.join(', ')} tanpa penjelasan non-okupasi pada pekerja terpapar benzena/BBM.`,
+      alasan: `${findings.join(', ')} tanpa penjelasan non-okupasi. KLARIFIKASI: periksa dokumen HRA untuk memastikan pajanan benzena/BBM pada unit kerja pekerja.`,
       data: `Hematologi ${latest.tglMcu ?? '-'}`,
     });
   }
@@ -217,7 +217,7 @@ function cekMuskuloskeletal(history: McuLike[]): PemicuSaran[] {
   if (findings.length) {
     return [{
       kriteria: 9, nama: 'Muskuloskeletal / neuro',
-      alasan: `${findings.join(' · ')} pada pekerja getaran/manual handling/kerja repetitif.`,
+      alasan: `${findings.join(' · ')} pada pekerja getaran/manual handling/kerja repetitif. KLARIFIKASI: periksa dokumen HRA untuk memastikan pajanan getaran/manual handling/repetitif pada unit kerja pekerja.`,
       data: `Anamnesis ${latest.tglMcu ?? '-'}`,
     }];
   }

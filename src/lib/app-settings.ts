@@ -30,8 +30,6 @@ export interface DokumenSetting {
   formPak: string;
   /** Nomor resmi FORM/123 — penilaian kelaikan kerja. */
   form123: string;
-  /** Nomor resmi HRA (FORM/069). */
-  formHra: string;
   /** Nomor resmi FORM/116-118 (RULA/ROSA/WERA). */
   formRula: string;
   formRosa: string;
@@ -74,7 +72,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
     // Draft Form PAK belum bernumber — diisi lewat Setting saat resmi.
     formPak: 'BG/QSHE/FORM/___ (Form PAK — draft)',
     form123: 'BG/QSHE/FORM/123',
-    formHra: 'BG/QSHE/FORM/069',
     formRula: 'BG/QSHE/FORM/116',
     formRosa: 'BG/QSHE/FORM/117',
     formWera: 'BG/QSHE/FORM/118',

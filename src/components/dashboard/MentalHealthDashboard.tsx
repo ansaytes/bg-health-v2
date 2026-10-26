@@ -281,11 +281,6 @@ export default function MentalHealthDashboard() {
         <ChartCard title="Rata-rata Skor DASS-21" sub="Depresi · ansietas · stres (skala 0–21)" accent="#3498DB" empty={!i.dass21.terisi}><canvas ref={subskalaRef} /></ChartCard>
         <ChartCard title="Sebaran SRQ-20 per Site" sub="Responden &amp; kasus perlu tindak lanjut" accent="#2E86DE" empty={!perSite.length}><canvas ref={siteRef} /></ChartCard>
       </div>
-
-      <div style={{ fontSize: 9.5, color: 'var(--muted-foreground)', lineHeight: 1.5, flexShrink: 0 }}>
-        Catatan: SRQ-20 dan DASS-21 adalah instrumen skrining klinis per individu — diagnosis tetap ditetapkan dokter.
-        Faktor psikologi lingkungan kerja (SDS-30) ada di Data Entry → Psikologi Lingkungan Kerja.
-      </div>
     </div>
   );
 }

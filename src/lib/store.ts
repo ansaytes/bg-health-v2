@@ -5,7 +5,7 @@ import { getMissingZonasiInputs } from './zonasi-engine';
 import { applyMCUCalculations, buildAutomaticFollowUpRecommendations } from './mcu-calculations';
 
 export type PageTab = 'home' | 'dashboard' | 'data-entry' | 'administrator';
-export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan' | 'layanan-kuratif' | 'inventory-dashboard' | 'hearing-dashboard' | 'ergonomi-dashboard' | 'mental-health-dashboard' | 'pemetaan-psikologis' | 'higiene-industri' | 'persetujuan-ergonomi';
+export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan' | 'layanan-kuratif' | 'inventory-dashboard' | 'hearing-dashboard' | 'ergonomi-dashboard' | 'mental-health-dashboard' | 'pemetaan-psikologis' | 'higiene-industri' | 'persetujuan-ergonomi' | 'prokawan-dashboard';
 export type AdminSidebar = 'lagging-indicator' | 'review-mcu' | 'input-jadwal-mcu' | 'kunjungan-admin' | 'health-campaign' | 'kelola-pengguna' | 'hearing-conservation' | 'ergonomi' | 'layanan-kuratif-admin' | 'higiene-industri-admin' | 'pak-register' | 'pengaturan';
 export type DataEntrySidebar = 'gangguan-tidur' | 'kesehatan-mental' | 'psikologi-lingkungan' | 'input-jadwal-mcu' | 'persetujuan-ergonomi';
 export type HomeSidebar = 'semua-feed' | 'health-campaign' | 'health-talk' | 'podcast' | 'news';

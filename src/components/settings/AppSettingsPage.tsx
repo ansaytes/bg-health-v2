@@ -146,7 +146,6 @@ export default function AppSettingsPage() {
               {([
                 ['dokumen.formPak', 'Form PAK-01/02/03'],
                 ['dokumen.form123', 'FORM/123 — Kelaikan Kerja'],
-                ['dokumen.formHra', 'FORM/069 — HRA'],
                 ['dokumen.formRula', 'FORM/116 — RULA'],
                 ['dokumen.formRosa', 'FORM/117 — ROSA'],
                 ['dokumen.formWera', 'FORM/118 — WERA'],

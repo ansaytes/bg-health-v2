@@ -66,12 +66,14 @@ export async function GET(req: NextRequest) {
   const client = adminClient();
 
   // Ambil MCU terbaru per karyawan. Query bertingkat agar tetap jalan pada
-  // database yang kolomnya belum lengkap.
+  // database yang kolomnya belum lengkap. `department` tersedia di tabel
+  // employees — di mcu_records tidak ada kolom itu, jadi kolomnya dilepas
+  // dari daftar dan jabatan/departemen diambil dari tabel employees.
   const attempts = [
-    'nik_karyawan,nama,site,department,tugas_area,zona_risiko,trigger_zona,hasil_mcu,mcu_terakhir,tanggal_mcu',
-    'nik_karyawan,nama,site,department,zona_risiko,trigger_zona,hasil_mcu,mcu_terakhir,tanggal_mcu',
-    'nik_karyawan,nama,site,department,zona_risiko,zona_kategori,trigger_zona,mcu_terakhir',
-    'nik_karyawan,nama,site,department,zona_risiko,mcu_terakhir',
+    'nik_karyawan,nama,site,tugas_area,zona_risiko,trigger_zona,hasil_mcu,mcu_terakhir,tanggal_mcu',
+    'nik_karyawan,nama,site,zona_risiko,trigger_zona,hasil_mcu,mcu_terakhir,tanggal_mcu',
+    'nik_karyawan,nama,site,zona_risiko,trigger_zona,mcu_terakhir',
+    'nik_karyawan,nama,site,zona_risiko,mcu_terakhir',
   ];
 
   let rows: McuRow[] = [];
@@ -102,6 +104,22 @@ export async function GET(req: NextRequest) {
     terbaru.set(key, row);
   }
 
+  // Jabatan/departemen tersedia di tabel `employees` — mcu_records tidak
+  // menyimpan kolom department. Join berdasarkan nik_karyawan_hash.
+  const nikHashes = [...new Set([...terbaru.values()].map((row) => String(row.nik_karyawan ?? '').trim()).filter(Boolean))];
+  const deptByNik = new Map<string, string>();
+  if (nikHashes.length) {
+    for (let i = 0; i < nikHashes.length; i += 100) {
+      const chunk = nikHashes.slice(i, i + 100);
+      const { data: emps } = await client.from('employees')
+        .select('nik_hash,job_position,department')
+        .in('nik_hash', chunk);
+      for (const emp of emps || []) {
+        if (emp.nik_hash) deptByNik.set(String(emp.nik_hash), String(emp.job_position || emp.department || ''));
+      }
+    }
+  }
+
   const peserta: PesertaProKawan[] = [];
   for (const row of terbaru.values()) {
     const zonaRaw = String(row.zona_risiko ?? '').trim();
@@ -121,7 +139,7 @@ export async function GET(req: NextRequest) {
       nik: String(row.nik_karyawan ?? ''),
       site: String(row.site ?? ''),
       area: String(row.tugas_area ?? '') || null,
-      department: String(row.department ?? '') || null,
+      department: deptByNik.get(String(row.nik_karyawan ?? '').trim()) || null,
       zona,
       triggers,
       jalur: rencana.jalur as JalurProKawan,
