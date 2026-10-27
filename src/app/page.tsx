@@ -16,9 +16,9 @@ import InputLaggingIndicator from '@/components/administrator/InputLaggingIndica
 import LaggingIndicatorPage from '@/components/administrator/LaggingIndicatorPage';
 import KunjunganBerobatForm from '@/components/administrator/KunjunganBerobatForm';
 import HealthCampaignForm from '@/components/administrator/HealthCampaignForm';
-import UserManagement from '@/components/administrator/UserManagement';
 import AppSettingsPage from '@/components/settings/AppSettingsPage';
 import PakRegister from '@/components/pak/PakRegister';
+import AdminProKawan from '@/components/administrator/AdminProKawan';
 import InputJadwalMCU from '@/components/administrator/InputJadwalMCUModern';
 import GangguanTidurPage from '@/components/administrator/GangguanTidurPage';
 import InputMentalHealthPage from '@/components/administrator/InputMentalHealthPage';
@@ -396,6 +396,16 @@ function IconPakRegister() {
   );
 }
 
+/** ProKawan — hati dengan garis denyut (monitoring peserta). */
+function IconProKawan() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l8.8 8.8 8.8-8.8a5.5 5.5 0 0 0 0-7.8z" />
+      <path d="M3.5 12.5h3.2l1.6-3 2.4 6 1.8-3h5.5" />
+    </svg>
+  );
+}
+
 const ADMIN_SIDEBAR: SidebarItem[] = [
   { key: 'lagging-indicator', label: 'Lagging Indicator', icon: <IconInputLagging /> },
   { key: 'review-mcu', label: 'Review MCU', icon: <IconReviewMCU /> },
@@ -406,7 +416,8 @@ const ADMIN_SIDEBAR: SidebarItem[] = [
   // Hearing Conservation + Ergonomi masuk ke menu Higiene Industri.
   { key: 'higiene-industri-admin', label: 'Higiene Industri', icon: <IconHigiene /> },
   { key: 'pak-register', label: 'Register PAK', icon: <IconPakRegister /> },
-  { key: 'kelola-pengguna', label: 'Kelola Pengguna', icon: <IconUsers />, superuserOnly: true },
+  { key: 'prokawan-admin', label: 'ProKawan', icon: <IconProKawan /> },
+  // Kelola Pengguna dipindah ke menu Pengaturan (tab "Kelola Pengguna").
   { key: 'pengaturan', label: 'Pengaturan', icon: <IconSetting />, superuserOnly: true },
 ];
 const DATA_ENTRY_SIDEBAR: SidebarItem[] = [
@@ -616,12 +627,8 @@ function AdminContent() {
   const activeAdminSidebar = useMCUStore((s) => s.activeAdminSidebar);
   const { isAdmin, role } = useAuth();
 
-  // Kelola Pengguna is standalone (no toggle)
-  if (activeAdminSidebar === 'kelola-pengguna') {
-    return <div className="admin-form-container"><UserManagement /></div>;
-  }
-
-  if (activeAdminSidebar === 'pengaturan') {
+  // Kelola Pengguna kini menjadi tab di dalam menu Pengaturan.
+  if (activeAdminSidebar === 'pengaturan' || activeAdminSidebar === 'kelola-pengguna') {
     return <div className="admin-form-container"><AppSettingsPage /></div>;
   }
 
@@ -634,7 +641,11 @@ function AdminContent() {
   }
 
   if (activeAdminSidebar === 'pak-register') {
-    return <div className="admin-form-container"><PakRegister /></div>;
+    return <PakRegister />;
+  }
+
+  if (activeAdminSidebar === 'prokawan-admin') {
+    return <AdminProKawan />;
   }
 
   const panels: Record<string, { form: React.ReactNode; tables: React.ReactNode[]; hasTable: boolean; labels?: string[] }> = {

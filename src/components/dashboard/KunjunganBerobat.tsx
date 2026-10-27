@@ -9,7 +9,7 @@ import {
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { fetchDashboardData } from '@/lib/dashboard-data';
-import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, warnaBar } from '@/lib/chart-standard';
+import { BAR_LAYOUT, STANDAR_ANIMASI, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, useAnimationReady, warnaBar } from '@/lib/chart-standard';
 
 // Register Chart.js plugins and all controllers/scales/elements
 ChartJS.register(...registerables, ChartDataLabels);
@@ -141,6 +141,11 @@ export default function KunjunganBerobat() {
   const obatChartInst = useRef<ChartJS | null>(null);
   const deptChartInst = useRef<ChartJS | null>(null);
 
+  // Chart hanya dibuat setelah halaman selesai transisi masuk (double RAF).
+  // Tanpa ini animasi Chart.js selesai sebelum container terlihat pengguna,
+  // sehingga diagram tampak statis / tidak beranimasi.
+  const animReady = useAnimationReady([]);
+
   useEffect(() => {
     return () => {
       // Cleanup on full unmount
@@ -240,12 +245,12 @@ export default function KunjunganBerobat() {
   const totalRujukRS = rujukList.length;
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || !animReady) return;
 
     // ANIMASI STANDAR APLIKASI: selalu berjalan (chart selalu dibuat ulang
     // saat data berubah, dan dibuat baru saat pertama tampil).
     const animationSettings = STANDAR_ANIMASI_BAR;
-    const lineAnimationSettings = { duration: 1000, easing: 'easeOutQuart' as const };
+    const lineAnimationSettings = STANDAR_ANIMASI;
 
       // Common theme colors
       const textColor = isDark ? '#F9FAFB' : '#111827';
@@ -292,7 +297,8 @@ export default function KunjunganBerobat() {
       const trendOptions: ChartOptions<'line'> = {
         responsive: true,
         maintainAspectRatio: false,
-        animation: lineAnimationSettings,
+        // Line animasi standar aplikasi: tumbuh dari kiri ke kanan.
+        animation: { ...STANDAR_ANIMASI, duration: 1000 },
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -730,7 +736,7 @@ export default function KunjunganBerobat() {
       // Don't destroy on every re-render, only on full unmount
     };
      
-  }, [filteredRecords, records, selectedDept, loading, isDark]);
+  }, [filteredRecords, records, selectedDept, loading, isDark, animReady]);
 
   return (
     <div className="dashboard" ref={containerRef} style={{ overflowY: 'auto', overflowX: 'hidden' }}>

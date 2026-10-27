@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import {
   Chart as ChartJS,
@@ -11,7 +11,7 @@ import {
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { supabase } from '@/lib/supabase';
-import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, skalaBar } from '@/lib/chart-standard';
+import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, skalaBar, useAnimationReady } from '@/lib/chart-standard';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -333,8 +333,14 @@ export function MCUChart({
     };
   }, []);
 
+  // TUNDA penggambaran sampai container benar-benar terlihat (double RAF).
+  // Inilah penyebab diagram lain terlihat "kaku": mereka dirender ke dalam
+  // container yang sedang beranimasi masuk (transisi halaman / framer-motion),
+  // sehingga animasi Chart.js selesai SEBELUM container terlihat pengguna.
+  const animReady = useAnimationReady([dataSignature]);
+
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || !animReady) return;
 
     const textColor = isDark ? '#F9FAFB' : '#111827';
     const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
@@ -479,7 +485,7 @@ export function MCUChart({
       // Don't destroy on every re-render, only on full unmount
     };
      
-  }, [dataSignature, isDark]);
+  }, [dataSignature, isDark, animReady]);
 
   return (
     <div className="mcu-dashboard-chart">

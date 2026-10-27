@@ -25,6 +25,7 @@ import {
   STANDAR_ANIMASI_DONUT,
   PALET_BAR,
   skalaBar,
+  useAnimationReady,
 } from '@/lib/chart-standard';
 import {
   JALUR_LABEL,
@@ -36,6 +37,27 @@ import {
   type PesertaProKawan,
   type StatusKepatuhan,
 } from '@/lib/prokawan';
+
+/**
+ * Kirim pengingat kontrol ProKawan via WhatsApp.
+ * Nomor telepon belum tersedia di tabel peserta — buka link dengan placeholder
+ * agar petugas tinggal isi nomor di aplikasi WhatsApp (web/desktop).
+ * Pesan sesuai format permintaan: salam + info kontrol rutin + tanggal.
+ */
+function kirimWa(p: PesertaProKawan) {
+  const tanggal = p.jatuhTempo
+    ? new Date(`${p.jatuhTempo}T00:00:00`).toLocaleDateString('id-ID', {
+      day: 'numeric', month: 'long', year: 'numeric',
+    })
+    : 'tanggal yang akan ditentukan';
+  const jalur = JALUR_LABEL[p.jalur];
+  const pengendalian = p.pengendalian
+    ? p.pengendalian.split('\n').map((l) => l.replace(/^•\s*/, '')).join('; ')
+    : 'sesuai rekomendasi QSHE Medic';
+  const pesan = `Salam, menginformasikan bahwa karyawan a/n ${p.nama} (NIK ${p.nik}, ${p.site}${p.department ? ` — ${p.department}` : ''}) terjadwal untuk melakukan kontrol rutin ProKawan pada tanggal ${tanggal}.\n\nJalur: ${jalur}\nPengendalian: ${pengendalian}\n\nMohon hadir sesuai jadwal dan membawa bukti kontrol. Terima kasih.`;
+  // Nomor telepon kosong → wa.me tanpa nomor membuka picker kontak WhatsApp.
+  window.open(`https://wa.me/?text=${encodeURIComponent(pesan)}`, '_blank');
+}
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -101,8 +123,20 @@ export default function ProKawanDashboard() {
 
   const ringkas = useMemo(() => ringkasProKawan(filtered), [filtered]);
 
+  // Tunda pembuatan chart 2 frame: bila chart dibuat saat container masih dalam
+  // transisi halaman (canvas berukuran nol), Chart.js menampilkan kondisi akhir
+  // tanpa animasi. Diberi tanda ringkasan agar animasi diulang saat data siap.
+  const chartsReady = useAnimationReady([
+    ringkas.total,
+    ringkas.byZona.Kuning,
+    ringkas.byZona.Merah,
+    ringkas.bySite.length,
+    ringkas.byStatus.terlambat,
+  ]);
+
   /* ── Charts ─────────────────────────────────────────────── */
   useEffect(() => {
+    if (!chartsReady) return;
     const text = isDark ? '#F9FAFB' : '#111827';
     const grid = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
     const cardBg = isDark ? '#1b1b1b' : '#ffffff';
@@ -260,7 +294,7 @@ export default function ProKawanDashboard() {
       Object.values(charts.current).forEach((c) => c?.destroy());
       charts.current = {};
     };
-  }, [ringkas, isDark]);
+  }, [ringkas, isDark, chartsReady]);
 
   const th: React.CSSProperties = {
     padding: '6px 8px', borderBottom: '1px solid var(--border)', fontSize: 9.5,
@@ -358,10 +392,12 @@ export default function ProKawanDashboard() {
                 <th style={th}>Site / Departemen</th>
                 <th style={th}>Zona</th>
                 <th style={th}>Parameter Pemicu</th>
+                <th style={th}>Pengendalian</th>
                 <th style={th}>Jalur</th>
                 <th style={th}>Jatuh Tempo</th>
                 <th style={th}>Status</th>
                 <th style={th}>Kelayakan Kerja</th>
+                <th style={th}>Pengingat</th>
               </tr>
             </thead>
             <tbody>
@@ -384,15 +420,12 @@ export default function ProKawanDashboard() {
                       {p.zona}
                     </span>
                   </td>
-                  <td style={{ ...td, fontSize: 10, maxWidth: 260 }}>
-                    {p.triggers.slice(0, 2).map((t, k) => (
-                      <div key={k} style={{ color: 'var(--muted-foreground)' }} title={t}>
-                        {t.length > 62 ? `${t.slice(0, 60)}…` : t}
+                  <td style={{ ...td, fontSize: 10, maxWidth: 260 }} title={p.pengendalian ?? ''}>
+                    {p.pengendalian
+                      ? <div style={{ color: 'var(--muted-foreground)', whiteSpace: 'pre-line', lineHeight: 1.45 }}>
+                        {p.pengendalian.length > 180 ? `${p.pengendalian.slice(0, 178)}…` : p.pengendalian}
                       </div>
-                    ))}
-                    {p.triggers.length > 2 && (
-                      <div style={{ fontSize: 9, color: 'var(--muted-foreground)' }}>+{p.triggers.length - 2} parameter lain</div>
-                    )}
+                      : <span style={{ color: 'var(--muted-foreground)' }}>—</span>}
                   </td>
                   <td style={{ ...td, fontSize: 10.5 }} title={JALUR_DESKRIPSI[p.jalur]}>
                     {JALUR_LABEL[p.jalur]}
@@ -405,11 +438,28 @@ export default function ProKawanDashboard() {
                     </span>
                   </td>
                   <td style={{ ...td, fontSize: 10.5 }}>{p.kelayakanKerja ?? '—'}</td>
+                  <td style={td}>
+                    <button
+                      type="button"
+                      onClick={() => kirimWa(p)}
+                      title="Kirim pengingat kontrol via WhatsApp"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '4px 10px', borderRadius: 7, border: 'none', cursor: 'pointer',
+                        background: '#25D366', color: '#fff', fontSize: 10.5, fontWeight: 700,
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                        <path d="M12 2a10 10 0 0 0-8.94 14.5L2 22l5.65-1.04A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.13-1.14l-.3-.18-3.11.57.6-3.03-.2-.32A8 8 0 1 1 12 20zm4.5-5.92c-.25-.12-1.47-.72-1.7-.8-.23-.09-.4-.13-.56.12-.17.25-.64.8-.78.96-.15.17-.29.19-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.23-1.47-1.38-1.72-.15-.25-.02-.38.11-.51.11-.11.25-.29.37-.44.12-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.12-.56-1.35-.77-1.84-.2-.48-.4-.42-.56-.42h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.23.9 2.42 1.03 2.59.13.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.43.53.6.19 1.16.16 1.6.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.08.15-1.18-.06-.1-.23-.16-.48-.28z" />
+                      </svg>
+                      WA
+                    </button>
+                  </td>
                 </tr>
               ))}
               {!filtered.length && !loading && (
                 <tr>
-                  <td colSpan={8} style={{ padding: 24, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>
+                  <td colSpan={10} style={{ padding: 24, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>
                     Belum ada karyawan pada Zona Kuning atau Zona Merah.
                   </td>
                 </tr>

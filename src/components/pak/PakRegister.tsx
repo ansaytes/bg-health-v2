@@ -194,7 +194,7 @@ export default function PakRegister() {
   const td = 'px-3 py-2 text-[11px] border-b align-top';
 
   return (
-    <div className="admin-form-container" style={{ paddingBottom: 20 }}>
+    <div className="dashboard" style={{ overflowY: 'auto', overflowX: 'hidden' }}>
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
         <div>

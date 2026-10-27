@@ -108,8 +108,37 @@ async function getCaller(request: NextRequest): Promise<{ role: string; site: st
   return { role: profile.role, site };
 }
 
+const MONITOR_FIELDS = 'employee_id,nik_karyawan,nama,site,area_raw,client,jabatan,exempt,total_mcu,mcu_terakhir,kategori_mcu_terakhir,hasil_mcu,perlu_fu,rekomendasi_fu,item_fu,diagnosa,fram_score,fram_prob,frs_kategori,zona_risiko,masa_berlaku_mcu,status_mcu,status_follow_up,jadwal_mcu_selanjutnya';
+const MONITOR_FIELDS_ALT = 'employee_id,nik_karyawan,nama,site,area_raw,client,jabatan,exempt,total_mcu,mcu_terakhir,kategori_mcu_terakhir,hasil_mcu,perlu_fu,rekomendasi_fu,item_fu,diagnosa,fram_score,fram_prob,frs_kategori,masa_berlaku_mcu,status_mcu,status_follow_up,jadwal_mcu_selanjutnya';
+
+/**
+ * VIEW `monitor_mcu` di database bisa belum memuat kolom `zona_risiko` /
+ * `nik_karyawan` (mis. migration 010 belum diterapkan), sehingga select penuh
+ * gagal dengan error Postgres "column ... does not exist". Pilih daftar kolom
+ * pertama yang benar-benar ada agar dashboard tetap tampil.
+ */
+let monitorColumnsCache: string | null = null;
+
+async function resolveMonitorColumns(): Promise<string> {
+  if (monitorColumnsCache) return monitorColumnsCache;
+  const candidates = [MONITOR_FIELDS, MONITOR_FIELDS_ALT];
+  for (const fields of candidates) {
+    const { error } = await client.from('monitor_mcu').select(fields).limit(1);
+    if (!error) {
+      monitorColumnsCache = fields;
+      return fields;
+    }
+    if (!/does not exist|PGRST204|42703/i.test(error.message)) {
+      monitorColumnsCache = fields;
+      return fields;
+    }
+  }
+  monitorColumnsCache = '*';
+  return '*';
+}
+
 async function fetchAllMonitorMcuRows(): Promise<Record<string, unknown>[]> {
-  const SELECT_FIELDS = 'employee_id,nik_karyawan,nama,site,area_raw,client,jabatan,exempt,total_mcu,mcu_terakhir,kategori_mcu_terakhir,hasil_mcu,perlu_fu,rekomendasi_fu,item_fu,diagnosa,fram_score,fram_prob,frs_kategori,zona_risiko,masa_berlaku_mcu,status_mcu,status_follow_up,jadwal_mcu_selanjutnya';
+  const SELECT_FIELDS = await resolveMonitorColumns();
   const PAGE_SIZE = 1000;
   const rows: Record<string, unknown>[] = [];
 
@@ -127,7 +156,7 @@ async function fetchAllMonitorMcuRows(): Promise<Record<string, unknown>[]> {
 
     if (error) throw error;
     if (!data || data.length === 0) break;
-    rows.push(...(data as Record<string, unknown>[]));
+    rows.push(...(data as unknown as Record<string, unknown>[]));
     if (data.length < PAGE_SIZE) break; // last page — no more rows
   }
 
@@ -178,6 +207,9 @@ export async function GET(request: NextRequest) {
         site: normalizeSiteName(row.site) || null,
         client: String(row.client || '').trim() || 'PT. BDM',
         area: normalizeArea(row.area_raw, row.site),
+        // VIEW versi lama menamai kolom ini `zonasi`; keduanya dipetakan ke
+        // `zona_risiko` supaya tabel & grafik tetap terisi.
+        zona_risiko: row.zona_risiko ?? row.zonasi ?? null,
         status_mcu: normalizeMcuStatus(row.status_mcu, exempt, row.masa_berlaku_mcu),
         status_follow_up: normalizeFollowUpStatus(row.status_follow_up, exempt),
       };

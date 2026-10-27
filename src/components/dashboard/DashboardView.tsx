@@ -5,7 +5,7 @@ import { Chart as ChartJS, registerables } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { MONTHS, JOBSITES } from '@/lib/lagging-data';
 import { fetchDashboardData } from '@/lib/dashboard-data';
-import { STANDAR_ANIMASI_BAR, BAR_LAYOUT, skalaBar } from '@/lib/chart-standard';
+import { STANDAR_ANIMASI_BAR, BAR_LAYOUT, skalaBar, useAnimationReady } from '@/lib/chart-standard';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -99,6 +99,9 @@ export default function DashboardView() {
   const [loadingSick, setLoadingSick] = useState(false);
   const [loadingAsr, setLoadingAsr] = useState(false);
   const [chartReady, setChartReady] = useState(false);
+  // Sama seperti diagram ASR: chart baru dibuat setelah halaman selesai
+  // transisi masuk, agar animasinya benar-benar terlihat.
+  const animReady = useAnimationReady([]);
   const [isDark, setIsDark] = useState(
     () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
   );
@@ -415,12 +418,12 @@ export default function DashboardView() {
         cancelAnimationFrame(animFrameRef.current);
       }
     };
-  }, [chartReady, asrRank, isDark]);
+  }, [chartReady, asrRank, isDark, animReady]);
 
   useEffect(() => {
     const t = setTimeout(() => setChartReady(true), 50);
     return () => clearTimeout(t);
-  }, [selectedMonth, selectedSite, selectedYear, asrRank.length]);
+  }, [selectedMonth, selectedSite, selectedYear, asrRank.length, animReady]);
 
   const sickListCount = sickList.length;
 
@@ -464,7 +467,7 @@ export default function DashboardView() {
     const canvas = sickCanvasRef.current;
     // Canvas baru ada setelah state "tidak ada data" hilang, jadi chart lama
     // wajib dihancurkan lebih dulu sebelum keluar lebih awal.
-    if (!canvas || !sickRanking.length) {
+    if (!canvas || !sickRanking.length || !animReady) {
       sickChartRef.current?.destroy();
       sickChartRef.current = null;
       return;
@@ -572,7 +575,7 @@ export default function DashboardView() {
       sickChartRef.current?.destroy();
       sickChartRef.current = null;
     };
-  }, [sickSignature, isDark, sickMode]);
+  }, [sickSignature, isDark, sickMode, animReady]);
 
   return (
     <div className="dashboard">

@@ -8,21 +8,23 @@
 // Pola UI mengikuti tema aplikasi (var(--card)/var(--border)).
 
 import { useEffect, useState } from 'react';
-import { Building2, FileText, Clock, Hospital, Save, Loader2 } from 'lucide-react';
+import { Building2, FileText, Clock, Hospital, Save, Loader2, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/lib/use-app-settings';
 import { useAuth } from '@/lib/auth-context';
 import { DEFAULT_SETTINGS, type AppSettings } from '@/lib/app-settings';
 import CenteredTabs from '@/components/ui/centered-tabs';
+import UserManagement from '@/components/administrator/UserManagement';
 
-type Tab = 'perusahaan' | 'dokumen' | 'pak' | 'faskes';
+type Tab = 'perusahaan' | 'dokumen' | 'pak' | 'faskes' | 'pengguna';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'perusahaan', label: 'Perusahaan' },
   { key: 'dokumen', label: 'Nomor Dokumen' },
   { key: 'pak', label: 'Batas Waktu PAK' },
   { key: 'faskes', label: 'Faskes & BPJS' },
+  { key: 'pengguna', label: 'Kelola Pengguna' },
 ];
 
 export default function AppSettingsPage() {
@@ -239,6 +241,19 @@ export default function AppSettingsPage() {
                 </div>
               </div>
             </div>
+          </section>
+        )}
+
+        {tab === 'pengguna' && (
+          <section style={{ background: 'var(--card)', borderRadius: 12, padding: 16, border: '1px solid var(--border)' }}>
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="size-4 text-primary" />
+              <h3 style={{ fontSize: 12.5, fontWeight: 700, margin: 0 }}>Kelola Pengguna</h3>
+            </div>
+            <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: '0 0 12px' }}>
+              Kelola akun dan akses pengguna sistem BG-Health.
+            </p>
+            <UserManagement />
           </section>
         )}
 

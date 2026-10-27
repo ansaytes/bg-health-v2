@@ -4931,7 +4931,7 @@ select.admin-input.compact-input {
 .col-filter-footer .is-primary:hover { text-decoration: none; filter: brightness(1.08); }
 
 /* ═══════════════════════════════════════════════════════════════
-   Centered Tabs — tab menu selalu di kiri halaman
+   Centered Tabs — tab menu selalu di TENGAH halaman (simetris)
    (Nama class dipertahankan agar tidak perlu ubah semua pemakai.)
    ═══════════════════════════════════════════════════════════════ */
 .centered-tabs {

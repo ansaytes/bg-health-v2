@@ -7,7 +7,7 @@ import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { authFetch } from '@/lib/api-client';
 import { KLAS_COLOR, type Klasifikasi } from '@/lib/hc-ergo';
 import { Chip, SITES, fmtDate, tableStyle, tdStyle, thStyle } from '@/components/administrator/hc-ergo-ui';
-import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT } from '@/lib/chart-standard';
+import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, useAnimationReady } from '@/lib/chart-standard';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -66,8 +66,11 @@ export default function ErgonomiDashboard() {
     return () => { alive = false; };
   }, [site]);
 
+  // Tunda penggambaran 2 frame agar animasi Chart.js berjalan di depan pengguna.
+  const animReady = useAnimationReady([]);
+
   useEffect(() => {
-    if (!d) return;
+    if (!d || !animReady) return;
     const text = isDark ? '#F9FAFB' : '#111827';
     const grid = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
     const cardBg = isDark ? '#1b1b1b' : '#ffffff';
@@ -209,7 +212,7 @@ export default function ErgonomiDashboard() {
       Object.values(charts.current).forEach((c) => c?.destroy());
       charts.current = {};
     };
-  }, [d, isDark]);
+  }, [d, isDark, animReady]);
 
   if (err) return <div style={{ padding: 20, color: '#E63946', fontSize: 13 }}>{err}</div>;
   if (!d) return (

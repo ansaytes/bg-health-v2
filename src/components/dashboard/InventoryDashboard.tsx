@@ -13,7 +13,7 @@ import ChartDataLabels from 'chartjs-plugin-datalabels';
 import DownloadButton from '@/components/ui/download-button';
 import { AlertTriangle, Clock, PackageCheck, AlertCircle, RefreshCw, ShieldAlert, Boxes } from 'lucide-react';
 import { fetchDashboardData } from '@/lib/dashboard-data';
-import { STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT } from '@/lib/chart-standard';
+import { STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, useAnimationReady } from '@/lib/chart-standard';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -44,6 +44,10 @@ export default function InventoryDashboard() {
   const [categoryFilter, setCategoryFilter] = useState('Semua');
   const [stockStatusFilter, setStockStatusFilter] = useState('Semua');
   const [expiredStatusFilter, setExpiredStatusFilter] = useState('Semua');
+
+  // Tunda pembuatan chart 2 frame agar animasi berjalan di depan pengguna
+  // (container baru selesai transisi masuk pada frame-frame awal).
+  const animReady = useAnimationReady([]);
 
   // Chart canvas refs
   const topExpiredCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -280,7 +284,7 @@ export default function InventoryDashboard() {
   // Render Charts
 
   useEffect(() => {
-    if (loading || !isAuthorized || items.length === 0) return;
+    if (loading || !isAuthorized || items.length === 0 || !animReady) return;
 
     // ANIMASI STANDAR APLIKASI: selalu berjalan.
     const animationSettings = STANDAR_ANIMASI_BAR;
@@ -654,7 +658,7 @@ export default function InventoryDashboard() {
       // Don't destroy on every re-render, only on full unmount
     };
      
-  }, [items, chartRenderKey, loading, isAuthorized, isDark, isDashboardView]);
+  }, [items, chartRenderKey, loading, isAuthorized, isDark, isDashboardView, animReady]);
 
   // Access guard
   if (!isAuthorized) {

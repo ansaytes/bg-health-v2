@@ -111,8 +111,14 @@ export interface RencanaPengendalian {
  * parameter menghasilkan frekuensi berbeda, yang dipakai adalah yang PALING
  * KETAT (angka bulan terkecil).
  */
-export function rencanaDariTriggers(triggers: string[]): RencanaPengendalian {
-  if (!triggers.length) return { jalur: 'kontrol-dokter', bulan: null, pemicu: [] };
+export function rencanaDariTriggers(triggers: string[], zona?: 'Kuning' | 'Merah'): RencanaPengendalian {
+  if (!triggers.length) {
+    // Parameter pemicu tidak tercatat (record MCU lama / impor tanpa kolom
+    // trigger_zona). Frekuensi TIDAK dikarang dari nol: dipakai frekuensi
+    // dasar zona menurut STD/006 — Merah 1 bulan, Kuning 3 bulan — sehingga
+    // jadwal kontrol tetap bisa dihitung dan dipantau.
+    return { jalur: 'kontrol-dokter', bulan: zona === 'Merah' ? 1 : zona === 'Kuning' ? 3 : null, pemicu: [] };
+  }
 
   let terpilih: { aturan: AturanJalur; trigger: string } | null = null;
 
@@ -184,17 +190,42 @@ export function statusKepatuhan(jatuhTempo: string | null, sekarang: Date = new 
 export interface PesertaProKawan {
   nama: string;
   nik: string;
+  /** SHA-256 NIK — dipakai untuk mengaitkan data kunjungan kontrol & WA. */
+  nikHash?: string | null;
   site: string;
   area: string | null;
   department: string | null;
+  /** Nomor WhatsApp peserta bila tersedia di tabel employees. */
+  noWa?: string | null;
   zona: 'Kuning' | 'Merah';
   triggers: string[];
+  /** Teks pengendalian per parameter dari kolom engine STD/006 (bukan general). */
+  pengendalian: string | null;
   jalur: JalurProKawan;
   bulan: number | null;
   jatuhTempo: string | null;
   status: StatusKepatuhan;
   /** Hanya status, TANPA diagnosis (INK 016 poin 4.7.3 huruf e). */
   kelayakanKerja: string | null;
+}
+
+/**
+ * Detail pemantauan kunjungan kontrol satu peserta — diisi Paramedic Site /
+ * QSHE Medic saat peserta kembali dari kontrol (bukti dokter / hasil lab).
+ */
+export interface KunjunganKontrol {
+  id: string;
+  nik: string;
+  /** Tanggal kontrol yang dijadwalkan (jatuhTempo). */
+  jadwalTanggal: string | null;
+  /** Tanggal aktual peserta benar-benar diperiksa. */
+  aktualTanggal: string | null;
+  /** Link/link dokumen evidence: surat kontrol, hasil lab, resume dokter. */
+  evidenceUrl: string | null;
+  /** Catatan singkat dokter pemeriksa / paramedic. */
+  catatan: string | null;
+  /** Kesimpulan kunjungan: Membaik / Stabil / Memburuk / Belum diketahui. */
+  hasil: 'MEMBAIK' | 'STABIL' | 'MEMBURUK' | 'BELUM' | null;
 }
 
 export function ringkasProKawan(peserta: PesertaProKawan[]) {

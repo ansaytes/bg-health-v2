@@ -1,4 +1,5 @@
 'use client';
+import { useEffect, useState } from 'react';
 // Standar tampilan grafik seluruh aplikasi.
 //
 // Aturan yang dikunci di sini supaya semua halaman konsisten:
@@ -190,3 +191,61 @@ export const OPSI_DONUT = {
   rotation: 0,
   circumference: 360,
 } as const;
+
+/**
+ * Hook "siap digambar": true setelah ada canvas berukuran nyata + satu jeda.
+ *
+ * MASALAH YANG DISELESAIKAN: chart di dalam container yang sedang beranimasi
+ * masuk (transisi halaman) sebenarnya SUDAH dirender di DOM, sehingga Chart.js
+ * langsung beranimasi — dan animasinya selesai SEBELUM container selesai
+ * terlihat. Hasilnya chart terlihat statis (gejala: "diagram belum berjalan").
+ *
+ * Menunggu "dua frame" saja tidak cukup karena ukuran canvas biasanya masih 0
+ * pada frame tersebut. Karena itu hook ini MENUNGGU sampai benar-benar ada
+ * canvas dengan lebar & tinggi > 8px (artinya layout sudah final dan elemen
+ * sudah di-paint), baru memberi satu frame tambahan. Chart yang dibuat setelah
+ * kondisi itu dijamin memulai animasi dari nol di depan pengguna.
+ */
+export function useAnimationReady(deps: unknown[]): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    setReady(false);
+    let raf = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let batal = false;
+
+    const tungguTerlihat = () => {
+      if (batal) return;
+      // Chart.js menyelesaikan animasi dalam SATU frame bila canvas belum punya
+      // ukuran (w/h 0) atau belum terlihat — hasilnya diagram tampak diam.
+      // Jadi tunggu sampai ada canvas dengan ukuran nyata dan itemnya benar-benar
+      // dirender, baru beri jeda singkat agar frame pertama ter-paint.
+      const siap = [...document.querySelectorAll('canvas')].some((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 8 && r.height > 8;
+      });
+      if (siap) {
+        timer = setTimeout(() => { if (!batal) setReady(true); }, ANIMASI_JEDA_MS);
+        return;
+      }
+      // Belum ada canvas berukuran wajar — periksa lagi di frame berikutnya.
+      raf = requestAnimationFrame(tungguTerlihat);
+    };
+
+    raf = requestAnimationFrame(tungguTerlihat);
+    return () => {
+      batal = true;
+      cancelAnimationFrame(raf);
+      if (timer) clearTimeout(timer);
+    };
+  }, deps);
+  return ready;
+}
+
+/**
+ * Jeda setelah paint sebelum chart dibuat, dalam milidetik.
+ * Harus lebih lama dari transisi halaman `.page-transition` (0.22s / 220 ms),
+ * karena chart yang dibuat saat transisi sedang berjalan menyelesaikan
+ * animasinya di luar pandangan pengguna — itulah gejala "diagram diam".
+ */
+export const ANIMASI_JEDA_MS = 260;
