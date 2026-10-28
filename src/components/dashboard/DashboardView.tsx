@@ -5,7 +5,7 @@ import { Chart as ChartJS, registerables } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { MONTHS, JOBSITES } from '@/lib/lagging-data';
 import { fetchDashboardData } from '@/lib/dashboard-data';
-import { STANDAR_ANIMASI_BAR, BAR_LAYOUT, skalaBar, useAnimationReady } from '@/lib/chart-standard';
+import { STANDAR_ANIMASI_BAR, BAR_LAYOUT, animasiUlang, skalaBar, useAnimationReady } from '@/lib/chart-standard';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -571,6 +571,11 @@ export default function DashboardView() {
         },
       }],
     });
+    // Pemicu animasi eksplisit (lihat chart-standard.ts). Diagram ASR di halaman
+    // yang sama beranimasi karena digambar manual per frame; diagram ini butuh
+    // reset()+update() agar tidak tampil langsung jadi.
+    animasiUlang(sickChartRef.current);
+
     return () => {
       sickChartRef.current?.destroy();
       sickChartRef.current = null;

@@ -9,7 +9,7 @@ import {
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { fetchDashboardData } from '@/lib/dashboard-data';
-import { BAR_LAYOUT, STANDAR_ANIMASI, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, useAnimationReady, warnaBar } from '@/lib/chart-standard';
+import { BAR_LAYOUT, STANDAR_ANIMASI, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, animasiUlang, useAnimationReady, warnaBar } from '@/lib/chart-standard';
 
 // Register Chart.js plugins and all controllers/scales/elements
 ChartJS.register(...registerables, ChartDataLabels);
@@ -730,6 +730,15 @@ export default function KunjunganBerobat() {
           data: deptData,
           options: deptOptions,
         });
+    }
+
+    // PEMICU ANIMASI EKSPLISIT — lihat komentar di chart-standard.ts.
+    // Chart.js melewati animasi bila canvas baru memperoleh ukuran atau bila
+    // perubahan data dianggap kecil. reset()+update() memaksa kelima diagram
+    // tumbuh dari keadaan kosong, sama seperti diagram ASR (yang berhasil)
+    // karena ia menggambar ulang sendiri per requestAnimationFrame.
+    for (const inst of [trendChartInst, ulangChartInst, diagChartInst, obatChartInst, deptChartInst]) {
+      animasiUlang(inst.current);
     }
 
     return () => {

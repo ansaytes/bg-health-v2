@@ -18,7 +18,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  AlertTriangle, CalendarClock, CheckCircle2, ExternalLink,
+  AlertTriangle, CalendarClock, Calculator, CheckCircle2, ExternalLink,
   Loader2, RefreshCw, Search, Save, UserRound, XCircle, MessageCircle,
 } from 'lucide-react';
 
@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authFetch } from '@/lib/api-client';
 import { useMCUStore } from '@/lib/store';
+import { PARAMETER_KONTROL } from '@/lib/prokawan-evaluasi';
 import {
   JALUR_DESKRIPSI,
   JALUR_LABEL,
@@ -112,6 +113,11 @@ export default function AdminProKawan() {
   const [filterSite, setFilterSite] = useState('semua');
   const [selectedNik, setSelectedNik] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Hasil usulan jadwal (GET) — belum menulis apa pun sampai dikonfirmasi.
+  const [jadwalUsulan, setJadwalUsulan] = useState<{
+    diusulkan: number; tanpaJadwal: number; sudahAda: number;
+  } | null>(null);
+  const [jadwalLoading, setJadwalLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -210,6 +216,50 @@ export default function AdminProKawan() {
     }
   }
 
+  /**
+   * Menghitung usulan jadwal kontrol (tidak menulis).
+   * Nama fungsi ini sengaja "tinjau", bukan "tetapkan": INK/016 poin 4.1.4
+   * menempatkan kewenangan penetapan pada QSHE Medic, bukan pada sistem.
+   */
+  async function tinjauJadwal() {
+    setJadwalLoading(true);
+    try {
+      const r = await authFetch('/api/prokawan/jadwal');
+      setJadwalUsulan({
+        diusulkan: Number(r.diusulkan ?? 0),
+        tanpaJadwal: Number(r.tanpaJadwal ?? 0),
+        sudahAda: Number(r.sudahAda ?? 0),
+      });
+    } catch (e) {
+      store.showToast(e instanceof Error ? e.message : 'Gagal menghitung usulan jadwal', 'error');
+    } finally {
+      setJadwalLoading(false);
+    }
+  }
+
+  /** Menulis jadwal usulan ke kunjungan_kontrol setelah dikonfirmasi QSHE Medic. */
+  async function tulisJadwal() {
+    if (!jadwalUsulan) return;
+    const setuju = confirm(
+      `Tetapkan ${jadwalUsulan.diusulkan} jadwal kontrol ProKawan?\n\n`
+      + 'Dasar: tanggal pemeriksaan terakhir + frekuensi kolom Pengendalian Bab 7.\n'
+      + 'Jadwal yang sudah ada tidak diubah.',
+    );
+    if (!setuju) return;
+
+    setJadwalLoading(true);
+    try {
+      const r = await authFetch('/api/prokawan/jadwal?mode=konfirmasi', { method: 'POST' });
+      store.showToast(`${Number(r.ditulis ?? 0)} jadwal kontrol ditetapkan`, 'success');
+      setJadwalUsulan(null);
+      await load();
+    } catch (e) {
+      store.showToast(e instanceof Error ? e.message : 'Gagal menetapkan jadwal', 'error');
+    } finally {
+      setJadwalLoading(false);
+    }
+  }
+
   async function kirimWa() {
     if (!selected) return;
     bukaWhatsApp(selected.noWa ?? kontrolTerakhir?.no_wa, pesanWaProKawan(selected, jadwalBerlaku));
@@ -263,6 +313,32 @@ export default function AdminProKawan() {
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             Refresh
           </button>
+          {/* Penetapan jadwal: QSHE Medic MENETAPKAN & memberitahukan jadwal
+              kontrol pertama (INK/016 poin 4.1.4). Tanggalnya diusulkan sistem
+              dari tanggal MCU + frekuensi Bab 7, lalu diperiksa di sini sebelum
+              ditulis ke kunjungan_kontrol. */}
+          <button
+            type="button"
+            onClick={() => void tinjauJadwal()}
+            disabled={jadwalLoading}
+            className="mcu-dashboard-refresh"
+            title="Hitung usulan tanggal kontrol dari tgl MCU + frekuensi parameter"
+          >
+            {jadwalLoading ? <Loader2 size={13} className="animate-spin" /> : <CalendarClock size={13} />}
+            Usulan Jadwal
+          </button>
+          {jadwalUsulan && (
+            <button
+              type="button"
+              onClick={() => void tulisJadwal()}
+              disabled={jadwalLoading}
+              className="mcu-dashboard-refresh"
+              style={{ background: 'rgba(0,184,148,0.12)', borderColor: 'rgba(0,184,148,0.4)', color: '#00806a' }}
+            >
+              {jadwalLoading ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+              Tetapkan {jadwalUsulan.diusulkan} Jadwal
+            </button>
+          )}
         </div>
         <div className="kunjungan-total-right">
           <span>Peserta <b>{filtered.length}</b></span>
@@ -270,6 +346,26 @@ export default function AdminProKawan() {
           <span>Merah <b style={{ color: '#FF2D2D' }}>{filtered.filter((p) => p.zona === 'Merah').length}</b></span>
         </div>
       </div>
+
+      {/* Ringkasan hasil usulan jadwal */}
+      {jadwalUsulan && (
+        <div style={{ flexShrink: 0, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, padding: '7px 12px', borderRadius: 8, background: 'rgba(52,152,219,0.08)', border: '1px solid rgba(52,152,219,0.28)', fontSize: 10.5 }}>
+          <b style={{ color: '#2471A3' }}>Usulan jadwal kontrol:</b>
+          <span>{jadwalUsulan.diusulkan} dapat dijadwalkan otomatis</span>
+          <span>· {jadwalUsulan.tanpaJadwal} tanpa jadwal kontrol dokter</span>
+          <span>· {jadwalUsulan.sudahAda} sudah tertetapkan</span>
+          <span style={{ color: 'var(--muted-foreground)' }}>
+            Dasar: tgl pemeriksaan terakhir + frekuensi kolom Pengendalian Bab 7 (INK/016 poin 4.1.4)
+          </span>
+          <button
+            type="button"
+            onClick={() => setJadwalUsulan(null)}
+            style={{ marginLeft: 'auto', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 10.5, color: 'var(--muted-foreground)' }}
+          >
+            Tutup
+          </button>
+        </div>
+      )}
 
       {error && (
         <div style={{ padding: '8px 12px', borderRadius: 8, background: 'rgba(255,45,45,0.08)', color: '#b3261e', fontSize: 11.5, flexShrink: 0 }}>
@@ -500,6 +596,19 @@ export default function AdminProKawan() {
                 )}
               </div>
 
+              {/* Form nilai kontrol → evaluasi zona otomatis.
+                  Inilah yang membuat "kontrol" bermakna: nilai parameter dari
+                  Faskes Rekanan diolah engine STANDAR PTM, bukan sekadar
+                  dicap tanggal (INK/016 poin 4.4.5 & 4.6.1). */}
+              <FormEvaluasiKontrol
+                key={`eval-${selected.nik}-${kontrolTerakhir?.id ?? 'baru'}`}
+                peserta={selected}
+                onSelesai={() => void load()}
+              />
+
+              {/* Jejak audit: setiap peralihan zona, sumbernya, dan dasarnya. */}
+              <RiwayatZona nik={selected.nik} versi={kontrolTerakhir?.id ?? 'baru'} />
+
               <div style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '0 2px 12px', fontSize: 9.5, color: 'var(--muted-foreground)' }}>
                 <AlertTriangle size={11} />
                 Kepatuhan dinilai dari ada/tidaknya tanggal aktual periksa dalam bukti dokter pemeriksa. Diagnosis tidak ditampilkan (INK/016 poin 4.7.3 huruf e).
@@ -600,6 +709,325 @@ function KontrolForm({ peserta, row, defaultJadwal, saving, onSave }: {
           Simpan kontrol
         </Button>
       </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Form nilai kontrol + evaluasi zona otomatis
+   ══════════════════════════════════════════════════════════════ */
+
+/**
+ * Form input NILAI PARAMETER hasil kontrol dari Fasilitas Kesehatan Rekanan.
+ *
+ * DASAR DOKUMEN (INK/016):
+ *  • 4.4.5 — hasil pemeriksaan Faskes Rekanan menjadi bahan evaluasi dan
+ *    pembaruan Zona Risiko PTM.
+ *  • 4.6.1 — QSHE Medic mengevaluasi hasil dan memperbarui zona.
+ *  • 4.6.2 / 4.6.3 — tetap Kuning/Merah ⇒ lanjut ProKawan; menjadi Hijau ⇒
+ *    dihentikan kepesertaannya (dengan pemantauan MCU rutin).
+ *
+ * Perilaku:
+ *  1. Nilai diisi dari hasil lab/pemeriksaan kontrol — tidak semua parameter
+ *     wajib; yang tidak diukur memakai nilai acuan sebelumnya agar zona tidak
+ *     berubah hanya karena data kosong.
+ *  2. Tombol "Hitung Zona" menjalankan engine STANDAR PTM yang SAMA dengan MCU.
+ *  3. Hasil evaluasi menampilkan zona sebelum → sesudah, arah (membaik/
+ *     memburuk/tetap), dan tren per parameter.
+ *  4. "Simpan & Perbarui Zona" menulis hasil ke kunjungan_kontrol (riwayat
+ *     permanen + baseline) DAN memperbarui zona peserta.
+ */
+function FormEvaluasiKontrol({ peserta, onSelesai }: {
+  peserta: PesertaProKawan;
+  onSelesai: () => void;
+}) {
+  const store = useMCUStore();
+  const [nilai, setNilai] = useState<Record<string, string>>({});
+  const [tanggal, setTanggal] = useState(new Date().toISOString().slice(0, 10));
+  const [evidence, setEvidence] = useState('');
+  const [catatan, setCatatan] = useState('');
+  const [menghitung, setMenghitung] = useState(false);
+  const [hasil, setHasil] = useState<{
+    zonaBaru: string; arah: string; zonaSebelumnya: string | null;
+    frekuensiEvaluasi: string; triggers: string[];
+    parameterBerubah: { key: string; label: string; sebelum: string | null; sekarang: string | null; tren: string }[];
+    parameterKosong: string[];
+  } | null>(null);
+
+  const terisi = PARAMETER_KONTROL.filter((p) => String(nilai[p.key] ?? '').trim() !== '');
+
+  function nilaiAngka(): Record<string, number | string> {
+    const out: Record<string, number | string> = {};
+    for (const p of terisi) {
+      const raw = String(nilai[p.key]).replace(',', '.').trim();
+      const n = Number(raw);
+      // Visus disimpan sebagai teks (6/9), sisanya angka.
+      out[p.key] = Number.isFinite(n) && /^[\d.,]+$/.test(raw) ? n : raw;
+    }
+    return out;
+  }
+
+  async function hitung(terapkanZona: boolean) {
+    if (!terisi.length) {
+      store.showToast('Isi minimal satu nilai parameter hasil kontrol', 'error');
+      return;
+    }
+    setMenghitung(true);
+    try {
+      const r = await authFetch('/api/prokawan/evaluasi', {
+        method: 'POST',
+        body: JSON.stringify({
+          nik: peserta.nik,
+          aktual_tanggal: tanggal,
+          nilai: nilaiAngka(),
+          evidence_url: evidence || null,
+          catatan: catatan || null,
+          terapkanZona,
+        }),
+      });
+      setHasil(r.evaluasi as typeof hasil);
+      store.showToast(
+        terapkanZona ? String(r.pesan ?? 'Zona diperbarui') : 'Zona dihitung — tinjau hasilnya',
+        'success',
+      );
+      if (terapkanZona) { setNilai({}); onSelesai(); }
+    } catch (e) {
+      store.showToast(e instanceof Error ? e.message : 'Gagal mengevaluasi hasil kontrol', 'error');
+    } finally {
+      setMenghitung(false);
+    }
+  }
+
+  const TREN_WARNA: Record<string, string> = {
+    membaik: '#00B894', memburuk: '#FF2D2D', tetap: '#778899', baru: '#3498DB',
+  };
+  const TREN_LABEL: Record<string, string> = {
+    membaik: 'membaik', memburuk: 'memburuk', tetap: 'tetap', baru: 'pengukuran pertama',
+  };
+  const kelompok = [
+    { id: 'vital', judul: 'Vital & Antropometri' },
+    { id: 'lab', judul: 'Laboratorium' },
+    { id: 'fungsi', judul: 'Fungsi & Skrining' },
+  ] as const;
+
+  return (
+    <div className="card" style={{ padding: '10px 12px', flexShrink: 0 }}>
+      <div className="card-head" style={{ marginBottom: 8 }}>
+        <span style={{ width: 3, height: 18, borderRadius: 2, background: '#ff4d00', flexShrink: 0 }} />
+        <div style={{ minWidth: 0 }}>
+          <h2 style={{ fontSize: 12 }}>Nilai Hasil Kontrol → Evaluasi Zona</h2>
+          <p style={{ fontSize: 9.5 }}>
+            Isi nilai dari Fasilitas Kesehatan Rekanan. Zona dihitung engine STANDAR PTM yang sama dengan MCU
+            (INK/016 4.4.5 &amp; 4.6.1) — tidak semua parameter wajib.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" style={{ marginBottom: 8 }}>
+        <label className="flex flex-col gap-1">
+          <span className="text-[10px] font-semibold text-muted-foreground">Tanggal aktual periksa</span>
+          <Input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} className="h-8 rounded-lg text-sm" />
+        </label>
+        <label className="flex flex-col gap-1 sm:col-span-2">
+          <span className="text-[10px] font-semibold text-muted-foreground">Evidence dokter / hasil lab (link)</span>
+          <Input value={evidence} onChange={(e) => setEvidence(e.target.value)} placeholder="https://… surat kontrol / resume dokter" className="h-8 rounded-lg text-sm" />
+        </label>
+      </div>
+
+      {kelompok.map((k) => (
+        <div key={k.id} style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted-foreground)', marginBottom: 4 }}>
+            {k.judul}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 6 }}>
+            {PARAMETER_KONTROL.filter((p) => p.kelompok === k.id).map((p) => (
+              <label key={p.key} className="flex flex-col gap-0.5" title={`${p.label} (${p.unit})`}>
+                <span style={{ fontSize: 9, color: 'var(--muted-foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {p.label} <span style={{ opacity: 0.7 }}>{p.unit}</span>
+                </span>
+                <Input
+                  value={nilai[p.key] ?? ''}
+                  onChange={(e) => setNilai((prev) => ({ ...prev, [p.key]: e.target.value }))}
+                  inputMode={p.key === 'visusJauh' ? 'text' : 'decimal'}
+                  placeholder="—"
+                  className="h-8 rounded-lg text-sm"
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      <label className="flex flex-col gap-1" style={{ marginBottom: 8 }}>
+        <span className="text-[10px] font-semibold text-muted-foreground">Catatan dokter / paramedis</span>
+        <Input value={catatan} onChange={(e) => setCatatan(e.target.value)} placeholder="Ringkasan kontrol, saran kontrol berikutnya" className="h-8 rounded-lg text-sm" />
+      </label>
+
+      {/* Hasil evaluasi */}
+      {hasil && (
+        <div style={{ marginBottom: 8, padding: '8px 10px', borderRadius: 8, border: `1px solid ${TREN_WARNA[hasil.arah] ?? '#778899'}44`, background: `${TREN_WARNA[hasil.arah] ?? '#778899'}0f` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 11 }}>
+            <b>Zona: {hasil.zonaSebelumnya ?? '—'} &rarr; {hasil.zonaBaru}</b>
+            <span style={{ fontWeight: 800, color: TREN_WARNA[hasil.arah] ?? '#778899' }}>
+              ({TREN_LABEL[hasil.arah] ?? hasil.arah})
+            </span>
+            <span style={{ color: 'var(--muted-foreground)' }}>Frekuensi berikutnya: {hasil.frekuensiEvaluasi}</span>
+          </div>
+          <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: '3px 12px', fontSize: 9.5 }}>
+            {hasil.parameterBerubah.map((p) => (
+              <span key={p.key} style={{ color: TREN_WARNA[p.tren] }}>
+                {p.label}: <b>{p.sebelum ?? '—'} &rarr; {p.sekarang ?? '—'}</b> ({TREN_LABEL[p.tren]})
+              </span>
+            ))}
+          </div>
+          {hasil.parameterKosong.length > 0 && (
+            <div style={{ marginTop: 4, fontSize: 9, color: 'var(--muted-foreground)' }}>
+              Tidak diukur: {hasil.parameterKosong.slice(0, 8).join(', ')}
+              {hasil.parameterKosong.length > 8 ? ` +${hasil.parameterKosong.length - 8}` : ''}
+              {' '}— memakai nilai acuan sebelumnya.
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+        <span style={{ marginRight: 'auto', fontSize: 9.5, color: 'var(--muted-foreground)', alignSelf: 'center' }}>
+          {terisi.length} parameter terisi
+        </span>
+        <Button size="sm" variant="outline" disabled={menghitung} onClick={() => void hitung(false)} style={{ gap: 5 }}>
+          {menghitung ? <Loader2 size={13} className="animate-spin" /> : <Calculator size={13} />}
+          Hitung Zona
+        </Button>
+        <Button size="sm" disabled={menghitung || !hasil} onClick={() => void hitung(true)} style={{ gap: 5 }}>
+          {menghitung ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+          Simpan &amp; Perbarui Zona
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Riwayat perubahan zona (audit trail)
+   ══════════════════════════════════════════════════════════════ */
+
+interface BarisHistoriZona {
+  id: string;
+  created_at: string;
+  sumber: 'kontrol' | 'mcu' | 'manual';
+  zona_lama: string | null;
+  zona_baru: string;
+  tanggal_acuan: string | null;
+  catatan: string | null;
+  diubah_oleh: string | null;
+}
+
+const SUMBER_LABEL: Record<string, string> = {
+  kontrol: 'Hasil kontrol',
+  mcu: 'MCU',
+  manual: 'Manual',
+};
+
+/**
+ * Riwayat perubahan Zona Risiko PTM.
+ *
+ * Zona pada `mcu_records` memang ditimpa saat diperbarui dari hasil kontrol.
+ * Kartu ini membaca `zona_histori` (append-only) sehingga nilai sebelum &
+ * sesudah setiap perubahan tetap dapat dilihat — inilah catatan historinya.
+ */
+function RiwayatZona({ nik, versi }: { nik: string; versi: string }) {
+  const [baris, setBaris] = useState<BarisHistoriZona[]>([]);
+  const [tersedia, setTersedia] = useState(true);
+  const [memuat, setMemuat] = useState(true);
+
+  const muat = useCallback(async () => {
+    setMemuat(true);
+    try {
+      const r = await authFetch(`/api/prokawan/evaluasi?nik=${encodeURIComponent(nik)}`);
+      setBaris(Array.isArray(r.historiZona) ? (r.historiZona as BarisHistoriZona[]) : []);
+      setTersedia(r.historiZonaTersedia !== false);
+    } catch {
+      setBaris([]);
+    } finally {
+      setMemuat(false);
+    }
+  }, [nik]);
+
+  useEffect(() => { void muat(); }, [muat, versi]);
+
+  const warna = (z: string | null) => (z === 'Merah' ? '#FF2D2D' : z === 'Kuning' ? '#C99A00' : z === 'Hijau' ? '#00B894' : '#778899');
+
+  return (
+    <div className="card" style={{ padding: '10px 12px', flexShrink: 0 }}>
+      <div className="card-head" style={{ marginBottom: 6 }}>
+        <span style={{ width: 3, height: 18, borderRadius: 2, background: '#8E44AD', flexShrink: 0 }} />
+        <div style={{ minWidth: 0 }}>
+          <h2 style={{ fontSize: 12 }}>Riwayat Perubahan Zona</h2>
+          <p style={{ fontSize: 9.5 }}>
+            Jejak audit — zona pada record MCU ditimpa setiap pembaruan, riwayatnya disimpan di sini
+          </p>
+        </div>
+      </div>
+
+      {!tersedia && (
+        <p style={{ fontSize: 10, color: '#9a6b00', margin: 0 }}>
+          Tabel <b>zona_histori</b> belum ada. Jalankan migration
+          <code style={{ marginLeft: 3 }}>20261028_prokawan_nilai_kontrol.sql</code>.
+        </p>
+      )}
+
+      {memuat && (
+        <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: 0 }}>
+          <Loader2 className="size-3 animate-spin inline mr-1" /> Memuat riwayat…
+        </p>
+      )}
+
+      {!memuat && tersedia && !baris.length && (
+        <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: 0 }}>
+          Belum ada perubahan zona tercatat.
+        </p>
+      )}
+
+      {!memuat && baris.length > 0 && (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={TH}>Waktu</th>
+                <th style={TH}>Sumber</th>
+                <th style={TH}>Zona</th>
+                <th style={TH}>Tgl acuan</th>
+                <th style={TH}>Catatan</th>
+              </tr>
+            </thead>
+            <tbody>
+              {baris.map((h) => (
+                <tr key={h.id}>
+                  <td style={{ ...TD, whiteSpace: 'nowrap', color: 'var(--muted-foreground)' }}>
+                    {new Date(h.created_at).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}
+                  </td>
+                  <td style={TD}>
+                    <span style={{
+                      fontSize: 9, fontWeight: 800, padding: '1px 6px', borderRadius: 999,
+                      background: h.sumber === 'kontrol' ? 'rgba(52,152,219,0.12)' : 'rgba(119,136,153,0.14)',
+                      color: h.sumber === 'kontrol' ? '#2471A3' : '#5a6b7b',
+                    }}>
+                      {SUMBER_LABEL[h.sumber] ?? h.sumber}
+                    </span>
+                  </td>
+                  <td style={{ ...TD, whiteSpace: 'nowrap', fontWeight: 700 }}>
+                    <span style={{ color: warna(h.zona_lama) }}>{h.zona_lama ?? '—'}</span>
+                    <span style={{ margin: '0 4px', color: 'var(--muted-foreground)' }}>&rarr;</span>
+                    <span style={{ color: warna(h.zona_baru) }}>{h.zona_baru}</span>
+                  </td>
+                  <td style={{ ...TD, whiteSpace: 'nowrap' }}>{fmtTanggal(h.tanggal_acuan)}</td>
+                  <td style={{ ...TD, maxWidth: 220, color: 'var(--muted-foreground)' }}>{h.catatan ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

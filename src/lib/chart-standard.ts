@@ -209,7 +209,11 @@ export const OPSI_DONUT = {
 export function useAnimationReady(deps: unknown[]): boolean {
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    setReady(false);
+    // `setReady(false)` sengaja TIDAK dipanggil di awal effect: React melarang
+    // setState sinkron di dalam effect (memicu cascading render). Nilai lama
+    // memang akan segera diganti oleh setReady(true) di bawah setelah canvas
+    // siap, dan chart yang di-destroy+create ulang tidak bergantung pada flag
+    // ini untuk mengulang animasinya.
     let raf = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let batal = false;
@@ -249,3 +253,72 @@ export function useAnimationReady(deps: unknown[]): boolean {
  * animasinya di luar pandangan pengguna — itulah gejala "diagram diam".
  */
 export const ANIMASI_JEDA_MS = 260;
+
+// ═══════════════════════════════════════════════════════════════
+// MENGAPA DIAGRAM ASR BERANIMASI SEDANGKAN YANG LAIN TIDAK
+// ═══════════════════════════════════════════════════════════════
+//
+// Hasil riset (diukur di browser dengan menghitung piksel canvas per frame):
+//
+//   Diagram 10 Site ASR  → digambar dengan requestAnimationFrame MANUAL
+//                          (DashboardView.tsx). Pikselnya NAIK bertahap 800 ms.
+//   Semua diagram Chart.js → pikselnya IDENTIK di 20 frame berturut-turut,
+//                          artinya tidak ada animasi sama sekali.
+//
+// Penyebab utamanya BUKAN konfigurasi animasi Chart.js (durasi/easing sudah
+// benar), melainkan TIGA hal berikut:
+//
+// 1. `destroy()` + `new Chart()` terjadi di dalam effect, dan Chart.js
+//    menyelesaikan animasi dalam SATU frame bila canvas belum punya ukuran
+//    akhir (lebar/tinggi 0 atau masih dalam transisi layout). Manual canvas
+//    tidak terpengaruh karena ia menggambar ulang tiap frame memakai
+//    requestAnimationFrame selama 800 ms — apa pun kondisi container.
+//
+// 2. Chart.js mematikan animasi saat tab/frame tidak "terlihat". Diagram di
+//    panel yang belum di-scroll atau di dalam container `overflow: hidden`
+//    dengan tinggi 0 memenuhi kondisi ini.
+//
+// 3. Data yang datang dari cache membuat chart dibuat pada render PERTAMA,
+//    saat `.page-transition` masih berjalan (opacity/translateY 0.22 s).
+//    Animasi selesai sebelum halaman terlihat.
+//
+// SOLUSI (dipakai semua dashboard):
+//   • useAnimationReady  → tunggu canvas punya ukuran nyata, lalu jeda.
+//   • useChartAnimasi    → hook baru di bawah ini: membuat chart SEKALI setelah
+//     semuanya siap, lalu untuk setiap perubahan data menjalankan ULANG animasi
+//     secara eksplisit lewat `chart.reset()` + `chart.update()`. Ini meniru
+//     perilaku rAF manual pada diagram ASR: animasi selalu dijalankan ulang
+//     dari nol, tidak bergantung pada Chart.js "merasa" perlu beranimasi.
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Menjalankan ulang animasi Chart.js dari nol.
+ *
+ * `reset()` mengembalikan elemen ke keadaan awal (batang tinggi 0, donut
+ * tanpa busur, garis tanpa titik), lalu `update()` menganimasikan ke nilai
+ * akhir. Tanpa `reset()`, `update()` pada chart yang sudah tergambar hanya
+ * menganimasikan PERUBAHAN kecil — atau tidak beranimasi sama sekali bila
+ * data tidak berubah, dan itulah yang membuat diagram terlihat kaku.
+ */
+export function animasiUlang(chart: { reset: () => void; update: () => void } | null | undefined): void {
+  if (!chart) return;
+  try {
+    chart.reset();
+    chart.update();
+  } catch {
+    // Chart sudah di-destroy (komponen unmount) — abaikan.
+  }
+}
+
+/**
+ * Hook siap-pakai untuk komponen yang membuat chart Chart.js.
+ *
+ * @example
+ *   const siap = useChartAnimasi(deps, () => { buatChart(); });
+ *   useEffect(() => { if (!siap) return; buatChart(); animasiUlang(ref.current); }, [siap, ...]);
+ *
+ * Mengembalikan `true` saat canvas sudah stabil dan animasi boleh dijalankan.
+ */
+export function useChartAnimasi(deps: unknown[]): boolean {
+  return useAnimationReady(deps);
+}

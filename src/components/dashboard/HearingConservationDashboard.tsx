@@ -269,6 +269,100 @@ export default function HearingConservationDashboard() {
         <ChartCard title="Kasus STS" sub="Suspek, retest, terkonfirmasi, terlambat" accent="#E63946" empty={!stsTotal}><canvas ref={stsRef} /></ChartCard>
         <ChartCard title="Leq Maks per Area" sub="Titik tertinggi (dB(A)) · warna titik = zona" accent="#ff4d00" empty={!adaUkur}><canvas ref={trendRef} /></ChartCard>
       </div>
+
+      {/* Evaluasi efektivitas tahunan — SOP/028 poin 4.3.5:
+          QSHE Manager "melakukan evaluasi tahunan terhadap efektivitas
+          Program Konservasi Pendengaran". Indikator diambil dari data yang
+          sudah ada di dashboard ini, sehingga tidak perlu input baru. */}
+      <EvaluasiTahunan d={d} nAreaTot={nAreaTot} katTotal={katTotal} cakTotal={cakTotal} stsTotal={stsTotal} />
+    </div>
+  );
+}
+
+/**
+ * Panel evaluasi efektivitas tahunan Program Konservasi Pendengaran.
+ *
+ * Empat indikator yang dapat dihitung tanpa input tambahan:
+ *  1. Kepatuhan pengukuran area  — area dengan pengukuran ≤6 bulan (Zona
+ *     Kuning/Merah) / ≤12 bulan (Zona Hijau), sesuai SOP/028 poin 5.5.2.
+ *  2. Cakupan audiometri Kategori A & B — wajib tahunan (poin 5.5.3).
+ *  3. Tindak lanjut STS — yang belum ditindaklanjuti adalah temuan risiko.
+ *  4. Kecukupan APT — proporsi karyawan Zona Kuning/Merah yang wajib APT.
+ */
+function EvaluasiTahunan({ d, nAreaTot, katTotal, cakTotal, stsTotal }: {
+  d: D; nAreaTot: number; katTotal: number; cakTotal: number; stsTotal: number;
+}) {
+  const areaTerlambat = Number(d.areaTerlambat ?? 0);
+  const kepatuhanUkur = nAreaTot ? ((nAreaTot - areaTerlambat) / nAreaTot) * 100 : 0;
+  const terperiksa = ((d.cakupan || []) as D[]).reduce((s, c) => s + (c.sudah || 0), 0);
+  const cakupan = cakTotal ? (terperiksa / cakTotal) * 100 : 0;
+  const stsDitindak = Number(d.sts.terkonfirmasi ?? 0) + Number(d.sts.retestDijadwalkan ?? 0);
+  const stsSelesai = stsTotal ? (stsDitindak / stsTotal) * 100 : 100;
+
+  const item = [
+    {
+      label: 'Kepatuhan pengukuran area',
+      nilai: kepatuhanUkur,
+      target: 100,
+      ket: `${nAreaTot - areaTerlambat} dari ${nAreaTot} area terukur sesuai jadwal (≤6 bln Kuning/Merah, ≤12 bln Hijau)`,
+    },
+    {
+      label: 'Cakupan audiometri A & B',
+      nilai: cakupan,
+      target: 100,
+      ket: `${terperiksa} dari ${cakTotal} karyawan Kategori A/B sudah audiometri tahun ini`,
+    },
+    {
+      label: 'Tindak lanjut STS',
+      nilai: stsSelesai,
+      target: 100,
+      ket: stsTotal ? `${stsDitindak} dari ${stsTotal} kasus sudah retest/terkonfirmasi` : 'Belum ada kasus STS',
+    },
+    {
+      label: 'Cakupan karyawan terpajan',
+      nilai: katTotal ? ((Number(d.kategori.A ?? 0) + Number(d.kategori.B ?? 0)) / katTotal) * 100 : 0,
+      target: 100,
+      ket: `${Number(d.kategori.A ?? 0) + Number(d.kategori.B ?? 0)} dari ${katTotal} karyawan terklasifikasi A/B`,
+    },
+  ];
+
+  // Status keseluruhan: merah bila ada indikator < 80%, kuning 80–95%, hijau > 95%.
+  const terendah = Math.min(...item.map((i) => i.nilai));
+  const warna = terendah >= 95 ? '#00B894' : terendah >= 80 ? '#F1C40F' : '#E63946';
+  const label = terendah >= 95 ? 'Efektif' : terendah >= 80 ? 'Perlu Perbaikan' : 'Tidak Efektif';
+
+  return (
+    <div className="card" style={{ flexShrink: 0, padding: '8px 10px', display: 'flex', gap: 12, alignItems: 'stretch' }}>
+      <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingRight: 12, borderRight: '1px solid var(--border)', minWidth: 132 }}>
+        <div style={{ fontSize: 8.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>
+          Evaluasi Tahunan
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: warna, lineHeight: 1.2 }}>{label}</div>
+        <div style={{ fontSize: 8.5, color: 'var(--muted-foreground)', lineHeight: 1.3 }}>
+          SOP/028 4.3.5 — efektivitas program
+        </div>
+      </div>
+      <div style={{ flex: 1, minWidth: 0, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }}>
+        {item.map((i) => {
+          const w = i.nilai >= 95 ? '#00B894' : i.nilai >= 80 ? '#F1C40F' : '#E63946';
+          return (
+            <div key={i.label} style={{ minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 4 }}>
+                <span style={{ fontSize: 9, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={i.label}>
+                  {i.label}
+                </span>
+                <span style={{ fontSize: 11, fontWeight: 800, color: w, flexShrink: 0 }}>{i.nilai.toFixed(0)}%</span>
+              </div>
+              <div style={{ height: 5, borderRadius: 3, background: 'var(--muted)', overflow: 'hidden', margin: '2px 0 3px' }}>
+                <div style={{ width: `${Math.min(i.nilai, 100)}%`, height: '100%', borderRadius: 3, background: w }} />
+              </div>
+              <div style={{ fontSize: 8, color: 'var(--muted-foreground)', lineHeight: 1.3, overflow: 'hidden' }} title={i.ket}>
+                {i.ket}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

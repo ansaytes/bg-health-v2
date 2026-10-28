@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
+import { PRIORITAS_WARNA, type Notifikasi } from '@/lib/notifikasi-medic';
 
 interface Approval {
   id: number;
@@ -14,17 +15,31 @@ interface Approval {
   created_at: string;
 }
 
-export default function NotificationBell({ isSuperuser }: { isSuperuser: boolean }) {
+/**
+ * Bell notifikasi — dua sumber:
+ *  1. Pendaftaran akun menunggu persetujuan (superuser saja).
+ *  2. Tindak lanjut QSHE Medic: kontrol ProKawan, MCU expired, surat
+ *     kelayakan, batas waktu PAK, jadwal pemantauan karyawan sakit.
+ *
+ * Notifikasi Medic dihitung ON-DEMAND di server (bukan cron), sehingga selalu
+ * akurat tanpa proses latar belakang. Isinya sengaja hanya NAMA + JENIS
+ * TINDAKAN — tanpa diagnosis/nilai lab (INK/016 4.7.3e, UU 27/2022).
+ */
+export default function NotificationBell({ isSuperuser, canMedic = false }: {
+  isSuperuser: boolean;
+  canMedic?: boolean;
+}) {
   const [approvals, setApprovals] = useState<Approval[]>([]);
+  const [medic, setMedic] = useState<Notifikasi[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const canView = isSuperuser;
+  const canViewApprovals = isSuperuser;
+  const canView = canViewApprovals || canMedic;
 
   const fetchApprovals = async () => {
-    if (!canView) return;
-    setLoading(true);
+    if (!canViewApprovals) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/notifications', {
@@ -34,21 +49,44 @@ export default function NotificationBell({ isSuperuser }: { isSuperuser: boolean
       if (json.notifications) setApprovals(json.notifications);
     } catch {
       // silent fail
+    }
+  };
+
+  const fetchMedic = async () => {
+    if (!canMedic) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/notifikasi', {
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      if (Array.isArray(json.daftar)) setMedic(json.daftar as Notifikasi[]);
+    } catch {
+      // silent fail
+    }
+  };
+
+  const fetchSemua = async () => {
+    if (!canView) return;
+    setLoading(true);
+    try {
+      await Promise.all([fetchApprovals(), fetchMedic()]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (canView) fetchApprovals();
-  }, [canView]);
+    if (canView) void fetchSemua();
+  }, [canView, canMedic]);
 
-  // Poll every 30 seconds
+  // Poll every 30 seconds — server menyimpan cache 5 menit, jadi ini ringan.
   useEffect(() => {
     if (!canView) return;
-    const interval = setInterval(fetchApprovals, 30000);
+    const interval = setInterval(() => { void fetchSemua(); }, 30000);
     return () => clearInterval(interval);
-  }, [isSuperuser]);
+  }, [canView, canMedic]);
 
   // Close on outside click
   useEffect(() => {
@@ -109,12 +147,13 @@ export default function NotificationBell({ isSuperuser }: { isSuperuser: boolean
 
   if (!canView) return null;
 
-  const count = approvals.length;
+  const count = approvals.length + medic.length;
+  const totalKritis = medic.filter((m) => m.prioritas === 'kritis').length;
 
   return (
     <div ref={dropdownRef} style={{ position: 'relative' }}>
       <button
-        onClick={() => { setOpen(!open); if (!open) fetchApprovals(); }}
+        onClick={() => { setOpen(!open); if (!open) void fetchSemua(); }}
         style={{
           width: 30, height: 30, borderRadius: 8, border: '1px solid var(--border)',
           background: 'var(--card)', cursor: 'pointer', display: 'flex',
@@ -131,7 +170,8 @@ export default function NotificationBell({ isSuperuser }: { isSuperuser: boolean
           <span style={{
             position: 'absolute', top: -4, right: -4,
             minWidth: 16, height: 16, borderRadius: 8,
-            background: '#ff4d00', color: '#fff',
+            // Merah bila ada yang KRITIS (mis. PAK lewat batas), oranye biasa.
+            background: totalKritis > 0 ? '#FF2D2D' : '#ff4d00', color: '#fff',
             fontSize: 9, fontWeight: 700, display: 'flex',
             alignItems: 'center', justifyContent: 'center',
             padding: '0 4px', border: '2px solid var(--card)',
@@ -167,11 +207,72 @@ export default function NotificationBell({ isSuperuser }: { isSuperuser: boolean
                 Notifikasi
               </span>
               {count > 0 && (
-                <span style={{ fontSize: 10, color: '#ff4d00', fontWeight: 600 }}>
-                  {count} pending
+                <span style={{ fontSize: 10, color: totalKritis > 0 ? '#FF2D2D' : '#ff4d00', fontWeight: 600 }}>
+                  {count} tindak lanjut{totalKritis > 0 ? ` · ${totalKritis} kritis` : ''}
                 </span>
               )}
             </div>
+
+            {/* Notifikasi tindak lanjut QSHE Medic — didahulukan karena
+                menyangkut batas waktu (PAK 2×24 jam, kontrol jatuh tempo). */}
+            {!loading && medic.length > 0 && (
+              <div>
+                <div style={{
+                  padding: '6px 16px', fontSize: 9, fontWeight: 800, textTransform: 'uppercase',
+                  letterSpacing: '0.05em', color: 'var(--muted-foreground)',
+                  background: 'var(--muted)', borderBottom: '1px solid var(--border)',
+                }}>
+                  Tindak Lanjut QSHE Medic
+                </div>
+                {medic.map((n) => (
+                  <button
+                    key={n.id}
+                    onClick={() => {
+                      setOpen(false);
+                      window.location.href = n.tautan;
+                    }}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
+                      padding: '9px 16px', borderBottom: '1px solid var(--border)',
+                      border: 'none', borderLeft: `3px solid ${PRIORITAS_WARNA[n.prioritas]}`,
+                      background: 'transparent', fontFamily: 'inherit',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, fontWeight: 700, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {n.judul}
+                      </span>
+                      {n.sisaHari !== null && (
+                        <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 800, color: PRIORITAS_WARNA[n.prioritas] }}>
+                          {n.sisaHari < 0 ? `+${Math.abs(n.sisaHari)}h` : n.sisaHari === 0 ? 'hari ini' : `H-${n.sisaHari}`}
+                        </span>
+                      )}
+                    </div>
+                    {n.subjek && (
+                      <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--foreground)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {n.subjek}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 9.5, color: 'var(--muted-foreground)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {n.keterangan}
+                    </div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#ff4d00', marginTop: 2 }}>
+                      {n.aksi} →
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {!loading && approvals.length > 0 && (
+              <div style={{
+                padding: '6px 16px', fontSize: 9, fontWeight: 800, textTransform: 'uppercase',
+                letterSpacing: '0.05em', color: 'var(--muted-foreground)',
+                background: 'var(--muted)', borderBottom: '1px solid var(--border)',
+              }}>
+                Pendaftaran Menunggu Persetujuan
+              </div>
+            )}
 
             <div style={{ maxHeight: 400, overflowY: 'auto' }}>
               {loading ? (

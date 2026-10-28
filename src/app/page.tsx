@@ -19,6 +19,10 @@ import HealthCampaignForm from '@/components/administrator/HealthCampaignForm';
 import AppSettingsPage from '@/components/settings/AppSettingsPage';
 import PakRegister from '@/components/pak/PakRegister';
 import AdminProKawan from '@/components/administrator/AdminProKawan';
+import MonitoringKaryawanSakit from '@/components/administrator/MonitoringKaryawanSakit';
+import InspeksiSanitasi from '@/components/administrator/InspeksiSanitasi';
+import GiziKerja from '@/components/administrator/GiziKerja';
+import SaranaKlinik from '@/components/administrator/SaranaKlinik';
 import InputJadwalMCU from '@/components/administrator/InputJadwalMCUModern';
 import GangguanTidurPage from '@/components/administrator/GangguanTidurPage';
 import InputMentalHealthPage from '@/components/administrator/InputMentalHealthPage';
@@ -38,6 +42,7 @@ import MentalHealthDashboard from '@/components/dashboard/MentalHealthDashboard'
 import HigieneIndustriTabs from '@/components/dashboard/HigieneIndustriTabs';
 import LayananKuratifTabs from '@/components/dashboard/LayananKuratifTabs';
 import ProKawanDashboard from '@/components/dashboard/ProKawanDashboard';
+import LaporanMingguan from '@/components/dashboard/LaporanMingguan';
 import ErgoApproval from '@/components/dashboard/ErgoApproval';
 import HcInputPage from '@/components/administrator/HcInputPage';
 import HcAudiometriEval from '@/components/administrator/HcAudiometriEval';
@@ -88,13 +93,16 @@ function AdminLayananKuratif() {
  * dalam satu menu bertab (sama seperti sisi dashboard).
  */
 function AdminHigieneIndustri() {
-  const [tab, setTab] = useState<'hearing' | 'ergonomi'>('hearing');
+  const [tab, setTab] = useState<'hearing' | 'ergonomi' | 'sanitasi' | 'gizi'>('hearing');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       <CenteredTabs
         tabs={[
           { key: 'hearing', label: 'Hearing Conservation' },
           { key: 'ergonomi', label: 'Ergonomi' },
+          // Higiene & Sanitasi (STD/005) + Gizi Kerja (AKG 2019) — SOP/028 poin 5.7
+          { key: 'sanitasi', label: 'Higiene & Sanitasi' },
+          { key: 'gizi', label: 'Gizi Kerja' },
         ]}
         active={tab}
         onChange={setTab}
@@ -102,7 +110,11 @@ function AdminHigieneIndustri() {
         compact
       />
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {tab === 'hearing' ? (
+        {tab === 'sanitasi' ? (
+          <InspeksiSanitasi />
+        ) : tab === 'gizi' ? (
+          <GiziKerja />
+        ) : tab === 'hearing' ? (
           <AdminTogglePanel
             formContent={<HcInputPage />}
             tableContents={[<HcAudiometriEval key="hc-audio" />]}
@@ -307,11 +319,23 @@ const HOME_SIDEBAR: SidebarItem[] = [
   { key: 'news', label: 'News', icon: <IconNews /> },
 ];
 
+/** Laporan Mingguan — kalender dengan tanda centang. */
+function IconLaporanMingguan() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <path d="M3 9h18M8 2v4M16 2v4" />
+      <path d="M9 15l1.5 1.5L14 13" />
+    </svg>
+  );
+}
+
 const DASH_SIDEBAR: SidebarItem[] = [
   { key: 'statistik', label: 'Statistik Kesehatan', icon: <IconStatistik /> },
   { key: 'monitoring', label: 'Monitoring MCU', icon: <IconMonitoring /> },
   { key: 'layanan-kuratif', label: 'Layanan Kuratif', icon: <IconKuratif /> },
   { key: 'prokawan-dashboard', label: 'ProKawan', icon: <IconProkawan />, adminOnly: true },
+  { key: 'laporan-mingguan', label: 'Laporan Mingguan', icon: <IconLaporanMingguan />, adminOnly: true },
   { key: 'higiene-industri', label: 'Higiene Industri', icon: <IconHigiene />, adminOnly: true },
   { key: 'mental-health-dashboard', label: 'Kesehatan Mental', icon: <IconBrain />, adminOnly: true },
 ];
@@ -406,6 +430,29 @@ function IconProKawan() {
   );
 }
 
+/** Monitoring Karyawan Sakit — tempat tidur dengan tanda denyut. */
+function IconKaryawanSakit() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 20V9a2 2 0 0 1 2-2h9a4 4 0 0 1 4 4v9" />
+      <path d="M3 16h18M3 20h18" />
+      <circle cx="7.5" cy="10.5" r="1.5" />
+      <path d="M17 11h4M19 9v4" />
+    </svg>
+  );
+}
+
+/** Sarana & Prasarana — kotak peralatan dengan centang. */
+function IconSarana() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="7" width="18" height="13" rx="2" />
+      <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+      <path d="M9 14l1.5 1.5L15 12" />
+    </svg>
+  );
+}
+
 const ADMIN_SIDEBAR: SidebarItem[] = [
   { key: 'lagging-indicator', label: 'Lagging Indicator', icon: <IconInputLagging /> },
   { key: 'review-mcu', label: 'Review MCU', icon: <IconReviewMCU /> },
@@ -417,6 +464,10 @@ const ADMIN_SIDEBAR: SidebarItem[] = [
   { key: 'higiene-industri-admin', label: 'Higiene Industri', icon: <IconHigiene /> },
   { key: 'pak-register', label: 'Register PAK', icon: <IconPakRegister /> },
   { key: 'prokawan-admin', label: 'ProKawan', icon: <IconProKawan /> },
+  // Monitoring Karyawan Sakit (SOP/027) — jalur kelayakan kerja yang BERBEDA
+  // dari kesimpulan vendor MCU. Keduanya sah dan berdampingan.
+  { key: 'karyawan-sakit', label: 'Monitoring Karyawan Sakit', icon: <IconKaryawanSakit /> },
+  { key: 'sarana-klinik', label: 'Sarana & Prasarana', icon: <IconSarana /> },
   // Kelola Pengguna dipindah ke menu Pengaturan (tab "Kelola Pengguna").
   { key: 'pengaturan', label: 'Pengaturan', icon: <IconSetting />, superuserOnly: true },
 ];
@@ -524,6 +575,7 @@ function DashContent() {
     case 'kunjungan': return <LayananKuratifTabs initialTab="kunjungan" />;
     case 'inventory-dashboard': return <LayananKuratifTabs initialTab="inventory" />;
     case 'prokawan-dashboard': return <ProKawanDashboard />;
+    case 'laporan-mingguan': return <LaporanMingguan />;
     case 'higiene-industri': return <HigieneIndustriTabs />;
     case 'hearing-dashboard': return <HigieneIndustriTabs initialTab="hearing" />;
     case 'ergonomi-dashboard': return <HigieneIndustriTabs initialTab="ergonomi" />;
@@ -646,6 +698,14 @@ function AdminContent() {
 
   if (activeAdminSidebar === 'prokawan-admin') {
     return <AdminProKawan />;
+  }
+
+  if (activeAdminSidebar === 'karyawan-sakit') {
+    return <MonitoringKaryawanSakit />;
+  }
+
+  if (activeAdminSidebar === 'sarana-klinik') {
+    return <SaranaKlinik />;
   }
 
   const panels: Record<string, { form: React.ReactNode; tables: React.ReactNode[]; hasTable: boolean; labels?: string[] }> = {
@@ -1281,7 +1341,11 @@ export default function Home() {
             <div className="header-right">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/BestK3.png" alt="BestK3" className="header-right-logo" />
-              <NotificationBell isSuperuser={isSuperuser} />
+              <NotificationBell
+                isSuperuser={isSuperuser}
+                // Notifikasi tindak lanjut hanya untuk QSHE Medic.
+                canMedic={['superuser', 'administrator', 'pic'].includes(role ?? '')}
+              />
               <button className="theme-btn" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
                 {theme === 'dark'
                   ? <svg viewBox="0 0 24 24" fill="none" stroke="#FDCB6E" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>

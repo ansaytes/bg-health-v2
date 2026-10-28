@@ -13,7 +13,7 @@ import ChartDataLabels from 'chartjs-plugin-datalabels';
 import DownloadButton from '@/components/ui/download-button';
 import { AlertTriangle, Clock, PackageCheck, AlertCircle, RefreshCw, ShieldAlert, Boxes } from 'lucide-react';
 import { fetchDashboardData } from '@/lib/dashboard-data';
-import { STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, useAnimationReady } from '@/lib/chart-standard';
+import { STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, animasiUlang, useAnimationReady } from '@/lib/chart-standard';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -652,6 +652,13 @@ export default function InventoryDashboard() {
           data,
           options,
         });
+    }
+
+    // PEMICU ANIMASI EKSPLISIT — lihat komentar di chart-standard.ts.
+    // Tanpa ini keempat diagram tampil langsung jadi (Chart.js melewati
+    // animasi bila canvas baru diberi ukuran / perubahan data kecil).
+    for (const inst of [topExpiredChart, stockStatusChart, topExpSoonChart, fastMovingChart]) {
+      animasiUlang(inst.current);
     }
 
     return () => {

@@ -46,6 +46,8 @@ import {
   detectGender,
   hasActiveLiverDisease,
   hasArtritisUrat,
+  hasAnyCardiacHistory,
+  hasAnyStroke,
   hasAsthma,
   hasChronicLbp,
   hasControlledEpilepsy,
@@ -69,6 +71,11 @@ import {
   type Classification,
 } from '@/lib/clinical-classification';
 import { dassBandLabel, dassCategory, isDassActionable, SRQ20_THRESHOLD, type DassDomain } from '@/lib/questionnaire-scores';
+import {
+  aturanDariLabel,
+  pengendalianHijau,
+  susunPengendalian,
+} from '@/lib/ptm-pengendalian';
 
 export interface ZonasiResult {
   zona: 'Hijau' | 'Kuning' | 'Merah' | 'Belum Lengkap';
@@ -449,57 +456,62 @@ function assessQuestionnaireZonasi(ctx: AssessCtx) {
   // dan tersedia di halaman Input Kesehatan Mental serta dashboard.
 }
 
-/** Membangun ZonasiResult akhir dari temuan yang terkumpul. */
+/**
+ * Membangun ZonasiResult akhir dari temuan yang terkumpul.
+ *
+ * PENGENDALIAN DIAMBIL PER PARAMETER (Bab 7 STD/006 Rev.002), bukan satu teks
+ * per zona. Lihat `ptm-pengendalian.ts` untuk tabelnya. Jika suatu temuan tidak
+ * punya baris di tabel (mis. temuan di luar cakupan dokumen), teksnya dilaporkan
+ * di `catatanSOP` alih-alih dikarang.
+ */
 function buildZonasiOutcome(merah: Finding[], kuning: Finding[], catatanSOP: string[]): ZonasiResult {
+  const catatan = [...catatanSOP];
+
   if (merah.length > 0) {
+    const hasil = susunPengendalian(merah);
+    const tanpaBaris = merah.filter((f) => !aturanDariLabel(f.label, f.detail));
+    for (const f of tanpaBaris) catatan.push(`Pengendalian belum tercantum pada Bab 7 STD/006: ${f.label}`);
+
     return {
       zona: 'Merah',
       triggers: merah.map((f) => (f.detail ? `${f.label} — ${f.detail}` : f.label)),
-      pengendalian: [
-        '• Wajib kontrol dokter spesialis setiap 1 bulan sampai stabil',
-        '• Wajib menyerahkan surat kontrol atau clearance',
-        '• Evaluasi ulang status setiap 1 bulan',
-        '• Dapat direkomendasikan penempatan sementara (Currently Unfit)',
-        '• Tidak diperkenankan bekerja di area risiko tinggi (ketinggian, alat berat, confined space, shift malam intensif) sampai dinyatakan stabil',
-      ].join('\n'),
+      pengendalian: hasil.pengendalian,
       parameterBelumDinilai: [],
-      catatanSOP,
-      frekuensiEvaluasi: 'Setiap 1 bulan',
+      catatanSOP: catatan,
+      // Bab 6.2.3: evaluasi minimal 1 bulan oleh dokter spesialis.
+      frekuensiEvaluasi: 'Setiap 1 bulan sampai stabil',
     };
   }
 
   if (kuning.length > 0) {
-    // Poin 6.2.2: bila hanya Prediabetes atau Obesitas ringan/sedang, kontrol 6 bulan.
-    // Parameter lain selalu 3 bulan, dan bila ada lebih dari satu, yang terpendek berlaku.
-    const onlyLongInterval = kuning.every((f) => /Prediabetes/i.test(f.label) || /Obesity/i.test(f.label) || /Overweight/i.test(f.label));
-    const interval = onlyLongInterval ? '6 bulan' : '3 bulan';
+    const hasil = susunPengendalian(kuning);
+    const tanpaBaris = kuning.filter((f) => !aturanDariLabel(f.label, f.detail));
+    for (const f of tanpaBaris) catatan.push(`Pengendalian belum tercantum pada Bab 7 STD/006: ${f.label}`);
+
+    // Prinsip risiko tertinggi (Bab 6.2.2): frekuensi karyawan = yang terketat
+    // di antara parameternya. Bila SEMUA parameternya hanya dipantau paramedis
+    // (tanpa kontrol dokter berkala), evaluasi tetap 3 bulan lewat MCU berkala.
+    const bulan = hasil.bulan;
+    const frekuensi = bulan === null
+      ? (hasil.tanpaKontrolBerkala ? 'Evaluasi ulang setiap 3 bulan melalui MCU/pemeriksaan berkala (tanpa kontrol dokter berkala)' : 'Evaluasi ulang setiap 3 bulan')
+      : `Setiap ${bulan} bulan`;
+
     return {
       zona: 'Kuning',
       triggers: kuning.map((f) => (f.detail ? `${f.label} — ${f.detail}` : f.label)),
-      pengendalian: [
-        `• Wajib kontrol dokter minimal setiap ${interval}`,
-        '• Wajib menyerahkan bukti kontrol ke HO',
-        '• Tidak direkomendasikan bekerja di area risiko tinggi bila kondisi belum stabil',
-        `• Evaluasi ulang status zona setiap ${interval}`,
-        '• Program perbaikan gaya hidup (berat badan, diet, olahraga)',
-        '• Layak kerja dengan monitoring (Fit With Note)',
-      ].join('\n'),
+      pengendalian: hasil.pengendalian,
       parameterBelumDinilai: [],
-      catatanSOP,
-      frekuensiEvaluasi: `Setiap ${interval}`,
+      catatanSOP: catatan,
+      frekuensiEvaluasi: frekuensi,
     };
   }
 
   return {
     zona: 'Hijau',
     triggers: [],
-    pengendalian: [
-      '• MCU rutin sesuai jadwal perusahaan (1 tahun sekali atau sesuai kebijakan)',
-      '• Edukasi gaya hidup sehat',
-      '• Layak kerja tanpa pembatasan khusus',
-    ].join('\n'),
+    pengendalian: pengendalianHijau(),
     parameterBelumDinilai: [],
-    catatanSOP,
+    catatanSOP: catatan,
     frekuensiEvaluasi: 'Minimal 1 kali dalam 12 bulan',
   };
 }
@@ -606,6 +618,22 @@ export function calcPerluFU(kesVendor: string | undefined, hasAbnormal: boolean)
 // FRAMINGHAM RISK SCORE
 // ═══════════════════════════════════════════
 
+/**
+ * Riwayat penyakit kardiovaskular yang sudah ditegakkan dokter.
+ *
+ * INK/012 poin 4.2.6 huruf b: penyakit jantung koroner, stroke, atau penyakit
+ * arteri perifer. Karyawan dengan riwayat ini TIDAK dihitung FRS-nya —
+ * dikategorikan risiko SANGAT TINGGI dan ditindaklanjuti seperti risiko tinggi.
+ *
+ * Memakai `hasAnyCardiacHistory` / `hasAnyStroke` (bukan hanya "gejala
+ * residual") karena batasan ini berlaku untuk RIWAYAT penyakitnya, bukan hanya
+ * yang masih bergejala. Karyawan dengan gejala residual juga sudah pasti masuk
+ * Zona Merah lewat engine zonasi — dua jalur itu tidak saling menggantikan.
+ */
+function hasRiwayatKardiovaskular(d: MCUDraft): boolean {
+  return hasAnyCardiacHistory(d.riwayatJantung) || hasAnyStroke(d.riwayatStroke);
+}
+
 export function calcFramingham(d: MCUDraft): { score: number; prob: string; kat: string } {
   const age = toNumber(d.usia);
   const chol = toNumber(d.chol);
@@ -614,6 +642,38 @@ export function calcFramingham(d: MCUDraft): { score: number; prob: string; kat:
   const smoking = d.merokok === 'Ya';
   const dm = d.diabetes === 'Ya';
   const isMale = detectGender(d.jenisKelamin) === 'male';
+
+  // ── Kriteria PENERAPAN FRS — BG/QSHE/INK/012 Rev.002 poin 4.2.6 ──────────
+  //
+  // Dokumen TIDAK menghitung FRS untuk semua karyawan. Tiga batasan:
+  //
+  //   a. Usia <30 tahun  → FRS TIDAK dihitung, ditindaklanjuti sama seperti
+  //      kategori risiko RENDAH (poin 4.2.6 huruf a).
+  //   b. Ada riwayat penyakit kardiovaskular yang sudah ditegakkan dokter
+  //      (jantung koroner, stroke, penyakit arteri perifer) → FRS TIDAK
+  //      dihitung, dicatat sebagai "risiko SANGAT TINGGI" dan ditindaklanjuti
+  //      seperti kategori risiko tinggi (poin 4.2.6 huruf b).
+  //   c. Usia >74 tahun juga diperlakukan sama seperti <30 (risiko rendah),
+  //      karena di PT Bagong Dekaka Makmur usia tersebut sudah melewati batas
+  //      pensiun sehingga tidak muncul dalam data karyawan aktif. Pemeriksaan
+  //      ini tetap dipertahankan sebagai penjaga, bukan sebagai kasus nyata.
+  //
+  // Sebelumnya engine menghitung untuk SEMUA umur dan mengabaikan riwayat
+  // kardiovaskular, sehingga karyawan 25 tahun atau penyintas stroke tetap
+  // mendapat angka FRS yang secara metodologis tidak berlaku.
+  const riwayatKardiovaskular = hasRiwayatKardiovaskular(d);
+  if (riwayatKardiovaskular) {
+    return {
+      score: 0,
+      prob: 'Sangat Tinggi',
+      kat: 'Sangat Tinggi (Riwayat Kardiovaskular)',
+    };
+  }
+
+  if (age !== null && (age < 30 || age > 74)) {
+    // Poin 4.2.6 huruf a: diperlakukan sebagai risiko rendah, tanpa hitung FRS.
+    return { score: 0, prob: '<1%', kat: 'Low Risk (di luar rentang usia FRS)' };
+  }
 
   if (!age || !chol || hdl === null || !sbp || !d.jenisKelamin) {
     return { score: 0, prob: 'Cek Parameter', kat: 'Cek Parameter' };

@@ -442,13 +442,19 @@ export function parseVisualAcuity(raw: string | number | null | undefined): Visi
   const decimalMatch = text.match(/(\d+[.,]\d+)/);
   const ratioMatch = text.match(/(\d+)\s*\/\s*(\d+)/);
 
+  //
+  // BUG YANG DIPERBAIKI: rumus lama membalik pecahan Snellen.
+  //   "6/12" dihitung 12/6 = 2,0 → terbaca 6/6 → Zona Hijau,
+  //   padahal STD/006 Bab 7 menempatkan 6/12 pada Zona Kuning.
+  // Snellen 6/x berarti penglihatan sebesar 6/x dari normal, jadi desimalnya
+  // adalah x/6 dibalik: 6/6 = 1,0; 6/12 = 0,50; 6/18 = 0,33; 6/60 = 0,10.
+  // Untuk notasi 20/y berlaku sama: 20/20 = 1,0; 20/40 = 0,50.
   let decimal: number | null = null;
   if (ratioMatch) {
     const numerator = Number(ratioMatch[1]);
     const denominator = Number(ratioMatch[2]);
-    if (denominator > 0) {
-      // 6/x → desimal; 20/y → desimal
-      decimal = numerator === 20 ? denominator / 20 : numerator / 6;
+    if (numerator > 0 && denominator > 0) {
+      decimal = numerator / denominator;
     }
   } else if (decimalMatch) {
     const value = Number(decimalMatch[1].replace(',', '.'));
@@ -463,10 +469,17 @@ export function parseVisualAcuity(raw: string | number | null | undefined): Visi
     ? (decimal >= 1 ? '6/6' : `6/${Math.round(6 / decimal)}`)
     : null;
 
+  // STD/006 Bab 7 (visus terkoreksi, mata terbaik):
+  //   Hijau  ≥6/9  (≥0,67)
+  //   Kuning 6/12–6/18 (0,33–<0,67)  — 6/9 tepat sudah Hijau sesuai catatan SOP
+  //   Merah  <6/18 (<0,33)
+  // Ambang memakai pembandingan Snellen, bukan desimal hasil pembagian:
+  // 6/9 = 0,666… yang secara float < 0,67 sehingga dulu salah masuk Kuning.
+  // Dengan perbandingan silang (6 * 6 >= 9 * 6) tidak ada galat pembulatan.
   let category: VisionResult['category'];
-  if (decimal >= 0.67) category = 'normal';      // ≥ 6/9
-  else if (decimal >= 0.33) category = 'ringan'; // 6/18 – 6/9
-  else category = 'berat';                        // < 6/18
+  if (decimal >= (6 / 9) - 1e-9) category = 'normal';   // ≥ 6/9
+  else if (decimal >= (6 / 18) - 1e-9) category = 'ringan'; // 6/18 – 6/12
+  else category = 'berat';                                // < 6/18
 
   return { decimal: Number(decimal.toFixed(2)), snellen, corrected, category, raw: text };
 }

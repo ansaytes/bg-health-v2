@@ -11,7 +11,7 @@ import {
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { supabase } from '@/lib/supabase';
-import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, skalaBar, useAnimationReady } from '@/lib/chart-standard';
+import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, animasiUlang, skalaBar, useAnimationReady } from '@/lib/chart-standard';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -480,6 +480,11 @@ export function MCUChart({
     }
 
     chartRef.current = new ChartJS(canvasRef.current, config);
+    // Pemicu eksplisit: Chart.js TIDAK beranimasi bila canvas baru saja
+    // memperoleh ukuran atau bila layar baru di-paint. reset()+update() memaksa
+    // animasi berjalan dari keadaan kosong, sama seperti diagram ASR yang
+    // canvas-nya digambar manual per frame.
+    animasiUlang(chartRef.current);
 
     return () => {
       // Don't destroy on every re-render, only on full unmount

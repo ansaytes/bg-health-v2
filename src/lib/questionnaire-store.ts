@@ -37,6 +37,12 @@ export interface CallerProfile {
   userId: string;
   employeeNikHash: string | null;
   mustChangePassword: boolean;
+  /**
+   * Site karyawan yang tertaut ke akun PIC.
+   * Diambil dari tabel `employees` lewat employee_nik_hash agar PIC hanya
+   * melihat data site-nya sendiri. Null untuk role lain / bila tidak tertaut.
+   */
+  site?: string | null;
 }
 
 const ALLOWED_ROLES = ['pic', 'superuser', 'administrator'];
@@ -60,15 +66,30 @@ export async function getCaller(req: NextRequest): Promise<CallerProfile | null>
   if (!user) return null;
   const { data: profile } = await client
     .from('user_profiles')
-    .select('role,employee_nik_hash')
+    .select('role,employee_nik_hash,site')
     .eq('user_id', user.id)
     .single();
-  return profile ? {
+  if (!profile) return null;
+
+  // Site PIC: utamakan site_name dari karyawan yang tertaut (paling akurat),
+  // lalu jatuh ke kolom `site` pada profil.
+  let site = profile.site ?? null;
+  if (profile.role === 'pic' && profile.employee_nik_hash) {
+    const { data: emp } = await client
+      .from('employees')
+      .select('site_name')
+      .eq('nik_hash', profile.employee_nik_hash)
+      .maybeSingle();
+    site = emp?.site_name || site;
+  }
+
+  return {
     role: profile.role,
     userId: user.id,
     employeeNikHash: profile.employee_nik_hash || null,
     mustChangePassword: user.app_metadata?.must_change_password === true,
-  } : null;
+    site,
+  };
 }
 
 export function canWriteQuestionnaires(caller: CallerProfile | null): boolean {
