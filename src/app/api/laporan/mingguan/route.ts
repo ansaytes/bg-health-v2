@@ -120,7 +120,7 @@ export async function GET(req: NextRequest) {
     // Diambil dari kunjungan_kontrol: yang JADWAL atau AKTUAL-nya jatuh di
     // pekan ini. Itu yang relevan untuk laporan mingguan Paramedic Site.
     let kontrolQuery = client
-      .from('kunjungan_kontrol')
+      .from('followups_prokawan')
       .select('nik_hash,jadwal_tanggal,aktual_tanggal,zona_risiko,hasil,arah')
       .or(`and(jadwal_tanggal.gte.${mulaiIso},jadwal_tanggal.lte.${selesaiIso}),and(aktual_tanggal.gte.${mulaiIso},aktual_tanggal.lte.${selesaiIso})`);
     if (siteBatasan) kontrolQuery = kontrolQuery.eq('site', siteBatasan);

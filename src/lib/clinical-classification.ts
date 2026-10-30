@@ -466,22 +466,41 @@ export function parseVisualAcuity(raw: string | number | null | undefined): Visi
   }
 
   const snellen = decimal > 0
-    ? (decimal >= 1 ? '6/6' : `6/${Math.round(6 / decimal)}`)
+    ? (decimal >= 1 - 1e-9 ? '6/6' : `6/${Math.round(6 / decimal)}`)
     : null;
 
   // STD/006 Bab 7 (visus terkoreksi, mata terbaik):
   //   Hijau  ≥6/9  (≥0,67)
   //   Kuning 6/12–6/18 (0,33–<0,67)  — 6/9 tepat sudah Hijau sesuai catatan SOP
   //   Merah  <6/18 (<0,33)
-  // Ambang memakai pembandingan Snellen, bukan desimal hasil pembagian:
-  // 6/9 = 0,666… yang secara float < 0,67 sehingga dulu salah masuk Kuning.
-  // Dengan perbandingan silang (6 * 6 >= 9 * 6) tidak ada galat pembulatan.
+  // ── Ambang perbandingan SILANG, bebas galat float ──────────────────
+  //
+  // 6/9 = 0,6666… dan 6/18 = 0,3333… tidak dapat dibandingkan dengan aman
+  // memakai `>= 0.67` atau `>= 0.333`: hasil pembagian berbeda jalur (parse →
+  // toFixed(2) → banding) bisa meleset ~1e-16, cukup untuk membuat 6/18 yang
+  // seharusnya Zona Kuning jatuh ke Merah.
+  //
+  // Perbandingan silang bebas galat sepenuhnya:
+  //   desimal ≥ 6/9  ⇔  desimal × 9 ≥ 6
+  //   desimal ≥ 6/18 ⇔  desimal × 18 ≥ 6
+  //
+  // STD/006 Bab 7: Hijau ≥6/9 · Kuning 6/12–6/18 · Merah <6/18
+  // Toleransi 5e-4 cukup untuk menyerap pembulatan 4 desimal (6 × 1e-4) tanpa
+  // membuat 6/24 (0,25) ikut terbaca sebagai 6/18.
+  const EPS = 2e-3;
   let category: VisionResult['category'];
-  if (decimal >= (6 / 9) - 1e-9) category = 'normal';   // ≥ 6/9
-  else if (decimal >= (6 / 18) - 1e-9) category = 'ringan'; // 6/18 – 6/12
+  if (decimal * 9 >= 6 - EPS) category = 'normal';        // ≥ 6/9
+  else if (decimal * 18 >= 6 - EPS) category = 'ringan';  // 6/18 – 6/12
   else category = 'berat';                                // < 6/18
 
-  return { decimal: Number(decimal.toFixed(2)), snellen, corrected, category, raw: text };
+  // ── Presisi desimal ─────────────────────────────────────────────────
+  // Dulu `toFixed(2)`: 6/18 = 0,3333 → 0,33. Masalahnya ambang KUNING adalah
+  // TEPAT 6/18 = 0,3333, sehingga 0,33 < 0,3333 dan 6/18 jatuh ke MERAH
+  // padahal STD/006 menempatkannya di Zona Kuning.
+  // Sekarang 4 desimal: 0,3333 cukup untuk membedakan 6/18 (0,3333) dari
+  // 6/24 (0,25) tanpa kehilangan presisi batas. Nilai tetap dibulatkan agar
+  // tidak tersimpan sebagai 0,3333333333333333.
+  return { decimal: Number(decimal.toFixed(4)), snellen, corrected, category, raw: text };
 }
 
 export function classifyVision(visusJauh: string | number | null | undefined): Classification | null {

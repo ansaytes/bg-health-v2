@@ -188,7 +188,7 @@ export async function GET(req: NextRequest) {
   const nikHash = hashField(nik);
   const client = adminClient();
   const { data, error } = await client
-    .from('kunjungan_kontrol')
+    .from('followups_prokawan')
     .select('id,jadwal_tanggal,aktual_tanggal,evidence_url,catatan,hasil,arah,zona_sebelum,zona_sesudah,nilai,baseline,evaluasi,dievaluasi_pada')
     .eq('nik_hash', nikHash)
     .order('jadwal_tanggal', { ascending: true });

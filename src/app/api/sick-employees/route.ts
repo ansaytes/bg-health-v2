@@ -1,8 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+/**
+ * Endpoint rekap bulanan karyawan sakit.
+ *
+ * KEAMANAN (hasil audit): sebelumnya GET & POST tidak memeriksa autentikasi,
+ * sehingga siapa pun bisa mengunduh 795 baris berisi NIK plaintext, nama,
+ * dan riwayat sakit lewat HTTP biasa. Sekarang:
+ *   GET  → hanya pengguna login (semua role boleh melihat dashboard)
+ *   POST → hanya QSHE Medic / administrator
+ *
+ * Catatan: pemeriksaan dilakukan di route karena klien Supabase di sini
+ * memakai anon key, sehingga RLS saja tidak cukup untuk membedakan role.
+ */
+async function periksaPemanggil(request: NextRequest): Promise<string | null> {
+  const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || '';
+  if (!token) return null;
+
+  // Mode preview (hanya aktif bila env diset) — sama seperti route lain.
+  if (token === 'preview-access-token' && process.env.NEXT_PUBLIC_PREVIEW_ROLE) {
+    return process.env.NEXT_PUBLIC_PREVIEW_ROLE;
+  }
+
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return null;
+
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('role')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  return profile?.role ?? null;
+}
+
+const ROLES_BACA = ['superuser', 'administrator', 'pic', 'manager'];
+const ROLES_TULIS = ['superuser', 'administrator'];
+
 export async function GET(request: NextRequest) {
   try {
+    const role = await periksaPemanggil(request);
+    if (!role) {
+      return NextResponse.json({ success: false, error: 'Sesi login tidak ditemukan' }, { status: 401 });
+    }
+    if (!ROLES_BACA.includes(role)) {
+      return NextResponse.json({ success: false, error: 'Akses ditolak' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const jobsite = searchParams.get('jobsite') || '';
     const bulan = searchParams.get('bulan') || '';
@@ -37,6 +81,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const role = await periksaPemanggil(request);
+    if (!role) {
+      return NextResponse.json({ success: false, error: 'Sesi login tidak ditemukan' }, { status: 401 });
+    }
+    if (!ROLES_TULIS.includes(role)) {
+      return NextResponse.json({ success: false, error: 'Hanya administrator yang dapat menambah data' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { nik, nama, jobsite, jabatan, bulan, tahun,
       tgl_mulai_a, tgl_selesai_a, hari_a, diag_a,

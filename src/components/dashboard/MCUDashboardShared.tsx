@@ -11,7 +11,7 @@ import {
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { supabase } from '@/lib/supabase';
-import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, animasiUlang, skalaBar, useAnimationReady } from '@/lib/chart-standard';
+import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, animasiUlang, gradientBatang, skalaBar, useAnimationReady } from '@/lib/chart-standard';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -352,6 +352,15 @@ export function MCUChart({
     // kedip, dan diagram tidak pernah terlihat kaku karena data dari cache.
     const animation = type === 'doughnut' ? STANDAR_ANIMASI_DONUT : STANDAR_ANIMASI_BAR;
 
+    // GRADIENT BATANG — meniru efek diagram "10 Site ASR tertinggi", tetapi
+    // warna dasar tiap batang TETAP warna aslinya (hanya efek gradasinya yang
+    // ditambahkan). Hanya berlaku untuk bar; donut tetap warna solid.
+    const ctx2d = canvasRef.current.getContext('2d');
+    const area = { left: 0, right: canvasRef.current.clientWidth || 1, top: 0, bottom: canvasRef.current.clientHeight || 1 };
+    const background = type === 'bar' && ctx2d
+      ? colors.map((c) => gradientBatang(ctx2d, area, c, Boolean(horizontal)))
+      : colors;
+
     const config: ChartConfiguration = {
       type,
       data: {
@@ -359,7 +368,7 @@ export function MCUChart({
         datasets: [{
           label: legendLabel,
           data: values,
-          backgroundColor: colors,
+          backgroundColor: background,
           borderColor: type === 'doughnut' ? 'rgba(128,128,128,0.18)' : colors,
           borderWidth: type === 'doughnut' ? 1 : 0,
           borderRadius: type === 'bar' ? 4 : undefined,
@@ -403,14 +412,23 @@ export function MCUChart({
             enabled: !(type === 'doughnut' && centerText),
           },
           datalabels: {
-            display: type === 'doughnut' ? (context: { dataset: { data: unknown[] }; dataIndex: number }) => {
-              const value = Number(context.dataset.data[context.dataIndex]);
-              return total > 0 && value > 0;
-            } : true,
+            // ── Perbaikan "label No Data tidak terlihat" ───────────────────
+            // Versi lama menyembunyikan label untuk batang bernilai 0, sehingga
+            // kategori "No Data" / "Tidak Ada Data" tampil sebagai batang kosong
+            // tanpa angka — padahal justru itu informasi yang dibutuhkan.
+            // Sekarang angka 0 tetap ditulis KECUALI di donut (di mana nol
+            // memang tidak punya busur untuk ditempeli label).
+            display: type === 'doughnut'
+              ? (context: { dataset: { data: unknown[] }; dataIndex: number }) => {
+                const value = Number(context.dataset.data[context.dataIndex]);
+                return total > 0 && value > 0;
+              }
+              : true,
             anchor: type === 'bar' ? 'end' : 'center',
             align: type === 'bar' ? (horizontal ? 'right' : 'top') : 'center',
             formatter: (value: number) => {
-              if (value <= 0) return '';
+              // Donut: nol tidak perlu label. Bar: nol WAJIB tampil.
+              if (value <= 0) return type === 'bar' ? '0' : '';
               return percentLabels && total ? `${(value / total * 100).toFixed(1)}%` : `${value}`;
             },
             color: context => {

@@ -3609,9 +3609,11 @@ select.admin-input.compact-input {
   height: 40px;
 }
 
+/* Ukuran spinner halaman dikurangi 75% dari 88px → 66px, sesuai permintaan.
+   Tetap proporsional karena ring & logo memakai persentase container. */
 .bm-loading.is-card .bm-loading-spinner {
-  width: 88px;
-  height: 88px;
+  width: 66px;
+  height: 66px;
 }
 
 /* Luaran: ring berputar searah jarum jam dengan perlahan */
@@ -4407,10 +4409,12 @@ select.admin-input.compact-input {
   outline: 2px solid rgba(255, 77, 0, 0.35);
   outline-offset: 1px;
 }
+/* Pencarian & tanggal pengisian dalam SATU baris:
+   kolom pencarian mengisi ruang tersisa (kiri), tanggal di kanan. */
 .qh-identity-search-row {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 .qh-identity-search-field {
@@ -4420,11 +4424,33 @@ select.admin-input.compact-input {
 .qh-identity-search-field .qh-input {
   height: 36px;
 }
+/* Input + tombol Cari berdampingan tanpa margin-top, sejajar tinggi. */
+.qh-search-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.qh-search-inline .qh-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 .qh-identity-search-button {
-  align-self: flex-start;
   height: 36px;
-  margin-top: 21px;
+  flex-shrink: 0;
   padding: 0 18px;
+  margin-top: 0;
+}
+.qh-identity-date-field {
+  flex: 0 0 auto;
+  min-width: 170px;
+  align-self: flex-start;
+}
+/* Tanpa petunjuk di bawah, label tanggal sejajar dengan label pencarian. */
+.qh-identity-date-field .qh-input {
+  height: 36px;
+}
+@media (max-width: 640px) {
+  .qh-identity-date-field { flex: 1 1 100%; margin-top: 4px; }
 }
 .qh-fields-grid {
   display: grid;

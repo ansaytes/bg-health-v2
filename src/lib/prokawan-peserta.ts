@@ -18,6 +18,7 @@
 
 import { adminClient } from '@/lib/questionnaire-store';
 import { decrypt, hashField, isEncryptedValue } from '@/lib/encryption';
+import { siteDihitung } from '@/lib/site-filter';
 import {
   rencanaDariTriggers,
   statusKepatuhan,
@@ -209,7 +210,7 @@ export async function muatPesertaProKawan(opsi: MuatPesertaOptions = {}): Promis
     for (let i = 0; i < nikHashes.length; i += 150) {
       const chunk = nikHashes.slice(i, i + 150);
       const [kontrolRes, schedRes] = await Promise.all([
-        client.from('kunjungan_kontrol').select('nik_hash,jadwal_tanggal,aktual_tanggal').in('nik_hash', chunk),
+        client.from('followups_prokawan').select('nik_hash,jadwal_tanggal,aktual_tanggal').in('nik_hash', chunk),
         client.from('mcu_schedules').select('nik_karyawan_hash,tanggal_jadwal').in('nik_karyawan_hash', chunk),
       ]);
 
@@ -247,6 +248,8 @@ export async function muatPesertaProKawan(opsi: MuatPesertaOptions = {}): Promis
     if (!/^(kuning|merah)$/i.test(zonaRaw)) continue;
 
     const site = String(row.site ?? '').trim();
+    // Site "Batch" = calon karyawan, bukan peserta ProKawan.
+    if (!siteDihitung(site)) continue;
     if (opsi.site && opsi.site.toLowerCase() !== 'head office'
       && site.toLowerCase() !== opsi.site.toLowerCase()) continue;
 

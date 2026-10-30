@@ -58,6 +58,7 @@ export async function GET(req: NextRequest) {
   const departmentFilter = searchParams.get('department')?.trim() || '';
   const searchFilter = searchParams.get('search')?.trim() || '';
   const employeeFrom = (page - 1) * pageSize;
+  try {
   let employeeQuery = client.from('employees')
     .select('nik,nama,gender,age,department,job_position,site_name,national_id', { count: 'exact' })
     .ilike('employment_status', 'Aktif')
@@ -75,37 +76,111 @@ export async function GET(req: NextRequest) {
     const safeSearch = searchFilter.replace(/[(),]/g, '');
     if (safeSearch) employeeQuery = employeeQuery.or(`nama.ilike.%${safeSearch}%,department.ilike.%${safeSearch}%,site_name.ilike.%${safeSearch}%`);
   }
-  const [{ data: employeeData, count: employeeCount, error: employeeError }, { data: scheduleData, error: scheduleError }, { data: monitorData, error: monitorError }] = await Promise.all([
-    employeeQuery,
-    fetchAllRows((from, to) => client.from('mcu_schedules').select('*').range(from, to)),
-    fetchAllRows((from, to) => client.from('monitor_mcu').select('*').range(from, to)),
-  ]);
-  if (employeeError || scheduleError || monitorError) {
-    const error = employeeError || scheduleError || monitorError;
+  // ── OPTIMASI (perbaikan "canceling statement due to statement timeout") ──
+  //
+  // Versi lama mengambil SELURUH tabel `mcu_schedules` dan SELURUH VIEW
+  // `monitor_mcu` (yang menggabungkan employees + mcu_records + mcu_schedules)
+  // di setiap permintaan, padahal halaman ini hanya menampilkan 100 karyawan.
+  // Untuk ±1.300 record MCU + 3.100 jadwal, query itu melewati batas waktu
+  // statement Supabase dan permintaan gagal total.
+  //
+  // Sekarang hanya diambil untuk NIK yang ada di halaman ini:
+  //   1. employeeQuery (100 baris) → daftar NIK
+  //   2. mcu_schedules & monitor_mcu difilter dengan `.in(nik_karyawan, NIK)`
+  //
+  // Bila daftar NIK kosong (halaman melewati akhir data), tidak ada query
+  // tambahan yang dijalankan sama sekali.
+  const { data: employeeData, count: employeeCount, error: employeeError } = await employeeQuery;
+  if (employeeError) {
+    return NextResponse.json({ error: employeeError.message || 'Gagal memuat data MCU' }, { status: 500 });
+  }
+
+  const employees = (employeeData || []).map(decryptEmployee);
+  const nikHalaman = employees
+    .map((e) => String(e.nik || '').trim())
+    .filter(Boolean);
+
+  let scheduleData: Record<string, unknown>[] = [];
+  let monitorData: Record<string, unknown>[] = [];
+  let scheduleError: { message: string } | null = null;
+  let monitorError: { message: string } | null = null;
+
+  if (nikHalaman.length) {
+    // `mcu_schedules.nik_karyawan` tersimpan TERENKRIPSI dengan IV acak, jadi
+    // filter `.in()` tidak bisa memakai NIK polos. Yang dipakai adalah hash
+    // deterministik `nik_karyawan_hash`.
+    const hashes = nikHalaman.map((nik) => hashField(nik)).filter((h): h is string => Boolean(h));
+
+    const [schedRes, monRes] = await Promise.all([
+      hashes.length
+        ? client.from('mcu_schedules')
+          .select('id,nik_karyawan,nik_karyawan_hash,tanggal_jadwal,site')
+          .in('nik_karyawan_hash', hashes)
+        : Promise.resolve({ data: [], error: null }),
+      // TANGGAL MCU TERAKHIR diambil langsung dari mcu_records, BUKAN dari VIEW
+      // monitor_mcu. VIEW itu menggabungkan tiga tabel dan butuh ±6 detik
+      // hanya untuk 100 NIK — cukup membuat halaman ini terasa macet.
+      //
+      // `nik_karyawan` di mcu_records terenkripsi, jadi filter memakai hash
+      // deterministik `nik_karyawan_hash` (sama seperti mcu_schedules).
+      hashes.length
+        ? client.from('mcu_records')
+          .select('nik_karyawan_hash,tgl_mcu')
+          .in('nik_karyawan_hash', hashes)
+          .not('tgl_mcu', 'is', null)
+          .order('tgl_mcu', { ascending: false })
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+    scheduleData = (schedRes.data ?? []) as Record<string, unknown>[];
+    monitorData = (monRes.data ?? []) as Record<string, unknown>[];
+    scheduleError = schedRes.error;
+    monitorError = monRes.error;
+  }
+
+  if (scheduleError || monitorError) {
+    const error = scheduleError || monitorError;
     return NextResponse.json({ error: error?.message || 'Gagal memuat data MCU' }, { status: 500 });
   }
-  const data = (scheduleData || []).filter(row =>
-    user.role !== 'pic' || !user.site || user.site.toLowerCase() === 'head office' || row.site === user.site
-  );
-  const employees = (employeeData || []).map(decryptEmployee);
-  const { data: filterEmployees, error: filterError } = await fetchAllRows(from => {
+  // Daftar pilihan filter hanya butuh DISTINCT site & department, bukan seluruh
+  // baris karyawan. Mengambil 2.700+ baris untuk dua dropdown ikut memperlambat
+  // endpoint ini. Batas 5.000 cukup untuk seluruh kombinasi site+department
+  // yang realistis, dan hanya dijalankan sekali per permintaan.
+  const { data: filterEmployees, error: filterError } = await (() => {
     let query = client.from('employees')
       .select('site_name,department')
       .ilike('employment_status', 'Aktif')
       .eq('division', 'Mining')
-      .range(from, from + 999);
+      .limit(5000);
     if (user.role === 'pic' && user.site && user.site.toLowerCase() !== 'head office') {
       query = query.eq('site_name', user.site);
     }
     return query;
-  });
+  })();
   if (filterError) return NextResponse.json({ error: filterError.message }, { status: 500 });
   const sites = [...new Set((filterEmployees || []).map(row => row.site_name).filter(Boolean))].sort();
   const departments = [...new Set((filterEmployees || []).map(row => row.department).filter(Boolean))].sort();
-  const monitors = (monitorData || []).map(decryptMCURecord);
-  const monitorByNik = new Map(monitors.map(record => [String(record.nik_karyawan || ''), record]));
-  const scheduleByNik = new Map(data.map(row => [String(decrypt(row.nik_karyawan) || row.nik_karyawan), row]));
-  const ids = data.map(row => row.id);
+  // tgl_mcu terbaru per hash → dipetakan balik ke NIK karyawan.
+  const hashByNik = new Map<string, string>();
+  for (const nik of nikHalaman) {
+    const h = hashField(nik);
+    if (h) hashByNik.set(nik, h);
+  }
+  const tglByHash = new Map<string, string>();
+  for (const row of (monitorData || []) as Record<string, unknown>[]) {
+    const h = String(row.nik_karyawan_hash ?? '');
+    const tgl = String(row.tgl_mcu ?? '').slice(0, 10);
+    // Baris sudah terurut tgl_mcu DESC → yang pertama ditemukan adalah terbaru.
+    if (h && tgl && !tglByHash.has(h)) tglByHash.set(h, tgl);
+  }
+  const monitorByNik = new Map<string, { tgl_mcu: string | null }>();
+  for (const [nik, h] of hashByNik) {
+    monitorByNik.set(nik, { tgl_mcu: tglByHash.get(h) ?? null });
+  }
+  const data = ((scheduleData || []) as Record<string, unknown>[]).filter(row =>
+    user.role !== 'pic' || !user.site || user.site.toLowerCase() === 'head office' || row.site === user.site
+  );
+  const scheduleByNik = new Map(data.map(row => [String(decrypt(String(row.nik_karyawan ?? '')) || row.nik_karyawan), row]));
+  const ids = data.map(row => String(row.id ?? ''));
   const { data: history } = ids.length
     ? await client.from('mcu_schedule_history').select('schedule_id,old_date,new_date,note,changed_at').in('schedule_id', ids).order('changed_at', { ascending: false })
     : { data: [] };
@@ -129,9 +204,9 @@ export async function GET(req: NextRequest) {
       department: employee.department || null,
       jabatan: employee.job_position || null,
       site: employee.site_name || '-',
-      tanggal_mcu_terakhir: monitor?.tgl_mcu || null,
-      tanggal_jadwal: schedule?.tanggal_jadwal || '',
-      history: schedule ? historyById.get(schedule.id) || [] : [],
+      tanggal_mcu_terakhir: monitor?.tgl_mcu ?? null,
+      tanggal_jadwal: String(schedule?.tanggal_jadwal ?? ''),
+      history: schedule ? historyById.get(String(schedule.id ?? '')) || [] : [],
     };
   });
   return NextResponse.json({
@@ -144,6 +219,14 @@ export async function GET(req: NextRequest) {
     sites,
     departments,
   });
+  } catch (error) {
+    // Tanpa penangkap ini, kesalahan apa pun (termasuk nama kolom salah)
+    // menjadi 500 tanpa pesan — menyulitkan diagnosis.
+    const message = error instanceof Error ? error.message
+      : (typeof error === 'object' && error && 'message' in error ? String((error as { message: unknown }).message) : 'Gagal memuat data MCU');
+    console.error('GET /api/mcu/schedule:', error);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {

@@ -107,28 +107,34 @@ export function IdentityPanel({
     <div className="qh-card">
       <h3 className="qh-card-title">Identitas Karyawan</h3>
 
+      {/* SATU BARIS: pencarian di kiri, tanggal pengisian di kanan.
+          Sebelumnya tanggal berada di blok terpisah di bawah kotak pencarian,
+          sehingga memakan satu baris penuh untuk satu input saja. */}
       <div className="qh-identity-search-row">
         <div className="qh-identity-search-field">
           <label className="qh-label" htmlFor="qh-identity-search">
             NIK KTP, NIK Karyawan, atau Nama
           </label>
-          <input
-            id="qh-identity-search"
-            className="qh-input"
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') onSearch();
-            }}
-            placeholder="NIK KTP, NIK Karyawan, atau Nama"
-          />
+          <div className="qh-search-inline">
+            <input
+              id="qh-identity-search"
+              className="qh-input"
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') onSearch();
+              }}
+              placeholder="NIK KTP, NIK Karyawan, atau Nama"
+            />
+            <button type="button" className="qh-btn qh-btn-primary qh-identity-search-button" onClick={onSearch} disabled={searching}>
+              {searching ? 'Mencari…' : 'Cari'}
+            </button>
+          </div>
           <p className="qh-hint">
             Bisa diisi NIK KTP, NIK Karyawan, atau sebagian nama. Identitas lain terisi otomatis.
           </p>
         </div>
-        <button type="button" className="qh-btn qh-btn-primary qh-identity-search-button" onClick={onSearch} disabled={searching}>
-          {searching ? 'Mencari…' : 'Cari'}
-        </button>
+        {children && <div className="qh-identity-date-field">{children}</div>}
       </div>
 
       {identity && (

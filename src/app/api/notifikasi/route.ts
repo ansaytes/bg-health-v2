@@ -11,6 +11,7 @@ import {
   prioritasDariSisaHari,
   selisihHari,
   urutkanNotifikasi,
+  type JenisNotifikasi,
   type Notifikasi,
   type RingkasanNotifikasi,
 } from '@/lib/notifikasi-medic';
@@ -79,8 +80,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
   }
 
-  const site = caller.role === 'pic' ? caller.site ?? null : null;
-  const cacheKey = `${caller.role}|${site ?? '-'}`;
+  const role = String(caller.role);
+  const site = role === 'pic' ? caller.site ?? null : null;
+  const cacheKey = `${role}|${site ?? '-'}`;
   const force = req.nextUrl.searchParams.get('refresh') === 'true';
 
   if (!force && cache && cache.key === cacheKey && Date.now() - cache.at < CACHE_MS) {
@@ -311,14 +313,29 @@ export async function GET(req: NextRequest) {
     // Modul karyawan sakit belum dimigrasi → lewati.
   }
 
-  daftar.sort(urutkanNotifikasi);
+  // ── FILTER SESUAI ROLE ─────────────────────────────────────────────────
+  // Notifikasi hanya boleh muncul bila pengguna memang dapat membuka halaman
+  // tujuannya. Tanpa ini, PIC melihat notifikasi yang membawa ke halaman
+  // admin yang kemudian menolak aksesnya — membingungkan dan membocorkan
+  // informasi bahwa data itu ada.
+  const bolehAkses: Record<JenisNotifikasi, boolean> = {
+    'kontrol-prokawan': ['superuser', 'administrator', 'pic'].includes(role),
+    'mcu-expired': ['superuser', 'administrator', 'pic'].includes(role),
+    'mcu-akan-expired': ['superuser', 'administrator', 'pic'].includes(role),
+    'surat-kelayakan': ['superuser', 'administrator'].includes(role),
+    'pak-batas-waktu': ['superuser', 'administrator'].includes(role),
+    'karyawan-sakit': ['superuser', 'administrator', 'pic'].includes(role),
+  };
+
+  const tersaring = daftar.filter((n) => bolehAkses[n.jenis]);
+  tersaring.sort(urutkanNotifikasi);
 
   const ringkasan: RingkasanNotifikasi = {
-    total: daftar.length,
-    kritis: daftar.filter((n) => n.prioritas === 'kritis').length,
-    penting: daftar.filter((n) => n.prioritas === 'penting').length,
-    informasi: daftar.filter((n) => n.prioritas === 'informasi').length,
-    daftar: daftar.slice(0, 100),
+    total: tersaring.length,
+    kritis: tersaring.filter((n) => n.prioritas === 'kritis').length,
+    penting: tersaring.filter((n) => n.prioritas === 'penting').length,
+    informasi: tersaring.filter((n) => n.prioritas === 'informasi').length,
+    daftar: tersaring.slice(0, 200),
     dihitungPada: new Date().toISOString(),
   };
 

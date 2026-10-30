@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   const client = adminClient();
   const nik = req.nextUrl.searchParams.get('nik')?.trim();
 
-  let query = client.from('kunjungan_kontrol').select('*')
+  let query = client.from('followups_prokawan').select('*')
     .order('jadwal_tanggal', { ascending: false })
     .limit(2000);
   if (nik) query = query.eq('nik_hash', hashField(nik));
@@ -91,8 +91,8 @@ export async function POST(req: NextRequest) {
       ? { ...patch, nik_enc: nik, nama_enc: body.nama ?? null }
       : patch;
     return body.id
-      ? client.from('kunjungan_kontrol').update(payload).eq('id', body.id)
-      : client.from('kunjungan_kontrol').insert({ ...payload, jadwal_tanggal: body.jadwal_tanggal, created_by: caller.userId });
+      ? client.from('followups_prokawan').update(payload).eq('id', body.id)
+      : client.from('followups_prokawan').insert({ ...payload, jadwal_tanggal: body.jadwal_tanggal, created_by: caller.userId });
   };
 
   let { error } = await run(true);
@@ -119,7 +119,7 @@ export async function DELETE(req: NextRequest) {
   const id = req.nextUrl.searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'id wajib diisi' }, { status: 400 });
 
-  const { error } = await adminClient().from('kunjungan_kontrol').delete().eq('id', id);
+  const { error } = await adminClient().from('followups_prokawan').delete().eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

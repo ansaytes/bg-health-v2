@@ -17,6 +17,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useMCUStore } from '@/lib/store';
 import CenteredTabs from '@/components/ui/centered-tabs';
 import { DEFAULT_SETTINGS, mergeSettings, type AppSettings } from '@/lib/app-settings';
+import EmployeeLookupInput from '@/components/administrator/EmployeeLookupInput';
 
 interface PakCase {
   id: string;
@@ -359,14 +360,24 @@ function NewCaseForm({ saving, onCancel, onSubmit }: {
     <div className="card" style={{ padding: 16, marginTop: 12 }}>
       <h3 style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 10 }}>Kasus PAK Baru</h3>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-        <label className="flex flex-col gap-1">
-          <span className={label}>Nama Karyawan (untuk pencarian NIK)</span>
-          <Input value={form.nama ?? ''} onChange={(e) => set('nama', e.target.value)} placeholder="Nama lengkap" className="h-9 rounded-lg text-sm" />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className={label}>NIK Hash (dari pencarian karyawan / record MCU)</span>
-          <Input value={form.nik_hash ?? ''} onChange={(e) => set('nik_hash', e.target.value)} placeholder="nik_karyawan_hash dari database" className="h-9 rounded-lg text-sm" />
-        </label>
+        {/* Identitas diisi lewat pencarian karyawan yang SAMA dengan Review MCU.
+            Sebelumnya pengguna harus mengetik `nik_karyawan_hash` manual — tidak
+            mungkin dilakukan tanpa membuka database. */}
+        <div className="sm:col-span-2">
+          <EmployeeLookupInput
+            value={form.nik_hash ?? ''}
+            onChange={(v) => set('nik_hash', v)}
+            onEmployeeFound={(emp) => {
+              set('nama', String(emp.nama ?? ''));
+              set('jabatan', String(emp.jabatan ?? ''));
+              set('department', String(emp.department ?? ''));
+            }}
+            onAutoFill={(_field, val) => { if (_field === 'nama') set('nama', val); }}
+            placeholder="Cari nama / NIK / NIK KTP"
+            label={<span className={label}>Karyawan</span>}
+            required
+          />
+        </div>
         <label className="flex flex-col gap-1">
           <span className={label}>Lokasi</span>
           <select value={form.lokasi ?? 'Head Office'} onChange={(e) => set('lokasi', e.target.value)} className="h-9 rounded-lg border-input bg-background px-3 text-sm">

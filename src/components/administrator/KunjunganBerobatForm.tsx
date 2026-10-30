@@ -97,6 +97,8 @@ export default function KunjunganBerobatForm() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  // Hasil tindak lanjut otomatis (episode karyawan sakit / kasus PAK).
+  const [infoMsg, setInfoMsg] = useState('');
 
   // 1. Fetch master Diagnosa, Dosis, and Inventory items from DB
   useEffect(() => {
@@ -256,6 +258,7 @@ export default function KunjunganBerobatForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setInfoMsg('');
 
     if (!form.nama || !form.nama.trim()) {
       setErrorMsg('Nama Pasien / Karyawan wajib diisi');
@@ -292,6 +295,35 @@ export default function KunjunganBerobatForm() {
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Gagal menyimpan');
+
+      // ── TINDAK LANJUT OTOMATIS ─────────────────────────────────────────
+      // Rujuk RS → episode Monitoring Karyawan Sakit.
+      // Kategori Penyakit Akibat Kerja → kasus baru di Register PAK.
+      // Kegagalan integrasi TIDAK menggagalkan penyimpanan kunjungan; hasilnya
+      // dilaporkan di pesan sukses agar terlihat jelas.
+      try {
+        const integrasi = await fetch('/api/kunjungan/integrasi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nik: form.nik && form.nik.trim() ? form.nik.trim() : null,
+            nama: form.nama.trim(),
+            tanggal: form.tanggalKunjungan,
+            site: form.site,
+            kategori: form.kategori,
+            rujukRS: form.rujukRS === 'Ya',
+            namaRS: form.namaRS,
+            keluhan: form.catatan,
+          }),
+        });
+        const ik = await integrasi.json();
+        if (Array.isArray(ik.catatan) && ik.catatan.length) {
+          setInfoMsg(ik.catatan.join(' '));
+        }
+      } catch {
+        // Integrasi bersifat tambahan — jangan gagalkan penyimpanan utama.
+      }
+
       setSaved(true);
       setForm({
         tanggalKunjungan: new Date().toISOString().split('T')[0],
@@ -728,6 +760,11 @@ export default function KunjunganBerobatForm() {
             </div>
 
             {errorMsg && <p className="login-error-msg" style={{ marginTop: 16 }}>{errorMsg}</p>}
+            {infoMsg && (
+              <p style={{ marginTop: 12, fontSize: 11.5, color: '#00806a', lineHeight: 1.5 }}>
+                {infoMsg}
+              </p>
+            )}
             <div style={{ marginTop: 20, display: 'flex', gap: 10 }}>
               <button
                 type="submit"

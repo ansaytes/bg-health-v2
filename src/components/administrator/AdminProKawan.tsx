@@ -26,7 +26,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authFetch } from '@/lib/api-client';
 import { useMCUStore } from '@/lib/store';
-import { PARAMETER_KONTROL } from '@/lib/prokawan-evaluasi';
+import type { KelompokField } from '@/lib/followup-fields';
+import { formatSuratKontrolAbnormal } from '@/lib/surat-kontrol-format';
 import {
   JALUR_DESKRIPSI,
   JALUR_LABEL,
@@ -237,7 +238,7 @@ export default function AdminProKawan() {
     }
   }
 
-  /** Menulis jadwal usulan ke kunjungan_kontrol setelah dikonfirmasi QSHE Medic. */
+  /** Menulis jadwal usulan ke followups_prokawan setelah dikonfirmasi QSHE Medic. */
   async function tulisJadwal() {
     if (!jadwalUsulan) return;
     const setuju = confirm(
@@ -374,8 +375,8 @@ export default function AdminProKawan() {
       )}
       {!tabelSiap && (
         <div style={{ padding: '8px 12px', borderRadius: 8, background: 'rgba(255,196,0,0.10)', border: '1px solid rgba(255,196,0,0.4)', color: '#9a6b00', fontSize: 11.5, flexShrink: 0 }}>
-          Tabel <b>kunjungan_kontrol</b> belum dibuat — jadwal kontrol masih dihitung dari MCU terakhir. Jalankan migration
-          <code style={{ marginLeft: 4 }}>20261025_prokawan_kunjungan.sql</code>.
+          Tabel <b>followups_prokawan</b> belum dibuat — jadwal kontrol masih dihitung dari MCU terakhir. Jalankan migration
+          <code style={{ marginLeft: 4 }}>20261029_followups_prokawan.sql</code>.
         </div>
       )}
 
@@ -600,7 +601,7 @@ export default function AdminProKawan() {
                   Inilah yang membuat "kontrol" bermakna: nilai parameter dari
                   Faskes Rekanan diolah engine STANDAR PTM, bukan sekadar
                   dicap tanggal (INK/016 poin 4.4.5 & 4.6.1). */}
-              <FormEvaluasiKontrol
+              <FormTindakLanjut
                 key={`eval-${selected.nik}-${kontrolTerakhir?.id ?? 'baru'}`}
                 peserta={selected}
                 onSelesai={() => void load()}
@@ -718,191 +719,347 @@ function KontrolForm({ peserta, row, defaultJadwal, saving, onSave }: {
    ══════════════════════════════════════════════════════════════ */
 
 /**
- * Form input NILAI PARAMETER hasil kontrol dari Fasilitas Kesehatan Rekanan.
+/**
+ * Form TINDAK LANJUT — wadah tunggal hasil follow up.
  *
- * DASAR DOKUMEN (INK/016):
- *  • 4.4.5 — hasil pemeriksaan Faskes Rekanan menjadi bahan evaluasi dan
- *    pembaruan Zona Risiko PTM.
- *  • 4.6.1 — QSHE Medic mengevaluasi hasil dan memperbarui zona.
- *  • 4.6.2 / 4.6.3 — tetap Kuning/Merah ⇒ lanjut ProKawan; menjadi Hijau ⇒
- *    dihentikan kepesertaannya (dengan pemantauan MCU rutin).
+ * DASAR
+ *  • INK/016 4.4.5 & 4.6.1 — hasil pemeriksaan Faskes Rekanan menjadi bahan
+ *    evaluasi dan pembaruan Zona Risiko PTM.
+ *  • ProKawan adalah istilah untuk pengendalian temuan spesifik STD/006 —
+ *    bukan program terpisah. Karena itu follow up temuan MCU dan kontrol
+ *    rutin ProKawan dicatat di tempat yang SAMA.
  *
- * Perilaku:
- *  1. Nilai diisi dari hasil lab/pemeriksaan kontrol — tidak semua parameter
- *     wajib; yang tidak diukur memakai nilai acuan sebelumnya agar zona tidak
- *     berubah hanya karena data kosong.
- *  2. Tombol "Hitung Zona" menjalankan engine STANDAR PTM yang SAMA dengan MCU.
- *  3. Hasil evaluasi menampilkan zona sebelum → sesudah, arah (membaik/
- *     memburuk/tetap), dan tren per parameter.
- *  4. "Simpan & Perbarui Zona" menulis hasil ke kunjungan_kontrol (riwayat
- *     permanen + baseline) DAN memperbarui zona peserta.
+ * FIELD YANG DITAMPILKAN
+ * Tidak semua parameter. Hanya yang berasal dari tiga sumber:
+ *   1. Trigger Zona PTM      — menentukan zona (STD/006)
+ *   2. Abnormal standar ID   — di luar rentang rujukan Indonesia
+ *   3. Abnormal engine       — severity bukan hijau tapi tidak jadi trigger
+ *
+ * HASIL
+ * Nilai ditimpa ke baseline saat perhitungan — baseline MCU sendiri TIDAK
+ * diubah, sehingga riwayat "dulu 165/102, sekarang 131/79" tetap terlacak.
  */
-function FormEvaluasiKontrol({ peserta, onSelesai }: {
+function FormTindakLanjut({ peserta, onSelesai }: {
   peserta: PesertaProKawan;
   onSelesai: () => void;
 }) {
   const store = useMCUStore();
+  const [data, setData] = useState<{
+    karyawan: Record<string, unknown>;
+    baseline: { zona: string | null; mcuRecordId: string };
+    zonaEfektif: { zona: string; trigger: string; frekuensi: string } | null;
+    kelompok: KelompokField[];
+    riwayat: Record<string, unknown>[];
+    ringkasanSurat: string;
+    totalField: number;
+    butuhMcu?: boolean;
+    error?: string;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
   const [nilai, setNilai] = useState<Record<string, string>>({});
-  const [tanggal, setTanggal] = useState(new Date().toISOString().slice(0, 10));
+  const [aktual, setAktual] = useState(new Date().toISOString().slice(0, 10));
   const [evidence, setEvidence] = useState('');
   const [catatan, setCatatan] = useState('');
-  const [menghitung, setMenghitung] = useState(false);
-  const [hasil, setHasil] = useState<{
-    zonaBaru: string; arah: string; zonaSebelumnya: string | null;
-    frekuensiEvaluasi: string; triggers: string[];
-    parameterBerubah: { key: string; label: string; sebelum: string | null; sekarang: string | null; tren: string }[];
-    parameterKosong: string[];
+  const [menyimpan, setMenyimpan] = useState(false);
+  const [terbuka, setTerbuka] = useState<Record<string, boolean>>({});
+  const [hasilSimpan, setHasilSimpan] = useState<{
+    zonaSebelum: string | null; zonaSesudah: string; arah: string; ringkasanSurat: string;
   } | null>(null);
 
-  const terisi = PARAMETER_KONTROL.filter((p) => String(nilai[p.key] ?? '').trim() !== '');
-
-  function nilaiAngka(): Record<string, number | string> {
-    const out: Record<string, number | string> = {};
-    for (const p of terisi) {
-      const raw = String(nilai[p.key]).replace(',', '.').trim();
-      const n = Number(raw);
-      // Visus disimpan sebagai teks (6/9), sisanya angka.
-      out[p.key] = Number.isFinite(n) && /^[\d.,]+$/.test(raw) ? n : raw;
+  const muat = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await authFetch(`/api/followups?nik=${encodeURIComponent(peserta.nik)}`);
+      setData(r as never);
+      // Kelompok default terbuka semua; pengguna bisa melipat.
+      const buka: Record<string, boolean> = {};
+      for (const k of ((r.kelompok ?? []) as KelompokField[])) buka[k.sumber] = true;
+      setTerbuka(buka);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Gagal memuat data tindak lanjut';
+      setData({ error: msg } as never);
+    } finally {
+      setLoading(false);
     }
-    return out;
-  }
+  }, [peserta.nik]);
 
-  async function hitung(terapkanZona: boolean) {
-    if (!terisi.length) {
-      store.showToast('Isi minimal satu nilai parameter hasil kontrol', 'error');
+  useEffect(() => { void muat(); }, [muat]);
+
+  const jumlahTerisi = Object.values(nilai).filter((v) => String(v).trim() !== '').length;
+
+  // Pratinjau teks surat dari nilai yang sedang diketik.
+  const pratinjauSurat = useMemo(() => {
+    if (!data) return '';
+    const gabungan: Record<string, string | number | null> = {};
+    for (const k of data.kelompok) {
+      for (const f of k.fields) {
+        const baru = nilai[f.id];
+        gabungan[f.id] = baru !== undefined && baru !== ''
+          ? (Number.isFinite(Number(String(baru).replace(',', '.'))) && !f.teks ? Number(String(baru).replace(',', '.')) : baru)
+          : (f.nilaiFollowUp ?? f.nilaiMcu);
+        if (f.id === 'tdS') {
+          const tdD = nilai.tdD !== undefined && nilai.tdD !== '' ? nilai.tdD : (f.nilaiMcu);
+          gabungan.tdD = Number.isFinite(Number(String(tdD).replace(',', '.'))) ? Number(String(tdD).replace(',', '.')) : tdD;
+        }
+      }
+    }
+    const ids = data.kelompok.flatMap((k) => k.fields.map((f) => f.id));
+    return formatSuratKontrolAbnormal(gabungan, ids).teks;
+  }, [data, nilai]);
+
+  async function simpan() {
+    if (!jumlahTerisi && !catatan.trim()) {
+      store.showToast('Isi minimal satu hasil tindak lanjut', 'error');
       return;
     }
-    setMenghitung(true);
+    setMenyimpan(true);
     try {
-      const r = await authFetch('/api/prokawan/evaluasi', {
+      const payloadNilai: Record<string, string | number> = {};
+      for (const [id, v] of Object.entries(nilai)) {
+        const teks = String(v).trim();
+        if (!teks) continue;
+        const n = Number(teks.replace(',', '.'));
+        // Visus & interpretasi tetap teks; numerik disimpan sebagai angka.
+        payloadNilai[id] = Number.isFinite(n) && !/[a-zA-Z/]/.test(teks) ? n : teks;
+      }
+      const r = await authFetch('/api/followups', {
         method: 'POST',
         body: JSON.stringify({
           nik: peserta.nik,
-          aktual_tanggal: tanggal,
-          nilai: nilaiAngka(),
+          nama: peserta.nama,
+          site: peserta.site,
+          department: peserta.department,
+          jabatan: null,
+          jadwal_tanggal: aktual,
+          aktual_tanggal: aktual,
+          nilai: payloadNilai,
           evidence_url: evidence || null,
           catatan: catatan || null,
-          terapkanZona,
+          jenis: 'prokawan',
         }),
       });
-      setHasil(r.evaluasi as typeof hasil);
-      store.showToast(
-        terapkanZona ? String(r.pesan ?? 'Zona diperbarui') : 'Zona dihitung — tinjau hasilnya',
-        'success',
-      );
-      if (terapkanZona) { setNilai({}); onSelesai(); }
+      setHasilSimpan({
+        zonaSebelum: (r.zonaSebelum as string | null) ?? null,
+        zonaSesudah: String(r.zonaSesudah ?? '—'),
+        arah: String(r.arah ?? ''),
+        ringkasanSurat: String(r.ringkasanSurat ?? ''),
+      });
+      setNilai({}); setEvidence(''); setCatatan('');
+      store.showToast('Tindak lanjut tersimpan, zona diperbarui', 'success');
+      await muat();
+      onSelesai();
     } catch (e) {
-      store.showToast(e instanceof Error ? e.message : 'Gagal mengevaluasi hasil kontrol', 'error');
+      store.showToast(e instanceof Error ? e.message : 'Gagal menyimpan tindak lanjut', 'error');
     } finally {
-      setMenghitung(false);
+      setMenyimpan(false);
     }
   }
 
-  const TREN_WARNA: Record<string, string> = {
-    membaik: '#00B894', memburuk: '#FF2D2D', tetap: '#778899', baru: '#3498DB',
+  if (loading) {
+    return (
+      <div className="card" style={{ padding: 16, flexShrink: 0 }}>
+        <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: 0 }}>
+          <Loader2 className="size-3 animate-spin inline mr-1" /> Memuat tindak lanjut…
+        </p>
+      </div>
+    );
+  }
+
+  if (data?.error || data?.butuhMcu) {
+    return (
+      <div className="card" style={{ padding: 14, flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: 11, color: '#9a6b00' }}>
+          <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span>{data?.error ?? 'Belum ada data MCU.'}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const ARAH_WARNA: Record<string, string> = {
+    membaik: '#00B894', memburuk: '#FF2D2D', tetap: '#778899', 'tidak-dapat-dinilai': '#778899',
   };
-  const TREN_LABEL: Record<string, string> = {
-    membaik: 'membaik', memburuk: 'memburuk', tetap: 'tetap', baru: 'pengukuran pertama',
-  };
-  const kelompok = [
-    { id: 'vital', judul: 'Vital & Antropometri' },
-    { id: 'lab', judul: 'Laboratorium' },
-    { id: 'fungsi', judul: 'Fungsi & Skrining' },
-  ] as const;
 
   return (
-    <div className="card" style={{ padding: '10px 12px', flexShrink: 0 }}>
-      <div className="card-head" style={{ marginBottom: 8 }}>
-        <span style={{ width: 3, height: 18, borderRadius: 2, background: '#ff4d00', flexShrink: 0 }} />
-        <div style={{ minWidth: 0 }}>
-          <h2 style={{ fontSize: 12 }}>Nilai Hasil Kontrol → Evaluasi Zona</h2>
-          <p style={{ fontSize: 9.5 }}>
-            Isi nilai dari Fasilitas Kesehatan Rekanan. Zona dihitung engine STANDAR PTM yang sama dengan MCU
-            (INK/016 4.4.5 &amp; 4.6.1) — tidak semua parameter wajib.
+    <>
+      {/* Ringkasan zona */}
+      <div className="card" style={{ padding: '10px 12px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <h2 style={{ fontSize: 12, fontWeight: 700, margin: 0 }}>Tindak Lanjut</h2>
+            <p style={{ fontSize: 9.5, color: 'var(--muted-foreground)', margin: '2px 0 0' }}>
+              Baseline MCU {fmtTanggal(String(data.karyawan.tglMcu ?? ''))} · {data.totalField} parameter perlu ditindaklanjuti
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+            <InfoMini label="Zona baseline" value={String(data.baseline.zona ?? '—')} />
+            <span style={{ fontSize: 14, color: 'var(--muted-foreground)' }}>&rarr;</span>
+            <InfoMini
+              label="Zona efektif"
+              value={String(data.zonaEfektif?.zona ?? data.baseline.zona ?? '—')}
+              warna={String(data.zonaEfektif?.zona ?? '') === 'Merah' ? '#FF2D2D' : String(data.zonaEfektif?.zona ?? '') === 'Kuning' ? '#C99A00' : '#00B894'}
+            />
+          </div>
+        </div>
+        {data.zonaEfektif?.frekuensi && (
+          <p style={{ fontSize: 9.5, color: 'var(--muted-foreground)', margin: '6px 0 0' }}>
+            Frekuensi mengikuti nilai terbaru: <b>{data.zonaEfektif.frekuensi}</b> — baseline MCU tidak diubah.
           </p>
-        </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" style={{ marginBottom: 8 }}>
-        <label className="flex flex-col gap-1">
-          <span className="text-[10px] font-semibold text-muted-foreground">Tanggal aktual periksa</span>
-          <Input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} className="h-8 rounded-lg text-sm" />
-        </label>
-        <label className="flex flex-col gap-1 sm:col-span-2">
-          <span className="text-[10px] font-semibold text-muted-foreground">Evidence dokter / hasil lab (link)</span>
-          <Input value={evidence} onChange={(e) => setEvidence(e.target.value)} placeholder="https://… surat kontrol / resume dokter" className="h-8 rounded-lg text-sm" />
-        </label>
-      </div>
-
-      {kelompok.map((k) => (
-        <div key={k.id} style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted-foreground)', marginBottom: 4 }}>
-            {k.judul}
+      {/* Form field — dilipat per kelompok */}
+      <div className="card" style={{ padding: '10px 12px', flexShrink: 0 }}>
+        <div className="card-head" style={{ marginBottom: 8 }}>
+          <span style={{ width: 3, height: 18, borderRadius: 2, background: '#ff4d00', flexShrink: 0 }} />
+          <div style={{ minWidth: 0 }}>
+            <h2 style={{ fontSize: 12 }}>Hasil Tindak Lanjut</h2>
+            <p style={{ fontSize: 9.5 }}>Isi yang diperiksa ulang. Field kosong memakai nilai baseline.</p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 6 }}>
-            {PARAMETER_KONTROL.filter((p) => p.kelompok === k.id).map((p) => (
-              <label key={p.key} className="flex flex-col gap-0.5" title={`${p.label} (${p.unit})`}>
-                <span style={{ fontSize: 9, color: 'var(--muted-foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {p.label} <span style={{ opacity: 0.7 }}>{p.unit}</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" style={{ marginBottom: 10 }}>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold text-muted-foreground">Tanggal tindak lanjut</span>
+            <Input type="date" value={aktual} onChange={(e) => setAktual(e.target.value)} className="h-8 rounded-lg text-sm" />
+          </label>
+          <label className="flex flex-col gap-1 sm:col-span-2">
+            <span className="text-[10px] font-semibold text-muted-foreground">Bukti / hasil pemeriksaan (link)</span>
+            <Input value={evidence} onChange={(e) => setEvidence(e.target.value)} placeholder="https://… surat kontrol / hasil lab" className="h-8 rounded-lg text-sm" />
+          </label>
+        </div>
+
+        {data.kelompok.map((k) => {
+          const buka = terbuka[k.sumber] !== false;
+          const WARNA = k.sumber === 'trigger' ? '#FF2D2D' : k.sumber === 'abnormal' ? '#FF7A00' : '#3498DB';
+          return (
+            <div key={k.sumber} style={{ marginBottom: 10, border: '1px solid var(--border)', borderRadius: 8 }}>
+              <button
+                type="button"
+                onClick={() => setTerbuka((p) => ({ ...p, [k.sumber]: !buka }))}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left',
+                  padding: '7px 10px', border: 'none', background: 'var(--muted)', cursor: 'pointer',
+                  borderRadius: buka ? '8px 8px 0 0' : 8, fontFamily: 'inherit',
+                }}
+              >
+                <span style={{ width: 3, height: 14, borderRadius: 2, background: WARNA, flexShrink: 0 }} />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--foreground)', display: 'block' }}>
+                    {k.judul} ({k.fields.length})
+                  </span>
+                  <span style={{ fontSize: 9, color: 'var(--muted-foreground)' }}>{k.keterangan}</span>
                 </span>
-                <Input
-                  value={nilai[p.key] ?? ''}
-                  onChange={(e) => setNilai((prev) => ({ ...prev, [p.key]: e.target.value }))}
-                  inputMode={p.key === 'visusJauh' ? 'text' : 'decimal'}
-                  placeholder="—"
-                  className="h-8 rounded-lg text-sm"
-                />
-              </label>
-            ))}
-          </div>
-        </div>
-      ))}
+                <span style={{ fontSize: 10, color: 'var(--muted-foreground)', flexShrink: 0 }}>{buka ? '▾' : '▸'}</span>
+              </button>
 
-      <label className="flex flex-col gap-1" style={{ marginBottom: 8 }}>
-        <span className="text-[10px] font-semibold text-muted-foreground">Catatan dokter / paramedis</span>
-        <Input value={catatan} onChange={(e) => setCatatan(e.target.value)} placeholder="Ringkasan kontrol, saran kontrol berikutnya" className="h-8 rounded-lg text-sm" />
-      </label>
-
-      {/* Hasil evaluasi */}
-      {hasil && (
-        <div style={{ marginBottom: 8, padding: '8px 10px', borderRadius: 8, border: `1px solid ${TREN_WARNA[hasil.arah] ?? '#778899'}44`, background: `${TREN_WARNA[hasil.arah] ?? '#778899'}0f` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 11 }}>
-            <b>Zona: {hasil.zonaSebelumnya ?? '—'} &rarr; {hasil.zonaBaru}</b>
-            <span style={{ fontWeight: 800, color: TREN_WARNA[hasil.arah] ?? '#778899' }}>
-              ({TREN_LABEL[hasil.arah] ?? hasil.arah})
-            </span>
-            <span style={{ color: 'var(--muted-foreground)' }}>Frekuensi berikutnya: {hasil.frekuensiEvaluasi}</span>
-          </div>
-          <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: '3px 12px', fontSize: 9.5 }}>
-            {hasil.parameterBerubah.map((p) => (
-              <span key={p.key} style={{ color: TREN_WARNA[p.tren] }}>
-                {p.label}: <b>{p.sebelum ?? '—'} &rarr; {p.sekarang ?? '—'}</b> ({TREN_LABEL[p.tren]})
-              </span>
-            ))}
-          </div>
-          {hasil.parameterKosong.length > 0 && (
-            <div style={{ marginTop: 4, fontSize: 9, color: 'var(--muted-foreground)' }}>
-              Tidak diukur: {hasil.parameterKosong.slice(0, 8).join(', ')}
-              {hasil.parameterKosong.length > 8 ? ` +${hasil.parameterKosong.length - 8}` : ''}
-              {' '}— memakai nilai acuan sebelumnya.
+              {buka && (
+                <div style={{ padding: 10, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
+                  {k.fields.map((f) => {
+                    // ── TEKANAN DARAH: DUA KOTAK ───────────────────────
+                    // tdS = Sistole, tdD = Diastole. Keduanya WAJIB terisi
+                    // supaya engine bisa mengklasifikasi (classifyBloodPressure
+                    // membutuhkan dua angka). Dulu hanya satu field sehingga
+                    // diastole tidak ikut terkirim.
+                    if (f.id === 'tdS') {
+                      const sistol = nilai.tdS ?? '';
+                      const diastol = nilai.tdD ?? '';
+                      return (
+                        <div key={f.id} className="flex flex-col gap-0.5" title={f.alasan}>
+                          <span style={{ fontSize: 9.5, fontWeight: 600, display: 'flex', gap: 4, alignItems: 'baseline', minWidth: 0 }}>
+                            <span>Tekanan Darah</span>
+                            <span style={{ fontSize: 8.5, color: 'var(--muted-foreground)', flexShrink: 0 }}>mmHg</span>
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Input
+                              value={sistol}
+                              onChange={(e) => setNilai((p) => ({ ...p, tdS: e.target.value }))}
+                              placeholder={`Sistole ${String(f.nilaiMcu)}`}
+                              className="h-8 rounded-lg text-sm"
+                              style={{ minWidth: 0 }}
+                            />
+                            <span style={{ color: 'var(--muted-foreground)', fontWeight: 700 }}>/</span>
+                            <Input
+                              value={diastol}
+                              onChange={(e) => setNilai((p) => ({ ...p, tdD: e.target.value }))}
+                              placeholder={`Diastole ${String(f.nilaiMcuDiastol ?? '')}`}
+                              className="h-8 rounded-lg text-sm"
+                              style={{ minWidth: 0 }}
+                            />
+                          </div>
+                          <span style={{ fontSize: 8, color: 'var(--muted-foreground)', lineHeight: 1.3 }}>
+                            {f.klasifikasi ? `${f.klasifikasi} · ` : ''}Sistole/Diastole — isi keduanya
+                          </span>
+                        </div>
+                      );
+                    }
+                    return (
+                      <label key={f.id} className="flex flex-col gap-0.5" title={f.alasan}>
+                        <span style={{ fontSize: 9.5, fontWeight: 600, display: 'flex', gap: 4, alignItems: 'baseline', minWidth: 0 }}>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.label}</span>
+                          {f.unit && <span style={{ fontSize: 8.5, color: 'var(--muted-foreground)', flexShrink: 0 }}>{f.unit}</span>}
+                        </span>
+                        <Input
+                          value={nilai[f.id] ?? ''}
+                          onChange={(e) => setNilai((p) => ({ ...p, [f.id]: e.target.value }))}
+                          placeholder={`MCU: ${String(f.nilaiMcu)}${f.rentang ? ` (normal ${f.rentang})` : ''}`}
+                          className="h-8 rounded-lg text-sm"
+                        />
+                        <span style={{ fontSize: 8, color: 'var(--muted-foreground)', lineHeight: 1.3 }}>
+                          {f.klasifikasi ? `${f.klasifikasi} · ` : ''}{f.alasan}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      )}
+          );
+        })}
 
-      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-        <span style={{ marginRight: 'auto', fontSize: 9.5, color: 'var(--muted-foreground)', alignSelf: 'center' }}>
-          {terisi.length} parameter terisi
-        </span>
-        <Button size="sm" variant="outline" disabled={menghitung} onClick={() => void hitung(false)} style={{ gap: 5 }}>
-          {menghitung ? <Loader2 size={13} className="animate-spin" /> : <Calculator size={13} />}
-          Hitung Zona
-        </Button>
-        <Button size="sm" disabled={menghitung || !hasil} onClick={() => void hitung(true)} style={{ gap: 5 }}>
-          {menghitung ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-          Simpan &amp; Perbarui Zona
-        </Button>
+        <label className="flex flex-col gap-1" style={{ marginBottom: 8 }}>
+          <span className="text-[10px] font-semibold text-muted-foreground">Catatan dokter / paramedis</span>
+          <Input value={catatan} onChange={(e) => setCatatan(e.target.value)} placeholder="Ringkasan tindak lanjut" className="h-8 rounded-lg text-sm" />
+        </label>
+
+        {/* Pratinjau surat kontrol */}
+        <div style={{ padding: '8px 10px', borderRadius: 8, background: 'var(--muted)', fontSize: 10.5, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)', marginBottom: 3 }}>
+            Teks surat pengantar
+          </div>
+          <div style={{ fontFamily: 'Consolas, monospace', wordBreak: 'break-word' }}>
+            {pratinjauSurat || data.ringkasanSurat || '—'}
+          </div>
+        </div>
+
+        {hasilSimpan && (
+          <div style={{ marginTop: 8, padding: '7px 10px', borderRadius: 8, background: `${ARAH_WARNA[hasilSimpan.arah] ?? '#778899'}12`, border: `1px solid ${ARAH_WARNA[hasilSimpan.arah] ?? '#778899'}44`, fontSize: 10.5 }}>
+            <b>Zona: {hasilSimpan.zonaSebelum ?? '—'} &rarr; {hasilSimpan.zonaSesudah}</b>
+            <span style={{ color: ARAH_WARNA[hasilSimpan.arah] ?? '#778899', fontWeight: 800 }}> ({hasilSimpan.arah})</span>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10, alignItems: 'center' }}>
+          <span style={{ fontSize: 9.5, color: 'var(--muted-foreground)', marginRight: 'auto' }}>
+            {jumlahTerisi} parameter diisi
+          </span>
+          <Button size="sm" disabled={menyimpan} onClick={() => void simpan()} style={{ gap: 5 }}>
+            {menyimpan ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+            Simpan Tindak Lanjut
+          </Button>
+        </div>
       </div>
+    </>
+  );
+}
+
+function InfoMini({ label, value, warna }: { label: string; value: string; warna?: string }) {
+  return (
+    <div style={{ padding: '4px 9px', borderRadius: 8, background: 'var(--muted)', textAlign: 'center', minWidth: 80 }}>
+      <div style={{ fontSize: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>{label}</div>
+      <div style={{ fontSize: 12, fontWeight: 800, color: warna ?? 'var(--foreground)' }}>{value}</div>
     </div>
   );
 }

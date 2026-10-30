@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { decrypt, decryptEmployee, hashField, isEncryptedValue } from '@/lib/encryption';
+import { siteDihitung } from '@/lib/site-filter';
 import {
   EXEMPT_TEXT,
   NO_DATA_TEXT,
@@ -252,8 +253,10 @@ async function buildRows(): Promise<Row[]> {
     };
   });
 
-  rows.sort(compareMonitorRows);
-  return rows.map(({ _tglMasuk, ...row }) => row);
+  // Site "Batch" = calon karyawan — bukan bagian dari populasi yang dinilai.
+  const dihitung = rows.filter((row) => siteDihitung(row.site));
+  dihitung.sort(compareMonitorRows);
+  return dihitung.map(({ _tglMasuk, ...row }) => row);
 }
 
 // ------------------------------------------------------------------ cache ---

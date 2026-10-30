@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { decryptMCURecord, hashField } from '@/lib/encryption';
+import { siteDihitung } from '@/lib/site-filter';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
@@ -213,9 +214,12 @@ export async function GET(request: NextRequest) {
         status_mcu: normalizeMcuStatus(row.status_mcu, exempt, row.masa_berlaku_mcu),
         status_follow_up: normalizeFollowUpStatus(row.status_follow_up, exempt),
       };
-    }).filter(row => caller.role !== 'pic' || !caller.site
-      || caller.site.toLowerCase() === 'head office'
-      || String(row['site'] || '').toLowerCase() === caller.site.toLowerCase());
+    })
+      // Site "Batch" = calon karyawan, tidak dihitung pada dashboard.
+      .filter(row => siteDihitung(row.site))
+      .filter(row => caller.role !== 'pic' || !caller.site
+        || caller.site.toLowerCase() === 'head office'
+        || String(row['site'] || '').toLowerCase() === caller.site.toLowerCase());
 
     return NextResponse.json({ employees });
   } catch (error) {

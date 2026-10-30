@@ -10,7 +10,8 @@ import { Chart as ChartJS, registerables, type ChartOptions } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { authFetch } from '@/lib/api-client';
 import { SITES } from '@/components/administrator/hc-ergo-ui';
-import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, useAnimationReady } from '@/lib/chart-standard';
+import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, gradientBatangArray, useAnimationReady } from '@/lib/chart-standard';
+import PageLoading from '@/components/ui/page-loading';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -208,8 +209,9 @@ export default function MentalHealthDashboard() {
       data: {
         labels: perSiteData.length ? perSiteData.map((s) => String(s.site)) : ['Belum ada data'],
         datasets: [
-          { label: 'Responden', data: perSiteData.length ? perSiteData.map((s) => s.total || 0) : [0], backgroundColor: 'rgba(52,152,219,0.78)', borderRadius: 4, ...BAR_LAYOUT },
-          { label: 'SRQ-20 ≥ 6', data: perSiteData.length ? perSiteData.map((s) => s.perluTindakLanjut || 0) : [0], backgroundColor: 'rgba(231,76,60,0.80)', borderRadius: 4, ...BAR_LAYOUT },
+          // Gradient per batang, mengikuti efek diagram Top 10 ASR.
+          { label: 'Responden', data: perSiteData.length ? perSiteData.map((s) => s.total || 0) : [0], backgroundColor: gradientBatangArray(['rgba(52,152,219,0.78)'], true) as never, borderRadius: 4, ...BAR_LAYOUT },
+          { label: 'SRQ-20 ≥ 6', data: perSiteData.length ? perSiteData.map((s) => s.perluTindakLanjut || 0) : [0], backgroundColor: gradientBatangArray(['rgba(231,76,60,0.80)'], true) as never, borderRadius: 4, ...BAR_LAYOUT },
         ],
       },
       options: {
@@ -232,12 +234,8 @@ export default function MentalHealthDashboard() {
   }, [d, isDark, animReady]);
 
   if (err) return <div style={{ padding: 20, color: '#E63946', fontSize: 13 }}>{err}</div>;
-  if (!d) return (
-    <div className="bm-loading is-card" role="status" aria-live="polite" aria-label="Memuat dashboard kesehatan mental">
-      <div className="bm-loading-spinner"><div className="bm-loading-ring" aria-hidden="true" /><img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" /></div>
-      <p className="bm-loading-label">Memuat dashboard kesehatan mental…</p>
-    </div>
-  );
+  // Satu spinner untuk seluruh halaman, bukan per diagram.
+  if (!d) return <PageLoading label="Memuat Kesehatan Mental" />;
 
   const perSite = (d.perSite || []) as D[];
   const i = d.instrumen;

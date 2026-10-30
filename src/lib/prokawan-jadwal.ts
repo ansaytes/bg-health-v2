@@ -28,7 +28,7 @@
 // angkanya sudah bisa dihitung dari data yang ada.
 //
 // Karena itu: sistem MENGUSULKAN tanggal, QSHE Medic MENGONFIRMASI. Jadwal
-// hasil usulan tetap disimpan di `kunjungan_kontrol` agar bisa diubah, dicetak,
+// hasil usulan tetap disimpan di `followups_prokawan` agar bisa diubah, dicetak,
 // dan dijadikan dasar pengingat WhatsApp — bukan sekadar angka di layar.
 //
 // TIDAK SEMUA PARAMETER PUNYA TANGGAL
@@ -76,7 +76,7 @@ export interface UsulanJadwal {
   /** Dasar hitungan yang ditampilkan ke pengguna agar dapat diaudit. */
   dasar: string;
   alasanTanpaJadwal: string | null;
-  /** true bila kunjungan_kontrol sudah punya jadwal pada rentang tanggal itu. */
+  /** true bila followups_prokawan sudah punya jadwal pada rentang tanggal itu. */
   sudahAda: boolean;
 }
 
@@ -182,7 +182,7 @@ export function usulanJadwalPeserta(p: PesertaLengkap): UsulanJadwal {
  * Menjalankan penjadwalan untuk seluruh peserta.
  *
  * mode 'usulan'   → hitung saja, tidak menulis apa pun (aman, default).
- * mode 'konfirmasi' → tulis ke `kunjungan_kontrol` (nik_hash + jadwal_tanggal),
+ * mode 'konfirmasi' → tulis ke `followups_prokawan` (nik_hash + jadwal_tanggal),
  *                     melewati baris yang sudah ada agar tidak menduplikasi.
  */
 export async function jalankanPenjadwalan(mode: ModePenjadwalan, peserta: PesertaLengkap[]): Promise<HasilPenjadwalan> {
@@ -196,7 +196,7 @@ export async function jalankanPenjadwalan(mode: ModePenjadwalan, peserta: Pesert
     const hashes = [...new Set(kandidat.map((u) => u.nikHash))];
     for (let i = 0; i < hashes.length; i += 150) {
       const { data } = await client
-        .from('kunjungan_kontrol')
+        .from('followups_prokawan')
         .select('nik_hash,jadwal_tanggal')
         .in('nik_hash', hashes.slice(i, i + 150));
       for (const r of data ?? []) {
@@ -215,7 +215,7 @@ export async function jalankanPenjadwalan(mode: ModePenjadwalan, peserta: Pesert
   if (mode === 'konfirmasi') {
     const baru = usulan.filter((u) => u.jadwalUsulan && u.nikHash && !u.sudahAda);
     for (const u of baru) {
-      const { error } = await client.from('kunjungan_kontrol').insert({
+      const { error } = await client.from('followups_prokawan').insert({
         nik_hash: u.nikHash,
         site: u.site || null,
         zona_risiko: u.zona,

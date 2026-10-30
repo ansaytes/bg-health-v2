@@ -100,6 +100,83 @@ export function banyakWarnaBar(count: number): string[] {
   return Array.from({ length: count }, (_, index) => warnaBar(index));
 }
 
+/**
+ * KANVAS GRADIENT BATANG — meniru efek diagram "10 Site ASR tertinggi".
+ *
+ * ASR memakai gradient horizontal `#E54B1A → #FF8C42` dengan canvas manual.
+ * Chart.js tidak bisa langsung memakai dua warna sekaligus, jadi warna dasar
+ * tiap batang dibuat gradient: warna tetap WARNA ASLINYA di ujung kiri, lalu
+ * dicerahkan menuju ujung kanan.
+ *
+ * Kenapa dicerahkan, bukan diganti warna gradient ASR: instruksi pemilik
+ * aplikasi — "warna masing-masing bar tetap seperti saat ini, hanya efek
+ * gradasinya saja". Jadi identitas warna tiap batang tidak berubah.
+ *
+ * @param color warna dasar, format `rgba(r,g,b,a)` atau `#rrggbb`
+ * @param horizontal true = gradient kiri→kanan (bar horizontal)
+ */
+export function gradientBatang(
+  ctx: CanvasRenderingContext2D,
+  area: { left: number; right: number; top: number; bottom: number },
+  color: string,
+  horizontal: boolean,
+): CanvasGradient {
+  const { r, g, b, a } = pecahWarna(color);
+  const grad = horizontal
+    ? ctx.createLinearGradient(area.left, 0, Math.max(area.right, area.left + 1), 0)
+    : ctx.createLinearGradient(0, area.bottom, 0, Math.max(area.top, 1));
+
+  grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${a})`);
+  // Dicerahkan ~35% ke warna putih — cukup untuk memberi kesan gradasi tanpa
+  // mengubah warna yang dikenali pembaca.
+  grad.addColorStop(1, `rgba(${campurPutih(r)}, ${campurPutih(g)}, ${campurPutih(b)}, ${a})`);
+  return grad;
+}
+
+/**
+ * Versi SIAP PAKAI untuk Chart.js: menghasilkan fungsi `backgroundColor`
+ * berbentuk gradient untuk setiap batang.
+ *
+ * Pemakaian di config Chart.js:
+ *   backgroundColor: gradientBatangArray(ctx, colors, horizontal)
+ *
+ * Chart.js memanggil fungsi ini untuk setiap batang; `ctx.chart` memberi area
+ * plotting sehingga gradient tepat dari dasar sampai ujung batang.
+ */
+export function gradientBatangArray(
+  colors: string[],
+  horizontal: boolean,
+): (context: { chart: { ctx: CanvasRenderingContext2D; chartArea?: { left: number; right: number; top: number; bottom: number } }; dataIndex: number }) => CanvasGradient | string {
+  return (context) => {
+    const area = context.chart.chartArea;
+    if (!area) return colors[context.dataIndex] ?? colors[0] ?? '#778899';
+    const color = colors[context.dataIndex] ?? colors[colors.length - 1] ?? '#778899';
+    return gradientBatang(context.chart.ctx, area, color, horizontal);
+  };
+}
+
+function campurPutih(v: number): number {
+  return Math.round(Math.min(255, v + (255 - v) * 0.35));
+}
+
+function pecahWarna(color: string): { r: number; g: number; b: number; a: number } {
+  const rgba = color.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)/i);
+  if (rgba) {
+    return { r: Number(rgba[1]), g: Number(rgba[2]), b: Number(rgba[3]), a: rgba[4] === undefined ? 1 : Number(rgba[4]) };
+  }
+  const hex = color.replace('#', '');
+  if (hex.length === 6) {
+    return {
+      r: parseInt(hex.slice(0, 2), 16),
+      g: parseInt(hex.slice(2, 4), 16),
+      b: parseInt(hex.slice(4, 6), 16),
+      a: 1,
+    };
+  }
+  // Warna tak dikenal → abu-abu netral, jangan sampai crash.
+  return { r: 120, g: 120, b: 120, a: 1 };
+}
+
 /** Gaya sumbu batang horizontal. */
 export function opsiBarHorizontal(H: string, V: string): Record<string, unknown> {
   return {

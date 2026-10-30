@@ -7,7 +7,8 @@ import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { authFetch } from '@/lib/api-client';
 import { ZONA_COLOR, type Zona } from '@/lib/hc-ergo';
 import { Chip, SITES, fmtDate, tableStyle, tdStyle, thStyle } from '@/components/administrator/hc-ergo-ui';
-import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, useAnimationReady } from '@/lib/chart-standard';
+import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, gradientBatangArray, useAnimationReady } from '@/lib/chart-standard';
+import PageLoading from '@/components/ui/page-loading';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -230,12 +231,8 @@ export default function HearingConservationDashboard() {
   }, [d, isDark, animReady]);
 
   if (err) return <div style={{ padding: 20, color: '#E63946', fontSize: 13 }}>{err}</div>;
-  if (!d) return (
-    <div className="bm-loading is-card" role="status" aria-live="polite" aria-label="Memuat dashboard konservasi pendengaran">
-      <div className="bm-loading-spinner"><div className="bm-loading-ring" aria-hidden="true" /><img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" /></div>
-      <p className="bm-loading-label">Memuat dashboard konservasi pendengaran…</p>
-    </div>
-  );
+  if (!d) return <PageLoading label="Memuat Konservasi Pendengaran" />;
+  // Spinner SATU untuk seluruh halaman (bukan per diagram), logo 75%.
 
   const areas = (d.areas || []) as D[];
   const nAreaTot = Object.values(d.zona as Record<string, number>).reduce((a, b) => a + b, 0);

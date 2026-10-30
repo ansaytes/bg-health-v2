@@ -263,8 +263,12 @@ export default function InventoryAdmin() {
         </Button>
       </div>
 
-      <div className="mcu-records-toolbar" style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'var(--card)', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border)', flexWrap: 'nowrap' }}>
-        <div className="mcu-records-search" style={{ flex: '1 1 0px', minWidth: 0, display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--background)', padding: '0 12px', height: '38px', borderRadius: '6px', border: '1px solid var(--border)', boxSizing: 'border-box' }}>
+      {/* Toolbar TANPA latar card: sebelumnya kotak putih membentang selebar
+          halaman dan menyisakan area putih di kiri-kanan pencarian. Sekarang
+          toolbar transparan (menyatu dengan background), sedangkan kotak
+          pencarian & filter yang BERWARNA PUTIH agar menonjol. */}
+      <div className="mcu-records-toolbar" style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'transparent', padding: '0', border: 'none', flexWrap: 'nowrap' }}>
+        <div className="mcu-records-search" style={{ flex: '1 1 0px', minWidth: 0, display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--card)', padding: '0 12px', height: '38px', borderRadius: '6px', border: '1px solid var(--border)', boxSizing: 'border-box' }}>
           <Search size={16} className="text-muted-foreground" style={{ flexShrink: 0 }} />
           <input
             type="text"
@@ -278,7 +282,7 @@ export default function InventoryAdmin() {
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            style={{ width: '100%', height: '38px', padding: '0 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--background)', fontSize: '13px', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
+            style={{ width: '100%', height: '38px', padding: '0 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card)', fontSize: '13px', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
           >
             <option value="Semua">Semua Kategori</option>
             <option value="Obat">Obat</option>

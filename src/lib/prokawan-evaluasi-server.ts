@@ -8,7 +8,7 @@
 //   1. Baseline harus PERMANEN. Bila nilai MCU berubah (MCU baru), riwayat
 //      kontrol lama tetap harus bisa dibandingkan dengan nilai yang berlaku
 //      saat kontrol itu terjadi. Karena itu baseline disalin ke baris
-//      kunjungan_kontrol, bukan hanya direferensikan.
+//      followups_prokawan, bukan hanya direferensikan.
 //
 //   2. Perhitungan zona memakai engine yang sama dengan MCU (`assessZonasi`),
 //      sehingga tidak ada dua implementasi aturan yang bisa menyimpang.
@@ -62,7 +62,7 @@ const PROFIL_MCU = [
  * Konversi baris mcu_records (snake_case) ke objek yang dibaca engine.
  * Kolom sensitif didekripsi lebih dulu.
  */
-function barisKeDraft(record: Record<string, unknown>): Record<string, string | number | undefined> {
+export function barisKeDraft(record: Record<string, unknown>): Record<string, string | number | undefined> {
   const dekripsi = decryptMCURecord(record) as Record<string, unknown>;
   const peta = new Map<string, string>();
   for (const field of MCU_FIELDS) {
@@ -124,7 +124,7 @@ export async function evaluateFromKontrol(opsi: {
   // Memakai kontrol sebelumnya lebih tepat bila peserta sudah pernah kontrol:
   // perubahan diukur antar-kontrol, bukan dari MCU yang bisa berumur setahun.
   const { data: kontrolLalu } = await client
-    .from('kunjungan_kontrol')
+    .from('followups_prokawan')
     .select('id,aktual_tanggal,nilai,zona_sesudah')
     .eq('nik_hash', nikHash)
     .not('nilai', 'is', null)
@@ -162,7 +162,7 @@ export async function evaluateFromKontrol(opsi: {
     profil: profil as never,
   });
 
-  // ── 4. Simpan ke kunjungan_kontrol (buat baris baru bila belum ada) ─────
+  // ── 4. Simpan ke followups_prokawan (buat baris baru bila belum ada) ─────
   const payload = {
     nik_hash: nikHash,
     aktual_tanggal: aktualTanggal,
@@ -181,10 +181,10 @@ export async function evaluateFromKontrol(opsi: {
 
   let kunjunganId = opsi.kunjunganId;
   if (kunjunganId) {
-    const { error } = await client.from('kunjungan_kontrol').update(payload).eq('id', kunjunganId);
+    const { error } = await client.from('followups_prokawan').update(payload).eq('id', kunjunganId);
     if (error) throw new Error(`Gagal menyimpan hasil kontrol: ${error.message}`);
   } else {
-    const { data, error } = await client.from('kunjungan_kontrol')
+    const { data, error } = await client.from('followups_prokawan')
       .insert({ ...payload, jadwal_tanggal: aktualTanggal, created_by: 'evaluasi-kontrol' })
       .select('id')
       .single();

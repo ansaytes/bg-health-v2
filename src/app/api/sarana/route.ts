@@ -68,6 +68,41 @@ export async function GET(req: NextRequest) {
     };
   });
 
+  // ── Obat & BHP TIDAK diisi manual di sini ────────────────────────────────
+  // Persediaan obat sudah dikelola lengkap di halaman Inventory (dengan batch,
+  // ED, dan pemakaian). Menduplikasinya di Sarana hanya akan membuat dua angka
+  // berbeda untuk hal yang sama. Karena itu satu baris virtual ditambahkan,
+  // dihitung langsung dari VIEW v_inventory_summary.
+  try {
+    const { data: inv } = await client
+      .from('v_inventory_summary')
+      .select('id,name,total_stock,avg_monthly_usage,closest_expired_date');
+    const obat = (inv ?? []) as Record<string, unknown>[];
+    const tersedia = obat.filter((o) => Number(o.total_stock ?? 0) > 0).length;
+    const kritis = obat.filter((o) => {
+      const stok = Number(o.total_stock ?? 0);
+      const pakai = Number(o.avg_monthly_usage ?? 0);
+      return stok <= 0 || (pakai > 0 && stok < pakai);
+    }).length;
+
+    items.unshift({
+      katalogId: 'inventory:obat-bhp',
+      nama: 'Persediaan Obat & BHP',
+      kategori: 'obat',
+      wajib: true,
+      perluKalibrasi: false,
+      status: tersedia > 0 ? 'ada' : 'tidak_ada',
+      jumlah: tersedia,
+      kondisi: `${inv?.length ?? 0} item terdaftar di Inventory${kritis ? ` · ${kritis} stok kritis` : ''}`,
+      tanggalKalibrasi: null,
+      tanggalInspeksi: null,
+      catatan: 'Dihitung otomatis dari halaman Inventory — tidak perlu diisi manual.',
+      tersedia: true,
+    });
+  } catch {
+    // Inventory belum tersedia → item obat tidak ditampilkan.
+  }
+
   // Ringkasan: hanya item WAJIB yang dihitung, item tamb tidak
   // boleh membuat persentase kepatuhan turun.
   const wajib = items.filter((i) => i.wajib && i.status !== 'tidak_diperlukan');
@@ -94,6 +129,16 @@ export async function GET(req: NextRequest) {
       kalibrasiKedaluwarsa,
     },
     kategoriUrut: ['perlengkapan_umum', 'ruangan', 'peralatan_medis', 'sarana_penunjang', 'alat_evakuasi', 'obat'],
+    // Standar penilaian kondisi alat — ditampilkan di form agar inspektur
+    // memakai acuan yang sama, bukan penilaian subjektif masing-masing.
+    standarKondisi: [
+      { nilai: 'BAIK', label: 'Baik', arti: 'Berfungsi normal, tidak ada kerusakan, siap pakai' },
+      { nilai: 'PERLU_KALIBRASI', label: 'Perlu kalibrasi', arti: 'Berfungsi tetapi masa kalibrasi habis atau mendekati habis' },
+      { nilai: 'RUSAK_RINGAN', label: 'Rusak ringan', arti: 'Masih dapat dipakai dengan keterbatasan; perlu perbaikan' },
+      { nilai: 'RUSAK_BERAT', label: 'Rusak berat', arti: 'Tidak dapat dipakai; wajib diperbaiki atau diganti' },
+      { nilai: 'TIDAK_ADA', label: 'Tidak ada', arti: 'Belum tersedia di site' },
+    ],
+    catatanStandar: 'SOP/028 poin 5.5 menetapkan daftar sarana, tetapi tidak menetapkan skala penilaian kondisi. Standar di atas diturunkan dari praktik umum pemeliharaan peralatan medis (Permenkes 54/2015 tentang Pengujian & Kalibrasi Alat Kesehatan) dan disetujui sebagai acuan internal.',
   });
 }
 

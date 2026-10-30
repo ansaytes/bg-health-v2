@@ -7,7 +7,8 @@ import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { authFetch } from '@/lib/api-client';
 import { KLAS_COLOR, type Klasifikasi } from '@/lib/hc-ergo';
 import { Chip, SITES, fmtDate, tableStyle, tdStyle, thStyle } from '@/components/administrator/hc-ergo-ui';
-import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, useAnimationReady } from '@/lib/chart-standard';
+import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, gradientBatangArray, useAnimationReady } from '@/lib/chart-standard';
+import PageLoading from '@/components/ui/page-loading';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -191,8 +192,9 @@ export default function ErgonomiDashboard() {
       data: {
         labels: patuh.length ? patuh.map((k) => String(k.site)) : ['Belum ada data'],
         datasets: [
-          { label: 'Internal bulan ini', data: patuh.length ? patuh.map((k) => k.internalBulanIni) : [0], backgroundColor: '#2E86DE', borderRadius: 4, ...BAR_LAYOUT },
-          { label: 'Pihak ketiga 12 bln', data: patuh.length ? patuh.map((k) => k.pihakKetiga12Bulan) : [0], backgroundColor: '#00B894', borderRadius: 4, ...BAR_LAYOUT },
+          // Gradient per batang (efek seperti diagram Top 10 ASR), warna dasar tetap.
+          { label: 'Internal bulan ini', data: patuh.length ? patuh.map((k) => k.internalBulanIni) : [0], backgroundColor: gradientBatangArray(['#2E86DE'], true) as never, borderRadius: 4, ...BAR_LAYOUT },
+          { label: 'Pihak ketiga 12 bln', data: patuh.length ? patuh.map((k) => k.pihakKetiga12Bulan) : [0], backgroundColor: gradientBatangArray(['#00B894'], true) as never, borderRadius: 4, ...BAR_LAYOUT },
         ],
       },
       options: {
@@ -215,12 +217,8 @@ export default function ErgonomiDashboard() {
   }, [d, isDark, animReady]);
 
   if (err) return <div style={{ padding: 20, color: '#E63946', fontSize: 13 }}>{err}</div>;
-  if (!d) return (
-    <div className="bm-loading is-card" role="status" aria-live="polite" aria-label="Memuat dashboard ergonomi">
-      <div className="bm-loading-spinner"><div className="bm-loading-ring" aria-hidden="true" /><img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" /></div>
-      <p className="bm-loading-label">Memuat dashboard ergonomi…</p>
-    </div>
-  );
+  // Spinner SATU untuk seluruh halaman (bukan per diagram), logo 75%.
+  if (!d) return <PageLoading label="Memuat Ergonomi" />;
 
   const patuh = (d.kepatuhan || []) as D[];
   // Nilai total untuk empty-state tiap kartu (data kosong tidak digambar sebagai sumbu 0–1).

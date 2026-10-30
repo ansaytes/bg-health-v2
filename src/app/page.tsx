@@ -11,7 +11,7 @@ import DashboardView from '@/components/dashboard/DashboardView';
 import MonitoringMCUTabs from '@/components/dashboard/MonitoringMCUTabs';
 import KunjunganBerobat from '@/components/dashboard/KunjunganBerobat';
 import ReviewMCU from '@/components/review-mcu/ReviewMCU';
-import FollowUpMCU from '@/components/review-mcu/FollowUpMCU';
+
 import InputLaggingIndicator from '@/components/administrator/InputLaggingIndicator';
 import LaggingIndicatorPage from '@/components/administrator/LaggingIndicatorPage';
 import KunjunganBerobatForm from '@/components/administrator/KunjunganBerobatForm';
@@ -42,7 +42,7 @@ import MentalHealthDashboard from '@/components/dashboard/MentalHealthDashboard'
 import HigieneIndustriTabs from '@/components/dashboard/HigieneIndustriTabs';
 import LayananKuratifTabs from '@/components/dashboard/LayananKuratifTabs';
 import ProKawanDashboard from '@/components/dashboard/ProKawanDashboard';
-import LaporanMingguan from '@/components/dashboard/LaporanMingguan';
+import SPIPDashboard from '@/components/dashboard/SPIPDashboard';
 import ErgoApproval from '@/components/dashboard/ErgoApproval';
 import HcInputPage from '@/components/administrator/HcInputPage';
 import HcAudiometriEval from '@/components/administrator/HcAudiometriEval';
@@ -335,7 +335,9 @@ const DASH_SIDEBAR: SidebarItem[] = [
   { key: 'monitoring', label: 'Monitoring MCU', icon: <IconMonitoring /> },
   { key: 'layanan-kuratif', label: 'Layanan Kuratif', icon: <IconKuratif /> },
   { key: 'prokawan-dashboard', label: 'ProKawan', icon: <IconProkawan />, adminOnly: true },
-  { key: 'laporan-mingguan', label: 'Laporan Mingguan', icon: <IconLaporanMingguan />, adminOnly: true },
+  // SPIP = Sarana, Prasarana, Instalasi, Peralatan (SOP/028 poin 5.5).
+  // Menu sendiri karena bukan faktor lingkungan kerja (Higiene Industri).
+  { key: 'spip', label: 'SPIP', icon: <IconSarana />, adminOnly: true },
   { key: 'higiene-industri', label: 'Higiene Industri', icon: <IconHigiene />, adminOnly: true },
   { key: 'mental-health-dashboard', label: 'Kesehatan Mental', icon: <IconBrain />, adminOnly: true },
 ];
@@ -575,7 +577,7 @@ function DashContent() {
     case 'kunjungan': return <LayananKuratifTabs initialTab="kunjungan" />;
     case 'inventory-dashboard': return <LayananKuratifTabs initialTab="inventory" />;
     case 'prokawan-dashboard': return <ProKawanDashboard />;
-    case 'laporan-mingguan': return <LaporanMingguan />;
+    case 'spip': return <SPIPDashboard />;
     case 'higiene-industri': return <HigieneIndustriTabs />;
     case 'hearing-dashboard': return <HigieneIndustriTabs initialTab="hearing" />;
     case 'ergonomi-dashboard': return <HigieneIndustriTabs initialTab="ergonomi" />;
@@ -589,27 +591,19 @@ function DashContent() {
 /*   Admin Toggle Panel — form/table switcher with smart rotating arrow */
 
 /**
- * Review MCU + Follow Up MCU dalam satu tampilan bertab.
- * Tab "Review MCU" = form input MCU (alur 3 langkah seperti sebelumnya).
- * Tab "Follow Up MCU" = tindak lanjut parameter yang tidak normal.
+ * Review MCU — input hasil pemeriksaan.
+ *
+ * Tab "Follow Up MCU" DIHAPUS: tindak lanjut sekarang dicatat di satu tempat,
+ * yaitu menu ProKawan (tabel followups_prokawan), agar baseline MCU dan hasil
+ * tindak lanjut tidak terpisah di dua sumber.
  */
 function ReviewMCUWithTabs() {
-  const [tab, setTab] = useState<'review' | 'followup'>('review');
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '90%', margin: '0 auto', padding: 16, overflow: 'hidden', flex: 1, minHeight: 0 }}>
-      <CenteredTabs
-        tabs={[
-          { key: 'review', label: 'Review MCU' },
-          { key: 'followup', label: 'Follow Up MCU' },
-        ]}
-        active={tab}
-        onChange={setTab}
-        ariaLabel="Review dan Follow Up MCU"
-        compact
-      />
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingTop: 10 }}>
-        {tab === 'review' ? <ReviewMCU /> : <FollowUpMCU />}
-      </div>
+    <div
+      className="admin-form-container"
+      style={{ width: '90%', margin: '0 auto', padding: 16, overflow: 'hidden', flex: 1, minHeight: 0 }}
+    >
+      <ReviewMCU />
     </div>
   );
 }
