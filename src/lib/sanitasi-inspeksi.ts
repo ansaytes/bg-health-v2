@@ -85,11 +85,11 @@ export const ITEM_INSPEKSI: ItemInspeksi[] = [
   { key: 'bising_alat', kategori: 'kebisingan', label: 'Alat ukur (SLM) & tinggi pengukuran', tipe: 'nilai', acuan: 'SLM, ±1,50 m dari lantai', sumber: 'Permenkes 48/2016 Tabel D' },
 
   // ── Pencahayaan ────────────────────────────────────────────────────
-  { key: 'lux_kerja', kategori: 'pencahayaan', label: 'Pencahayaan ruang kerja', tipe: 'hitung', satuan: 'lux', acuan: '≥300', sumber: 'Permenkes 48/2016 Tabel E' },
-  { key: 'lux_gambar', kategori: 'pencahayaan', label: 'Pencahayaan ruang gambar', tipe: 'hitung', satuan: 'lux', acuan: '≥750', sumber: 'Permenkes 48/2016 Tabel E' },
-  { key: 'lux_arsip', kategori: 'pencahayaan', label: 'Pencahayaan ruang arsip', tipe: 'hitung', satuan: 'lux', acuan: '≥150', sumber: 'Permenkes 48/2016 Tabel E' },
-  { key: 'lux_koridor', kategori: 'pencahayaan', label: 'Pencahayaan koridor/lobi', tipe: 'hitung', satuan: 'lux', acuan: '≥100', sumber: 'Permenkes 48/2016 Tabel E' },
-  { key: 'lux_darurat', kategori: 'pencahayaan', label: 'Pencahayaan darurat', tipe: 'nilai', acuan: '≥5% intensitas normal', sumber: 'Permenkes 48/2016 Tabel E' },
+  // DIPINDAH ke tab "Pencahayaan & Udara" (lib/lingkungan-kerja.ts).
+  // Alasan: pencahayaan diukur PER RUANG pada bidang kerja dengan luxmeter,
+  // dan NAB-nya bergantung peruntukan ruang (arsip 150 vs gambar 750 lux).
+  // Satu angka per site tidak bisa mewakili itu. Kategori dipertahankan agar
+  // data inspeksi lama tetap dapat dibaca.
 
   // ── Vektor ─────────────────────────────────────────────────────────
   { key: 'vektor_lalat', kategori: 'vektor', label: 'Indeks lalat', tipe: 'hitung', satuan: 'ekor/fly grill', acuan: '≤8 per 30 menit', sumber: 'Permenkes 48/2016 Tabel F' },
@@ -98,12 +98,9 @@ export const ITEM_INSPEKSI: ItemInspeksi[] = [
   { key: 'vektor_tikus', kategori: 'vektor', label: 'Indeks tikus', tipe: 'hitung', satuan: 'indeks', acuan: '0 (nihil)', sumber: 'Permenkes 48/2016 Tabel F' },
 
   // ── Udara ──────────────────────────────────────────────────────────
-  { key: 'udara_suhu', kategori: 'udara', label: 'Suhu udara', tipe: 'hitung', satuan: '°C', acuan: '23–26', sumber: 'Permenkes 48/2016 & Permenaker 5/2018' },
-  { key: 'udara_kelembapan', kategori: 'udara', label: 'Kelembapan', tipe: 'hitung', satuan: '%', acuan: '40–60', sumber: 'Permenkes 48/2016 & Permenaker 5/2018' },
-  { key: 'udara_oksigen', kategori: 'udara', label: 'Kadar oksigen', tipe: 'hitung', satuan: '%', acuan: '19,5–23,5', sumber: 'Permenaker 5/2018 Pasal 41' },
-  { key: 'udara_pm10', kategori: 'udara', label: 'Debu respirabel (PM10)', tipe: 'hitung', satuan: 'mg/m³', acuan: '≤0,15 (rata-rata 8 jam)', sumber: 'Permenkes 48/2016 Tabel G' },
-  { key: 'udara_ruang_per_orang', kategori: 'udara', label: 'Ruang udara per orang', tipe: 'hitung', satuan: 'm³', acuan: '≥10', sumber: 'Permenaker 5/2018 Pasal 42' },
-  { key: 'udara_ventilasi', kategori: 'udara', label: 'Pembersihan ventilasi buatan terakhir', tipe: 'nilai', acuan: 'Minimal setiap 3 bulan', sumber: 'Permenaker 5/2018 Pasal 42' },
+  // DIPINDAH ke tab "Pencahayaan & Udara". Kualitas udara diukur per titik
+  // dengan alat berbeda, dan PM10 sebagai rata-rata 8 jam — tidak mungkin
+  // ditangkap satu angka per site.
 
   // ── Sampah ─────────────────────────────────────────────────────────
   { key: 'sampah_organik', kategori: 'sampah', label: 'Wadah sampah organik', tipe: 'nilai', acuan: 'Kedap air, bertutup, berlabel, terpisah', sumber: 'Permenaker 5/2018 Pasal 37' },

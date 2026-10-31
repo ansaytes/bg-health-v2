@@ -4,6 +4,46 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { JENIS_META, PRIORITAS_WARNA, type JenisNotifikasi, type Notifikasi } from '@/lib/notifikasi-medic';
+import { useMCUStore } from '@/lib/store';
+
+/**
+ * Menavigasi ke halaman tujuan notifikasi.
+ *
+ * MENGAPA BUKAN window.location.href
+ * Aplikasi ini SPA dengan state navigasi di Zustand — bukan di URL. Menulis
+ * `window.location.href = '/?page=administrator&menu=prokawan-admin'` akan
+ * memuat ulang halaman, query string diabaikan, dan store kembali ke default
+ * (Home). Itulah sebabnya notifikasi “kembali ke Home”.
+ *
+ * Sekarang state store diubah langsung, sehingga halaman tujuan terbuka tanpa
+ * reload. `bukaMenu` menutup sidebar mobile.
+ */
+function navigasiKe(tautan: string, tutupSidebar: () => void): void {
+  try {
+    const query = tautan.includes('?') ? tautan.slice(tautan.indexOf('?') + 1) : '';
+    const params = new URLSearchParams(query);
+    const page = params.get('page') as 'home' | 'dashboard' | 'data-entry' | 'administrator' | null;
+    const menu = params.get('menu');
+
+    const store = useMCUStore.getState();
+    if (!page) {
+      store.setActivePage('home');
+      return;
+    }
+
+    store.setActivePage(page);
+    if (menu) {
+      if (page === 'administrator') store.setActiveAdminSidebar(menu as never);
+      else if (page === 'dashboard') store.setActiveDashSidebar(menu as never);
+      else if (page === 'data-entry') store.setActiveDataEntrySidebar(menu as never);
+      else if (page === 'home') store.setActiveHomeSidebar(menu as never);
+    }
+    tutupSidebar();
+  } catch {
+    // Bila store tidak tersedia (mis. SSR), jatuh ke perilaku lama.
+    window.location.href = tautan;
+  }
+}
 
 interface Approval {
   id: number;
@@ -43,6 +83,8 @@ export default function NotificationBell({ isSuperuser, canMedic = false }: {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  // Navigasi lewat store, bukan URL — lihat komentar navigasiKe().
+  const bukaMenu = () => setOpen(false);
 
   const canViewApprovals = isSuperuser;
   const canView = canViewApprovals || canMedic;
@@ -88,7 +130,6 @@ export default function NotificationBell({ isSuperuser, canMedic = false }: {
 
   useEffect(() => {
     if (canView) void fetchSemua();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canView, canMedic]);
 
   // Poll 30 detik — server menyimpan cache 5 menit, jadi ini ringan.
@@ -96,7 +137,6 @@ export default function NotificationBell({ isSuperuser, canMedic = false }: {
     if (!canView) return;
     const interval = setInterval(() => { void fetchSemua(); }, 30000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canView, canMedic]);
 
   // Close on outside click
@@ -247,7 +287,6 @@ export default function NotificationBell({ isSuperuser, canMedic = false }: {
                 <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat notifikasi">
                   <div className="bm-loading-spinner">
                     <div className="bm-loading-ring" aria-hidden="true" />
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
                   </div>
                   <p className="bm-loading-label">Memuat notifikasi…</p>
@@ -275,7 +314,7 @@ export default function NotificationBell({ isSuperuser, canMedic = false }: {
                           key={n.id}
                           onClick={() => {
                             setOpen(false);
-                            window.location.href = n.tautan;
+                            navigasiKe(n.tautan, bukaMenu);
                           }}
                           style={{
                             display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',

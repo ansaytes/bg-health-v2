@@ -170,7 +170,8 @@ export function IdentityPanel({
         </div>
       )}
 
-      {children}
+      {/* children SUDAH dirender di baris pencarian (kanan). Jangan diulang di
+          sini — dulu dirender dua kali sehingga field tanggal muncul dobel. */}
     </div>
   );
 }

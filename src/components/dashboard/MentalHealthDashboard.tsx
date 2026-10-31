@@ -12,6 +12,7 @@ import { authFetch } from '@/lib/api-client';
 import { SITES } from '@/components/administrator/hc-ergo-ui';
 import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, gradientBatangArray, useAnimationReady } from '@/lib/chart-standard';
 import PageLoading from '@/components/ui/page-loading';
+import { MCUChart } from '@/components/dashboard/MCUDashboardShared';
 
 ChartJS.register(...registerables, ChartDataLabels);
 
@@ -261,27 +262,34 @@ export default function MentalHealthDashboard() {
         </span>
       </div>
 
-      {/* Highlight hasil skrining — yang paling penting untuk tindak lanjut. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, flexShrink: 0 }}>
-        {[
-          { label: 'SRQ-20 Terisi', value: srqTerisi, caption: 'responden', color: '#E74C3C' },
-          { label: 'SRQ-20 ≥ 6', value: srqPerlu, caption: `${srqPersen.toFixed(1)}% perlu tindak lanjut`, color: '#E74C3C' },
-          { label: 'DASS-21 Terisi', value: dassTerisi, caption: 'responden', color: '#F39C12' },
-          { label: 'DASS-21 Perlu Perhatian', value: dassPerlu, caption: 'keparahan sedang ke atas', color: '#F39C12' },
-        ].map((kpi) => (
-          <div key={kpi.label} className="card" style={{ padding: '8px 12px', minHeight: 0 }}>
-            <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--muted-foreground)' }}>{kpi.label}</div>
-            <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.15, color: kpi.color }}>{kpi.value}</div>
-            <div style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>{kpi.caption}</div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gridTemplateRows: 'minmax(0, 1.2fr) minmax(0, 1fr)', gap: 8, flex: 1, minHeight: 0 }}>
-        <ChartCard title="SRQ-20" sub="Ambang ≥ 6 = perlu tindak lanjut" accent="#E74C3C" empty={!i.srq20.terisi}><canvas ref={srqRef} /></ChartCard>
-        <ChartCard title="DASS-21" sub="Keparahan terburuk dari depresi, ansietas, stres" accent="#F39C12" empty={!i.dass21.terisi}><canvas ref={dassRef} /></ChartCard>
-        <ChartCard title="Rata-rata Skor DASS-21" sub="Depresi · ansietas · stres (skala 0–21)" accent="#3498DB" empty={!i.dass21.terisi}><canvas ref={subskalaRef} /></ChartCard>
-        <ChartCard title="Sebaran SRQ-20 per Site" sub="Responden &amp; kasus perlu tindak lanjut" accent="#2E86DE" empty={!perSite.length}><canvas ref={siteRef} /></ChartCard>
+      {/* TEMPLATE SERAGAM Monitoring MCU: 4 diagram berjajar.
+          Kotak KPI terpisah DIHAPUS — angkanya sudah tampil pada donut
+          (total di tengah + persentase per potongan). */}
+      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, flex: 1, minHeight: 0 }}>
+        <ChartCard title="SRQ-20" sub="Ambang ≥6 = perlu tindak lanjut" accent="#E74C3C" empty={!i.srq20.terisi}>
+          <MCUChart
+            type="doughnut"
+            labels={['Normal (<6)', 'Perlu tindak lanjut (≥6)']}
+            values={[Math.max(srqTerisi - srqPerlu, 0), srqPerlu]}
+            colors={['#00B894', '#E74C3C']}
+            legendLabel="Responden"
+            centerText={String(srqTerisi)}
+            percentLabels
+          />
+        </ChartCard>
+        <ChartCard title="DASS-21" sub="Keparahan tertinggi 3 subskala" accent="#F39C12" empty={!i.dass21.terisi}>
+          <MCUChart
+            type="doughnut"
+            labels={['Dalam batas', 'Perlu perhatian']}
+            values={[Math.max(dassTerisi - dassPerlu, 0), dassPerlu]}
+            colors={['#00B894', '#F39C12']}
+            legendLabel="Responden"
+            centerText={String(dassTerisi)}
+            percentLabels
+          />
+        </ChartCard>
+        <ChartCard title="Rata-rata Subskala DASS-21" sub="Depresi · ansietas · stres" accent="#3498DB" empty={!i.dass21.terisi}><canvas ref={subskalaRef} /></ChartCard>
+        <ChartCard title="SRQ-20 per Site" sub="Responden · perlu tindak lanjut" accent="#2E86DE" empty={!perSite.length}><canvas ref={siteRef} /></ChartCard>
       </div>
     </div>
   );

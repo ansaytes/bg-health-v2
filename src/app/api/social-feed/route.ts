@@ -22,7 +22,32 @@ let cachedNews: FeedItem[] | null = null;
 let cachedTalks: FeedItem[] | null = null;
 let cachedPodcasts: FeedItem[] | null = null;
 let cacheTime = 0;
-const CACHE_DURATION = 60 * 60 * 1000; // 1 jam (naik dari 15 menit)
+/**
+ * CACHE DUA LAPIS
+ *
+ * 1. Memori (`cachedNews` …) — cepat, tapi HILANG setiap server restart/deploy.
+ * 2. Supabase (`app_settings.instagram_feed`) — bertahan 24 jam.
+ *
+ * MASALAH YANG DISELESAIKAN
+ * Cache memori saja tidak cukup: setiap kali server dev di-restart atau
+ * deployment baru berjalan, memori kosong → RapidAPI dipanggil lagi → kuota
+ * habis dalam beberapa hari. Dengan cache 24 jam di database, RapidAPI
+ * dipanggil maksimal SEKALI per hari per instance, berapa pun seringnya
+ * halaman Home dibuka atau server restart.
+ *
+ * `revalidate=1` / `sync=1` tetap bisa memaksa pembaruan manual.
+ */
+const CACHE_DURATION = 60 * 60 * 1000; // memori: 1 jam
+const DB_CACHE_DURATION = 24 * 60 * 60 * 1000; // database: 24 jam (1× sehari)
+
+/** Apakah data di app_settings masih segar (< 24 jam)? */
+function databaseCacheSegar(value: unknown): value is { posts: FeedItem[]; updated_at: string } {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as { posts?: unknown; updated_at?: unknown };
+  if (!Array.isArray(v.posts) || typeof v.updated_at !== 'string') return false;
+  const umur = Date.now() - new Date(v.updated_at).getTime();
+  return Number.isFinite(umur) && umur >= 0 && umur < DB_CACHE_DURATION && v.posts.length > 0;
+}
 const YOUTUBE_RSS_CHANNEL_ID = 'UCtTDlDNQNYH3jv97LD9cuJg';
 const YOUTUBE_VIDEOS_PAGE_CHANNEL_ID = 'UCmwnNhvM3VomoVkAkjR5AoQ';
 
@@ -442,6 +467,21 @@ async function getInstagramPostsFromDatabase(): Promise<FeedItem[]> {
   return [];
 }
 
+/** Membaca metadata cache (updated_at) dari app_settings tanpa memuat ulang data. */
+async function bacaMetaCache(): Promise<unknown> {
+  if (!supabaseAdmin) return null;
+  try {
+    const { data } = await supabaseAdmin
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'instagram_feed')
+      .maybeSingle();
+    return data?.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function saveInstagramPostsToDatabase(posts: FeedItem[]): Promise<void> {
   if (!supabaseAdmin || posts.length === 0) return;
   
@@ -501,15 +541,24 @@ export async function GET(request: Request) {
     }
   }
 
-  // 1. Ambil data dari database Supabase (0 kuota RapidAPI, cepat dan stabil)
+  // 1. Baca cache Instagram dari Supabase.
   let igPosts = await getInstagramPostsFromDatabase();
 
-  // 2. Hanya panggil RapidAPI jika database benar-benar kosong ATAU user memicu ?sync=1
-  if (igPosts.length === 0 || forceSync) {
+  // 2. Panggil RapidAPI HANYA bila:
+  //    • cache database kosong / lebih tua dari 24 jam, ATAU
+  //    • admin meminta sinkron manual (?sync=1)
+  // Dengan aturan ini RapidAPI dipanggil maksimal 1× per hari, sehingga kuota
+  // tidak habis walau halaman Home dibuka berkali-kali atau server restart.
+  const segar = databaseCacheSegar(await bacaMetaCache());
+  if ((!segar && igPosts.length === 0) || forceSync) {
     const freshPosts = await fetchInstagramPosts();
     if (freshPosts.length > 0) {
       igPosts = freshPosts;
       await saveInstagramPostsToDatabase(freshPosts);
+    } else if (igPosts.length > 0) {
+      // Fetch gagal tetapi database punya data lama — tetap tampilkan, jangan
+      // sampai halaman Home kosong hanya karena kuota habis.
+      console.warn('[Instagram] Fetch gagal, memakai cache database terakhir.');
     }
   }
 

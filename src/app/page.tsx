@@ -21,6 +21,7 @@ import PakRegister from '@/components/pak/PakRegister';
 import AdminProKawan from '@/components/administrator/AdminProKawan';
 import MonitoringKaryawanSakit from '@/components/administrator/MonitoringKaryawanSakit';
 import InspeksiSanitasi from '@/components/administrator/InspeksiSanitasi';
+import InspeksiLingkungan from '@/components/administrator/InspeksiLingkungan';
 import GiziKerja from '@/components/administrator/GiziKerja';
 import SaranaKlinik from '@/components/administrator/SaranaKlinik';
 import InputJadwalMCU from '@/components/administrator/InputJadwalMCUModern';
@@ -93,7 +94,7 @@ function AdminLayananKuratif() {
  * dalam satu menu bertab (sama seperti sisi dashboard).
  */
 function AdminHigieneIndustri() {
-  const [tab, setTab] = useState<'hearing' | 'ergonomi' | 'sanitasi' | 'gizi'>('hearing');
+  const [tab, setTab] = useState<'hearing' | 'ergonomi' | 'sanitasi' | 'lingkungan' | 'gizi'>('hearing');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       <CenteredTabs
@@ -102,6 +103,9 @@ function AdminHigieneIndustri() {
           { key: 'ergonomi', label: 'Ergonomi' },
           // Higiene & Sanitasi (STD/005) + Gizi Kerja (AKG 2019) — SOP/028 poin 5.7
           { key: 'sanitasi', label: 'Higiene & Sanitasi' },
+          // Pencahayaan & kualitas udara dipisah: butuh titik ukur per ruang
+          // dan alat sendiri, tidak bisa satu angka per site.
+          { key: 'lingkungan', label: 'Pencahayaan & Udara' },
           { key: 'gizi', label: 'Gizi Kerja' },
         ]}
         active={tab}
@@ -112,6 +116,8 @@ function AdminHigieneIndustri() {
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {tab === 'sanitasi' ? (
           <InspeksiSanitasi />
+        ) : tab === 'lingkungan' ? (
+          <InspeksiLingkungan />
         ) : tab === 'gizi' ? (
           <GiziKerja />
         ) : tab === 'hearing' ? (

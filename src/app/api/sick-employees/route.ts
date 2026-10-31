@@ -1,5 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+
+/**
+ * Klien dengan SERVICE ROLE untuk membaca/menulis data.
+ *
+ * MENGAPA BUKAN KLIEN ANON
+ * Setelah RLS `sick_employees` diaktifkan dan `anon` dicabut grant-nya (untuk
+ * menutup kebocoran 795 baris data pribadi), klien anon TIDAK LAGI bisa
+ * membaca tabel itu — termasuk dari server, sehingga endpoint mengembalikan
+ * "permission denied for table sick_employees".
+ *
+ * Service role melewati RLS, jadi endpoint tetap berfungsi. Otorisasi tidak
+ * hilang: pemeriksaan login & role tetap dilakukan SEBELUM query (lihat
+ * periksaPemanggil), dan `anon` tetap tidak punya akses langsung ke tabel.
+ */
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
+const supabaseData = createClient(supabaseUrl, serviceKey || anonKey);
 
 /**
  * Endpoint rekap bulanan karyawan sakit.
@@ -54,7 +73,7 @@ export async function GET(request: NextRequest) {
     const periodStart = searchParams.get('period_start') || '';
     const periodEnd = searchParams.get('period_end') || '';
 
-    let query = supabase
+    let query = supabaseData
       .from('sick_employees')
       .select('*')
       .order('jobsite', { ascending: true })
@@ -111,7 +130,7 @@ export async function POST(request: NextRequest) {
       is_pak: is_pak === 'Ya' || is_pak === true,
     };
 
-    const { data, error } = await supabase.from('sick_employees').insert(row).select();
+    const { data, error } = await supabaseData.from('sick_employees').insert(row).select();
     if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     return NextResponse.json({ success: true, data });
   } catch (err) {

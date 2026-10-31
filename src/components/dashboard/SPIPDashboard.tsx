@@ -81,6 +81,16 @@ export default function SPIPDashboard() {
   const r = data.ringkasan;
   // Site terbanyak yang belum lengkap (10 teratas) — peringkat terendah dulu.
   const siteRendah = data.perSite.slice(0, 10);
+  // Dua panel “apa yang harus dikerjakan” — dihitung dari data yang sudah ada.
+  const itemKurang = data.perKategori
+    .filter((k) => k.belum > 0)
+    .sort((a, b) => b.belum - a.belum)
+    .slice(0, 8)
+    .map((k) => ({ nama: k.kategori, belum: k.belum }));
+  const kalibrasiList = (data.alatKalibrasiLewat ?? []).slice(0, 8).map((a) => ({
+    nama: `${a.nama} (${a.site})`,
+    hari: a.hari,
+  }));
 
   return (
     <div className="dashboard mcu-live-dashboard" style={{ overflow: 'hidden', gap: 8 }}>
@@ -169,6 +179,40 @@ export default function SPIPDashboard() {
               colors={data.perKategori.map((_, i) => PALET_BAR[i % PALET_BAR.length])}
               horizontal
               legendLabel="Kelengkapan (%)"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Baris 3 — kekurangan per item & kalibrasi kedaluwarsa.
+          Dua panel ini menjawab “apa yang harus dikerjakan”, bukan hanya
+          “berapa persen”. Sebelumnya data ini sudah tersedia di API tetapi
+          tidak pernah ditampilkan. */}
+      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8, flex: 1, minHeight: 0 }}>
+        <div className="card mcu-dashboard-card">
+          <div className="card-head"><div><h2>Item Paling Banyak Belum Tersedia</h2><p>Jumlah site yang belum menyediakan</p></div></div>
+          <div className="mcu-dashboard-chart">
+            <MCUChart
+              type="bar"
+              labels={itemKurang.map((i) => i.nama)}
+              values={itemKurang.map((i) => i.belum)}
+              colors={itemKurang.map((_, i) => PALET_BAR[i % PALET_BAR.length])}
+              horizontal
+              legendLabel="Site"
+            />
+          </div>
+        </div>
+
+        <div className="card mcu-dashboard-card">
+          <div className="card-head"><div><h2>Alat Kalibrasi Kedaluwarsa</h2><p>Lebih dari 12 bulan sejak kalibrasi terakhir</p></div></div>
+          <div className="mcu-dashboard-chart">
+            <MCUChart
+              type="bar"
+              labels={kalibrasiList.map((k) => k.nama)}
+              values={kalibrasiList.map((k) => k.hari)}
+              colors={kalibrasiList.map((_, i) => PALET_BAR[i % PALET_BAR.length])}
+              horizontal
+              legendLabel="Hari"
             />
           </div>
         </div>

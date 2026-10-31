@@ -182,8 +182,9 @@ async function buildRows(): Promise<Row[]> {
   // --- susun baris
   const rows: Row[] = employees.map(emp => {
     const jabatan = String(emp.job_position || '').trim();
-    const exempt = isExemptJabatan(jabatan);
     const site = titleCase(emp.site_name);
+    // Head Office TIDAK mengenal pengecualian — semua karyawan wajib MCU.
+    const exempt = isExemptJabatan(jabatan, site);
 
     const valid = (recordsByEmployee.get(emp) || [])
       .map(rec => ({ rec, type: classifyMcuType(rec.status_mcu), date: parseDate(rec.tgl_mcu) }))

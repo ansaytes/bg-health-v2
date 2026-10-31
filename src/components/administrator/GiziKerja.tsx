@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { authFetch } from '@/lib/api-client';
 import { useMCUStore } from '@/lib/store';
 import { FAKTOR_AKTIVITAS, type BebanKerja } from '@/lib/gizi-kerja';
+import EmployeeLookupInput from '@/components/administrator/EmployeeLookupInput';
 
 interface Hasil {
   bmr: number; kebutuhanKkal: number; faktorAktivitas: number;
@@ -81,38 +82,36 @@ export default function GiziKerja() {
     <div className="dashboard" style={{ overflowY: 'auto', overflowX: 'hidden' }}>
       <div className="kunjungan-top-bar" style={{ flexShrink: 0 }}>
         <div className="kunjungan-filter-bar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, height: 28, padding: '0 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)' }}>
-            <Search size={13} color="var(--muted-foreground)" />
-            <input
+          {/* Pencarian identitas: NIK Karyawan, NIK KTP, atau NAMA — perilakunya
+              sama dengan kotak pencarian di halaman Review MCU. */}
+          <div style={{ flex: '1 1 280px', minWidth: 220, maxWidth: 360 }}>
+            <EmployeeLookupInput
               value={nik}
-              onChange={(e) => setNik(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') void hitung(); }}
-              placeholder="NIK karyawan"
-              style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 11, color: 'var(--foreground)', width: 160 }}
+              onChange={setNik}
+              onEmployeeFound={(emp) => {
+                setNik(String(emp.nik ?? nik));
+              }}
+              onAutoFill={(field, val) => { if (field === 'nik') setNik(val); }}
+              placeholder="Cari NIK Karyawan, NIK KTP, atau nama"
+              required={false}
             />
           </div>
-          <select className="admin-filter-select" value={beban} onChange={(e) => setBeban(e.target.value as BebanKerja)}>
-            <option value="">Beban kerja (otomatis dari jabatan)</option>
+          <select className="admin-filter-select" value={beban} onChange={(e) => setBeban(e.target.value as BebanKerja)} title="Beban kerja">
+            <option value="">Beban kerja (otomatis)</option>
             {(Object.keys(FAKTOR_AKTIVITAS) as BebanKerja[]).map((b) => (
-              <option key={b} value={b}>{FAKTOR_AKTIVITAS[b].label} — faktor {FAKTOR_AKTIVITAS[b].faktor}</option>
+              <option key={b} value={b}>{FAKTOR_AKTIVITAS[b].label}</option>
             ))}
           </select>
-          <Button size="sm" disabled={memuat || !nik.trim()} onClick={() => void hitung()} style={{ gap: 5, height: 28 }}>
-            {memuat ? <Loader2 size={12} className="animate-spin" /> : <Calculator size={12} />} Hitung
-          </Button>
+          <button type="button" onClick={() => void hitung()} disabled={memuat || !nik.trim()} className="mcu-dashboard-refresh">
+            {memuat ? <Loader2 size={13} className="animate-spin" /> : <Calculator size={13} />} Hitung
+          </button>
           <button type="button" onClick={() => void muatRekap()} className="mcu-dashboard-refresh">
             <RefreshCw size={13} /> Refresh Rekap
           </button>
         </div>
       </div>
 
-      <div style={{ flexShrink: 0, display: 'flex', gap: 5, alignItems: 'flex-start', fontSize: 10, color: 'var(--muted-foreground)' }}>
-        <Info size={11} style={{ flexShrink: 0, marginTop: 2 }} />
-        <span>
-          Acuan: <b>AKG Kemenkes RI 2019</b> + Mifflin–St Jeor, faktor aktivitas menurut beban kerja
-          (Permenaker 5/2018). Untuk <b>perencanaan menu kantin &amp; program gizi kerja</b> — bukan preskripsi diet.
-        </span>
-      </div>
+
 
       {error && (
         <div style={{ flexShrink: 0, padding: '7px 12px', borderRadius: 8, background: 'rgba(255,45,45,0.08)', color: '#b3261e', fontSize: 10.5 }}>

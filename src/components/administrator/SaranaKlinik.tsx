@@ -49,7 +49,9 @@ const KATEGORI_LABEL: Record<string, string> = {
   peralatan_medis: 'Peralatan Medis',
   sarana_penunjang: 'Sarana Penunjang',
   alat_evakuasi: 'Alat Evakuasi',
-  obat: 'Obat',
+  // Kategori 'obat' sengaja TIDAK ditampilkan: persediaan obat & BHP sudah
+  // dikelola di halaman Inventory dengan batch, ED, dan pemakaian. Menampilkannya
+  // lagi di sini hanya menghasilkan dua angka berbeda.
 };
 
 const STATUS_META: Record<ItemSarana['status'], { label: string; warna: string }> = {
@@ -165,7 +167,7 @@ export default function SaranaKlinik() {
 
       <div style={{ flexShrink: 0, fontSize: 10, color: 'var(--muted-foreground)', display: 'flex', gap: 5, alignItems: 'center' }}>
         <AlertTriangle size={11} />
-        Acuan: BG/QSHE/SOP/028 poin 5.5. Item di luar daftar boleh ditambahkan manual — sesuaikan dengan kondisi lapangan.
+        Item boleh ditambahkan manual sesuai kondisi lapangan.
       </div>
 
       {error && (

@@ -1,3 +1,5 @@
+import { supabase } from '@/lib/supabase';
+
 interface DashboardCacheEntry {
   expiresAt: number;
   request: Promise<unknown>;
@@ -5,6 +7,26 @@ interface DashboardCacheEntry {
 
 const DASHBOARD_CACHE_TTL_MS = 2 * 60 * 1000;
 const dashboardCache = new Map<string, DashboardCacheEntry>();
+
+/**
+ * Memuat data dashboard dengan menyertakan token sesi.
+ *
+ * MENGAPA TOKEN DIPERLUKAN DI SINI
+ * Endpoint seperti `/api/sick-employees` sekarang MEWAJIBKAN login (sebelumnya
+ * terbuka dan bisa diunduh siapa saja). Tanpa header Authorization, permintaan
+ * dari dashboard mendapat 401 dan grafik menjadi kosong — inilah sebabnya
+ * "Peringkat Karyawan Sakit" tidak menampilkan data meski filter sudah benar.
+ */
+async function tokenSesi(): Promise<string | null> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) return session.access_token;
+  } catch {
+    // Abaikan — lanjut ke fallback preview.
+  }
+  // Mode preview (hanya aktif bila env diset): token khusus yang diterima server.
+  return process.env.NEXT_PUBLIC_PREVIEW_ROLE ? 'preview-access-token' : null;
+}
 
 export function fetchDashboardData<T>(url: string, force = false): Promise<T> {
   const now = Date.now();
@@ -15,7 +37,10 @@ export function fetchDashboardData<T>(url: string, force = false): Promise<T> {
   if (force) dashboardCache.delete(url);
 
   const request = (async () => {
-    const response = await fetch(url);
+    const token = await tokenSesi();
+    const response = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
     const payload: unknown = await response.json();
     if (!response.ok) {
       const message = typeof payload === 'object' && payload !== null && 'error' in payload

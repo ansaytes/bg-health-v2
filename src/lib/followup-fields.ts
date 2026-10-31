@@ -119,7 +119,9 @@ const BUKAN_PARAMETER = new Set([
   'audInterp', 'spiInterp', 'chestXR', 'lumboXr', 'defWarna', 'lapangPandang',
   'ul', 'catatanFisik',
   // Status administratif & hasil turunan — bukan parameter klinis
-  'statusMcu', 'kesVendor', 'perluFu', 'rekFu', 'itemFu',
+  // `statusMCU` (huruf besar) adalah id sebenarnya di MCU_FIELDS — jangan
+  // hanya menulis `statusMcu`, karena filter bersifat case-sensitive.
+  'statusMcu', 'statusMCU', 'kesVendor', 'perluFu', 'rekFu', 'itemFu',
   // Serologi yang hanya dibaca sekali (bukan diukur ulang per kontrol).
   // HBsAg sendiri dinilai lewat klasifikasi khusus di atas.
   'hbsag', 'antiHbs', 'vdrl', 'tpha', 'hiv',
@@ -290,6 +292,9 @@ export function tentukanFieldTindakLanjut(
 
     // ── Sumber 2: di luar rentang standar Indonesia ──────────────
     if (field.type === 'number') {
+      // PENTING: `angkaDari()` sudah menangani desimal Indonesia ('25,6') dan
+      // internasional ('25.6'). Tanpa itu, '25.6' dibaca NaN sehingga BMI 25,6
+      // dianggap ABNORMAL padahal masih dalam rentang.
       const angka = angkaDari(String(nilaiMcu));
       const cek = diLuarRentang(angka, field, gender);
       if (cek?.abnormal) {
@@ -370,13 +375,13 @@ export function tentukanFieldTindakLanjut(
     },
     {
       sumber: 'abnormal',
-      judul: 'Temuan Abnormal (Standar Indonesia)',
-      keterangan: 'Di luar rentang rujukan laboratorium/klinis — tidak selalu menjadi peserta ProKawan',
+      judul: 'Temuan Abnormal',
+      keterangan: 'Di luar rentang rujukan — tidak selalu menjadi peserta ProKawan',
       fields: daftar.filter((f) => f.sumber === 'abnormal'),
     },
     {
       sumber: 'engine',
-      judul: 'Temuan Abnormal Lain',
+      judul: 'Temuan Lain',
       keterangan: 'Parameter dengan nilai di luar kriteria normal',
       fields: daftar.filter((f) => f.sumber === 'engine'),
     },

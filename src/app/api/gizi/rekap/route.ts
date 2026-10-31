@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCaller } from '@/lib/questionnaire-store';
 import { adminClient } from '@/lib/questionnaire-store';
 import { hitungKebutuhanKalori, sarankanBebanKerja, type BebanKerja } from '@/lib/gizi-kerja';
+import { siteDihitung } from '@/lib/site-filter';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,6 +54,8 @@ export async function GET(req: NextRequest) {
 
   for (const r of terbaru.values()) {
     const site = String(r.site ?? '').trim();
+    // Site "Batch" = calon karyawan, tidak dihitung.
+    if (!siteDihitung(site)) continue;
     if (siteFilter && site.toLowerCase() !== siteFilter.toLowerCase()) continue;
 
     const berat = Number(r.bb ?? 0);

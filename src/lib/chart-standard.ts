@@ -143,11 +143,30 @@ export function gradientBatang(
  * Chart.js memanggil fungsi ini untuk setiap batang; `ctx.chart` memberi area
  * plotting sehingga gradient tepat dari dasar sampai ujung batang.
  */
+/**
+ * Tipe pengembalian = fungsi Scriptable Chart.js untuk `backgroundColor`.
+ *
+ * CATATAN TIPE (penting — jangan diubah menjadi `any`):
+ *  • Tipe `Color` Chart.js tidak diekspor dari namespace publiknya, tetapi
+ *    callback Scriptable bersifat KOVARIAN pada tipe kembalian. Mengembalikan
+ *    `CanvasGradient | string` membuat TS menolak seluruh objek chart
+ *    (`Chart<'bar'>` tidak assignable ke `Chart<keyof ChartTypeRegistry>`).
+ *  • Karena itu fungsi dianotasi `unknown`, yang diterima semua tipe Color.
+ *    Nilai nyata tetap CanvasGradient / string, jadi runtime tidak berubah.
+ */
+export interface KonteksWarnaChart {
+  chart: {
+    ctx: CanvasRenderingContext2D;
+    chartArea?: { left: number; right: number; top: number; bottom: number };
+  };
+  dataIndex: number;
+}
+
 export function gradientBatangArray(
   colors: string[],
   horizontal: boolean,
-): (context: { chart: { ctx: CanvasRenderingContext2D; chartArea?: { left: number; right: number; top: number; bottom: number } }; dataIndex: number }) => CanvasGradient | string {
-  return (context) => {
+): (context: KonteksWarnaChart) => unknown {
+  return (context: KonteksWarnaChart) => {
     const area = context.chart.chartArea;
     if (!area) return colors[context.dataIndex] ?? colors[0] ?? '#778899';
     const color = colors[context.dataIndex] ?? colors[colors.length - 1] ?? '#778899';
@@ -235,9 +254,14 @@ export function skalaBar(opts: {
       color: opts.textColor,
       font: { size: 9.5, family: font },
       autoSkip: false,
+      // `crossAlign: 'far'` menempelkan label ke tepi sumbu agar tidak terpotong
+      // di sisi kiri kartu pada diagram batang horizontal.
+      crossAlign: 'far' as const,
       callback: ((value: string | number) => {
         const label = opts.labelOf ? opts.labelOf(Number(value)) : String(value);
-        return label.length > 22 ? `${label.slice(0, 20)}…` : label;
+        // Batas 22 karakter terlalu pendek untuk nama karyawan/departemen;
+        // 30 masih muat pada kartu selebar dashboard tanpa memotong kata.
+        return label.length > 30 ? `${label.slice(0, 28)}…` : label;
       }) as never,
     },
     // Keterangan sumbu wajib ada: tanpa ini banyak diagram tampil sebagai
@@ -250,6 +274,10 @@ export function skalaBar(opts: {
     beginAtZero: true,
     max: opts.max,
     suggestedMax: opts.suggestedMax,
+    // Ruang 18% di ujung sumbu nilai agar angka di ujung batang terpanjang
+    // tidak terpotong tepi kartu. Chart.js melarang `grace` digabung dengan
+    // `max`, jadi grace hanya dipakai bila `max` tidak ditentukan.
+    ...(opts.max === undefined ? { grace: '18%' } : {}),
     grid: { color: opts.gridColor },
     ticks: { color: opts.textColor, font: { size: 9, family: font }, precision: 0 as const },
     title: opts.valueTitle

@@ -13,12 +13,13 @@
 // bukan dianggap patuh.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, ClipboardCheck, Loader2, RefreshCw, Save, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ClipboardCheck, Loader2, RefreshCw, Save, UserRound, XCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authFetch } from '@/lib/api-client';
 import { useMCUStore } from '@/lib/store';
+import { useAuth } from '@/lib/auth-context';
 import { ITEM_INSPEKSI, KATEGORI_LABEL, type KategoriInspeksi, type NilaiItem } from '@/lib/sanitasi-inspeksi';
 
 const SITES = [
@@ -50,9 +51,13 @@ interface Riwayat {
 
 export default function InspeksiSanitasi() {
   const store = useMCUStore();
+  const { profile } = useAuth();
+  const namaInspektur = profile?.full_name || profile?.username || '—';
   const [site, setSite] = useState('Head Office');
   const [tanggal, setTanggal] = useState(new Date().toISOString().slice(0, 10));
-  const [inspektur, setInspektur] = useState('');
+  // Nama inspektur diambil otomatis dari user yang sedang login dan TIDAK dapat
+  // diubah manual — ini jejak audit siapa yang mengisi inspeksi. Bila nama
+  // profil kosong, dipakai username.
   const [nilai, setNilai] = useState<Record<string, NilaiItem>>({});
   const [riwayat, setRiwayat] = useState<Riwayat[]>([]);
   const [hasil, setHasil] = useState<HasilItem[] | null>(null);
@@ -60,13 +65,24 @@ export default function InspeksiSanitasi() {
   const [loading, setLoading] = useState(true);
   const [menyimpan, setMenyimpan] = useState(false);
   const [tabelSiap, setTabelSiap] = useState(true);
+  // Hasil pengukuran kebisingan yang SUDAH ADA di modul Hearing Conservation.
+  // Diambil otomatis, bukan diinput ulang — lihat /api/sanitasi/kebisingan.
+  const [kebisingan, setKebisingan] = useState<{
+    tersedia: boolean;
+    data: { area: string; tanggal: string | null; leqMax: number; jumlahTitik: number }[];
+    ringkasan?: { jumlahArea: number; leqTertinggi: number | null; areaDiAtasNAB: number };
+  } | null>(null);
 
   const loadRiwayat = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await authFetch(`/api/sanitasi?site=${encodeURIComponent(site)}`);
+      const [r, kb] = await Promise.all([
+        authFetch(`/api/sanitasi?site=${encodeURIComponent(site)}`),
+        authFetch(`/api/sanitasi/kebisingan?site=${encodeURIComponent(site)}`).catch(() => null),
+      ]);
       setRiwayat((r.data ?? []) as Riwayat[]);
       setTabelSiap(r.tabelSiap !== false);
+      setKebisingan(kb as never);
     } catch {
       setRiwayat([]);
     } finally {
@@ -91,7 +107,7 @@ export default function InspeksiSanitasi() {
     try {
       const r = await authFetch('/api/sanitasi', {
         method: 'POST',
-        body: JSON.stringify({ site, tanggal, inspektur, nilai }),
+        body: JSON.stringify({ site, tanggal, inspektur: namaInspektur, nilai }),
       });
       setRingkasan(r.ringkasan as Ringkasan);
       setHasil(r.items as HasilItem[]);
@@ -119,7 +135,19 @@ export default function InspeksiSanitasi() {
             {SITES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
           <Input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} className="h-7 w-[150px] rounded-lg text-xs" />
-          <Input value={inspektur} onChange={(e) => setInspektur(e.target.value)} placeholder="Nama inspektur" className="h-7 w-[160px] rounded-lg text-xs" />
+          <div
+            title="Diisi otomatis dari akun yang sedang login"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5, height: 28, padding: '0 10px',
+              borderRadius: 7, border: '1px solid var(--border)', background: 'var(--muted)',
+              fontSize: 11, color: 'var(--muted-foreground)', minWidth: 150,
+            }}
+          >
+            <UserRound size={12} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {namaInspektur}
+            </span>
+          </div>
           <button type="button" onClick={() => void loadRiwayat()} disabled={loading} className="mcu-dashboard-refresh">
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
@@ -143,8 +171,64 @@ export default function InspeksiSanitasi() {
 
       <div style={{ flexShrink: 0, fontSize: 10, color: 'var(--muted-foreground)', display: 'flex', gap: 5, alignItems: 'center' }}>
         <AlertTriangle size={11} />
-        Acuan: BG/QSHE/STD/005 Rev.001 (Permenkes 48/2016 & Permenaker 5/2018). Item kosong = belum dinilai, <b>tidak</b> dianggap patuh.
+        Item kosong = belum dinilai, <b>tidak</b> dianggap patuh.
       </div>
+
+      {/* Kebisingan — OTOMATIS dari Hearing Conservation, tidak diinput ulang.
+          Perluasan ini menjawab pertanyaan: "bukankah kebisingan sudah terbaca
+          dari tab Hearing Conservation?" — ya, dan sekarang ditampilkan di sini. */}
+      {kebisingan?.tersedia && (
+        <div className="card" style={{ padding: '8px 10px', flexShrink: 0 }}>
+          <div className="card-head" style={{ marginBottom: 6 }}>
+            <span style={{ width: 3, height: 16, borderRadius: 2, background: '#3498DB', flexShrink: 0 }} />
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h2 style={{ fontSize: 12 }}>Kebisingan Area — dari Hearing Conservation</h2>
+              <p style={{ fontSize: 9 }}>
+                Terbaca otomatis dari hasil pengukuran terakhir. Tidak perlu diisi ulang di sini.
+              </p>
+            </div>
+            {kebisingan.ringkasan && (
+              <div style={{ display: 'flex', gap: 10, fontSize: 9.5, flexShrink: 0 }}>
+                <span>{kebisingan.ringkasan.jumlahArea} area</span>
+                <span>Leq tertinggi <b>{kebisingan.ringkasan.leqTertinggi ?? '—'} dB(A)</b></span>
+                <span style={{ color: kebisingan.ringkasan.areaDiAtasNAB ? '#FF2D2D' : '#00B894' }}>
+                  {kebisingan.ringkasan.areaDiAtasNAB} di atas NAB
+                </span>
+              </div>
+            )}
+          </div>
+          {kebisingan.data.length ? (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    {['Area', 'Tanggal ukur', 'Leq maks', 'Titik', 'Status NAB'].map((h) => (
+                      <th key={h} style={{ padding: '4px 7px', borderBottom: '1px solid var(--border)', fontSize: 9, textTransform: 'uppercase', color: 'var(--muted-foreground)', fontWeight: 700, textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {kebisingan.data.slice(0, 8).map((k) => (
+                    <tr key={`${k.area}-${k.tanggal}`}>
+                      <td style={TD}>{k.area}</td>
+                      <td style={TD}>{k.tanggal ? new Date(`${k.tanggal}T00:00:00`).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
+                      <td style={{ ...TD, fontWeight: 700 }}>{k.leqMax} dB(A)</td>
+                      <td style={TD}>{k.jumlahTitik}</td>
+                      <td style={{ ...TD, fontWeight: 700, color: k.leqMax > 85 ? '#FF2D2D' : '#00B894' }}>
+                        {k.leqMax > 85 ? 'Di atas NAB' : 'Aman'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: 0 }}>
+              Belum ada pengukuran kebisingan tercatat untuk site ini.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Form per kategori */}
       {[...perKategori.entries()].map(([kategori, items]) => {

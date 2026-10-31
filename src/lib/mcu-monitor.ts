@@ -229,12 +229,26 @@ export function getJabatanRank(jab: unknown): number {
 // ------------------------------------------------------------ pengecualian --
 
 /**
- * Jabatan yang tidak memerlukan Mine Permit.
+ * Jabatan yang TIDAK memerlukan Mine Permit (Exempt).
+ *
+ * ATURAN PENTING — HEAD OFFICE SELALU DIKECUALIKAN DARI PENGECUALIAN.
+ * Seluruh karyawan Head Office WAJIB menjalani MCU, tanpa memandang jabatan.
+ * Karena itu "Cleaner" atau "Security" yang bertugas di HO tetap termasuk
+ * populasi MCU, sedangkan jabatan yang sama di jobsite tidak.
+ *
  * Skrip lama memakai substring (mis. "sec" ikut mengecualikan "Secretary"),
  * di sini dipakai batas kata supaya hanya jabatan yang dimaksud yang terkena.
  */
 const EXEMPT_REGEX = /\b(wakar|cook|masak|juru masak|clean|cleaning|cs|security|sec)\b/;
-export function isExemptJabatan(jabatan: unknown): boolean {
+
+export function isHeadOffice(site: unknown): boolean {
+  const s = String(site ?? '').trim().toLowerCase();
+  return s === 'head office' || s === 'ho' || s === 'headoffice';
+}
+
+export function isExemptJabatan(jabatan: unknown, site?: unknown): boolean {
+  // Head Office: tidak ada pengecualian — semua wajib MCU.
+  if (site !== undefined && isHeadOffice(site)) return false;
   return EXEMPT_REGEX.test(String(jabatan ?? '').toLowerCase());
 }
 

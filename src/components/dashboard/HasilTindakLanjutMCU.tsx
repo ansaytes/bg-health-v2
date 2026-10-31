@@ -95,13 +95,31 @@ export default function HasilTindakLanjutMCU() {
     && (!clients.length || (row.client && clients.includes(row.client))),
   ), [rows, site, area, clients]);
 
-  const followUpSummary = useMemo(() => ({
-    total: filtered.length,
-    needs: filtered.filter(row => row.status_follow_up === 'Perlu FU').length,
-    done: filtered.filter(row => row.status_follow_up === 'Selesai FU' || row.status_follow_up === 'Tidak Perlu FU').length,
-    noReview: filtered.filter(row => row.status_follow_up === 'Belum Review').length,
-    exempt: filtered.filter(row => row.status_follow_up === 'Exempt' || row.exempt).length,
-  }), [filtered]);
+  /**
+   * Ringkasan tindak lanjut.
+   *
+   * DEFINISI TOTAL
+   *  • `populasi` = seluruh karyawan Mining aktif (termasuk Exempt).
+   *  • `total`    = POPULASI MCU = karyawan yang WAJIB MCU (populasi − Exempt).
+   *    Angka inilah yang harus sebanding dengan grafik Status MCU, karena
+   *    Exempt memang tidak masuk hitungan Valid/Expired/No Data.
+   *  • `exempt`   = ditampilkan terpisah di baris total supaya jumlahnya jelas.
+   *
+   * Head Office TIDAK mengenal Exempt (semua wajib MCU) — lihat
+   * `isExemptJabatan(jabatan, site)` di lib/mcu-monitor.ts.
+   */
+  const followUpSummary = useMemo(() => {
+    const exempt = filtered.filter(row => row.exempt).length;
+    const wajibMcu = filtered.filter(row => !row.exempt);
+    return {
+      populasi: filtered.length,
+      total: wajibMcu.length,
+      needs: wajibMcu.filter(row => row.status_follow_up === 'Perlu FU').length,
+      done: wajibMcu.filter(row => row.status_follow_up === 'Selesai FU' || row.status_follow_up === 'Tidak Perlu FU').length,
+      noReview: wajibMcu.filter(row => row.status_follow_up === 'Belum Review').length,
+      exempt,
+    };
+  }, [filtered]);
 
   const diseases = useMemo(() => {
     const counts = new Map<string, number>();
@@ -213,7 +231,9 @@ export default function HasilTindakLanjutMCU() {
           onClientsChange={value => { setClients(value); setArea(''); setSite('All Site'); }}
         />
         <div className="mcu-total-bar">
-          <span className="mcu-total-label">Total:</span>
+          <span className="mcu-total-label">Total Mining Aktif:</span>
+          <span className="mcu-total-num">{followUpSummary.populasi}</span>
+          <span className="mcu-total-label" style={{ marginLeft: 6 }}>Wajib MCU:</span>
           <span className="mcu-total-num">{followUpSummary.total}</span>
           <span className="mcu-total-fu" style={{ color: '#B8860B' }}>Perlu FU: {followUpSummary.needs}</span>
           <span className="mcu-total-done">Selesai FU: {followUpSummary.done}</span>

@@ -18,7 +18,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  AlertTriangle, CalendarClock, Calculator, CheckCircle2, ExternalLink,
+  AlertTriangle, CalendarClock, Calculator, CheckCircle2, Copy, ExternalLink,
   Loader2, RefreshCw, Search, Save, UserRound, XCircle, MessageCircle,
 } from 'lucide-react';
 
@@ -762,6 +762,7 @@ function FormTindakLanjut({ peserta, onSelesai }: {
   const [catatan, setCatatan] = useState('');
   const [menyimpan, setMenyimpan] = useState(false);
   const [terbuka, setTerbuka] = useState<Record<string, boolean>>({});
+  const [tersalin, setTersalin] = useState(false);
   const [hasilSimpan, setHasilSimpan] = useState<{
     zonaSebelum: string | null; zonaSesudah: string; arah: string; ringkasanSurat: string;
   } | null>(null);
@@ -905,7 +906,7 @@ function FormTindakLanjut({ peserta, onSelesai }: {
         </div>
         {data.zonaEfektif?.frekuensi && (
           <p style={{ fontSize: 9.5, color: 'var(--muted-foreground)', margin: '6px 0 0' }}>
-            Frekuensi mengikuti nilai terbaru: <b>{data.zonaEfektif.frekuensi}</b> — baseline MCU tidak diubah.
+            Frekuensi mengikuti nilai terbaru: <b>{data.zonaEfektif.frekuensi}</b>
           </p>
         )}
       </div>
@@ -916,7 +917,6 @@ function FormTindakLanjut({ peserta, onSelesai }: {
           <span style={{ width: 3, height: 18, borderRadius: 2, background: '#ff4d00', flexShrink: 0 }} />
           <div style={{ minWidth: 0 }}>
             <h2 style={{ fontSize: 12 }}>Hasil Tindak Lanjut</h2>
-            <p style={{ fontSize: 9.5 }}>Isi yang diperiksa ulang. Field kosong memakai nilai baseline.</p>
           </div>
         </div>
 
@@ -1021,13 +1021,38 @@ function FormTindakLanjut({ peserta, onSelesai }: {
 
         <label className="flex flex-col gap-1" style={{ marginBottom: 8 }}>
           <span className="text-[10px] font-semibold text-muted-foreground">Catatan dokter / paramedis</span>
-          <Input value={catatan} onChange={(e) => setCatatan(e.target.value)} placeholder="Ringkasan tindak lanjut" className="h-8 rounded-lg text-sm" />
+          <Input value={catatan} onChange={(e) => setCatatan(e.target.value)} placeholder="" className="h-8 rounded-lg text-sm" />
         </label>
 
-        {/* Pratinjau surat kontrol */}
+        {/* Pratinjau surat kontrol — bisa disalin untuk ditempel ke surat pengantar */}
         <div style={{ padding: '8px 10px', borderRadius: 8, background: 'var(--muted)', fontSize: 10.5, lineHeight: 1.5 }}>
-          <div style={{ fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)', marginBottom: 3 }}>
-            Teks surat pengantar
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+            <span style={{ fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>
+              Teks surat pengantar
+            </span>
+            <button
+              type="button"
+              onClick={async () => {
+                const teks = pratinjauSurat || data.ringkasanSurat || '';
+                if (!teks) return;
+                try {
+                  await navigator.clipboard.writeText(teks);
+                  setTersalin(true);
+                  setTimeout(() => setTersalin(false), 1800);
+                } catch {
+                  store.showToast('Gagal menyalin — salin manual dari kotak teks', 'error');
+                }
+              }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+                fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
+                border: '1px solid var(--border)', background: 'var(--card)',
+                color: tersalin ? '#00B894' : 'var(--foreground)',
+              }}
+            >
+              {tersalin ? <CheckCircle2 size={11} /> : <Copy size={11} />}
+              {tersalin ? 'Tersalin' : 'Salin'}
+            </button>
           </div>
           <div style={{ fontFamily: 'Consolas, monospace', wordBreak: 'break-word' }}>
             {pratinjauSurat || data.ringkasanSurat || '—'}

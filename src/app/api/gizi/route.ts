@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCaller } from '@/lib/questionnaire-store';
 import { adminClient } from '@/lib/questionnaire-store';
 import { hitungKebutuhanKalori, sarankanBebanKerja, type BebanKerja } from '@/lib/gizi-kerja';
+import { siteDihitung } from '@/lib/site-filter';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +45,10 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   const rec = rows?.[0];
   if (!rec) return NextResponse.json({ error: 'Data MCU karyawan tidak ditemukan' }, { status: 404 });
+  // Site "Batch" = calon karyawan, bukan karyawan.
+  if (!siteDihitung(rec.site)) {
+    return NextResponse.json({ error: 'Karyawan site Batch tidak dihitung sebagai karyawan aktif' }, { status: 400 });
+  }
 
   const berat = Number(rec.bb ?? 0);
   const tinggi = Number(rec.tb ?? 0);

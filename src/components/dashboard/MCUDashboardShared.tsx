@@ -388,11 +388,15 @@ export function MCUChart({
         //  - donut : STANDAR_ANIMASI_DONUT (berputar searah jarum jam)
         //  - bar   : STANDAR_ANIMASI_BAR (tumbuh dari garis dasar, regrow)
         animation: animation as ChartOptions['animation'],
-        ...(type === 'doughnut' ? { cutout: '62%', radius: '82%', rotation: 0, circumference: 360 } : {}),
+        // Donut diperbesar: cutout 52% (lubang lebih kecil) & radius 96% agar
+        // memakai seluruh ruang kartu. Legend dipindah ke bawah karena posisi
+        // kanan memakan ±35% lebar kartu sehingga donut menyusut.
+        ...(type === 'doughnut' ? { cutout: '52%', radius: '96%', rotation: 0, circumference: 360 } : {}),
         plugins: {
           legend: {
             display: type === 'doughnut',
-            position: type === 'doughnut' ? 'right' : 'bottom',
+            // Legend di bawah untuk donut: posisi kanan menyusutkan donut.
+            position: 'bottom',
             labels: { color: textColor, font: { size: 10, weight: 'bold', family: fontFamily }, boxWidth: 12, usePointStyle: true },
           },
           tooltip: {
@@ -407,9 +411,10 @@ export function MCUChart({
                 return ` ${context.label}: ${value}${suffix}`;
               },
             },
-            // Angka total ditulis di tengah cincin; tooltip tetap disembunyikan
-            // karena tidak ada nilai yang perlu dibaca di area tengah.
-            enabled: !(type === 'doughnut' && centerText),
+            // Tooltip SELALU aktif, termasuk donut yang punya teks total di
+            // tengah. Angka total digambar sebagai teks canvas (bukan tooltip),
+            // jadi keduanya tidak bertabrakan dan pengguna tetap bisa melihat
+            // nilai + persentase tiap potongan.
           },
           datalabels: {
             // ── Perbaikan "label No Data tidak terlihat" ───────────────────
