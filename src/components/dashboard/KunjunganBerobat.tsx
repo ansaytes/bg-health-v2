@@ -519,6 +519,7 @@ export default function KunjunganBerobat() {
             grid: { display: false },
             border: { display: false },
             ticks: {
+              autoSkip: false,
               color: textColor,
               font: { size: 10, family: fontFamily },
               callback: function(val) {

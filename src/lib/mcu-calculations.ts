@@ -78,7 +78,8 @@ function buildFormulaFollowUp(values: MCUValues) {
   add(Boolean(values.defWarna && !['Normal', 'N/A'].includes(text(values.defWarna))), `Defisiensi Persepsi Warna : ${text(values.defWarna)}`);
   add(abnormal(values.lapangPandang), `Lapang Pandang : ${text(values.lapangPandang)}`);
   add(systolic !== null && diastolic !== null && (systolic > 130 || diastolic > 89), `TD : ${systolic}/${diastolic} mmHg`);
-  add(bmi !== null && bmi >= 30, `BMI : ${bmi}`);
+  add(bmi !== null && bmi >= 25 && bmi < 30, `BMI : ${bmi} (Overweight)`);
+  add(bmi !== null && bmi >= 30, `BMI : ${bmi} (Obesitas)`);
   add(hb !== null && ((gender === 'Laki - Laki' && (hb < 13 || hb > 16.5)) || (gender === 'Perempuan' && (hb < 12 || hb > 15))), `Hb : ${text(values.hb)} g/dL`);
   add(leukosit !== null && (leukosit > 11 || leukosit < 4), `Leukosit : ${text(values.leukosit)} 10³/µL`);
   add(eritrosit !== null && (eritrosit > 6.2 || eritrosit < 4.5), `Eritrosit : ${text(values.eritrosit)} 10⁶/µL`);

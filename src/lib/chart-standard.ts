@@ -196,7 +196,13 @@ function pecahWarna(color: string): { r: number; g: number; b: number; a: number
   return { r: 120, g: 120, b: 120, a: 1 };
 }
 
-/** Gaya sumbu batang horizontal. */
+/**
+ * Gaya sumbu batang horizontal.
+ *
+ * CATATAN: fungsi ini TIDAK lagi dipakai — semua diagram sekarang memakai
+ * `skalaBar()` yang lebih lengkap (judul sumbu, callback label, autoSkip).
+ * Tetap diekspor hanya untuk kompatibilitas.
+ */
 export function opsiBarHorizontal(H: string, V: string): Record<string, unknown> {
   return {
     x: { beginAtZero: true, grace: '12%', grid: { color: V }, border: { display: false }, ticks: { precision: 0 } },
