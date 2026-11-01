@@ -189,7 +189,14 @@ function klasifikasiEngine(id: string, d: Record<string, unknown>, gender: strin
     case 'tg': return classifyTriglyceride(toNumber(d.tg as string));
     case 'egfr': return classifyEgfr(toNumber(d.egfr as string));
     case 'au': return classifyUricAcid(toNumber(d.au as string), g);
-    case 'bmi': return classifyBmi(toNumber(d.bmi as string));
+    case 'bmi': {
+      // Sesuai arahan: IMT hanya menjadi temuan bila ≥30 (obesitas).
+      // `classifyBmi` mengembalikan 'kuning' untuk 23–29,9 sehingga tanpa
+      // pembatasan ini IMT 25,6 ikut muncul sebagai temuan di "Temuan Lain".
+      const b = toNumber(d.bmi as string);
+      if (b === null || b < 30) return null;
+      return classifyBmi(b);
+    }
     case 'hb': return classifyHemoglobin(toNumber(d.hb as string), g);
     case 'fev1Pct':
     case 'fev1FvcAct':

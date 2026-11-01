@@ -20,6 +20,13 @@ import { Input } from '@/components/ui/input';
 import { authFetch } from '@/lib/api-client';
 import { useMCUStore } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
+
+/** Label peruntukan ruang — dipakai panel pencahayaan. */
+const PERUNTUKAN_LABEL: Record<string, string> = {
+  ruang_kerja: 'Ruang kerja', ruang_gambar: 'Ruang gambar', resepsionis: 'Resepsionis',
+  ruang_arsip: 'Ruang arsip', ruang_rapat: 'Ruang rapat', ruang_makan: 'Ruang makan',
+  koridor_lobi: 'Koridor/lobi', lainnya: 'Lainnya',
+};
 import { ITEM_INSPEKSI, KATEGORI_LABEL, type KategoriInspeksi, type NilaiItem } from '@/lib/sanitasi-inspeksi';
 
 const SITES = [
@@ -72,17 +79,48 @@ export default function InspeksiSanitasi() {
     data: { area: string; tanggal: string | null; leqMax: number; jumlahTitik: number }[];
     ringkasan?: { jumlahArea: number; leqTertinggi: number | null; areaDiAtasNAB: number };
   } | null>(null);
+  // Pencahayaan & kualitas udara dari tab "Pencahayaan & Udara" — pola sama
+  // dengan kebisingan: dibaca, bukan diisi ulang di checklist sanitasi.
+  const [lingkungan, setLingkungan] = useState<{
+    tersedia: boolean;
+    data: {
+      id: string;
+      namaRuang: string;
+      peruntukanLabel: string;
+      penilaian: {
+        luxMin: number | null; nabLux: number | null; statusLux: string;
+        jumlahTidakMemenuhi: number;
+      } | null;
+    }[];
+    ringkasan?: { jumlahRuang: number; sudahDiukur: number; luxTidakMemenuhi: number };
+  } | null>(null);
 
   const loadRiwayat = useCallback(async () => {
     setLoading(true);
     try {
-      const [r, kb] = await Promise.all([
+      const [r, kb, lk] = await Promise.all([
         authFetch(`/api/sanitasi?site=${encodeURIComponent(site)}`),
         authFetch(`/api/sanitasi/kebisingan?site=${encodeURIComponent(site)}`).catch(() => null),
+        authFetch(`/api/lingkungan?site=${encodeURIComponent(site)}`).catch(() => null),
       ]);
       setRiwayat((r.data ?? []) as Riwayat[]);
       setTabelSiap(r.tabelSiap !== false);
       setKebisingan(kb as never);
+
+      if (lk && Array.isArray(lk.data)) {
+        setLingkungan({
+          tersedia: true,
+          data: lk.data.map((x: Record<string, unknown>) => ({
+            id: String(x.id),
+            namaRuang: String(x.namaRuang ?? '—'),
+            peruntukanLabel: PERUNTUKAN_LABEL[String(x.peruntukan)] ?? String(x.peruntukan ?? '—'),
+            penilaian: x.penilaian as never,
+          })),
+          ringkasan: lk.ringkasan as never,
+        });
+      } else {
+        setLingkungan(null);
+      }
     } catch {
       setRiwayat([]);
     } finally {
@@ -225,6 +263,70 @@ export default function InspeksiSanitasi() {
           ) : (
             <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: 0 }}>
               Belum ada pengukuran kebisingan tercatat untuk site ini.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Pencahayaan & Kualitas Udara — OTOMATIS dari tab Pencahayaan & Udara.
+          Pola sama dengan kebisingan di atas: angkanya sudah ada di modul
+          pengukuran, jadi tidak diisi ulang di checklist sanitasi. Yang
+          ditampilkan hanya ringkasan hasil terakhir per ruang. */}
+      {lingkungan?.tersedia && (
+        <div className="card" style={{ padding: '8px 10px', flexShrink: 0 }}>
+          <div className="card-head" style={{ marginBottom: 6 }}>
+            <span style={{ width: 3, height: 16, borderRadius: 2, background: '#8E44AD', flexShrink: 0 }} />
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h2 style={{ fontSize: 12 }}>Pencahayaan &amp; Kualitas Udara — dari Pengukuran Ruang</h2>
+              <p style={{ fontSize: 9 }}>
+                Terbaca otomatis dari pengukuran terakhir per ruang.
+              </p>
+            </div>
+            {lingkungan.ringkasan && (
+              <div style={{ display: 'flex', gap: 10, fontSize: 9.5, flexShrink: 0 }}>
+                <span>{lingkungan.ringkasan.jumlahRuang} ruang</span>
+                <span>Sudah diukur <b>{lingkungan.ringkasan.sudahDiukur}</b></span>
+                <span style={{ color: lingkungan.ringkasan.luxTidakMemenuhi ? '#FF2D2D' : '#00B894' }}>
+                  Lux tidak memenuhi <b>{lingkungan.ringkasan.luxTidakMemenuhi}</b>
+                </span>
+              </div>
+            )}
+          </div>
+          {lingkungan.data.length ? (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    {['Ruang', 'Peruntukan', 'Lux terendah', 'NAB', 'Status lux', 'Udara'].map((h) => (
+                      <th key={h} style={{ padding: '4px 7px', borderBottom: '1px solid var(--border)', fontSize: 9, textTransform: 'uppercase', color: 'var(--muted-foreground)', fontWeight: 700, textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {lingkungan.data.slice(0, 8).map((r) => {
+                    const p = r.penilaian;
+                    const udaraGagal = p ? p.jumlahTidakMemenuhi - (p.statusLux === 'tidak-memenuhi' ? 1 : 0) : 0;
+                    return (
+                      <tr key={r.id}>
+                        <td style={TD}>{r.namaRuang}</td>
+                        <td style={{ ...TD, fontSize: 10 }}>{r.peruntukanLabel}</td>
+                        <td style={{ ...TD, fontWeight: 700 }}>{p?.luxMin ?? '—'} lux</td>
+                        <td style={TD}>{p?.nabLux ?? '—'}</td>
+                        <td style={{ ...TD, fontWeight: 700, color: p?.statusLux === 'tidak-memenuhi' ? '#FF2D2D' : p?.statusLux === 'memenuhi' ? '#00B894' : '#778899' }}>
+                          {p?.statusLux === 'tidak-memenuhi' ? 'Tidak memenuhi' : p?.statusLux === 'memenuhi' ? 'Memenuhi' : 'Belum dinilai'}
+                        </td>
+                        <td style={{ ...TD, fontWeight: 700, color: udaraGagal > 0 ? '#FF7A00' : '#00B894' }}>
+                          {p ? (udaraGagal > 0 ? `${udaraGagal} tidak memenuhi` : 'Memenuhi') : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: 0 }}>
+              Belum ada pengukuran pencahayaan &amp; kualitas udara untuk site ini.
             </p>
           )}
         </div>

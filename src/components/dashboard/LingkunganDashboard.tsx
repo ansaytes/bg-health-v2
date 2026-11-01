@@ -81,17 +81,10 @@ export default function LingkunganDashboard({ site }: { site?: string }) {
   }
 
   const r = data.ringkasan;
+  // Kartu TETAP ditampilkan meski kosong — sama seperti Ergonomi yang belum
+  // punya data. Menghilangkan seluruh dashboard saat data kosong membuat
+  // pengguna tidak tahu bahwa modul ini ada dan perlu diisi.
   const adaData = r.sudahDiukur > 0;
-
-  if (!adaData) {
-    return (
-      <div className="dashboard mcu-live-dashboard" style={{ alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontSize: 12, color: 'var(--muted-foreground)', margin: 0 }}>
-          Belum ada data pengukuran
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div className="dashboard mcu-live-dashboard" style={{ overflow: 'hidden', gap: 8 }}>
@@ -114,57 +107,65 @@ export default function LingkunganDashboard({ site }: { site?: string }) {
         <div className="card mcu-dashboard-card">
           <div className="card-head"><div><h2>Kepatuhan Pencahayaan</h2><p>Ruang per status vs NAB</p></div></div>
           <div className="mcu-dashboard-chart">
-            <MCUChart
-              type="doughnut"
-              labels={['Memenuhi', 'Tidak memenuhi']}
-              values={[r.luxMemenuhi, r.luxTidakMemenuhi]}
-              colors={['#00B894', '#FF2D2D']}
-              legendLabel="Ruang"
-              centerText={String(r.sudahDiukur)}
-              percentLabels
-            />
+            {adaData ? (
+              <MCUChart
+                type="doughnut"
+                labels={['Memenuhi', 'Tidak memenuhi']}
+                values={[r.luxMemenuhi, r.luxTidakMemenuhi]}
+                colors={['#00B894', '#FF2D2D']}
+                legendLabel="Ruang"
+                centerText={String(r.sudahDiukur)}
+                percentLabels
+              />
+            ) : <Kosong />}
           </div>
         </div>
 
         <div className="card mcu-dashboard-card">
           <div className="card-head"><div><h2>Status Pengukuran</h2><p>Ruang sudah vs belum diukur</p></div></div>
           <div className="mcu-dashboard-chart">
-            <MCUChart
-              type="doughnut"
-              labels={['Sudah diukur', 'Belum diukur']}
-              values={[r.sudahDiukur, r.belumDiukur]}
-              colors={['#3498DB', '#778899']}
-              legendLabel="Ruang"
-              centerText={String(r.jumlahRuang)}
-            />
+            {adaData ? (
+              <MCUChart
+                type="doughnut"
+                labels={['Sudah diukur', 'Belum diukur']}
+                values={[r.sudahDiukur, r.belumDiukur]}
+                colors={['#3498DB', '#778899']}
+                legendLabel="Ruang"
+                centerText={String(r.jumlahRuang)}
+              />
+            ) : <Kosong />}
           </div>
         </div>
 
         <div className="card mcu-dashboard-card">
           <div className="card-head"><div><h2>Kepatuhan per Peruntukan</h2><p>Memenuhi · tidak memenuhi</p></div></div>
           <div className="mcu-dashboard-chart">
-            <MCUChart
-              type="bar"
-              labels={data.perPeruntukan.map((p) => p.peruntukan)}
-              values={data.perPeruntukan.map((p) => p.tidakMemenuhi)}
-              colors={data.perPeruntukan.map((_, i) => PALET_BAR[i % PALET_BAR.length])}
-              horizontal
-              legendLabel="Ruang tidak memenuhi"
-            />
+            {data.perPeruntukan.length ? (
+              <MCUChart
+                type="bar"
+                labels={data.perPeruntukan.map((p) => p.peruntukan)}
+                values={data.perPeruntukan.map((p) => p.tidakMemenuhi)}
+                colors={data.perPeruntukan.map((_, i) => PALET_BAR[i % PALET_BAR.length])}
+                horizontal
+                legendLabel="Ruang tidak memenuhi"
+              />
+            ) : <Kosong />}
           </div>
         </div>
 
         <div className="card mcu-dashboard-card">
           <div className="card-head"><div><h2>Kualitas Udara</h2><p>Parameter tidak memenuhi</p></div></div>
           <div className="mcu-dashboard-chart">
-            <MCUChart
-              type="bar"
-              labels={data.statusUdara.map((u) => u.label)}
-              values={data.statusUdara.map((u) => u.tidakMemenuhi)}
-              colors={data.statusUdara.map((_, i) => PALET_BAR[i % PALET_BAR.length])}
-              horizontal
-              legendLabel="Ruang tidak memenuhi"
-            />
+            {data.statusUdara.length ? (
+              <MCUChart
+                type="bar"
+                labels={data.statusUdara.map((u) => u.label)}
+                values={data.statusUdara.map((u) => u.tidakMemenuhi)}
+                colors={data.statusUdara.map((_, i) => PALET_BAR[i % PALET_BAR.length])}
+                horizontal
+                legendLabel="Ruang tidak memenuhi"
+              />
+            ) : <Kosong />}
           </div>
         </div>
       </div>
@@ -174,33 +175,46 @@ export default function LingkunganDashboard({ site }: { site?: string }) {
         <div className="card mcu-dashboard-card">
           <div className="card-head"><div><h2>Ruang Terendah</h2><p>% lux terendah terhadap NAB — prioritas perbaikan</p></div></div>
           <div className="mcu-dashboard-chart">
-            <MCUChart
-              type="bar"
-              labels={data.terendah.map((t) => t.ruang)}
-              values={data.terendah.map((t) => t.persenNab)}
-              colors={data.terendah.map((t) => t.persenNab >= 100 ? '#00B894' : t.persenNab >= 80 ? '#F1C40F' : t.persenNab >= 60 ? '#FF7A00' : '#FF2D2D')}
-              horizontal
-              legendLabel="% terhadap NAB"
-            />
+            {data.terendah.length ? (
+              <MCUChart
+                type="bar"
+                labels={data.terendah.map((t) => t.ruang)}
+                values={data.terendah.map((t) => t.persenNab)}
+                colors={data.terendah.map((t) => t.persenNab >= 100 ? '#00B894' : t.persenNab >= 80 ? '#F1C40F' : t.persenNab >= 60 ? '#FF7A00' : '#FF2D2D')}
+                horizontal
+                legendLabel="% terhadap NAB"
+              />
+            ) : <Kosong />}
           </div>
         </div>
 
         <div className="card mcu-dashboard-card">
           <div className="card-head"><div><h2>Tren Pengukuran</h2><p>Ruang memenuhi per bulan</p></div></div>
           <div className="mcu-dashboard-chart">
-            <MCUChart
-              type="bar"
-              labels={data.tren.map((t) => {
-                const b = Number(String(t.bulan).slice(5)) - 1;
-                return BULAN[b] ?? t.bulan;
-              })}
-              values={data.tren.map((t) => t.memenuhi)}
-              colors={data.tren.map((_, i) => PALET_BAR[i % PALET_BAR.length])}
-              legendLabel="Ruang memenuhi"
-            />
+            {data.tren.length ? (
+              <MCUChart
+                type="bar"
+                labels={data.tren.map((t) => {
+                  const b = Number(String(t.bulan).slice(5)) - 1;
+                  return BULAN[b] ?? t.bulan;
+                })}
+                values={data.tren.map((t) => t.memenuhi)}
+                colors={data.tren.map((_, i) => PALET_BAR[i % PALET_BAR.length])}
+                legendLabel="Ruang memenuhi"
+              />
+            ) : <Kosong />}
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Pesan di dalam kartu bila belum ada data — kartu tetap tampil. */
+function Kosong() {
+  return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--muted-foreground)' }}>
+      Belum ada data pengukuran
     </div>
   );
 }
