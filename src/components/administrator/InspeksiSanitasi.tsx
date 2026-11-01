@@ -258,7 +258,7 @@ export default function InspeksiSanitasi() {
                 const isViolation = hasilItem?.status === 'tidak_sesuai';
                 const isOk = hasilItem?.status === 'sesuai';
                 return (
-                  <label key={it.key} className="flex flex-col gap-0.5" title={`Acuan: ${it.acuan} — ${it.sumber}`}>
+                  <label key={it.key} className="flex flex-col gap-0.5" title={it.acuan}>
                     <span style={{ fontSize: 9.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
                       {isOk && <CheckCircle2 size={10} color="#00B894" />}
                       {isViolation && <XCircle size={10} color="#FF2D2D" />}

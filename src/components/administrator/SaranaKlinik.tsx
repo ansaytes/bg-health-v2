@@ -347,7 +347,6 @@ function FormTambah({ onSelesai }: { onSelesai: () => void }) {
         <span style={{ width: 3, height: 16, borderRadius: 2, background: '#00B894', flexShrink: 0 }} />
         <div>
           <h2 style={{ fontSize: 12 }}>Tambah Item Sarana</h2>
-          <p style={{ fontSize: 9 }}>Untuk perlengkapan yang dipakai di lapangan namun tidak tercantum di SOP/028</p>
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" style={{ marginBottom: 8 }}>

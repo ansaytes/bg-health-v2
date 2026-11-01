@@ -78,11 +78,13 @@ export const ITEM_INSPEKSI: ItemInspeksi[] = [
   { key: 'air_titik_sampel', kategori: 'air_minum', label: 'Titik sampel (sumber/bak/kran terjauh)', tipe: 'nilai', acuan: 'Ketiga titik diuji', sumber: 'Permenkes 48/2016 Tabel C' },
 
   // ── Kebisingan ─────────────────────────────────────────────────────
-  { key: 'bising_kantor_terbuka', kategori: 'kebisingan', label: 'Kebisingan ruang kantor terbuka', tipe: 'hitung', satuan: 'dBA', acuan: '55–65', sumber: 'Permenkes 48/2016 Tabel D' },
-  { key: 'bising_kantor_pribadi', kategori: 'kebisingan', label: 'Kebisingan ruang kantor pribadi', tipe: 'hitung', satuan: 'dBA', acuan: '50–55', sumber: 'Permenkes 48/2016 Tabel D' },
-  { key: 'bising_kantin', kategori: 'kebisingan', label: 'Kebisingan ruang umum/kantin', tipe: 'hitung', satuan: 'dBA', acuan: '65–75', sumber: 'Permenkes 48/2016 Tabel D' },
-  { key: 'bising_rapat', kategori: 'kebisingan', label: 'Kebisingan ruang rapat', tipe: 'hitung', satuan: 'dBA', acuan: '65–70', sumber: 'Permenkes 48/2016 Tabel D' },
-  { key: 'bising_alat', kategori: 'kebisingan', label: 'Alat ukur (SLM) & tinggi pengukuran', tipe: 'nilai', acuan: 'SLM, ±1,50 m dari lantai', sumber: 'Permenkes 48/2016 Tabel D' },
+  // TIDAK LAGI DIINPUT DI SINI. Pengukuran kebisingan sudah dikelola lengkap
+  // di modul Hearing Conservation (area, titik ukur, alat, tanggal). Tab
+  // sanitasi hanya MENAMPILKAN hasilnya secara read-only lewat
+  // `/api/sanitasi/kebisingan` — menghindari dua sumber angka yang bisa
+  // berbeda untuk pengukuran yang sama.
+  //
+  // Kategori `kebisingan` dipertahankan agar data inspeksi lama tetap terbaca.
 
   // ── Pencahayaan ────────────────────────────────────────────────────
   // DIPINDAH ke tab "Pencahayaan & Udara" (lib/lingkungan-kerja.ts).
@@ -132,10 +134,9 @@ const RENTANG: Record<string, [number | null, number | null]> = {
   air_kekeruhan: [null, 5],
   air_tds: [null, 500],
   air_ph: [6.5, 8.5],
-  bising_kantor_terbuka: [55, 65],
-  bising_kantor_pribadi: [50, 55],
-  bising_kantin: [65, 75],
-  bising_rapat: [65, 70],
+  // Field `bising_*` dan `lux_*` / `udara_*` DIHAPUS dari sini.
+  // Kebisingan diukur di Hearing Conservation; pencahayaan & kualitas udara
+  // di modul Pencahayaan & Udara (lib/lingkungan-kerja.ts).
   lux_kerja: [300, null],
   lux_gambar: [750, null],
   lux_arsip: [150, null],

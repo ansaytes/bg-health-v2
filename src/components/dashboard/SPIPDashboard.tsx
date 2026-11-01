@@ -4,17 +4,19 @@
 // Dashboard > SPIP — Sarana, Prasarana, Instalasi, Peralatan
 // ============================================================
 //
-// DASAR: BG/QSHE/SOP/028 poin 5.5 — kelengkapan sarana & prasarana pelayanan
-// kesehatan kerja (ruangan, peralatan medis, sarana penunjang, alat evakuasi).
+// PILIH SITE: dashboard bisa melihat satu site (fokus) atau seluruh site.
+// Sebelumnya tidak ada filter, sehingga saat sebuah site dipilih angkanya
+// hanya berisi site itu — grafik "per site" jadi tidak berarti.
 //
-// DESAIN mengikuti Monitoring MCU: kartu `.mcu-dashboard-card`, judul 12px,
-// donut dengan total di tengah, bar horizontal untuk peringkat, satu layar
-// penuh tanpa scroll.
+// ISI (yang dibutuhkan untuk pelaporan):
+//   1. Kelengkapan     — tersedia vs belum tersedia
+//   2. Kelayakan       — alat layak pakai vs rusak
+//   3. Kalibrasi       — patuh / mendekati / lewat 12 bulan
+//   4. Top 10 item rusak & top 10 item belum tersedia
+//   5. Peringkat kelengkapan per site
 //
-// Angka yang ditampilkan untuk PELAPORAN:
-//   • kepatuhan kelengkapan per site (poros utama — site mana yang tertinggal)
-//   • kondisi alat per kategori
-//   • alat yang kalibrasinya kedaluwarsa (risiko hasil pemeriksaan tidak sahih)
+// TEMPLATE mengikuti Monitoring MCU: kartu `.mcu-dashboard-card`, donut dengan
+// total di tengah, bar horizontal, satu layar tanpa scroll.
 
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
@@ -27,32 +29,42 @@ import { PALET_BAR } from '@/lib/chart-standard';
 interface Data {
   tabelSiap: boolean;
   catatan?: string;
+  site: string | null;
+  daftarSite: string[];
   ringkasan: {
-    jumlahSite: number; totalItemWajib: number; totalTersedia: number; persenNasional: number;
-    rusak: number; kalibrasiLewat: number; belumDicatat: number; siteBelumLengkap: number;
+    jumlahSite: number; itemWajib: number; tersedia: number; rusak: number;
+    tidakAda: number; tidakDiperlukan: number; belumDicatat: number;
+    persenLengkap: number; persenLayak: number; persenKalibrasiPatuh: number;
   };
-  perSite: { site: string; wajib: number; tersedia: number; rusak: number; kalibrasiLewat: number; persen: number }[];
-  perKategori: { kategori: string; key: string; wajib: number; tersedia: number; rusak: number; belum: number }[];
-  alatKalibrasiLewat: { nama: string; site: string; tanggal: string; hari: number }[];
+  kelengkapan: { tersedia: number; rusak: number; tidakAda: number; tidakDiperlukan: number };
+  kelayakan: { layak: number; rusak: number; persenLayak: number };
+  kalibrasi: { patuh: number; mendekati: number; lewat: number; belumAda: number; batasBulan: number; peringatanBulan: number };
+  perKategori: { kategori: string; key: string; tersedia: number; rusak: number; belum: number }[];
+  topRusak: { nama: string; jumlah: number }[];
+  topBelum: { nama: string; jumlah: number }[];
+  alatKalibrasi: { nama: string; site: string; tanggal: string | null; bulan: number | null }[];
+  perSite: { site: string; wajib: number; tersedia: number; rusak: number; persen: number }[];
 }
 
 export default function SPIPDashboard() {
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [site, setSite] = useState<string>('');
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const r = await authFetch('/api/sarana/dashboard');
+      const qs = site ? `?site=${encodeURIComponent(site)}` : '';
+      const r = await authFetch(`/api/sarana/dashboard${qs}`);
       setData(r as unknown as Data);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal memuat data SPIP');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [site]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -79,27 +91,37 @@ export default function SPIPDashboard() {
   }
 
   const r = data.ringkasan;
-  // Site terbanyak yang belum lengkap (10 teratas) — peringkat terendah dulu.
-  const siteRendah = data.perSite.slice(0, 10);
-  // Dua panel “apa yang harus dikerjakan” — dihitung dari data yang sudah ada.
-  const itemKurang = data.perKategori
-    .filter((k) => k.belum > 0)
-    .sort((a, b) => b.belum - a.belum)
-    .slice(0, 8)
-    .map((k) => ({ nama: k.kategori, belum: k.belum }));
-  const kalibrasiList = (data.alatKalibrasiLewat ?? []).slice(0, 8).map((a) => ({
-    nama: `${a.nama} (${a.site})`,
-    hari: a.hari,
-  }));
+  const k = data.kelengkapan;
+  const kl = data.kalibrasi;
+  const adaData = r.itemWajib > 0;
+
+  if (!adaData) {
+    return (
+      <div className="dashboard mcu-live-dashboard" style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ fontSize: 12, color: 'var(--muted-foreground)', margin: 0 }}>Belum ada data pengukuran</p>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard mcu-live-dashboard" style={{ overflow: 'hidden', gap: 8 }}>
+      {/* Filter site */}
       <div className="mcu-live-top-bar" style={{ flexShrink: 0 }}>
         <div className="mcu-dashboard-filters">
-          <label><span>Site</span><b style={{ fontSize: 11 }}>{r.jumlahSite}</b></label>
-          <label><span>Kelengkapan</span><b style={{ fontSize: 11, color: r.persenNasional >= 90 ? '#00B894' : r.persenNasional >= 70 ? '#C99A00' : '#FF2D2D' }}>{r.persenNasional}%</b></label>
-          <label><span>Rusak</span><b style={{ fontSize: 11, color: r.rusak ? '#FF7A00' : 'inherit' }}>{r.rusak}</b></label>
-          <label><span>Kalibrasi lewat</span><b style={{ fontSize: 11, color: r.kalibrasiLewat ? '#FF2D2D' : 'inherit' }}>{r.kalibrasiLewat}</b></label>
+          <label>
+            <span>Site</span>
+            <select
+              value={site}
+              onChange={(e) => setSite(e.target.value)}
+              style={{ height: 28, minWidth: 130, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 10, fontWeight: 700, padding: '0 6px' }}
+            >
+              <option value="">Semua Site</option>
+              {data.daftarSite.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </label>
+          <label><span>Kelengkapan</span><b style={{ fontSize: 11, color: r.persenLengkap >= 90 ? '#00B894' : r.persenLengkap >= 70 ? '#C99A00' : '#FF2D2D' }}>{r.persenLengkap}%</b></label>
+          <label><span>Kelayakan</span><b style={{ fontSize: 11, color: r.persenLayak >= 90 ? '#00B894' : '#FF7A00' }}>{r.persenLayak}%</b></label>
+          <label><span>Kalibrasi patuh</span><b style={{ fontSize: 11, color: r.persenKalibrasiPatuh >= 90 ? '#00B894' : '#FF2D2D' }}>{r.persenKalibrasiPatuh}%</b></label>
           <button type="button" onClick={() => void load()} disabled={loading} className="mcu-dashboard-refresh">
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
@@ -110,112 +132,145 @@ export default function SPIPDashboard() {
       {/* Baris 1 — tiga donut */}
       <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, flex: 1, minHeight: 0 }}>
         <div className="card mcu-dashboard-card">
-          <div className="card-head"><div><h2>Kelengkapan Sarana</h2><p>Tersedia vs wajib</p></div></div>
+          <div className="card-head"><div><h2>Kelengkapan</h2><p>Tersedia vs belum tersedia</p></div></div>
           <div className="mcu-dashboard-chart">
             <MCUChart
               type="doughnut"
-              labels={['Tersedia', 'Belum tersedia']}
-              values={[r.totalTersedia, Math.max(r.totalItemWajib - r.totalTersedia, 0)]}
-              colors={['#00B894', '#FF7A00']}
+              labels={['Tersedia', 'Tidak ada', 'Rusak', 'Tidak diperlukan']}
+              values={[k.tersedia, k.tidakAda, k.rusak, k.tidakDiperlukan]}
+              colors={['#00B894', '#FF7A00', '#FF2D2D', '#778899']}
               legendLabel="Item"
-              centerText={`${r.persenNasional}%`}
+              centerText={String(r.itemWajib)}
               percentLabels
             />
           </div>
         </div>
 
         <div className="card mcu-dashboard-card">
-          <div className="card-head"><div><h2>Status Kelengkapan Site</h2><p>Ambang 80%</p></div></div>
+          <div className="card-head"><div><h2>Kelayakan Alat</h2><p>Layak pakai vs rusak</p></div></div>
           <div className="mcu-dashboard-chart">
             <MCUChart
               type="doughnut"
-              labels={['Lengkap (≥80%)', 'Belum lengkap (<80%)']}
-              values={[r.jumlahSite - r.siteBelumLengkap, r.siteBelumLengkap]}
+              labels={['Layak pakai', 'Rusak']}
+              values={[data.kelayakan.layak, data.kelayakan.rusak]}
               colors={['#00B894', '#FF2D2D']}
-              legendLabel="Site"
-              centerText={String(r.jumlahSite)}
+              legendLabel="Item"
+              centerText={`${data.kelayakan.persenLayak}%`}
+              percentLabels
             />
           </div>
         </div>
 
         <div className="card mcu-dashboard-card">
-          <div className="card-head"><div><h2>Kondisi Alat</h2><p>Seluruh site</p></div></div>
+          <div className="card-head"><div><h2>Kalibrasi</h2><p>Batas {kl.batasBulan} bulan</p></div></div>
           <div className="mcu-dashboard-chart">
             <MCUChart
               type="doughnut"
-              labels={['Baik/tersedia', 'Rusak', 'Kalibrasi lewat']}
-              values={[r.totalTersedia - r.rusak, r.rusak, r.kalibrasiLewat]}
-              colors={['#00B894', '#FF7A00', '#FF2D2D']}
-              legendLabel="Item"
-              centerText={String(r.totalTersedia)}
+              labels={['Patuh', `Mendekati (≥${kl.peringatanBulan} bln)`, 'Lewat', 'Belum pernah']}
+              values={[kl.patuh, kl.mendekati, kl.lewat, kl.belumAda]}
+              colors={['#00B894', '#F1C40F', '#FF2D2D', '#778899']}
+              legendLabel="Alat"
+              centerText={`${r.persenKalibrasiPatuh}%`}
+              percentLabels
             />
           </div>
         </div>
       </div>
 
-      {/* Baris 2 — peringkat site + kategori */}
-      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.3fr) minmax(0, 1fr)', gap: 8, flex: 1, minHeight: 0 }}>
+      {/* Baris 2 — top 10 rusak, top 10 belum, per kategori */}
+      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, flex: 1, minHeight: 0 }}>
+        <KartuChart judul="Top 10 SPIP Rusak" sub="Jumlah site dengan alat rusak" kosong={!data.topRusak.length} pesanKosong="Tidak ada alat rusak">
+          <MCUChart
+            type="bar"
+            labels={data.topRusak.map((x) => x.nama)}
+            values={data.topRusak.map((x) => x.jumlah)}
+            colors={data.topRusak.map((_, i) => PALET_BAR[i % PALET_BAR.length])}
+            horizontal
+            legendLabel="Site"
+          />
+        </KartuChart>
+
+        <KartuChart judul="Item Belum Tersedia" sub="Jumlah site yang belum menyediakan" kosong={!data.topBelum.length} pesanKosong="Semua item wajib sudah tercatat">
+          <MCUChart
+            type="bar"
+            labels={data.topBelum.map((x) => x.nama)}
+            values={data.topBelum.map((x) => x.jumlah)}
+            colors={data.topBelum.map((_, i) => PALET_BAR[i % PALET_BAR.length])}
+            horizontal
+            legendLabel="Site"
+          />
+        </KartuChart>
+
+        <div className="card mcu-dashboard-card">
+          <div className="card-head"><div><h2>Status per Kategori</h2><p>Tersedia · rusak · belum</p></div></div>
+          <div className="mcu-dashboard-chart">
+            <MCUChart
+              type="bar"
+              labels={data.perKategori.map((x) => x.kategori)}
+              values={data.perKategori.map((x) => x.rusak + x.belum)}
+              colors={data.perKategori.map((_, i) => PALET_BAR[i % PALET_BAR.length])}
+              horizontal
+              legendLabel="Item bermasalah"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Baris 3 — per site + kalibrasi lewat */}
+      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8, flex: 1, minHeight: 0 }}>
         <div className="card mcu-dashboard-card">
           <div className="card-head"><div><h2>Kelengkapan per Site</h2><p>10 site terendah (%)</p></div></div>
           <div className="mcu-dashboard-chart">
             <MCUChart
               type="bar"
-              labels={siteRendah.map((s) => s.site)}
-              values={siteRendah.map((s) => s.persen)}
-              colors={siteRendah.map((s) => s.persen >= 90 ? '#00B894' : s.persen >= 80 ? '#F1C40F' : s.persen >= 60 ? '#FF7A00' : '#FF2D2D')}
+              labels={data.perSite.slice(0, 10).map((s) => s.site)}
+              values={data.perSite.slice(0, 10).map((s) => s.persen)}
+              colors={data.perSite.slice(0, 10).map((s) => s.persen >= 90 ? '#00B894' : s.persen >= 80 ? '#F1C40F' : s.persen >= 60 ? '#FF7A00' : '#FF2D2D')}
               horizontal
               legendLabel="Kelengkapan (%)"
             />
           </div>
         </div>
 
-        <div className="card mcu-dashboard-card">
-          <div className="card-head"><div><h2>Kelengkapan per Kategori</h2><p>Item tersedia / wajib</p></div></div>
-          <div className="mcu-dashboard-chart">
-            <MCUChart
-              type="bar"
-              labels={data.perKategori.map((k) => k.kategori)}
-              values={data.perKategori.map((k) => (k.wajib ? Number(((k.tersedia / k.wajib) * 100).toFixed(1)) : 0))}
-              colors={data.perKategori.map((_, i) => PALET_BAR[i % PALET_BAR.length])}
-              horizontal
-              legendLabel="Kelengkapan (%)"
-            />
-          </div>
-        </div>
+        <KartuChart judul="Kalibrasi Perlu Tindakan" sub="Bulan sejak kalibrasi terakhir" kosong={!data.alatKalibrasi.length} pesanKosong="Semua alat dalam masa kalibrasi">
+          <MCUChart
+            type="bar"
+            labels={data.alatKalibrasi.map((a) => `${a.nama} · ${a.site}`)}
+            values={data.alatKalibrasi.map((a) => a.bulan ?? kl.batasBulan)}
+            colors={data.alatKalibrasi.map((a) => (a.bulan ?? 99) >= kl.batasBulan ? '#FF2D2D' : '#F1C40F')}
+            horizontal
+            legendLabel="Bulan"
+          />
+        </KartuChart>
       </div>
+    </div>
+  );
+}
 
-      {/* Baris 3 — kekurangan per item & kalibrasi kedaluwarsa.
-          Dua panel ini menjawab “apa yang harus dikerjakan”, bukan hanya
-          “berapa persen”. Sebelumnya data ini sudah tersedia di API tetapi
-          tidak pernah ditampilkan. */}
-      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8, flex: 1, minHeight: 0 }}>
-        <div className="card mcu-dashboard-card">
-          <div className="card-head"><div><h2>Item Paling Banyak Belum Tersedia</h2><p>Jumlah site yang belum menyediakan</p></div></div>
-          <div className="mcu-dashboard-chart">
-            <MCUChart
-              type="bar"
-              labels={itemKurang.map((i) => i.nama)}
-              values={itemKurang.map((i) => i.belum)}
-              colors={itemKurang.map((_, i) => PALET_BAR[i % PALET_BAR.length])}
-              horizontal
-              legendLabel="Site"
-            />
+/**
+ * Kartu chart dengan PENANGANAN KONDISI KOSONG.
+ *
+ * MASALAH YANG DISELESAIKAN
+ * Sebelumnya diagram tanpa data tetap digambar sebagai grafik kosong dengan
+ * sumbu 0/1/2 — itu tampak seperti bug, bukan informasi. Sekarang kartu
+ * menampilkan pesan jelas dan tidak menggambar sumbu palsu.
+ */
+function KartuChart({ judul, sub, kosong, pesanKosong, children }: {
+  judul: string;
+  sub: string;
+  kosong: boolean;
+  pesanKosong: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="card mcu-dashboard-card">
+      <div className="card-head"><div><h2>{judul}</h2><p>{sub}</p></div></div>
+      <div className="mcu-dashboard-chart">
+        {kosong ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--muted-foreground)' }}>
+            {pesanKosong}
           </div>
-        </div>
-
-        <div className="card mcu-dashboard-card">
-          <div className="card-head"><div><h2>Alat Kalibrasi Kedaluwarsa</h2><p>Lebih dari 12 bulan sejak kalibrasi terakhir</p></div></div>
-          <div className="mcu-dashboard-chart">
-            <MCUChart
-              type="bar"
-              labels={kalibrasiList.map((k) => k.nama)}
-              values={kalibrasiList.map((k) => k.hari)}
-              colors={kalibrasiList.map((_, i) => PALET_BAR[i % PALET_BAR.length])}
-              horizontal
-              legendLabel="Hari"
-            />
-          </div>
-        </div>
+        ) : children}
       </div>
     </div>
   );

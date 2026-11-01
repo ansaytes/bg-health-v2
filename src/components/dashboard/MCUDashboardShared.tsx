@@ -455,9 +455,13 @@ export function MCUChart({
           textColor,
           gridColor,
           fontFamily,
-          // Keterangan sumbu: kategori (nama/label) dan nilai (jumlah/%).
-          categoryTitle: 'Kategori',
-          valueTitle: percentLabels ? 'Persentase (%)' : 'Jumlah',
+          // JUDUL SUMBU KATEGORI TIDAK DIBERI.
+          // Labelnya sudah berupa nama kategori yang jelas ("Zona Merah",
+          // "Obesity", "Fit To Work"). Menambah judul generik "Kategori" hanya
+          // menumpuk ruang di bawah label dan bertabrakan dengannya — inilah
+          // yang dikeluhkan sebagai "judul sumbu tumpang tindih dengan label".
+          // Judul sumbu nilai juga dihilangkan karena satuannya sudah terbaca
+          // dari angka + judul kartu.
           labelOf: (categoryIndex) => labels[categoryIndex] ?? '',
         }) : undefined,
       },

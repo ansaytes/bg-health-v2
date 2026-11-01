@@ -537,13 +537,13 @@ export default function DashboardView() {
             formatter: (v: number) => (v > 0 ? String(v) : ''),
           },
         },
+        // Tanpa judul sumbu: label nama karyawan sudah jelas dan judul sumbu
+        // hanya bertabrakan dengan label tersebut.
         scales: skalaBar({
           horizontal: true,
           textColor: text,
           gridColor: grid,
           suggestedMax: maxTotal * 1.3,
-          categoryTitle: 'Karyawan',
-          valueTitle: 'Hari sakit',
           labelOf: (i) => labels[i] ?? '',
         }),
       },

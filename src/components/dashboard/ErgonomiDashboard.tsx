@@ -96,7 +96,7 @@ export default function ErgonomiDashboard() {
       scales: horizontal
         ? { x: { stacked, beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah survei', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
             y: { stacked, grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false }, title: { display: true, text: 'Metode', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } } }
-        : { x: { stacked, grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false }, title: { display: true, text: 'Kategori', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+        : { x: { stacked, grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false } },
             y: { stacked, beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah survei', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } } },
     } as ChartOptions<'bar'>);
 

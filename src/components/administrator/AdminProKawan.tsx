@@ -356,7 +356,7 @@ export default function AdminProKawan() {
           <span>· {jadwalUsulan.tanpaJadwal} tanpa jadwal kontrol dokter</span>
           <span>· {jadwalUsulan.sudahAda} sudah tertetapkan</span>
           <span style={{ color: 'var(--muted-foreground)' }}>
-            Dasar: tgl pemeriksaan terakhir + frekuensi kolom Pengendalian Bab 7 (INK/016 poin 4.1.4)
+            Dasar: tgl pemeriksaan terakhir + frekuensi parameter
           </span>
           <button
             type="button"
@@ -387,7 +387,7 @@ export default function AdminProKawan() {
             <span style={{ width: 3, height: 20, borderRadius: 2, background: '#ff4d00', flexShrink: 0 }} />
             <div style={{ minWidth: 0 }}>
               <h2 style={{ fontSize: 12 }}>Daftar Peserta</h2>
-              <p style={{ fontSize: 9.5 }}>Zona Kuning &amp; Merah — INK/016 poin 4.1.1</p>
+              <p style={{ fontSize: 9.5 }}>Zona Kuning &amp; Merah</p>
             </div>
           </div>
           <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
@@ -508,7 +508,7 @@ export default function AdminProKawan() {
                   <span style={{ width: 3, height: 18, borderRadius: 2, background: '#8E44AD', flexShrink: 0 }} />
                   <div>
                     <h2 style={{ fontSize: 12 }}>Zona PTM &amp; Pengendalian</h2>
-                    <p style={{ fontSize: 9.5 }}>Per parameter — bukan general per zonasi (STD/006 Rev.002)</p>
+                    <p style={{ fontSize: 9.5 }}>Per parameter pengendalian</p>
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
@@ -612,7 +612,7 @@ export default function AdminProKawan() {
 
               <div style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '0 2px 12px', fontSize: 9.5, color: 'var(--muted-foreground)' }}>
                 <AlertTriangle size={11} />
-                Kepatuhan dinilai dari ada/tidaknya tanggal aktual periksa dalam bukti dokter pemeriksa. Diagnosis tidak ditampilkan (INK/016 poin 4.7.3 huruf e).
+                Kepatuhan dinilai dari ada/tidaknya tanggal aktual periksa dalam bukti dokter pemeriksa.
               </div>
             </>
           )}
@@ -891,7 +891,7 @@ function FormTindakLanjut({ peserta, onSelesai }: {
           <div style={{ flex: 1, minWidth: 180 }}>
             <h2 style={{ fontSize: 12, fontWeight: 700, margin: 0 }}>Tindak Lanjut</h2>
             <p style={{ fontSize: 9.5, color: 'var(--muted-foreground)', margin: '2px 0 0' }}>
-              Baseline MCU {fmtTanggal(String(data.karyawan.tglMcu ?? ''))} · {data.totalField} parameter perlu ditindaklanjuti
+              {data.totalField} parameter perlu ditindaklanjuti
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>

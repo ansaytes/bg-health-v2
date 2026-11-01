@@ -521,10 +521,21 @@
 /* ═══════════════════════════════════
    Chart Box
    ═══════════════════════════════════ */
+/*
+ * TINGGI MINIMUM CHART — penyebab label sumbu "selang-seling".
+ *
+ * `.chart-box` memakai `flex: 1; min-height: 0`, sehingga tinggi chart
+ * menyusut mengikuti sisa ruang grid. Pada grid 3 kolom, tiap chart hanya
+ * mendapat ~110–130px. Dengan 10 kategori, Chart.js MENYEMBUNYIKAN label
+ * yang tidak muat (mis. tiap label genap) walau `autoSkip: false` sudah diatur
+ * — inilah gejala "ada, tidak, ada, tidak" di diagram Top 10 Diagnosa.
+ *
+ * 180px memberi ruang ~18px per label — cukup untuk 10 kategori.
+ */
 .chart-box {
   position: relative;
   flex: 1;
-  min-height: 0;
+  min-height: 180px;
   overflow: visible;
 }
 
@@ -701,7 +712,9 @@ select:focus { border-color: #ff4d00; }
 .mcu-grid-3 .card-head { flex-shrink: 0; }
 .mcu-grid-3 .chart-box {
   flex: 1;
-  min-height: 0;
+  /* JANGAN dikembalikan ke 0: tinggi 0 membuat Chart.js menyembunyikan
+     label sumbu yang tidak muat (gejala "ada, tidak, ada, tidak"). */
+  min-height: 170px;
   height: auto;
 }
 
@@ -731,7 +744,8 @@ select:focus { border-color: #ff4d00; }
 .mcu-row1 .card-head, .mcu-row2 .card-head { flex-shrink: 0; }
 .mcu-row1 .chart-box, .mcu-row2 .chart-box {
   flex: 1;
-  min-height: 0;
+  /* Minimal 170px — alasan sama seperti .mcu-grid-3 di atas. */
+  min-height: 170px;
   height: auto;
 }
 
@@ -2132,7 +2146,10 @@ select.admin-input.compact-input {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 0;
+  /* Minimal 150px agar label sumbu kategori tidak terpotong walau kartu
+     sedang dalam grid sempit. Chart.js MENYEMBUNYIKAN label yang tidak
+     muat walau autoSkip: false — inilah gejala "ada, tidak, ada, tidak". */
+  min-height: 150px;
   width: 100%;
 }
 .mcu-dashboard-chart canvas {
@@ -4255,7 +4272,8 @@ select.admin-input.compact-input {
 }
 .kunjungan-trend-row .chart-box {
   flex: 1;
-  min-height: 0;
+  /* Minimal 170px agar 10 label batang horizontal tetap terbaca. */
+  min-height: 170px;
 }
 .kunjungan-row-charts {
   display: grid;
@@ -4271,7 +4289,7 @@ select.admin-input.compact-input {
 }
 .kunjungan-row-charts .chart-box {
   flex: 1;
-  min-height: 0;
+  min-height: 170px;
 }
 @media (max-width: 900px) {
   .kunjungan-scroll-content > div:first-child {

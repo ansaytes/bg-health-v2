@@ -292,19 +292,36 @@ export function tentukanFieldTindakLanjut(
 
     // ── Sumber 2: di luar rentang standar Indonesia ──────────────
     if (field.type === 'number') {
-      // PENTING: `angkaDari()` sudah menangani desimal Indonesia ('25,6') dan
-      // internasional ('25.6'). Tanpa itu, '25.6' dibaca NaN sehingga BMI 25,6
-      // dianggap ABNORMAL padahal masih dalam rentang.
-      const angka = angkaDari(String(nilaiMcu));
-      const cek = diLuarRentang(angka, field, gender);
-      if (cek?.abnormal) {
-        daftar.push({
-          ...dasarField(field, gender, nilaiMcu, nilaiFU),
-          sumber: 'abnormal',
-          alasan: `Di luar rentang normal ${labelRentang(field, gender)}`,
-        });
-        sudah.add(field.id);
-        continue;
+      // ── IMT: ambang khusus IMT ≥30 ──────────────────────────────
+      // `MCU_FIELDS.normalRange` untuk BMI adalah '<30' — naikkan ke sini
+      // supaya IMT 25,6 (Hijau menurut STD/006) TIDAK dianggap temuan.
+      // Sesuai arahan: hanya IMT ≥30 yang masuk temuan.
+      if (field.id === 'bmi') {
+        const bmiVal = angkaDari(String(nilaiMcu));
+        if (bmiVal !== null && bmiVal >= 30) {
+          daftar.push({
+            ...dasarField(field, gender, nilaiMcu, nilaiFU),
+            sumber: 'abnormal',
+            alasan: `IMT ${fmtAngka(bmiVal)} — obesitas (≥30)`,
+          });
+          sudah.add(field.id);
+          continue;
+        }
+      } else {
+        // PENTING: `angkaDari()` sudah menangani desimal Indonesia ('25,6') dan
+        // internasional ('25.6'). Tanpa itu, '25.6' dibaca NaN sehingga
+        // nilai dianggap ABNORMAL padahal masih dalam rentang.
+        const angka = angkaDari(String(nilaiMcu));
+        const cek = diLuarRentang(angka, field, gender);
+        if (cek?.abnormal) {
+          daftar.push({
+            ...dasarField(field, gender, nilaiMcu, nilaiFU),
+            sumber: 'abnormal',
+            alasan: `Di luar rentang normal ${labelRentang(field, gender)}`,
+          });
+          sudah.add(field.id);
+          continue;
+        }
       }
     }
 

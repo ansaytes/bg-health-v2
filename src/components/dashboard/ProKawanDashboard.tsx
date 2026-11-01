@@ -147,7 +147,7 @@ export default function ProKawanDashboard() {
 
         <div className="card mcu-dashboard-card">
           <div className="card-head">
-            <div><h2>Jalur Pengendalian</h2><p>INK/016 poin 4.2</p></div>
+            <div><h2>Jalur Pengendalian</h2><p>Per parameter pengendalian</p></div>
           </div>
           <div className="mcu-dashboard-chart">
             <MCUChart

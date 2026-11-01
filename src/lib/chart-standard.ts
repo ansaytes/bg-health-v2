@@ -240,56 +240,85 @@ export const WARNA_STATUS = {
  * `autoSkip: false` wajib agar SEMUA label sumbu tampil (penyebab banyak
  * batang tanpa nama sebelumnya).
  */
-export function skalaBar(opts: {
+export interface OpsiSkalaBar {
   horizontal: boolean;
   textColor: string;
   gridColor: string;
   fontFamily?: string;
   max?: number;
   suggestedMax?: number;
+  /** Mengubah label kategori sebelum dipotong. */
   labelOf?: (index: number) => string;
-  /** Judul sumbu nilai, mis. "Hari sakit" / "Jumlah kunjungan". */
+  /**
+   * Judul sumbu nilai, mis. "Hari sakit".
+   * DIKOSONGKAN bila nama parameternya sudah jelas dari judul kartu —
+   * judul sumbu yang mengulang judul kartu hanya menumpuk ruang.
+   */
   valueTitle?: string;
-  /** Judul sumbu kategori, mis. "Nama karyawan" / "Departemen". */
+  /** Judul sumbu kategori, mis. "Departemen". */
   categoryTitle?: string;
-}): ChartOptions<'bar'>['scales'] {
+  /**
+   * Ukuran font label kategori. Default 9,5. Diagram berlabel banyak
+   * (mis. 10 nama karyawan) boleh diperkecil ke 8,5 agar semua muat.
+   */
+  categoryFontSize?: number;
+  /** Ukuran font label nilai. Default 9. */
+  valueFontSize?: number;
+}
+
+/**
+ * Opsi dasar sumbu untuk bar horizontal/vertikal — SATU-SATUNYA sumber skala
+ * batang di seluruh aplikasi.
+ *
+ * Jangan membuat skala `scales: {...}` manual di komponen. Perbedaan skala
+ * antarhalaman itulah penyebab tampilan tidak seragam: sebagian memakai
+ * `autoSkip: false`, sebagian tidak; sebagian punya `grace`, sebagian tidak;
+ * sebagian memotong label, sebagian membiarkannya meluber.
+ */
+export function skalaBar(opts: OpsiSkalaBar): ChartOptions<'bar'>['scales'] {
   const font = opts.fontFamily ?? "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  const categoryFont = opts.categoryFontSize ?? 9.5;
+  const valueFont = opts.valueFontSize ?? 9;
+
   const categoryAxis = {
     grid: { display: false },
+    border: { display: false },
     ticks: {
       color: opts.textColor,
-      font: { size: 9.5, family: font },
+      font: { size: categoryFont, family: font },
+      // WAJIB: tanpa ini Chart.js melewati label ganjil → sumbu tampil
+      // "ada, kosong, ada, kosong".
       autoSkip: false,
-      // `crossAlign: 'far'` menempelkan label ke tepi sumbu agar tidak terpotong
-      // di sisi kiri kartu pada diagram batang horizontal.
+      // Menempelkan label ke tepi sumbu agar tidak terpotong di kiri kartu.
       crossAlign: 'far' as const,
+      padding: 4,
       callback: ((value: string | number) => {
         const label = opts.labelOf ? opts.labelOf(Number(value)) : String(value);
-        // Batas 22 karakter terlalu pendek untuk nama karyawan/departemen;
-        // 30 masih muat pada kartu selebar dashboard tanpa memotong kata.
+        // Dipotong 28 karakter; teks penuh tetap terbaca lewat tooltip.
         return label.length > 30 ? `${label.slice(0, 28)}…` : label;
       }) as never,
     },
-    // Keterangan sumbu wajib ada: tanpa ini banyak diagram tampil sebagai
-    // deretan angka tanpa konteks.
     title: opts.categoryTitle
-      ? { display: true, text: opts.categoryTitle, color: opts.textColor, font: { size: 9, family: font, weight: 'bold' as const } }
+      ? { display: true, text: opts.categoryTitle, color: opts.textColor, font: { size: valueFont, family: font, weight: 'bold' as const } }
       : undefined,
   };
+
   const valueAxis = {
     beginAtZero: true,
     max: opts.max,
     suggestedMax: opts.suggestedMax,
     // Ruang 18% di ujung sumbu nilai agar angka di ujung batang terpanjang
-    // tidak terpotong tepi kartu. Chart.js melarang `grace` digabung dengan
-    // `max`, jadi grace hanya dipakai bila `max` tidak ditentukan.
+    // tidak terpotong tepi kartu. Chart.js melarang `grace` + `max`, jadi
+    // grace hanya dipakai bila `max` tidak ditentukan.
     ...(opts.max === undefined ? { grace: '18%' } : {}),
     grid: { color: opts.gridColor },
-    ticks: { color: opts.textColor, font: { size: 9, family: font }, precision: 0 as const },
+    border: { display: false },
+    ticks: { color: opts.textColor, font: { size: valueFont, family: font }, precision: 0 as const },
     title: opts.valueTitle
-      ? { display: true, text: opts.valueTitle, color: opts.textColor, font: { size: 9, family: font, weight: 'bold' as const } }
+      ? { display: true, text: opts.valueTitle, color: opts.textColor, font: { size: valueFont, family: font, weight: 'bold' as const } }
       : undefined,
   };
+
   return (opts.horizontal
     ? { x: valueAxis, y: categoryAxis }
     : { x: categoryAxis, y: valueAxis }) as ChartOptions<'bar'>['scales'];

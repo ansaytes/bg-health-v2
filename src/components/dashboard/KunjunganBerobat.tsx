@@ -9,7 +9,7 @@ import {
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { fetchDashboardData } from '@/lib/dashboard-data';
-import { BAR_LAYOUT, STANDAR_ANIMASI, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, animasiUlang, useAnimationReady, warnaBar } from '@/lib/chart-standard';
+import { BAR_LAYOUT, STANDAR_ANIMASI, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, animasiUlang, skalaBar, useAnimationReady, warnaBar } from '@/lib/chart-standard';
 
 // Register Chart.js plugins and all controllers/scales/elements
 ChartJS.register(...registerables, ChartDataLabels);
@@ -507,29 +507,17 @@ export default function KunjunganBerobat() {
             clip: false,
           },
         },
-        scales: {
-          x: {
-            beginAtZero: true,
-            grace: '12%',
-            grid: { color: gridColor },
-            ticks: { color: textColor, font: { size: 10, family: fontFamily }, precision: 0 },
-            title: { display: true, text: 'Jumlah kasus', color: textColor, font: { size: 9, weight: 'bold' as const, family: fontFamily } },
-          },
-          y: {
-            grid: { display: false },
-            border: { display: false },
-            ticks: {
-              autoSkip: false,
-              color: textColor,
-              font: { size: 10, family: fontFamily },
-              callback: function(val) {
-                const label = this.getLabelForValue(Number(val));
-                return label.length > 22 ? label.slice(0, 20) + '...' : label;
-              },
-            },
-            title: { display: true, text: 'Diagnosa', color: textColor, font: { size: 9, weight: 'bold' as const, family: fontFamily } },
-          },
-        },
+        // Skala standar aplikasi (lib/chart-standard) — BUKAN skala manual.
+        // `labelOf` WAJIB diberikan pada diagram horizontal: Chart.js mengirim
+        // INDEKS (0,1,2,…) sebagai nilai tick pada sumbu kategori, bukan teks
+        // labelnya. Tanpa `labelOf`, sumbu menampilkan angka 0–9 alih-alih
+        // nama diagnosa.
+        scales: skalaBar({
+          horizontal: true,
+          textColor, gridColor, fontFamily,
+          categoryFontSize: 9,
+          labelOf: (i) => diagLabels[i] ?? '',
+        }),
       };
 
       if (diagChartInst.current) {
@@ -696,29 +684,14 @@ export default function KunjunganBerobat() {
             clip: false,
           },
         },
-        scales: {
-          x: {
-            beginAtZero: true,
-            grace: '12%',
-            grid: { color: gridColor },
-            ticks: { color: textColor, font: { size: 10, family: fontFamily }, precision: 0 },
-            title: { display: true, text: 'Jumlah kunjungan', color: textColor, font: { size: 9, weight: 'bold' as const, family: fontFamily } },
-          },
-          y: {
-            grid: { display: false },
-            border: { display: false },
-            ticks: {
-              color: textColor,
-              font: { size: 10, family: fontFamily },
-              autoSkip: false,
-              callback: function(val) {
-                const label = this.getLabelForValue(Number(val));
-                return label.length > 22 ? label.slice(0, 20) + '...' : label;
-              },
-            },
-            title: { display: true, text: 'Departemen', color: textColor, font: { size: 9, weight: 'bold' as const, family: fontFamily } },
-          },
-        },
+        // Skala standar aplikasi — bukan skala manual.
+        // `labelOf` wajib: sumbu kategori menerima INDEKS, bukan teks.
+        scales: skalaBar({
+          horizontal: true,
+          textColor, gridColor, fontFamily,
+          categoryFontSize: 9,
+          labelOf: (i) => deptLabels[i] ?? '',
+        }),
       };
 
       if (deptChartInst.current) {

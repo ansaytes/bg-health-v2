@@ -68,40 +68,11 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  // ── Obat & BHP TIDAK diisi manual di sini ────────────────────────────────
-  // Persediaan obat sudah dikelola lengkap di halaman Inventory (dengan batch,
-  // ED, dan pemakaian). Menduplikasinya di Sarana hanya akan membuat dua angka
-  // berbeda untuk hal yang sama. Karena itu satu baris virtual ditambahkan,
-  // dihitung langsung dari VIEW v_inventory_summary.
-  try {
-    const { data: inv } = await client
-      .from('v_inventory_summary')
-      .select('id,name,total_stock,avg_monthly_usage,closest_expired_date');
-    const obat = (inv ?? []) as Record<string, unknown>[];
-    const tersedia = obat.filter((o) => Number(o.total_stock ?? 0) > 0).length;
-    const kritis = obat.filter((o) => {
-      const stok = Number(o.total_stock ?? 0);
-      const pakai = Number(o.avg_monthly_usage ?? 0);
-      return stok <= 0 || (pakai > 0 && stok < pakai);
-    }).length;
-
-    items.unshift({
-      katalogId: 'inventory:obat-bhp',
-      nama: 'Persediaan Obat & BHP',
-      kategori: 'obat',
-      wajib: true,
-      perluKalibrasi: false,
-      status: tersedia > 0 ? 'ada' : 'tidak_ada',
-      jumlah: tersedia,
-      kondisi: `${inv?.length ?? 0} item terdaftar di Inventory${kritis ? ` · ${kritis} stok kritis` : ''}`,
-      tanggalKalibrasi: null,
-      tanggalInspeksi: null,
-      catatan: 'Dihitung otomatis dari halaman Inventory — tidak perlu diisi manual.',
-      tersedia: true,
-    });
-  } catch {
-    // Inventory belum tersedia → item obat tidak ditampilkan.
-  }
+  // ── OBAT TIDAK DITAMPILKAN DI SARANA ──────────────────────────────────────
+  // Persediaan obat & BHP dikelola tersendiri di halaman Inventory (batch, ED,
+  // pemakaian). Sebelumnya sebuah baris virtual "Persediaan Obat & BHP"
+  // ditambahkan di sini — itu yang membuat obat tetap muncul di Sarana.
+  // Sekarang dihapus: satu jenis data, satu halaman.
 
   // Ringkasan: hanya item WAJIB yang dihitung, item tamb tidak
   // boleh membuat persentase kepatuhan turun.
@@ -128,7 +99,7 @@ export async function GET(req: NextRequest) {
       belumDicatat,
       kalibrasiKedaluwarsa,
     },
-    kategoriUrut: ['perlengkapan_umum', 'ruangan', 'peralatan_medis', 'sarana_penunjang', 'alat_evakuasi', 'obat'],
+    kategoriUrut: ['perlengkapan_umum', 'ruangan', 'peralatan_medis', 'sarana_penunjang', 'alat_evakuasi'],
     // Standar penilaian kondisi alat — ditampilkan di form agar inspektur
     // memakai acuan yang sama, bukan penilaian subjektif masing-masing.
     standarKondisi: [

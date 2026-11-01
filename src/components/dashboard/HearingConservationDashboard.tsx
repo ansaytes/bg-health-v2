@@ -98,8 +98,8 @@ export default function HearingConservationDashboard() {
       },
       scales: horizontal
         ? { x: { beginAtZero: true, max, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
-            y: { grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false }, title: { display: true, text: 'Kategori', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } } }
-        : { x: { grid: { display: false }, ticks: { color: text, font: { size: 11, weight: 'bold' as const, family: FONT }, autoSkip: false }, title: { display: true, text: 'Kategori', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+            y: { grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false } } }
+        : { x: { grid: { display: false }, ticks: { color: text, font: { size: 11, weight: 'bold' as const, family: FONT }, autoSkip: false } },
             y: { beginAtZero: true, max, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah karyawan', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } } },
     } as ChartOptions<'bar'>);
 
@@ -336,7 +336,7 @@ function EvaluasiTahunan({ d, nAreaTot, katTotal, cakTotal, stsTotal }: {
         </div>
         <div style={{ fontSize: 15, fontWeight: 800, color: warna, lineHeight: 1.2 }}>{label}</div>
         <div style={{ fontSize: 8.5, color: 'var(--muted-foreground)', lineHeight: 1.3 }}>
-          SOP/028 4.3.5 — efektivitas program
+          Efektivitas program tahunan
         </div>
       </div>
       <div style={{ flex: 1, minWidth: 0, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }}>
