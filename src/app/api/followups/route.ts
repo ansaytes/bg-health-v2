@@ -34,7 +34,7 @@ export const maxDuration = 120;
  * Baseline MCU tetap utuh — nilai follow up hanya MENIMPA saat perhitungan,
  * sehingga riwayat "dulu 165/102, sekarang 131/79" tetap bisa ditelusuri.
  */
-const ROLES_BACA = ['superuser', 'administrator', 'pic', 'manager'];
+const ROLES_BACA = ['superuser', 'administrator', 'pic'];
 const ROLES_TULIS = ['superuser', 'administrator', 'pic'];
 
 function namaTerbaca(v: unknown): string {
@@ -78,6 +78,10 @@ export async function GET(req: NextRequest) {
       butuhMcu: true,
     }, { status: 404 });
   }
+  if (caller.role === 'pic' && (!caller.site
+    || String(mcu.site ?? '').trim().toLowerCase() !== caller.site.trim().toLowerCase())) {
+    return NextResponse.json({ error: 'PIC hanya dapat melihat tindak lanjut di site sendiri.' }, { status: 403 });
+  }
 
   // decryptMCURecord hanya mendekripsi field identitas. Kolom DB masih
   // snake_case (`td_s`, `visus_jauh`) sedangkan engine membaca camelCase
@@ -94,7 +98,8 @@ export async function GET(req: NextRequest) {
     .order('jadwal_tanggal', { ascending: false });
 
   if (riwayatError && !/does not exist|PGRST205|42P01/i.test(riwayatError.message)) {
-    return NextResponse.json({ error: riwayatError.message }, { status: 500 });
+    console.error('[Follow-up] Failed to read follow-up history:', riwayatError.code);
+    return NextResponse.json({ error: 'Gagal membaca riwayat tindak lanjut.' }, { status: 500 });
   }
 
   const rows = (riwayat ?? []) as Record<string, unknown>[];
@@ -194,15 +199,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Hanya QSHE Medic / PIC yang dapat mencatat tindak lanjut' }, { status: 403 });
   }
 
-  const body = await req.json().catch(() => ({}));
+  const parsedBody: unknown = await req.json().catch(() => null);
+  if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
+    return NextResponse.json({ error: 'Body permintaan tidak valid.' }, { status: 400 });
+  }
+  const body = parsedBody as Record<string, unknown>;
   const nik = String(body.nik ?? '').trim();
   const aktual = String(body.aktual_tanggal ?? '').slice(0, 10);
   if (!nik) return NextResponse.json({ error: 'NIK wajib diisi' }, { status: 400 });
-  if (!aktual) return NextResponse.json({ error: 'Tanggal aktual tindak lanjut wajib diisi' }, { status: 400 });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(aktual) || Number.isNaN(Date.parse(`${aktual}T00:00:00Z`))) {
+    return NextResponse.json({ error: 'Tanggal aktual tindak lanjut wajib diisi dengan format YYYY-MM-DD.' }, { status: 400 });
+  }
 
-  const nilai = (body.nilai && typeof body.nilai === 'object' ? body.nilai : {}) as Record<string, string | number>;
+  if (!body.nilai || typeof body.nilai !== 'object' || Array.isArray(body.nilai)) {
+    return NextResponse.json({ error: 'Hasil tindak lanjut tidak valid.' }, { status: 400 });
+  }
+  const nilai = body.nilai as Record<string, unknown>;
   if (!Object.keys(nilai).length) {
     return NextResponse.json({ error: 'Isi minimal satu hasil tindak lanjut' }, { status: 400 });
+  }
+  if (Object.keys(nilai).length > 40 || Object.values(nilai).some((value) =>
+    (typeof value !== 'string' && typeof value !== 'number')
+    || (typeof value === 'string' && value.length > 500)
+    || (typeof value === 'number' && !Number.isFinite(value)))) {
+    return NextResponse.json({ error: 'Nilai tindak lanjut tidak valid.' }, { status: 400 });
   }
 
   const nikHash = hashField(nik);
@@ -213,11 +233,27 @@ export async function POST(req: NextRequest) {
   // Baseline MCU — sumber hitungan sekaligus untuk kolom mcu_record_id.
   const { data: mcuRows } = await client
     .from('mcu_records')
-    .select('id,trigger_zona,zonasi')
+    .select('id,trigger_zona,zonasi,site,nama,jabatan,department')
     .eq('nik_karyawan_hash', nikHash)
     .order('tgl_mcu', { ascending: false, nullsFirst: false })
     .limit(1);
   const mcu = mcuRows?.[0] as unknown as Record<string, unknown> | undefined;
+  if (!mcu) return NextResponse.json({ error: 'Data MCU karyawan tidak ditemukan.' }, { status: 404 });
+  if (caller.role === 'pic' && (!caller.site
+    || String(mcu.site ?? '').trim().toLowerCase() !== caller.site.trim().toLowerCase())) {
+    return NextResponse.json({ error: 'PIC hanya dapat mencatat tindak lanjut di site sendiri.' }, { status: 403 });
+  }
+
+  const { buildDatasetEfektifDanZona } = await import('@/lib/followup-apply');
+  const baselineResult = await buildDatasetEfektifDanZona({ client, nikHash, nilaiBaru: {} });
+  const allowedFields = new Set(tentukanFieldTindakLanjut(
+    baselineResult.baseline,
+    String(mcu.trigger_zona ?? ''),
+  ).flatMap((group) => group.fields.map((field) => field.id)));
+  if (Object.keys(nilai).some((field) => !allowedFields.has(field))) {
+    return NextResponse.json({ error: 'Hasil memuat parameter yang tidak dapat ditindaklanjuti.' }, { status: 400 });
+  }
+  const typedNilai = nilai as Record<string, string | number>;
 
   // Nomor urut untuk riwayat kronologis.
   const { count } = await client
@@ -227,25 +263,37 @@ export async function POST(req: NextRequest) {
     .eq('selesai', true);
 
   // Teks surat dari field abnormal + nilai baru.
-  const { buildDatasetEfektifDanZona } = await import('@/lib/followup-apply');
   const hasil = await buildDatasetEfektifDanZona({
-    client, nikHash, nilaiBaru: nilai,
+    client, nikHash, nilaiBaru: typedNilai,
   });
+
+  const evidenceUrl = body.evidence_url ? String(body.evidence_url).trim() : '';
+  if (evidenceUrl) {
+    try {
+      if (evidenceUrl.length > 2000 || new URL(evidenceUrl).protocol !== 'https:') throw new Error();
+    } catch {
+      return NextResponse.json({ error: 'URL bukti harus menggunakan HTTPS.' }, { status: 400 });
+    }
+  }
+  const jadwal = String(body.jadwal_tanggal ?? aktual).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(jadwal) || Number.isNaN(Date.parse(`${jadwal}T00:00:00Z`))) {
+    return NextResponse.json({ error: 'Tanggal jadwal tindak lanjut tidak valid.' }, { status: 400 });
+  }
 
   const payload = {
     nik_hash: nikHash,
     nik_enc: encrypt(nik),
-    nama_enc: body.nama ? encrypt(String(body.nama)) : null,
-    site: body.site ?? null,
-    department: body.department ?? null,
-    jabatan: body.jabatan ?? null,
+    nama_enc: baselineResult.baseline.nama ? encrypt(String(baselineResult.baseline.nama)) : null,
+    site: mcu.site ?? null,
+    department: mcu.department ?? null,
+    jabatan: mcu.jabatan ?? null,
     zona_risiko: hasil.zonaSebelum,
-    jadwal_tanggal: String(body.jadwal_tanggal ?? aktual).slice(0, 10),
+    jadwal_tanggal: jadwal,
     aktual_tanggal: aktual,
-    evidence_url: body.evidence_url || null,
-    catatan: body.catatan || null,
+    evidence_url: evidenceUrl || null,
+    catatan: typeof body.catatan === 'string' ? body.catatan.slice(0, 2000) : null,
     hasil: hasil.arah === 'membaik' ? 'MEMBAIK' : hasil.arah === 'memburuk' ? 'MEMBURUK' : 'STABIL',
-    nilai,
+    nilai: typedNilai,
     baseline: hasil.baseline,
     zona_sebelum: hasil.zonaSebelum,
     zona_sesudah: hasil.zonaBaru,
@@ -264,7 +312,18 @@ export async function POST(req: NextRequest) {
 
   let error;
   if (body.id) {
-    ({ error } = await client.from('followups_prokawan').update(payload).eq('id', String(body.id)));
+    if (typeof body.id !== 'string' || body.id.length > 100) {
+      return NextResponse.json({ error: 'ID tindak lanjut tidak valid.' }, { status: 400 });
+    }
+    const { data: ownedRow, error: ownershipError } = await client
+      .from('followups_prokawan')
+      .select('id')
+      .eq('id', body.id)
+      .eq('nik_hash', nikHash)
+      .maybeSingle();
+    if (ownershipError) return NextResponse.json({ error: 'Gagal memeriksa tindak lanjut.' }, { status: 500 });
+    if (!ownedRow) return NextResponse.json({ error: 'Tindak lanjut tidak ditemukan.' }, { status: 404 });
+    ({ error } = await client.from('followups_prokawan').update(payload).eq('id', body.id).eq('nik_hash', nikHash));
   } else {
     ({ error } = await client.from('followups_prokawan').insert({ ...payload, created_by: caller.userId }));
   }
@@ -275,7 +334,8 @@ export async function POST(req: NextRequest) {
         error: 'Tabel followups_prokawan belum ada. Jalankan migration 20261029_followups_prokawan.sql.',
       }, { status: 500 });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[Follow-up] Failed to save follow-up:', error.code);
+    return NextResponse.json({ error: 'Gagal menyimpan tindak lanjut.' }, { status: 500 });
   }
 
   // Terapkan zona baru ke kolom turunan mcu_records (baseline TIDAK diubah).
@@ -310,6 +370,9 @@ export async function DELETE(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id wajib diisi' }, { status: 400 });
 
   const { error } = await adminClient().from('followups_prokawan').delete().eq('id', id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[Follow-up] Failed to delete follow-up:', error.code);
+    return NextResponse.json({ error: 'Gagal menghapus tindak lanjut.' }, { status: 500 });
+  }
   return NextResponse.json({ success: true });
 }

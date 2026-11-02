@@ -19,6 +19,25 @@ ChartJS.register(...registerables, ChartDataLabels);
 type D = Record<string, any>;
 const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
+/**
+ * Urutan & warna derajat — SAMA dengan label yang dikirim API
+ * (`app/api/mental-health/dashboard`: `srqBand` / `dassBand`).
+ * Urutan menentukan susunan batang agar konsisten antar pemuatan data.
+ */
+const SRQ_BAND_ORDER = ['Normal', 'Perlu Tindak Lanjut'] as const;
+const SRQ_BAND_WARNA: Record<string, string> = {
+  Normal: '#00B894',
+  'Perlu Tindak Lanjut': '#E74C3C',
+};
+const DASS_BAND_ORDER = ['Normal', 'Ringan', 'Sedang', 'Berat', 'Sangat Berat'] as const;
+const DASS_BAND_WARNA: Record<string, string> = {
+  Normal: '#00B894',
+  Ringan: '#F1C40F',
+  Sedang: '#E67E22',
+  Berat: '#E74C3C',
+  'Sangat Berat': '#8E44AD',
+};
+
 // Warna lembut dan tidak saling bertabrakan: merah = perlu tindak lanjut,
 // oranye = perlu perhatian, hijau = normal. Biru hanya untuk seri netral.
 const RED = 'rgba(231, 76, 60, 0.72)';
@@ -290,6 +309,47 @@ export default function MentalHealthDashboard() {
         </ChartCard>
         <ChartCard title="Rata-rata Subskala DASS-21" sub="Depresi · ansietas · stres" accent="#3498DB" empty={!i.dass21.terisi}><canvas ref={subskalaRef} /></ChartCard>
         <ChartCard title="SRQ-20 per Site" sub="Responden · perlu tindak lanjut" accent="#2E86DE" empty={!perSite.length}><canvas ref={siteRef} /></ChartCard>
+      </div>
+
+      {/* Baris 2 — sebaran derajat keparahan & indikator SDS.
+          Tiga diagram ini memakai data yang SUDAH tersedia di API tetapi
+          belum pernah ditampilkan: `srq20.band`, `dass21.band`, dan
+          `sds.perIndikator`. Sebelumnya empat diagram sebelumnya hanya
+          menunjukkan total, bukan DERAJAT — sehingga tidak informatif untuk
+          menentukan prioritas tindak lanjut. */}
+      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, flex: 1, minHeight: 0 }}>
+        <ChartCard title="Sebaran Skor SRQ-20" sub="Ringan · sedang · berat" accent="#E74C3C" empty={!Object.keys(i.srq20.band || {}).length}>
+          <MCUChart
+            type="bar"
+            labels={Array.from(SRQ_BAND_ORDER, (k) => k).filter((k) => Number((i.srq20.band as Record<string, number>)?.[k] ?? 0) > 0)}
+            values={Array.from(SRQ_BAND_ORDER, (k) => k).filter((k) => Number((i.srq20.band as Record<string, number>)?.[k] ?? 0) > 0).map((k) => Number((i.srq20.band as Record<string, number>)[k]))}
+            colors={SRQ_BAND_ORDER.filter((k) => Number((i.srq20.band as Record<string, number>)?.[k] ?? 0) > 0).map((k) => SRQ_BAND_WARNA[k] ?? '#778899')}
+            horizontal
+            legendLabel="Responden"
+          />
+        </ChartCard>
+
+        <ChartCard title="Derajat Keparahan DASS-21" sub="Kategori tertinggi dari 3 subskala" accent="#F39C12" empty={!Object.keys(i.dass21.band || {}).length}>
+          <MCUChart
+            type="bar"
+            labels={DASS_BAND_ORDER.filter((k) => Number((i.dass21.band as Record<string, number>)?.[k] ?? 0) > 0)}
+            values={DASS_BAND_ORDER.filter((k) => Number((i.dass21.band as Record<string, number>)?.[k] ?? 0) > 0).map((k) => Number((i.dass21.band as Record<string, number>)[k]))}
+            colors={DASS_BAND_ORDER.filter((k) => Number((i.dass21.band as Record<string, number>)?.[k] ?? 0) > 0).map((k) => DASS_BAND_WARNA[k] ?? '#778899')}
+            horizontal
+            legendLabel="Responden"
+          />
+        </ChartCard>
+
+        <ChartCard title="Indikator SDS" sub="Rata-rata skor per indikator (skala 5–35)" accent="#8E44AD" empty={!(i.sds?.perIndikator || []).length}>
+          <MCUChart
+            type="bar"
+            labels={(i.sds?.perIndikator || []).map((x: any) => x.title)}
+            values={(i.sds?.perIndikator || []).map((x: any) => Number(x.rataRata || 0))}
+            colors={(i.sds?.perIndikator || []).map((_: any, idx: number) => ['#8E44AD', '#3498DB', '#E74C3C', '#F39C12', '#00B894', '#1ABC9C'][idx % 6])}
+            horizontal
+            legendLabel="Skor rata-rata"
+          />
+        </ChartCard>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getInventoryCallerRole, inventorySupabase as supabase } from '@/lib/inventory-auth';
+import { createInventoryClient, getInventoryCallerRole } from '@/lib/inventory-auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -7,6 +7,7 @@ export async function POST(request: NextRequest) {
     if (!role || !['administrator', 'superuser'].includes(role)) {
       return NextResponse.json({ success: false, error: 'Hanya administrator dan superuser yang dapat menambah stok' }, { status: 403 });
     }
+    const supabase = createInventoryClient();
 
     const body = await request.json();
     const { item_id, jumlah_masuk, tanggal_masuk, tanggal_expired } = body;
@@ -34,6 +35,11 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const role = await getInventoryCallerRole(request);
+    if (!role || !['administrator', 'superuser', 'pic'].includes(role)) {
+      return NextResponse.json({ success: false, error: 'Akses ditolak' }, { status: 403 });
+    }
+    const supabase = createInventoryClient();
     const { searchParams } = new URL(request.url);
     const itemId = searchParams.get('item_id');
     
@@ -50,8 +56,7 @@ export async function GET(request: NextRequest) {
       
     if (error) throw error;
     return NextResponse.json({ success: true, data: data || [] });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Gagal mengambil data batch';
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Gagal mengambil data batch.' }, { status: 500 });
   }
 }

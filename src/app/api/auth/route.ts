@@ -10,7 +10,6 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : supabase;
-const EMPLOYEE_DEFAULT_PASSWORD = process.env.EMPLOYEE_DEFAULT_PASSWORD || '';
 
 const PREVIEW_ROLE = process.env.NEXT_PUBLIC_PREVIEW_ROLE as string | undefined;
 
@@ -22,7 +21,7 @@ async function getSessionRole(req: NextRequest) {
     if (cookie) accessToken = cookie;
   }
   if (!accessToken) return null;
-  if (accessToken === 'preview-access-token' && PREVIEW_ROLE) {
+  if (process.env.NODE_ENV !== 'production' && accessToken === 'preview-access-token' && PREVIEW_ROLE) {
     return { userId: 'preview-0000-0000-0000-000000000001', role: PREVIEW_ROLE };
   }
   const { data: { user }, error } = await supabase.auth.getUser(accessToken);
@@ -32,7 +31,7 @@ async function getSessionRole(req: NextRequest) {
     .select('role, full_name, username, site, employee_nik_hash')
     .eq('user_id', user.id)
     .single();
-  return { user, role: (profile?.role as string) || 'viewer', profile };
+  return { user, role: (profile?.role as string) || 'disabled', profile };
 }
 
 export async function POST(req: NextRequest) {
@@ -41,7 +40,6 @@ export async function POST(req: NextRequest) {
     const { action } = body;
     const ctx = {
       supabase, supabaseAdmin, supabaseServiceKey,
-      employeeDefaultPassword: EMPLOYEE_DEFAULT_PASSWORD,
     };
 
     if (action === 'login') return handleLogin(req, body, ctx);
@@ -51,6 +49,7 @@ export async function POST(req: NextRequest) {
       const authInfo = await getSessionRole(req);
       const isSuperuser = authInfo?.role === 'superuser';
       const isPreview = req.headers.get('authorization')?.replace('Bearer ', '') === 'preview-access-token'
+        && process.env.NODE_ENV !== 'production'
         && Boolean(process.env.NEXT_PUBLIC_PREVIEW_ROLE);
       return handleRegister(req, body, { supabaseAdmin, isSuperuser, isPreview });
     }

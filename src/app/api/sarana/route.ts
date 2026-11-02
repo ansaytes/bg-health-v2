@@ -26,8 +26,13 @@ export async function GET(req: NextRequest) {
 
   const client = adminClient();
   const siteParam = req.nextUrl.searchParams.get('site')?.trim() || '';
-  const picSite = caller.role === 'pic' ? caller.site ?? null : null;
-  const site = picSite || siteParam;
+  if (caller.role === 'pic' && !caller.site) {
+    return NextResponse.json({ error: 'Site PIC belum ditetapkan.' }, { status: 403 });
+  }
+  if (caller.role === 'pic' && siteParam && siteParam.toLowerCase() !== caller.site!.toLowerCase()) {
+    return NextResponse.json({ error: 'PIC hanya dapat melihat site sendiri.' }, { status: 403 });
+  }
+  const site = caller.role === 'pic' ? caller.site! : siteParam;
 
   if (!site) {
     return NextResponse.json({ error: 'Parameter site wajib diisi' }, { status: 400 });
@@ -41,11 +46,11 @@ export async function GET(req: NextRequest) {
   if (katalogError) {
     return NextResponse.json({
       error: 'Tabel sarana belum dibuat. Jalankan migration 20261028_sarana_klinik.sql.',
-      detail: katalogError.message,
     }, { status: 500 });
   }
   if (kondisiError) {
-    return NextResponse.json({ error: kondisiError.message }, { status: 500 });
+    console.error('[Sarana] Failed to read site conditions:', kondisiError.code);
+    return NextResponse.json({ error: 'Gagal membaca data sarana.' }, { status: 500 });
   }
 
   const byKatalog = new Map((kondisi ?? []).map((k) => [String(k.katalog_id), k]));
@@ -131,7 +136,7 @@ export async function POST(req: NextRequest) {
   if (!site || !katalogId) {
     return NextResponse.json({ error: 'site dan katalogId wajib diisi' }, { status: 400 });
   }
-  if (caller.role === 'pic' && caller.site && caller.site.toLowerCase() !== site.toLowerCase()) {
+  if (caller.role === 'pic' && (!caller.site || caller.site.toLowerCase() !== site.toLowerCase())) {
     return NextResponse.json({ error: 'PIC hanya dapat mengubah sarana site sendiri' }, { status: 403 });
   }
 
@@ -153,7 +158,10 @@ export async function POST(req: NextRequest) {
     updated_at: new Date().toISOString(),
   }, { onConflict: 'site,katalog_id' });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[Sarana] Failed to save site condition:', error.code);
+    return NextResponse.json({ error: 'Gagal menyimpan data sarana.' }, { status: 500 });
+  }
   return NextResponse.json({ success: true });
 }
 

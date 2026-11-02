@@ -26,7 +26,7 @@ async function getCaller(request: NextRequest): Promise<{ role: string; site: st
   const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
     || request.cookies.get('sb-access-token')?.value;
   if (!token) return null;
-  if (token === 'preview-access-token' && previewRole) {
+  if (process.env.NODE_ENV !== 'production' && token === 'preview-access-token' && previewRole) {
     return { role: previewRole, site: process.env.NEXT_PUBLIC_PREVIEW_SITE || 'Head Office' };
   }
 

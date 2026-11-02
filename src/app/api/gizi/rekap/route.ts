@@ -21,7 +21,14 @@ export async function GET(req: NextRequest) {
   }
 
   const params = req.nextUrl.searchParams;
-  const siteFilter = caller.role === 'pic' ? caller.site ?? null : params.get('site')?.trim() || null;
+  const requestedSite = params.get('site')?.trim() || '';
+  if (caller.role === 'pic' && !caller.site) {
+    return NextResponse.json({ error: 'Site PIC belum ditetapkan.' }, { status: 403 });
+  }
+  if (caller.role === 'pic' && requestedSite && requestedSite.toLowerCase() !== caller.site!.toLowerCase()) {
+    return NextResponse.json({ error: 'PIC hanya dapat melihat site sendiri.' }, { status: 403 });
+  }
+  const siteFilter = caller.role === 'pic' ? caller.site! : requestedSite || null;
 
   const client = adminClient();
 
@@ -37,7 +44,7 @@ export async function GET(req: NextRequest) {
     .order('tgl_mcu', { ascending: false, nullsFirst: false })
     .limit(8000);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: 'Gagal membaca data agregat MCU.' }, { status: 500 });
 
   const terbaru = new Map<string, Record<string, unknown>>();
   for (const r of (data ?? []) as Record<string, unknown>[]) {

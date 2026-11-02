@@ -8,7 +8,7 @@
 // Pola UI mengikuti tema aplikasi (var(--card)/var(--border)).
 
 import { useEffect, useState } from 'react';
-import { Building2, FileText, Clock, Hospital, Save, Loader2, Users } from 'lucide-react';
+import { Building2, FileText, Clock, Hospital, Save, Loader2, Users, Plug } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/lib/use-app-settings';
@@ -16,14 +16,16 @@ import { useAuth } from '@/lib/auth-context';
 import { DEFAULT_SETTINGS, type AppSettings } from '@/lib/app-settings';
 import CenteredTabs from '@/components/ui/centered-tabs';
 import UserManagement from '@/components/administrator/UserManagement';
+import IntegrationSettings from '@/components/settings/IntegrationSettings';
 
-type Tab = 'perusahaan' | 'dokumen' | 'pak' | 'faskes' | 'pengguna';
+type Tab = 'perusahaan' | 'dokumen' | 'pak' | 'faskes' | 'integrasi' | 'pengguna';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'perusahaan', label: 'Perusahaan' },
   { key: 'dokumen', label: 'Nomor Dokumen' },
   { key: 'pak', label: 'Batas Waktu PAK' },
   { key: 'faskes', label: 'Faskes & BPJS' },
+  { key: 'integrasi', label: 'Integrasi' },
   { key: 'pengguna', label: 'Kelola Pengguna' },
 ];
 
@@ -104,6 +106,7 @@ export default function AppSettingsPage() {
       <CenteredTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Pengaturan aplikasi" compact />
 
       <div style={{ paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {tab === 'integrasi' && <IntegrationSettings />}
         {tab === 'perusahaan' && (
           <section style={{ background: 'var(--card)', borderRadius: 12, padding: 16, border: '1px solid var(--border)' }}>
             <div className="flex items-center gap-2 mb-3">

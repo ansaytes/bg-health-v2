@@ -33,6 +33,13 @@ const KUESIONER = [
       + 'Instrumen SDS-30 (psikologi lingkungan kerja) diisi petugas di Data Entry.',
     waktu: 'sekitar 5 menit',
   },
+  {
+    href: '/kuesioner/psikologi-lingkungan',
+    title: 'Psikologi Lingkungan Kerja',
+    subtitle: 'Survei Diagnosis Stres — 30 pertanyaan',
+    detail: 'Skrining faktor psikologi kerja. Hasil digunakan dalam pemetaan kelompok, bukan sebagai diagnosis individu.',
+    waktu: 'sekitar 5 menit',
+  },
 ];
 
 export default function KuesionerLandingPage() {

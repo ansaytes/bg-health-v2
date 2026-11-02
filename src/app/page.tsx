@@ -462,19 +462,18 @@ function IconSarana() {
 }
 
 const ADMIN_SIDEBAR: SidebarItem[] = [
-  { key: 'lagging-indicator', label: 'Lagging Indicator', icon: <IconInputLagging /> },
-  { key: 'review-mcu', label: 'Review MCU', icon: <IconReviewMCU /> },
-  { key: 'health-campaign', label: 'Health Campaign', icon: <IconCampaignAdmin /> },
   // Kunjungan Berobat + Inventory digabung menjadi satu menu "Layanan Kuratif"
   // (tab di dalamnya), konsisten dengan sisi dashboard.
   { key: 'layanan-kuratif-admin', label: 'Layanan Kuratif', icon: <IconKuratif /> },
+  // Monitoring sakit menindaklanjuti episode karyawan; urutan menu mengikuti alur admin.
+  { key: 'karyawan-sakit', label: 'Monitoring Karyawan Sakit', icon: <IconKaryawanSakit /> },
+  { key: 'lagging-indicator', label: 'Lagging Indicator', icon: <IconInputLagging /> },
+  { key: 'review-mcu', label: 'Review MCU', icon: <IconReviewMCU /> },
+  { key: 'prokawan-admin', label: 'ProKawan', icon: <IconProKawan /> },
   // Hearing Conservation + Ergonomi masuk ke menu Higiene Industri.
   { key: 'higiene-industri-admin', label: 'Higiene Industri', icon: <IconHigiene /> },
+  { key: 'health-campaign', label: 'Health Campaign', icon: <IconCampaignAdmin /> },
   { key: 'pak-register', label: 'Register PAK', icon: <IconPakRegister /> },
-  { key: 'prokawan-admin', label: 'ProKawan', icon: <IconProKawan /> },
-  // Monitoring Karyawan Sakit (SOP/027) — jalur kelayakan kerja yang BERBEDA
-  // dari kesimpulan vendor MCU. Keduanya sah dan berdampingan.
-  { key: 'karyawan-sakit', label: 'Monitoring Karyawan Sakit', icon: <IconKaryawanSakit /> },
   { key: 'sarana-klinik', label: 'Sarana & Prasarana', icon: <IconSarana /> },
   // Kelola Pengguna dipindah ke menu Pengaturan (tab "Kelola Pengguna").
   { key: 'pengaturan', label: 'Pengaturan', icon: <IconSetting />, superuserOnly: true },
@@ -972,7 +971,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
           </p>
           <p className="login-footer-text" style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
             Employee dapat login dengan NIK Karyawan atau National ID. Akun dibuat otomatis pada login pertama;
-            gunakan password awal dari administrator, lalu ganti password untuk melanjutkan.
+            gunakan password yang dibuat saat mendaftar; akun baru dapat dipakai setelah disetujui Superuser.
           </p>
           </>
           ) : (
@@ -990,7 +989,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
                   email: regEmail,
                   password: regPassword,
                   full_name: regNama,
-                  role: 'viewer',
+                  role: 'employee',
                   employee_lookup_token: regEmployee?.lookupToken,
                 }),
               });
@@ -1192,6 +1191,9 @@ export default function Home() {
       });
     }
     if (activePage === 'data-entry') {
+      if (role === 'manager') {
+        return DATA_ENTRY_SIDEBAR.filter((item) => item.approverOnly);
+      }
       return DATA_ENTRY_SIDEBAR.filter((item) => {
         if (item.approverOnly && !['manager', 'superuser'].includes(role || '')) return false;
         return true;
@@ -1245,10 +1247,10 @@ export default function Home() {
   const displayName = profile?.full_name || profile?.username || 'User';
   const initials = displayName.charAt(0).toUpperCase();
   const roleLabel = profile?.role === 'superuser' ? 'Superuser'
-    : profile?.role === 'administrator' ? 'Administrator'
-      : profile?.role === 'pic' ? 'PIC'
+    : profile?.role === 'administrator' ? 'QSHE Medic'
+      : profile?.role === 'pic' ? 'PIC Site'
         : profile?.role === 'employee' ? 'Employee'
-          : profile?.role === 'manager' ? 'Manager' : 'Viewer';
+          : profile?.role === 'manager' ? 'Manager' : 'Akun dinonaktifkan';
 
   return (
     <div className="app-shell">

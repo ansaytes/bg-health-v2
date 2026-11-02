@@ -2,13 +2,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-export const MIN_PASSWORD_LENGTH = 8;
-export const BLOCKED_PASSWORDS = new Set(['bagong1994']);
+export const MIN_PASSWORD_LENGTH = 12;
 
 export async function handleChangePassword(
   req: NextRequest,
   body: Record<string, unknown>,
-  ctx: { supabaseAdmin: SupabaseClient; supabaseServiceKey: string; employeeDefaultPassword: string },
+  ctx: { supabaseAdmin: SupabaseClient; supabaseServiceKey: string },
 ): Promise<NextResponse> {
   const accessToken = req.headers.get('authorization')?.replace('Bearer ', '') || req.cookies.get('sb-access-token')?.value;
   if (!accessToken || !ctx.supabaseServiceKey) {
@@ -21,10 +20,7 @@ export async function handleChangePassword(
   }
   const newPassword = String(body.newPassword ?? '');
   if (newPassword.length < MIN_PASSWORD_LENGTH) {
-    return NextResponse.json({ error: 'Password baru minimal 8 karakter' }, { status: 400 });
-  }
-  if (newPassword === ctx.employeeDefaultPassword || BLOCKED_PASSWORDS.has(newPassword)) {
-    return NextResponse.json({ error: 'Password baru tidak boleh sama dengan password awal' }, { status: 400 });
+    return NextResponse.json({ error: `Password baru minimal ${MIN_PASSWORD_LENGTH} karakter` }, { status: 400 });
   }
   const { error: updateError } = await ctx.supabaseAdmin.auth.admin.updateUserById(user.id, {
     password: newPassword,

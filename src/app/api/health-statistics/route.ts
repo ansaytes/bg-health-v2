@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getServerCaller, READ_ROLES, STAFF_ROLES, requireServerRole } from '@/lib/server-auth';
 
 /* ═══════════════════════════════════
    GET — Ambil data statistik kesehatan
@@ -8,6 +9,8 @@ import { supabase } from '@/lib/supabase';
    ═══════════════════════════════════ */
 export async function GET(request: NextRequest) {
   try {
+    const denied = requireServerRole(await getServerCaller(request), READ_ROLES);
+    if (denied) return denied;
     const { searchParams } = new URL(request.url);
     const tahun = searchParams.get('tahun');
     const bulan = searchParams.get('bulan');
@@ -47,6 +50,8 @@ export async function GET(request: NextRequest) {
    ═══════════════════════════════════ */
 export async function POST(request: NextRequest) {
   try {
+    const denied = requireServerRole(await getServerCaller(request), STAFF_ROLES);
+    if (denied) return denied;
     const body = await request.json();
     const { tahun, bulan, ...fields } = body;
 
@@ -87,6 +92,8 @@ export async function POST(request: NextRequest) {
    ═══════════════════════════════════ */
 export async function PUT(request: NextRequest) {
   try {
+    const denied = requireServerRole(await getServerCaller(request), STAFF_ROLES);
+    if (denied) return denied;
     const body = await request.json();
     const { tahun, bulan, ...fields } = body;
 
@@ -121,6 +128,8 @@ export async function PUT(request: NextRequest) {
    ═══════════════════════════════════ */
 export async function DELETE(request: NextRequest) {
   try {
+    const denied = requireServerRole(await getServerCaller(request), STAFF_ROLES);
+    if (denied) return denied;
     const { searchParams } = new URL(request.url);
     const tahun = searchParams.get('tahun');
     const bulan = searchParams.get('bulan');

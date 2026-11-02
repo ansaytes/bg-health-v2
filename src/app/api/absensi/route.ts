@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getServerCaller, READ_ROLES, STAFF_ROLES, requireServerRole } from '@/lib/server-auth';
 
 /* ═══════════════════════════════════
    GET — Fetch absensi_sakit with filters
@@ -7,8 +8,18 @@ import { supabase } from '@/lib/supabase';
    ═══════════════════════════════════ */
 export async function GET(request: NextRequest) {
   try {
+    const caller = await getServerCaller(request);
+    const denied = requireServerRole(caller, READ_ROLES);
+    if (denied) return denied;
+    if (caller!.role === 'pic' && !caller!.site) return NextResponse.json({ error: 'Site PIC belum ditetapkan' }, { status: 403 });
     const { searchParams } = new URL(request.url);
-    const jobsite = searchParams.get('jobsite') || '';
+    let jobsite = searchParams.get('jobsite') || '';
+    if (caller!.role === 'pic') {
+      if (jobsite && jobsite !== 'All Site' && jobsite.toLowerCase() !== caller!.site!.toLowerCase()) {
+        return NextResponse.json({ error: 'PIC hanya dapat melihat site sendiri' }, { status: 403 });
+      }
+      jobsite = caller!.site!;
+    }
     const bulan = searchParams.get('bulan') || '';
     const tahun = searchParams.get('tahun') || '';
 
@@ -47,6 +58,9 @@ export async function GET(request: NextRequest) {
    ═══════════════════════════════════ */
 export async function POST(request: NextRequest) {
   try {
+    const caller = await getServerCaller(request);
+    const denied = requireServerRole(caller, STAFF_ROLES);
+    if (denied) return denied;
     const body = await request.json();
     const {
       nik, nama, jobsite, jabatan, bulan, tahun,
@@ -61,6 +75,9 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'NIK, Nama, Jobsite, Bulan, dan Tahun wajib diisi' },
         { status: 400 }
       );
+    }
+    if (caller!.role === 'pic' && (!caller!.site || String(jobsite).toLowerCase() !== caller!.site.toLowerCase())) {
+      return NextResponse.json({ error: 'PIC hanya dapat mencatat absensi pada site sendiri' }, { status: 403 });
     }
 
     const row = {

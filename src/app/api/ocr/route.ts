@@ -1,11 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'node:crypto';
 import { GoogleGenAI } from '@google/genai';
 import { MCU_FIELDS } from '@/lib/mcu-fields';
 import {
   DEFAULT_GEMINI_OCR_MODEL,
-  GEMINI_OCR_MODELS,
   isGeminiOcrModel,
 } from '@/lib/gemini-ocr-models';
+import { decryptIntegrationSecret, getDriveAccessToken, integrationAdminClient, readIntegration } from '@/lib/integration-settings';
+import { getServerCaller, requireServerRole, STAFF_ROLES } from '@/lib/server-auth';
 
 // Create a schema mapping dynamically from MCU_FIELDS
 function generatePromptSchema() {
@@ -62,131 +64,180 @@ DETAIL WAJIB:
 `;
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const caller = await getServerCaller(req);
+    const denied = requireServerRole(caller, STAFF_ROLES);
+    if (denied) return denied;
+    const identifierHash = crypto.createHash('sha256').update(`ocr:${caller!.userId}`).digest('hex');
+    const { data: allowed, error: rateLimitError } = await integrationAdminClient().rpc('consume_login_attempt', {
+      p_identifier_hash: identifierHash,
+      p_limit: 20,
+      p_window_seconds: 3600,
+    });
+    if (rateLimitError) {
+      console.error('[OCR] Persistent rate limit check failed:', rateLimitError.code);
+      return NextResponse.json({ success: false, error: 'Pembatasan penggunaan belum tersedia.' }, { status: 503 });
+    }
+    if (allowed !== true) {
+      return NextResponse.json(
+        { success: false, error: 'Batas penggunaan OCR tercapai. Coba kembali dalam satu jam.' },
+        { status: 429, headers: { 'Retry-After': '3600' } },
+      );
+    }
     const body = await req.json();
     const { text, modelId } = body;
 
-    if (!text || text.trim().length === 0) {
+    if (typeof text !== 'string' || text.trim().length === 0) {
       return NextResponse.json({ success: false, error: 'Teks OCR kosong' }, { status: 400 });
     }
+    if (text.length > 100_000) {
+      return NextResponse.json({ success: false, error: 'Teks OCR melebihi batas ukuran' }, { status: 413 });
+    }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const aiIntegration = await readIntegration('ai');
+    const aiSecrets = decryptIntegrationSecret(aiIntegration?.secret_ciphertext ?? null);
+    const apiKey = typeof aiSecrets.apiKey === 'string' ? aiSecrets.apiKey : '';
+    const provider = aiIntegration?.config.provider === 'openai-compatible' ? 'openai-compatible' : 'gemini';
+    const model = typeof aiIntegration?.config.model === 'string' && aiIntegration.config.model
+      ? aiIntegration.config.model
+      : DEFAULT_GEMINI_OCR_MODEL;
     if (!apiKey) {
-      return NextResponse.json({ success: false, error: 'Konfigurasi layanan ekstraksi belum tersedia di server.' }, { status: 500 });
+      return NextResponse.json({ success: false, error: 'API key AI belum diatur pada menu Pengaturan > Integrasi.' }, { status: 503 });
     }
 
-    const ai = new GoogleGenAI({ apiKey });
-
-    // Cek apakah input adalah link Google Drive
-    const gDriveMatch = text.match(/(?:drive\.google\.com\/.*[?&]id=|drive\.google\.com\/file\/d\/)([-\w]{25,})/);
-    let parts: any[] = [];
-
-    if (gDriveMatch && gDriveMatch[1]) {
-      const fileId = gDriveMatch[1];
-      const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-      
+    const gDriveMatch = text.match(/(?:drive\.google\.com\/.*[?&]id=|drive\.google\.com\/file\/d\/|docs\.google\.com\/(?:document|spreadsheets|presentation)\/d\/)([-\w]{20,})/);
+    let document: { data: string; mimeType: string } | null = null;
+    let promptText = text;
+    if (gDriveMatch?.[1]) {
       try {
-        const fileRes = await fetch(downloadUrl);
-        if (!fileRes.ok) {
-            throw new Error(`HTTP ${fileRes.status}`);
+        const accessToken = await getDriveAccessToken();
+        const fileResponse = await fetch(
+          `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(gDriveMatch[1])}?alt=media`,
+          { headers: { Authorization: `Bearer ${accessToken}` }, signal: AbortSignal.timeout(20_000), cache: 'no-store' },
+        );
+        if (!fileResponse.ok) {
+          return NextResponse.json({ success: false, error: 'File tidak dapat diakses melalui akun Google Drive yang terhubung.' }, { status: 400 });
         }
-        
-        // Cek contentType jika memungkinkan, tapi default ke pdf
-        const contentType = fileRes.headers.get('content-type') || 'application/pdf';
-        const arrayBuffer = await fileRes.arrayBuffer();
-        const base64Data = Buffer.from(arrayBuffer).toString('base64');
-        
-        parts.push({
-          inlineData: {
-            data: base64Data,
-            mimeType: contentType.includes('text/html') ? 'application/pdf' : contentType
-          }
-        });
-        parts.push({ text: "Tolong ekstrak data MCU dari dokumen ini." });
-      } catch (err) {
-        return NextResponse.json({ 
-            success: false, 
-            error: 'Gagal mengunduh dokumen dari Google Drive. Pastikan akses link diset ke "Anyone with the link".' 
-        }, { status: 400 });
+        const contentLength = Number(fileResponse.headers.get('content-length') || 0);
+        if (contentLength > 15 * 1024 * 1024) {
+          return NextResponse.json({ success: false, error: 'Dokumen melebihi batas ukuran 15 MB.' }, { status: 413 });
+        }
+        const contentType = (fileResponse.headers.get('content-type') || 'application/pdf').split(';')[0].trim();
+        if (!['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(contentType)) {
+          return NextResponse.json({ success: false, error: 'Format dokumen tidak didukung untuk ekstraksi.' }, { status: 415 });
+        }
+        const bytes = await fileResponse.arrayBuffer();
+        if (bytes.byteLength > 15 * 1024 * 1024) {
+          return NextResponse.json({ success: false, error: 'Dokumen melebihi batas ukuran 15 MB.' }, { status: 413 });
+        }
+        document = { data: Buffer.from(bytes).toString('base64'), mimeType: contentType };
+        promptText = 'Tolong ekstrak data MCU dari dokumen terlampir.';
+      } catch {
+        return NextResponse.json({ success: false, error: 'Gagal mengunduh dokumen dari Google Drive.' }, { status: 502 });
       }
-    } else {
-      parts.push({ text: text });
     }
 
-    const configuredDefault = process.env.GEMINI_OCR_MODEL || DEFAULT_GEMINI_OCR_MODEL;
-    if (modelId !== undefined && !isGeminiOcrModel(modelId)) {
-      return NextResponse.json(
-        { success: false, error: 'Model ekstraksi yang dipilih tidak tersedia. Pilih model dari daftar Mode Ekstraksi Data.' },
-        { status: 400 },
-      );
-    }
-    const selectedModel = isGeminiOcrModel(modelId)
-      ? modelId
-      : isGeminiOcrModel(configuredDefault)
-        ? configuredDefault
-        : DEFAULT_GEMINI_OCR_MODEL;
-    const requestConfig = {
-      contents: [{ role: 'user' as const, parts }],
-      config: {
-        systemInstruction: generatePromptSchema(),
-        responseMimeType: 'application/json',
-        temperature: 0.1,
-      },
-    };
-
-    async function generate(model: string) {
-      return ai.models.generateContent({ model, ...requestConfig });
-    }
-
-    let response;
-    try {
-      response = await generate(selectedModel);
-    } catch (err: unknown) {
-      const apiError = err as { code?: number; status?: string; message?: string };
-      const message = apiError.message || '';
-      const isQuotaError = apiError.code === 429
-        || apiError.status === 'RESOURCE_EXHAUSTED'
-        || /quota exceeded|rate limit|resource_exhausted/i.test(message);
-
-      if (isQuotaError) {
-        const retryMatch = message.match(/retry(?:Delay| after)[^0-9]*(\d+(?:\.\d+)?)\s*(?:s|sec|seconds)?/i)
-          || message.match(/(\d+(?:\.\d+)?)\s*(?:s|sec|seconds)\b/i);
-        // The provider's retry value can land exactly on the rolling-window
-        // boundary. Add a small buffer so the next request is not sent too early.
-        const providerRetrySeconds = retryMatch ? Math.max(1, Math.ceil(Number(retryMatch[1]))) : 60;
-        const retrySeconds = providerRetrySeconds + 15;
+    let outputText = '';
+    if (provider === 'gemini') {
+      const selectedModel = typeof modelId === 'string' && modelId.length > 0
+        ? modelId
+        : model;
+      if (modelId !== undefined && (typeof modelId !== 'string' || !isGeminiOcrModel(modelId))) {
+        return NextResponse.json(
+          { success: false, error: 'Model ekstraksi yang dipilih tidak tersedia. Pilih model dari daftar Mode Ekstraksi Data.' },
+          { status: 400 },
+        );
+      }
+      const parts: Array<{ text: string } | { inlineData: { data: string; mimeType: string } }> = [];
+      if (document) parts.push({ inlineData: document });
+      parts.push({ text: promptText });
+      try {
+        const ai = new GoogleGenAI({ apiKey });
+        const response = await ai.models.generateContent({
+          model: selectedModel,
+          contents: [{ role: 'user', parts }],
+          config: {
+            systemInstruction: generatePromptSchema(),
+            responseMimeType: 'application/json',
+            temperature: 0.1,
+          },
+        });
+        outputText = response.text || '{}';
+      } catch (error: unknown) {
+        const apiError = error as { code?: number; status?: string; message?: string };
+        const message = apiError.message || '';
+        const isQuotaError = apiError.code === 429
+          || apiError.status === 'RESOURCE_EXHAUSTED'
+          || /quota exceeded|rate limit|resource_exhausted/i.test(message);
+        if (isQuotaError) {
+          return NextResponse.json(
+            { success: false, error: 'Batas penggunaan sementara tercapai. Tunggu sebelum mencoba kembali.', retryAfterSeconds: 60 },
+            { status: 429, headers: { 'Retry-After': '60' } },
+          );
+        }
+        console.error('[OCR] Gemini request failed.');
         return NextResponse.json(
           {
             success: false,
-            error: `Batas penggunaan sementara tercapai pada pemeriksaan terakhir. Tunggu sekitar ${retrySeconds} detik, lalu coba lagi. Jika penolakan berlanjut, quota proyek masih penuh karena perhitungannya menggunakan window berjalan.`,
-            retryAfterSeconds: retrySeconds,
+            errorCode: apiError.code === 401 || apiError.code === 403 ? 'API_KEY' : 'PROVIDER',
+            error: apiError.code === 401 || apiError.code === 403
+              ? 'API key AI ditolak. Periksa pengaturan integrasi.'
+              : 'Layanan ekstraksi gagal memproses dokumen.',
           },
-          {
-            status: 429,
-            headers: { 'Retry-After': String(retrySeconds) },
-          },
+          { status: 502 },
         );
       }
-
-      console.error('[OCR] Gemini request failed:', message || err);
-      return NextResponse.json(
-        {
-          success: false,
-          errorCode: apiError.code === 401 || apiError.code === 403
-            ? 'API_KEY'
-            : apiError.code === 400 || apiError.code === 404 ? 'MODEL_UNAVAILABLE' : 'PROVIDER',
-          error: apiError.code === 401 || apiError.code === 403
-            ? 'Konfigurasi akses layanan ekstraksi ditolak atau tidak memiliki izin. Periksa pengaturan server.'
-            : apiError.code === 400 || apiError.code === 404
-              ? `Model ${GEMINI_OCR_MODELS.find((model) => model.id === selectedModel)?.label || selectedModel} tidak tersedia untuk API key ini. Pilih model lain pada Mode Ekstraksi Data.`
-              : `Layanan ekstraksi gagal memproses dokumen${message ? `: ${message.slice(0, 240)}` : '. Silakan coba lagi.'}`,
-        },
-        { status: 502 },
-      );
+    } else {
+      const baseUrl = typeof aiIntegration?.config.baseUrl === 'string' ? aiIntegration.config.baseUrl.replace(/\/+$/, '') : '';
+      if (!baseUrl) return NextResponse.json({ success: false, error: 'Base URL AI belum diatur.' }, { status: 503 });
+      const endpoint = baseUrl.endsWith('/chat/completions') ? baseUrl : `${baseUrl}/chat/completions`;
+      const userContent: Array<Record<string, unknown>> = [{ type: 'text', text: promptText }];
+      if (document?.mimeType.startsWith('image/')) {
+        userContent.push({ type: 'image_url', image_url: { url: `data:${document.mimeType};base64,${document.data}` } });
+      } else if (document) {
+        userContent.push({ type: 'file', file: { filename: 'mcu-document.pdf', file_data: `data:${document.mimeType};base64,${document.data}` } });
+      }
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: generatePromptSchema() },
+              { role: 'user', content: userContent },
+            ],
+            temperature: 0.1,
+            response_format: { type: 'json_object' },
+          }),
+          signal: AbortSignal.timeout(60_000),
+          cache: 'no-store',
+        });
+        if (response.status === 429) {
+          return NextResponse.json(
+            { success: false, error: 'Batas penggunaan sementara tercapai. Tunggu sebelum mencoba kembali.', retryAfterSeconds: 60 },
+            { status: 429, headers: { 'Retry-After': '60' } },
+          );
+        }
+        if (!response.ok) {
+          console.error('[OCR] OpenAI-compatible provider rejected a request:', response.status);
+          return NextResponse.json({ success: false, error: 'Layanan AI menolak permintaan. Periksa endpoint, model, dan API key.' }, { status: 502 });
+        }
+        const result: unknown = await response.json();
+        if (!result || typeof result !== 'object' || !('choices' in result) || !Array.isArray(result.choices)) {
+          return NextResponse.json({ success: false, error: 'Respons layanan AI tidak valid.' }, { status: 502 });
+        }
+        const firstChoice = result.choices[0];
+        outputText = firstChoice && typeof firstChoice === 'object'
+          && 'message' in firstChoice && firstChoice.message && typeof firstChoice.message === 'object'
+          && 'content' in firstChoice.message && typeof firstChoice.message.content === 'string'
+          ? firstChoice.message.content : '';
+      } catch {
+        console.error('[OCR] OpenAI-compatible request failed.');
+        return NextResponse.json({ success: false, error: 'Endpoint layanan AI tidak dapat dijangkau atau waktu permintaan habis.' }, { status: 502 });
+      }
     }
-
-    const outputText = response.text || "{}";
     
     let parsedData = {};
     try {

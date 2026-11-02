@@ -20,7 +20,7 @@ async function getCallerRole(req: NextRequest): Promise<{ userId: string; role: 
     if (cookie) accessToken = cookie;
   }
   if (!accessToken) return null;
-  if (accessToken === 'preview-access-token' && PREVIEW_ROLE) {
+  if (process.env.NODE_ENV !== 'production' && accessToken === 'preview-access-token' && PREVIEW_ROLE) {
     return { userId: 'preview-0000-0000-0000-000000000001', role: PREVIEW_ROLE };
   }
 
@@ -42,7 +42,7 @@ async function getCallerRole(req: NextRequest): Promise<{ userId: string; role: 
 export async function GET(req: NextRequest) {
   try {
     const caller = await getCallerRole(req);
-    if (!caller || !['superuser', 'administrator'].includes(caller.role)) {
+    if (!caller || caller.role !== 'superuser') {
       return NextResponse.json({
         error: 'Akses ditolak',
         detail: !caller ? 'Tidak bisa memverifikasi sesi login. Pastikan SUPABASE_SERVICE_ROLE_KEY sudah diisi.' : 'Role Anda tidak punya akses ke halaman ini.',
@@ -58,7 +58,6 @@ export async function GET(req: NextRequest) {
         { id: 'preview-1', user_id: 'preview-0000-0000-0000-000000000001', username: 'superuser.preview', full_name: 'Preview Superuser', role: 'superuser', national_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
         { id: 'preview-2', user_id: 'preview-0000-0000-0000-000000000002', username: 'admin.preview', full_name: 'Preview Administrator', role: 'administrator', national_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
         { id: 'preview-3', user_id: 'preview-0000-0000-0000-000000000003', username: 'manager.preview', full_name: 'Ir. Budi Manager, QSHE', role: 'manager', national_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        { id: 'preview-4', user_id: 'preview-0000-0000-0000-000000000004', username: 'viewer.preview', full_name: 'Preview Viewer', role: 'viewer', national_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
       ];
       return NextResponse.json({ users: PREVIEW_MOCK_USERS });
     }
@@ -130,7 +129,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'ID dan role wajib diisi' }, { status: 400 });
     }
 
-    const validRoles = ['superuser', 'administrator', 'manager', 'pic', 'viewer', 'employee'];
+    const validRoles = ['superuser', 'administrator', 'manager', 'pic', 'employee', 'disabled'];
     if (!validRoles.includes(role)) {
       return NextResponse.json({ error: 'Role tidak valid' }, { status: 400 });
     }

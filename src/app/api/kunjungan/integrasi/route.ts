@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-import { adminClient, getCaller } from '@/lib/questionnaire-store';
+import { getServerCaller, requireServerRole, STAFF_ROLES } from '@/lib/server-auth';
+import { integrationAdminClient } from '@/lib/integration-settings';
 import { encrypt, hashField } from '@/lib/encryption';
 
 export const runtime = 'nodejs';
@@ -34,26 +34,44 @@ export const dynamic = 'force-dynamic';
  * Akses: QSHE Medic (superuser/administrator/pic).
  */
 export async function POST(req: NextRequest) {
-  const caller = await getCaller(req);
-  if (!caller || !['superuser', 'administrator', 'pic'].includes(String(caller.role))) {
-    return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
+  const caller = await getServerCaller(req);
+  const denied = requireServerRole(caller, STAFF_ROLES);
+  if (denied) return denied;
+  if (!caller) return NextResponse.json({ success: false, error: 'Sesi login tidak valid.' }, { status: 401 });
+  const parsedBody: unknown = await req.json().catch(() => null);
+  if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
+    return NextResponse.json({ success: false, error: 'Body permintaan tidak valid.' }, { status: 400 });
+  }
+  const kunjunganId = 'kunjunganId' in parsedBody && typeof parsedBody.kunjunganId === 'string'
+    ? parsedBody.kunjunganId.trim() : '';
+  if (!kunjunganId || kunjunganId.length > 100) {
+    return NextResponse.json({ success: false, error: 'ID kunjungan tidak valid.' }, { status: 400 });
   }
 
-  const body = await req.json().catch(() => ({}));
-  const nik = String(body.nik ?? '').trim();
-  const nama = String(body.nama ?? '').trim();
-  const tanggal = String(body.tanggal ?? '').slice(0, 10);
-  const site = String(body.site ?? '').trim();
-  const kategori = String(body.kategori ?? '').trim();
-  const rujukRS = body.rujukRS === true;
-  const namaRS = String(body.namaRS ?? '').trim();
-  const keluhan = String(body.keluhan ?? '').trim();
+  const client = integrationAdminClient();
+  const { data: kunjungan, error: kunjunganError } = await client
+    .from('kunjungan_berobat')
+    .select('nik,nama,jobsite,tanggal,rujuk_rs,nama_rs,keluhan,kategori')
+    .eq('id', kunjunganId)
+    .maybeSingle();
+  if (kunjunganError) return NextResponse.json({ success: false, error: 'Gagal memverifikasi kunjungan.' }, { status: 500 });
+  if (!kunjungan) return NextResponse.json({ success: false, error: 'Kunjungan tidak ditemukan.' }, { status: 404 });
 
-  if (!nik || !nama || !tanggal) {
-    return NextResponse.json({ error: 'nik, nama, dan tanggal wajib diisi' }, { status: 400 });
+  const nik = String(kunjungan.nik ?? '').trim();
+  const nama = String(kunjungan.nama ?? '').trim();
+  const tanggal = String(kunjungan.tanggal ?? '').slice(0, 10);
+  const site = String(kunjungan.jobsite ?? '').trim();
+  const kategori = String(kunjungan.kategori ?? '').trim();
+  const rujukRS = kunjungan.rujuk_rs === true;
+  const namaRS = String(kunjungan.nama_rs ?? '').trim();
+  const keluhan = String(kunjungan.keluhan ?? '').trim();
+  if (caller!.role === 'pic' && (!caller!.site || caller!.site.toLowerCase() !== site.toLowerCase())) {
+    return NextResponse.json({ success: false, error: 'PIC hanya dapat memproses kunjungan site sendiri.' }, { status: 403 });
+  }
+  if (!nik || !nama || !/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) {
+    return NextResponse.json({ success: false, error: 'Kunjungan tidak memiliki identitas yang cukup untuk tindak lanjut.' }, { status: 400 });
   }
 
-  const client = adminClient();
   const nikHash = hashField(nik);
   if (!nikHash) return NextResponse.json({ error: 'NIK tidak valid' }, { status: 400 });
 
@@ -90,14 +108,15 @@ export async function POST(req: NextRequest) {
           dibuat_oleh: caller.userId,
         });
         if (error) {
-          hasil.catatan.push(`Gagal membuat episode karyawan sakit: ${error.message}`);
+          console.error('[Kunjungan integration] Sick episode insert failed:', error.code);
+          hasil.catatan.push('Gagal membuat episode karyawan sakit.');
         } else {
           hasil.karyawanSakit = 'dibuat';
           hasil.catatan.push('Episode karyawan sakit dibuat dari rujukan RS.');
         }
       }
-    } catch (e) {
-      hasil.catatan.push(`Karyawan sakit: ${e instanceof Error ? e.message : 'tabel belum siap'}`);
+    } catch {
+      hasil.catatan.push('Gagal membuat episode karyawan sakit.');
     }
   }
 
@@ -137,14 +156,15 @@ export async function POST(req: NextRequest) {
           status: 'DITERIMA',
         });
         if (error) {
-          hasil.catatan.push(`Gagal membuat kasus PAK: ${error.message}`);
+          console.error('[Kunjungan integration] PAK case insert failed:', error.code);
+          hasil.catatan.push('Gagal membuat kasus PAK.');
         } else {
           hasil.registerPak = `PAK-${tahun}-${urut}`;
           hasil.catatan.push(`Kasus PAK PAK-${tahun}-${urut} dibuat. Triase wajib dalam 1 hari kerja.`);
         }
       }
-    } catch (e) {
-      hasil.catatan.push(`Register PAK: ${e instanceof Error ? e.message : 'tabel belum siap'}`);
+    } catch {
+      hasil.catatan.push('Gagal membuat kasus PAK.');
     }
   }
 

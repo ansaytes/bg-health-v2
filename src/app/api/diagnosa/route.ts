@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { getServerCaller, requireServerRole, READ_ROLES, STAFF_ROLES } from '@/lib/server-auth';
+import { integrationAdminClient } from '@/lib/integration-settings';
 
 const INITIAL_DIAGNOSA = [
   'Commond Cold', 'Faringitis', 'Vertigo', 'Strain', 'Chepalgia',
@@ -17,37 +14,48 @@ const INITIAL_DIAGNOSA = [
   'Leukositosis', 'Osteoarthitis', 'Pra-Hipertensi', 'Tachicardia'
 ];
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const caller = await getServerCaller(request);
+  const denied = requireServerRole(caller, READ_ROLES);
+  if (denied) return denied;
   try {
+    const supabase = integrationAdminClient();
     const { data, error } = await supabase
       .from('diagnosa')
       .select('nama')
       .order('nama', { ascending: true });
 
     if (error) {
-      // If table doesn't exist yet, return initial list gracefully
-      return NextResponse.json({ success: true, data: INITIAL_DIAGNOSA });
+      console.error('[Diagnosa] Failed to read diagnosis list:', error.code);
+      return NextResponse.json({ success: false, error: 'Gagal mengambil daftar diagnosa.' }, { status: 500 });
     }
 
     const dbNames = (data || []).map((d: { nama: string }) => d.nama).filter(Boolean);
     const combined = Array.from(new Set([...INITIAL_DIAGNOSA, ...dbNames])).sort((a, b) => a.localeCompare(b));
 
     return NextResponse.json({ success: true, data: combined });
-  } catch (_err) {
-    return NextResponse.json({ success: true, data: INITIAL_DIAGNOSA });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Layanan diagnosa belum tersedia.' }, { status: 503 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const nama = (body.nama || '').trim();
+    const caller = await getServerCaller(request);
+    const denied = requireServerRole(caller, STAFF_ROLES);
+    if (denied) return denied;
+    const body: unknown = await request.json().catch(() => null);
+    if (!body || typeof body !== 'object' || Array.isArray(body)
+      || !('nama' in body) || typeof body.nama !== 'string') {
+      return NextResponse.json({ success: false, error: 'Nama diagnosa wajib diisi.' }, { status: 400 });
+    }
+    const nama = body.nama.trim().slice(0, 120);
 
     if (!nama) {
       return NextResponse.json({ success: false, error: 'Nama diagnosa wajib diisi' }, { status: 400 });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await integrationAdminClient()
       .from('diagnosa')
       .insert({ nama })
       .select()
@@ -58,12 +66,12 @@ export async function POST(request: NextRequest) {
       if (error.code === '23505') {
         return NextResponse.json({ success: true, message: 'Diagnosa sudah ada di master', data: { nama } });
       }
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      console.error('[Diagnosa] Failed to save diagnosis:', error.code);
+      return NextResponse.json({ success: false, error: 'Gagal menyimpan diagnosa.' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, message: 'Diagnosa berhasil ditambahkan ke master', data });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Gagal menyimpan diagnosa';
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Gagal menyimpan diagnosa.' }, { status: 500 });
   }
 }

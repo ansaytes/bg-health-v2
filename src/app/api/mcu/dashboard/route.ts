@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { decryptMCURecord, hashField } from '@/lib/encryption';
+import { decryptMCURecord } from '@/lib/encryption';
 import { siteDihitung } from '@/lib/site-filter';
+import { getServerCaller, requireServerRole, STAFF_ROLES } from '@/lib/server-auth';
+import { integrationAdminClient } from '@/lib/integration-settings';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const client = createClient(supabaseUrl, serviceKey || anonKey);
-const previewRole = process.env.NEXT_PUBLIC_PREVIEW_ROLE;
+const client = () => integrationAdminClient();
 
 const SITE_AREAS: Record<string, string> = Object.fromEntries(
   Object.entries({
@@ -74,41 +71,6 @@ interface ServerCacheEntry {
 let serverCache: ServerCacheEntry | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-async function getCaller(request: NextRequest): Promise<{ role: string; site: string | null } | null> {
-  const token = request.headers.get('authorization')?.replace('Bearer ', '')
-    || request.cookies.get('sb-access-token')?.value;
-  if (!token) return null;
-  if (token === 'preview-access-token' && previewRole) {
-    return { role: previewRole, site: process.env.NEXT_PUBLIC_PREVIEW_SITE || 'Head Office' };
-  }
-
-  const { data: { user }, error: authError } = await client.auth.getUser(token);
-  if (authError || !user) return null;
-
-  const { data: profile, error: profileError } = await client
-    .from('user_profiles')
-    .select('role,site,username,national_id,employee_nik_hash')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  if (profileError || !profile) return null;
-
-  let site = profile.site || null;
-  if (profile.role === 'pic') {
-    const employeeHash = profile.employee_nik_hash || hashField(profile.username);
-    const nationalIdHash = profile.national_id ? hashField(profile.national_id) : null;
-    const employeeQuery = employeeHash
-      ? client.from('employees').select('site_name').eq('nik_hash', employeeHash).maybeSingle()
-      : nationalIdHash
-        ? client.from('employees').select('site_name').eq('national_id_hash', nationalIdHash).maybeSingle()
-        : Promise.resolve({ data: null });
-    const { data: employee } = await employeeQuery;
-    site = employee?.site_name || site;
-  }
-
-  return { role: profile.role, site };
-}
-
 const MONITOR_FIELDS = 'employee_id,nik_karyawan,nama,site,area_raw,client,jabatan,exempt,total_mcu,mcu_terakhir,kategori_mcu_terakhir,hasil_mcu,perlu_fu,rekomendasi_fu,item_fu,diagnosa,fram_score,fram_prob,frs_kategori,zona_risiko,masa_berlaku_mcu,status_mcu,status_follow_up,jadwal_mcu_selanjutnya';
 const MONITOR_FIELDS_ALT = 'employee_id,nik_karyawan,nama,site,area_raw,client,jabatan,exempt,total_mcu,mcu_terakhir,kategori_mcu_terakhir,hasil_mcu,perlu_fu,rekomendasi_fu,item_fu,diagnosa,fram_score,fram_prob,frs_kategori,masa_berlaku_mcu,status_mcu,status_follow_up,jadwal_mcu_selanjutnya';
 
@@ -124,7 +86,7 @@ async function resolveMonitorColumns(): Promise<string> {
   if (monitorColumnsCache) return monitorColumnsCache;
   const candidates = [MONITOR_FIELDS, MONITOR_FIELDS_ALT];
   for (const fields of candidates) {
-    const { error } = await client.from('monitor_mcu').select(fields).limit(1);
+    const { error } = await client().from('monitor_mcu').select(fields).limit(1);
     if (!error) {
       monitorColumnsCache = fields;
       return fields;
@@ -146,7 +108,7 @@ async function fetchAllMonitorMcuRows(): Promise<Record<string, unknown>[]> {
   // Sequential pagination — avoids firing multiple concurrent queries against
   // the heavy 3-table CTE VIEW, which reliably caused statement timeouts.
   for (let from = 0; ; from += PAGE_SIZE) {
-    const { data, error } = await client
+    const { data, error } = await client()
       .from('monitor_mcu')
       .select(SELECT_FIELDS)
       // Urutan HARUS unik: order by site saja tidak deterministik, sehingga baris bisa
@@ -164,27 +126,12 @@ async function fetchAllMonitorMcuRows(): Promise<Record<string, unknown>[]> {
   return rows;
 }
 
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (typeof error === 'object' && error !== null && 'message' in error
-    && typeof error.message === 'string') {
-    return error.message;
-  }
-  return 'Gagal memuat data dashboard MCU';
-}
-
 export async function GET(request: NextRequest) {
   try {
-    if (!serviceKey) {
-      return NextResponse.json({
-        error: 'Dashboard MCU memerlukan SUPABASE_SERVICE_ROLE_KEY di environment server.',
-      }, { status: 500 });
-    }
-
-    const caller = await getCaller(request);
-    if (!caller || !['pic', 'administrator', 'superuser'].includes(caller.role)) {
-      return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
-    }
+    const caller = await getServerCaller(request);
+    const denied = requireServerRole(caller, STAFF_ROLES);
+    if (denied) return denied;
+    if (!caller) return NextResponse.json({ error: 'Sesi login tidak valid' }, { status: 401 });
     if (caller.role === 'pic' && !caller.site) {
       return NextResponse.json({ error: 'Site akun PIC belum ditentukan' }, { status: 403 });
     }
@@ -223,7 +170,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ employees });
   } catch (error) {
-    console.error('Gagal memuat data dashboard MCU:', error);
-    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
+    console.error('Gagal memuat data dashboard MCU:', error instanceof Error ? error.name : 'unknown error');
+    return NextResponse.json({ error: 'Gagal memuat data dashboard MCU.' }, { status: 500 });
   }
 }

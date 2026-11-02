@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getServerCaller, READ_ROLES, STAFF_ROLES, requireServerRole } from '@/lib/server-auth';
 
 /* ═══════════════════════════════════
    GET — Ambil data ASR per site
@@ -7,6 +8,10 @@ import { supabase } from '@/lib/supabase';
    ═══════════════════════════════════ */
 export async function GET(request: NextRequest) {
   try {
+    const caller = await getServerCaller(request);
+    const denied = requireServerRole(caller, READ_ROLES);
+    if (denied) return denied;
+    if (caller!.role === 'pic' && !caller!.site) return NextResponse.json({ error: 'Site PIC belum ditetapkan' }, { status: 403 });
     const { searchParams } = new URL(request.url);
     const tahun = searchParams.get('tahun');
     const bulan = searchParams.get('bulan');
@@ -17,6 +22,7 @@ export async function GET(request: NextRequest) {
       .order('asr', { ascending: false });
     if (tahun) q = q.eq('tahun', parseInt(tahun));
     if (bulan) q = q.eq('bulan', parseInt(bulan));
+    if (caller!.role === 'pic') q = q.eq('jobsite', caller!.site);
 
     const { data, error } = await q;
     if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -33,6 +39,9 @@ export async function GET(request: NextRequest) {
    ═══════════════════════════════════ */
 export async function POST(request: NextRequest) {
   try {
+    const caller = await getServerCaller(request);
+    const denied = requireServerRole(caller, ['superuser', 'administrator']);
+    if (denied) return denied;
     const body = await request.json();
     const { sites } = body;
 
@@ -66,6 +75,8 @@ export async function POST(request: NextRequest) {
    ═══════════════════════════════════ */
 export async function DELETE(request: NextRequest) {
   try {
+    const denied = requireServerRole(await getServerCaller(request), ['superuser', 'administrator']);
+    if (denied) return denied;
     const { searchParams } = new URL(request.url);
     const tahun = searchParams.get('tahun');
     const bulan = searchParams.get('bulan');

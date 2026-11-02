@@ -24,6 +24,22 @@ import { RefreshCw } from 'lucide-react';
 import { authFetch } from '@/lib/api-client';
 import { MCUChart } from '@/components/dashboard/MCUDashboardShared';
 import PageLoading from '@/components/ui/page-loading';
+
+/**
+ * Warna status kelayakan kerja — SALINAN PERSIS dari `RESULT_COLORS` di
+ * HasilTindakLanjutMCU.tsx. Kedua diagram menampilkan label yang sama, jadi
+ * warnanya harus identik agar pembaca tidak perlu menghafal dua skema.
+ */
+const WARNA_KELAYAKAN: Record<string, string> = {
+  'fit to work': '#00B894',
+  'fit with note': '#FFD700',
+  'fit with restriction': '#9B59B6',
+  'currently unfit': '#FF4444',
+  'temporary unfit': '#8B4513',
+  unfit: '#FF4444',
+  'no data': '#616161',
+  'belum ada mcu': '#616161',
+};
 import { PALET_BAR } from '@/lib/chart-standard';
 import {
   JALUR_LABEL,
@@ -238,7 +254,10 @@ export default function ProKawanDashboard() {
               type="bar"
               labels={ringkas.byKelayakan.map(([k]) => k)}
               values={ringkas.byKelayakan.map(([, v]) => v)}
-              colors={ringkas.byKelayakan.map((_, i) => ['#00B894', '#3498DB', '#FF7A00', '#778899'][i % 4])}
+              // Warna SAMA dengan diagram "Hasil MCU" pada Analisa & Tindak
+              // Lanjut MCU — labelnya identik (Fit To Work, Fit With Note,
+              // Currently Unfit, Unfit), jadi warnanya wajib seragam.
+              colors={ringkas.byKelayakan.map(([k]) => WARNA_KELAYAKAN[k.trim().toLowerCase()] ?? '#616161')}
               horizontal
               legendLabel="Peserta"
             />

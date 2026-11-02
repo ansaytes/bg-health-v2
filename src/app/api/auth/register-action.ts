@@ -7,7 +7,7 @@ import {
   legacyIdentityValues,
   type EmployeeLoginProfile,
 } from '@/lib/auth-employee-profile';
-import { MIN_PASSWORD_LENGTH, BLOCKED_PASSWORDS } from './change-password-action';
+import { MIN_PASSWORD_LENGTH } from './change-password-action';
 
 interface RegisterInput {
   username: string;
@@ -39,13 +39,10 @@ export function validateRegisterInput(body: Record<string, unknown>): { input?: 
   }
   if (!password) return { error: 'Password wajib diisi', status: 400 };
   if (password.length < MIN_PASSWORD_LENGTH) {
-    return { error: 'Password minimal 8 karakter', status: 400 };
-  }
-  if (BLOCKED_PASSWORDS.has(password)) {
-    return { error: 'Password tidak diperbolehkan', status: 400 };
+    return { error: `Password minimal ${MIN_PASSWORD_LENGTH} karakter`, status: 400 };
   }
   if (!role) return { error: 'Role wajib dipilih', status: 400 };
-  const validRoles = ['superuser', 'administrator', 'manager', 'pic', 'viewer', 'employee'];
+  const validRoles = ['superuser', 'administrator', 'manager', 'pic', 'employee'];
   if (!validRoles.includes(role)) return { error: 'Role tidak valid', status: 400 };
   if (!employeeNik) return { error: 'NIK Karyawan wajib dipilih dari data employee', status: 400 };
 

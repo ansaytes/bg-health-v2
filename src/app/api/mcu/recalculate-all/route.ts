@@ -1,45 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { decryptMCURecord, encryptMCURecord } from '@/lib/encryption';
 import { applyMCUCalculations } from '@/lib/mcu-calculations';
 import { MCU_FIELDS } from '@/lib/mcu-fields';
+import { getServerCaller, requireServerRole, SYSTEM_ROLES } from '@/lib/server-auth';
+import { integrationAdminClient } from '@/lib/integration-settings';
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
-const client = createClient(url, serviceKey);
+const client = () => integrationAdminClient();
 
-const PREVIEW_ROLE = process.env.NEXT_PUBLIC_PREVIEW_ROLE as string | undefined;
-
-async function getSessionRole(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  let accessToken = authHeader?.replace('Bearer ', '');
-  if (!accessToken) {
-    const cookie = req.cookies.get('sb-access-token')?.value;
-    if (cookie) accessToken = cookie;
-  }
-  if (!accessToken) return null;
-  if (accessToken === 'preview-access-token' && PREVIEW_ROLE) {
-    return { role: PREVIEW_ROLE };
-  }
-  const { data: { user }, error } = await client.auth.getUser(accessToken);
-  if (error || !user) return null;
-  const { data: profile } = await client
-    .from('user_profiles')
-    .select('role')
-    .eq('user_id', user.id)
-    .single();
-  return { role: (profile?.role as string) || 'viewer' };
-}
-
-export async function GET(req: NextRequest) {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return NextResponse.json({ success: false, error: 'SUPABASE_SERVICE_ROLE_KEY is not configured; bulk recalculation is disabled.' }, { status: 500 });
-  }
-
-  const authInfo = await getSessionRole(req);
-  if (!authInfo || (authInfo.role !== 'superuser' && authInfo.role !== 'administrator')) {
-    return NextResponse.json({ success: false, error: 'Akses ditolak. Hanya superuser/administrator yang dapat menjalankan rekalkulasi.' }, { status: 403 });
-  }
+export async function POST(req: NextRequest) {
+  const caller = await getServerCaller(req);
+  const denied = requireServerRole(caller, SYSTEM_ROLES);
+  if (denied) return denied;
 
   try {
     let allRecords: any[] = [];
@@ -48,7 +19,7 @@ export async function GET(req: NextRequest) {
     
     // Fetch all records
     while (true) {
-      const { data, error } = await client.from('mcu_records').select('*').range(from, from + pageSize - 1);
+      const { data, error } = await client().from('mcu_records').select('*').range(from, from + pageSize - 1);
       if (error) throw error;
       if (!data || data.length === 0) break;
       allRecords = allRecords.concat(data);
@@ -63,7 +34,7 @@ export async function GET(req: NextRequest) {
     }
 
     let updatedCount = 0;
-    const errors: any[] = [];
+    let failedCount = 0;
 
     // Process sequentially to avoid DB timeout or memory issues
     for (const record of allRecords) {
@@ -99,21 +70,22 @@ export async function GET(req: NextRequest) {
         
         const encryptedData = encryptMCURecord(dbData);
         
-        const { error: updateError } = await client
+        const { error: updateError } = await client()
           .from('mcu_records')
           .update(encryptedData)
           .eq('id', record.id);
           
         if (updateError) throw updateError;
         updatedCount++;
-      } catch (err: any) {
-        errors.push({ id: record.id, error: err.message });
+      } catch (err) {
+        failedCount++;
+        console.error('Failed to recalculate MCU record:', err instanceof Error ? err.name : 'unknown error');
       }
     }
 
-    return NextResponse.json({ success: true, updatedCount, totalFound: allRecords.length, errors });
-  } catch (err: any) {
-    console.error('Error recalculating MCU:', err);
-    return NextResponse.json({ success: false, error: err.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ success: failedCount === 0, updatedCount, totalFound: allRecords.length, failedCount });
+  } catch (err) {
+    console.error('Error recalculating MCU:', err instanceof Error ? err.name : 'unknown error');
+    return NextResponse.json({ success: false, error: 'Gagal menjalankan rekalkulasi MCU.' }, { status: 500 });
   }
 }

@@ -39,6 +39,9 @@ export async function GET(req: NextRequest) {
   const nik = params.get('nik')?.trim();
   const status = params.get('status')?.trim();
   const picSite = caller.role === 'pic' ? caller.site ?? null : null;
+  if (caller.role === 'pic' && !picSite) {
+    return NextResponse.json({ error: 'Site PIC belum ditetapkan' }, { status: 403 });
+  }
   const site = picSite || params.get('site')?.trim() || null;
 
   let query = client
@@ -211,8 +214,8 @@ export async function POST(req: NextRequest) {
   if (!mulai) return NextResponse.json({ error: 'Tanggal mulai sakit wajib diisi (SOP/027 poin 6.6.1)' }, { status: 400 });
 
   const site = String(body.site ?? '').trim() || null;
-  if (caller.role === 'pic' && caller.site && site
-    && caller.site.toLowerCase() !== site.toLowerCase()) {
+  if (caller.role === 'pic' && (!caller.site || !site
+    || caller.site.toLowerCase() !== site.toLowerCase())) {
     return NextResponse.json({ error: 'PIC hanya dapat mencatat karyawan site sendiri' }, { status: 403 });
   }
 
@@ -243,6 +246,14 @@ export async function POST(req: NextRequest) {
   const client = adminClient();
   let error;
   if (body.id) {
+    if (caller.role === 'pic') {
+      const { data: existing, error: lookupError } = await client
+        .from('sakit_episode').select('site').eq('id', String(body.id)).maybeSingle();
+      if (lookupError) return NextResponse.json({ error: 'Gagal memverifikasi episode' }, { status: 500 });
+      if (!existing || String(existing.site || '').toLowerCase() !== caller.site!.toLowerCase()) {
+        return NextResponse.json({ error: 'Episode tidak ditemukan pada site Anda' }, { status: 404 });
+      }
+    }
     ({ error } = await client.from('sakit_episode').update(payload).eq('id', String(body.id)));
   } else {
     ({ error } = await client.from('sakit_episode').insert({ ...payload, dibuat_oleh: caller.userId }));

@@ -2,30 +2,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { decryptEmployee } from '@/lib/encryption';
+import { getServerCaller } from '@/lib/server-auth';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-export const db = createClient(url, serviceKey || anonKey);
+export const db = createClient(url, serviceKey || 'missing-service-role-key');
 
 export const ADMIN_ROLES = ['administrator', 'superuser'];
 export const ALLOWED_ROLES = ADMIN_ROLES;                 // dipakai /api/hc
 /** Penyetuju dokumen ergonomi (FORM/116-118: "Disetujui oleh QSHE Manager / PJO"). */
 export const APPROVER_ROLES = ['manager', 'superuser'];
 
-export interface Caller { role: string; name: string; jabatan: string | null; }
+export interface Caller { role: string; name: string; jabatan: string | null; site: string | null; userId: string; }
 
 /** Verifikasi token Supabase dan ambil role + nama dari user_profiles. */
 export async function getCaller(req: NextRequest): Promise<Caller | null> {
-  const token = req.headers.get('authorization')?.replace('Bearer ', '') || req.cookies.get('sb-access-token')?.value;
-  if (!token) return null;
-  if (token === 'preview-access-token' && process.env.NEXT_PUBLIC_PREVIEW_ROLE) {
-    return { role: process.env.NEXT_PUBLIC_PREVIEW_ROLE, name: 'Preview User', jabatan: 'Preview' };
+  const verified = await getServerCaller(req);
+  if (!verified) return null;
+  if (process.env.NODE_ENV !== 'production' && verified.userId.startsWith('preview-')) {
+    return {
+      role: verified.role,
+      name: 'Preview User',
+      jabatan: 'Preview',
+      site: verified.site,
+      userId: verified.userId,
+    };
   }
-  const { data: { user } } = await db.auth.getUser(token);
-  if (!user) return null;
-  const { data: profile } = await db.from('user_profiles').select('role, username, full_name, employee_nik_hash').eq('user_id', user.id).single();
-  if (!profile) return null;
+  const { data: profile, error } = await db.from('user_profiles')
+    .select('username, full_name, employee_nik_hash')
+    .eq('user_id', verified.userId)
+    .maybeSingle();
+  if (error || !profile) return null;
   // Nama & jabatan penyetuju diambil otomatis dari data employee yang tertaut ke akun.
   let name: string = profile.full_name || profile.username || 'user';
   let jabatan: string | null = null;
@@ -37,7 +44,7 @@ export async function getCaller(req: NextRequest): Promise<Caller | null> {
       jabatan = d.job_position || null;
     }
   }
-  return { role: profile.role, name, jabatan };
+  return { role: verified.role, name, jabatan, site: verified.site, userId: verified.userId };
 }
 
 export async function requireCaller(req: NextRequest, roles: string[] = ADMIN_ROLES): Promise<{ caller: Caller } | { error: NextResponse }> {

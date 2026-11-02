@@ -1,37 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getServerCaller, requireServerRole } from '@/lib/server-auth';
+import { integrationAdminClient } from '@/lib/integration-settings';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-/* ═══════════════════════════════════
-   Auth helper — verify session & admin role
-   ═══════════════════════════════════ */
-async function verifyAdmin(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  let accessToken = authHeader?.replace('Bearer ', '');
-  if (!accessToken) {
-    const cookie = req.cookies.get('sb-access-token')?.value;
-    if (cookie) accessToken = cookie;
-  }
-  if (!accessToken) return { error: 'Tidak terautentikasi', status: 401 };
-
-  const { data: { user }, error } = await supabase.auth.getUser(accessToken);
-  if (error || !user) return { error: 'Sesi tidak valid', status: 401 };
-
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('role')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile || !['superuser', 'administrator'].includes(profile.role)) {
-    return { error: 'Akses ditolak. Hanya admin/superuser.', status: 403 };
-  }
-
-  return { userId: user.id, role: profile.role };
-}
+const KUNJUNGAN_ADMIN_ROLES = ['superuser', 'administrator'] as const;
 
 /* ═══════════════════════════════════
    PATCH — Update kunjungan_berobat by ID
@@ -41,24 +12,31 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await verifyAdmin(request);
-    if ('error' in auth) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status });
-    }
+    const caller = await getServerCaller(request);
+    const denied = requireServerRole(caller, KUNJUNGAN_ADMIN_ROLES);
+    if (denied) return denied;
 
     const { id } = await params;
-    const body = await request.json();
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ error: 'ID tidak valid' }, { status: 400 });
+    const body: unknown = await request.json().catch(() => null);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: 'Body permintaan tidak valid' }, { status: 400 });
+    }
 
     const updates: Record<string, unknown> = {};
     const allowedFields = [
       'nik', 'nama', 'departemen', 'jobsite', 'tanggal',
       'diagnosa', 'jenis_obat', 'rujuk_rs', 'nama_rs',
-      'usia', 'jk', 'jabatan', 'keluhan',
+      'usia', 'jk', 'jabatan', 'keluhan', 'kategori',
     ];
 
     for (const key of allowedFields) {
       if (key in body) {
-        updates[key] = body[key];
+        const value = (body as Record<string, unknown>)[key];
+        if (value !== null && typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') {
+          return NextResponse.json({ error: `Field ${key} tidak valid` }, { status: 400 });
+        }
+        updates[key] = typeof value === 'string' ? value.slice(0, 2000) : value;
       }
     }
 
@@ -66,7 +44,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Tidak ada field yang diperbarui' }, { status: 400 });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await integrationAdminClient()
       .from('kunjungan_berobat')
       .update(updates)
       .eq('id', id)
@@ -74,13 +52,14 @@ export async function PATCH(
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('[Kunjungan] Failed to update record:', error.code);
+      return NextResponse.json({ error: 'Gagal memperbarui data kunjungan' }, { status: 500 });
     }
+    if (!data) return NextResponse.json({ error: 'Data kunjungan tidak ditemukan' }, { status: 404 });
 
     return NextResponse.json({ success: true, data });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Gagal memperbarui data kunjungan';
-    return NextResponse.json({ error: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Gagal memperbarui data kunjungan' }, { status: 500 });
   }
 }
 
@@ -92,25 +71,27 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await verifyAdmin(request);
-    if ('error' in auth) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status });
-    }
+    const caller = await getServerCaller(request);
+    const denied = requireServerRole(caller, KUNJUNGAN_ADMIN_ROLES);
+    if (denied) return denied;
 
     const { id } = await params;
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ error: 'ID tidak valid' }, { status: 400 });
 
-    const { error } = await supabase
+    const { data, error } = await integrationAdminClient()
       .from('kunjungan_berobat')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .select('id');
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('[Kunjungan] Failed to delete record:', error.code);
+      return NextResponse.json({ error: 'Gagal menghapus data kunjungan' }, { status: 500 });
     }
+    if (!data?.length) return NextResponse.json({ error: 'Data kunjungan tidak ditemukan' }, { status: 404 });
 
     return NextResponse.json({ success: true, message: 'Data kunjungan berhasil dihapus' });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Gagal menghapus data kunjungan';
-    return NextResponse.json({ error: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Gagal menghapus data kunjungan' }, { status: 500 });
   }
 }

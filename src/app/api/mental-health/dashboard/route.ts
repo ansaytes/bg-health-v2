@@ -97,7 +97,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Akses ditolak.' }, { status: 403 });
     }
 
-    const site = new URL(req.url).searchParams.get('site')?.trim() || '';
+    let site = new URL(req.url).searchParams.get('site')?.trim() || '';
+    if (role === 'pic') {
+      if (!caller?.site) return NextResponse.json({ error: 'Site PIC belum ditetapkan.' }, { status: 403 });
+      if (site && site.toLowerCase() !== caller.site.toLowerCase()) {
+        return NextResponse.json({ error: 'PIC hanya dapat melihat site sendiri.' }, { status: 403 });
+      }
+      site = caller.site;
+    }
     const client = adminClient();
 
     const fetched = await fetchRows(client, 'nik_karyawan_hash,site,tgl_pemeriksaan,skor_srq20,dass_depresi,dass_ansietas,dass_stres');

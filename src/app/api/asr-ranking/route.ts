@@ -1,20 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getServerCaller, READ_ROLES, requireServerRole } from '@/lib/server-auth';
+import { integrationAdminClient } from '@/lib/integration-settings';
 
 const MKEYS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 
 export async function GET(req: NextRequest) {
+  const caller = await getServerCaller(req);
+  const denied = requireServerRole(caller, READ_ROLES);
+  if (denied) return denied;
+  if (caller!.role === 'pic' && !caller!.site) return NextResponse.json({ error: 'Site PIC belum ditetapkan' }, { status: 403 });
   const url = req.nextUrl.searchParams;
   const tahun = url.get('tahun') || '2026';
 
-  const { data, error } = await supabase
+  const client = integrationAdminClient();
+  let query = client
     .from('health_indicators')
     .select('jobsite, asr, bulan')
     .eq('tahun', Number(tahun))
     .neq('jobsite', 'All Site');
+  if (caller!.role === 'pic') query = query.eq('jobsite', caller!.site!);
+  const { data, error } = await query;
 
   if (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error('[ASR ranking] Query failed:', error.code);
+    return NextResponse.json({ success: false, error: 'Gagal mengambil peringkat ASR.' }, { status: 500 });
   }
 
   const map = new Map<string, Record<string, number | string>>();

@@ -34,18 +34,18 @@ const ROLE_STYLES: Record<string, { bg: string; color: string }> = {
   superuser: { bg: 'rgba(239,68,68,0.12)', color: '#ef4444' },
   administrator: { bg: 'rgba(255,77,0,0.12)', color: '#ff4d00' },
   manager: { bg: 'rgba(139,92,246,0.12)', color: '#7c3aed' },
-  viewer: { bg: 'var(--muted)', color: 'var(--muted-foreground)' },
   pic: { bg: 'rgba(0,184,148,0.12)', color: '#00a884' },
   employee: { bg: 'rgba(59,130,246,0.12)', color: '#2563eb' },
+  disabled: { bg: 'var(--muted)', color: 'var(--muted-foreground)' },
 };
 
 const ROLE_OPTIONS = [
-  { value: 'viewer', label: 'Viewer' },
   { value: 'employee', label: 'Employee' },
-  { value: 'pic', label: 'PIC' },
+  { value: 'pic', label: 'PIC Site' },
   { value: 'manager', label: 'Manager (QSHE)' },
-  { value: 'administrator', label: 'Administrator' },
+  { value: 'administrator', label: 'QSHE Medic' },
   { value: 'superuser', label: 'Superuser' },
+  { value: 'disabled', label: 'Akses dinonaktifkan' },
 ];
 
 export default function UserManagement() {
@@ -56,7 +56,7 @@ export default function UserManagement() {
 
   const [showRegister, setShowRegister] = useState(false);
   const [regForm, setRegForm] = useState({
-    username: '', password: '', full_name: '', role: 'viewer' as string, employee_nik: '', national_id: '', site: '',
+    username: '', password: '', full_name: '', role: 'employee' as string, employee_nik: '', national_id: '', site: '',
   });
   const [regLoading, setRegLoading] = useState(false);
   const [regError, setRegError] = useState('');
@@ -125,7 +125,7 @@ export default function UserManagement() {
       const data = await res.json();
       if (!res.ok) { setRegError(data.error || 'Gagal mendaftarkan pengguna'); return; }
       setRegSuccess(data.message || 'Pengguna berhasil didaftarkan!');
-      setRegForm({ username: '', password: '', full_name: '', role: 'viewer', employee_nik: '', national_id: '', site: '' });
+      setRegForm({ username: '', password: '', full_name: '', role: 'employee', employee_nik: '', national_id: '', site: '' });
       fetchUsers();
     } catch { setRegError('Gagal terhubung ke server'); } finally { setRegLoading(false); }
   };
@@ -267,7 +267,11 @@ export default function UserManagement() {
                 <tr><td colSpan={isSuperuser ? 10 : 9} style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)' }}>Belum ada pengguna terdaftar</td></tr>
               ) : (
                 users.map((u) => {
-                  const rs = ROLE_STYLES[u.role] || ROLE_STYLES.viewer;
+                  const rs = ROLE_STYLES[u.role] || ROLE_STYLES.disabled;
+                  const roleLabel = u.role === 'administrator' ? 'QSHE Medic'
+                    : u.role === 'pic' ? 'PIC Site'
+                      : u.role === 'disabled' || u.role === 'viewer' ? 'Akses dinonaktifkan'
+                        : ROLE_OPTIONS.find((option) => option.value === u.role)?.label || u.role;
                   return (
                     <tr key={u.id}>
                       <td style={{ fontFamily: 'monospace', fontSize: 10 }}>{u.employee_nik || '—'}</td>
@@ -289,7 +293,7 @@ export default function UserManagement() {
                           </select>
                         ) : (
                           <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700, background: rs.bg, color: rs.color }}>
-                            {u.role}
+                            {roleLabel}
                           </span>
                         )}
                       </td>

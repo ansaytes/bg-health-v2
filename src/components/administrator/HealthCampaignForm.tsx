@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import DriveFileUpload from '@/components/settings/DriveFileUpload';
 
 interface Campaign {
   id: string;
@@ -243,6 +244,9 @@ export default function HealthCampaignForm() {
               <div style={{ marginBottom: 14 }}>
                 <label className="admin-label">URL Gambar (Google Drive / link langsung)</label>
                 <input type="text" className="admin-input" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://drive.google.com/... atau https://..." />
+                <div style={{ marginTop: 8 }}>
+                  <DriveFileUpload category="kampanye" accept="image/jpeg,image/png,image/webp" onUploaded={setImageUrl} />
+                </div>
                 {imageUrl && (
                   <div style={{ marginTop: 8, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--muted)', maxWidth: 400, aspectRatio: '4 / 3', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}

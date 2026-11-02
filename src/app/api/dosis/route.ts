@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { getServerCaller, requireServerRole, READ_ROLES, STAFF_ROLES } from '@/lib/server-auth';
+import { integrationAdminClient } from '@/lib/integration-settings';
 
 // INITIAL_DOSIS is used ONLY as a fallback when the dosis_obat table is empty
 // or unreachable. Do NOT add entries here that have been intentionally deleted
@@ -21,15 +18,20 @@ const INITIAL_DOSIS = [
   '3x1 Sesudah Makan',
 ];
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const caller = await getServerCaller(request);
+  const denied = requireServerRole(caller, READ_ROLES);
+  if (denied) return denied;
   try {
+    const supabase = integrationAdminClient();
     const { data, error } = await supabase
       .from('dosis_obat')
       .select('kode')
       .order('kode', { ascending: true });
 
     if (error) {
-      return NextResponse.json({ success: true, data: INITIAL_DOSIS });
+      console.error('[Dosis] Failed to read dosage list:', error.code);
+      return NextResponse.json({ success: false, error: 'Gagal mengambil daftar dosis.' }, { status: 500 });
     }
 
     const dbCodes = (data || []).map((d: { kode: string }) => d.kode).filter(Boolean);
@@ -39,22 +41,29 @@ export async function GET() {
     const result = dbCodes.length > 0 ? dbCodes : INITIAL_DOSIS;
 
     return NextResponse.json({ success: true, data: result });
-  } catch (_err) {
-    return NextResponse.json({ success: true, data: INITIAL_DOSIS });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Layanan dosis belum tersedia.' }, { status: 503 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const kode = (body.kode || '').trim();
-    const keterangan = (body.keterangan || '').trim() || null;
+    const caller = await getServerCaller(request);
+    const denied = requireServerRole(caller, STAFF_ROLES);
+    if (denied) return denied;
+    const body: unknown = await request.json().catch(() => null);
+    if (!body || typeof body !== 'object' || Array.isArray(body)
+      || !('kode' in body) || typeof body.kode !== 'string') {
+      return NextResponse.json({ success: false, error: 'Kode / aturan pakai wajib diisi.' }, { status: 400 });
+    }
+    const kode = body.kode.trim().slice(0, 120);
+    const keterangan = 'keterangan' in body && typeof body.keterangan === 'string' ? body.keterangan.trim().slice(0, 300) || null : null;
 
     if (!kode) {
       return NextResponse.json({ success: false, error: 'Kode / aturan pakai wajib diisi' }, { status: 400 });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await integrationAdminClient()
       .from('dosis_obat')
       .insert({ kode, keterangan })
       .select()
@@ -64,12 +73,12 @@ export async function POST(request: NextRequest) {
       if (error.code === '23505') {
         return NextResponse.json({ success: true, message: 'Dosis sudah ada di master', data: { kode } });
       }
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      console.error('[Dosis] Failed to save dosage:', error.code);
+      return NextResponse.json({ success: false, error: 'Gagal menyimpan dosis.' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, message: 'Dosis berhasil ditambahkan ke master', data });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Gagal menyimpan dosis';
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Gagal menyimpan dosis.' }, { status: 500 });
   }
 }

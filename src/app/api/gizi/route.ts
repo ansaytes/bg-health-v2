@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(req: NextRequest) {
   const caller = await getCaller(req);
-  if (!caller || !['superuser', 'administrator', 'pic', 'manager'].includes(String(caller.role))) {
+  if (!caller || !['superuser', 'administrator', 'pic'].includes(String(caller.role))) {
     return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
   }
 
@@ -42,9 +42,12 @@ export async function GET(req: NextRequest) {
     .order('tgl_mcu', { ascending: false, nullsFirst: false })
     .limit(1);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: 'Gagal membaca data MCU.' }, { status: 500 });
   const rec = rows?.[0];
   if (!rec) return NextResponse.json({ error: 'Data MCU karyawan tidak ditemukan' }, { status: 404 });
+  if (caller.role === 'pic' && (!caller.site || String(rec.site ?? '').trim().toLowerCase() !== caller.site.trim().toLowerCase())) {
+    return NextResponse.json({ error: 'PIC hanya dapat melihat data karyawan di site sendiri.' }, { status: 403 });
+  }
   // Site "Batch" = calon karyawan, bukan karyawan.
   if (!siteDihitung(rec.site)) {
     return NextResponse.json({ error: 'Karyawan site Batch tidak dihitung sebagai karyawan aktif' }, { status: 400 });

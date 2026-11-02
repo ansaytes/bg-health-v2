@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth-context';
 import { KLAS_COLOR, scoreErgo, type Metode } from '@/lib/hc-ergo';
 import { WIZARDS, interpretasiFor, questionValue, type Answers, type Question } from '@/lib/ergo-wizard';
 import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
+import DriveFileUpload from '@/components/settings/DriveFileUpload';
 import { Btn, BtnRow, Chip, Field, Notice, SITES, Tabs, grid2, inputStyle } from './hc-ergo-ui';
 
 const BRAND = '#ff4d00';
@@ -162,7 +163,12 @@ export default function ErgoSurveyForm() {
                       inputStyle={{ ...inputStyle }} />
                   )}
                 </div>
-                <Field label="Link Foto / Video Postur Kerja" hint="(Google Drive, opsional)" full><input className="admin-input" style={inputStyle} value={id.foto_url} onChange={(e) => setI('foto_url', e.target.value)} /></Field>
+                <Field label="Link Foto / Video Postur Kerja" hint="(Google Drive, opsional)" full>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <input className="admin-input" style={inputStyle} value={id.foto_url} onChange={(e) => setI('foto_url', e.target.value)} />
+                    <DriveFileUpload category="ergonomi" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" site={id.site} onUploaded={(url) => setI('foto_url', url)} />
+                  </div>
+                </Field>
               </div>
             </>
           )}

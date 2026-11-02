@@ -30,11 +30,15 @@ export async function POST(req: NextRequest) {
   // Episode harus ada — sekaligus mengambil tanggal mulai sakit untuk fase.
   const { data: episode, error: epError } = await client
     .from('sakit_episode')
-    .select('id,tanggal_mulai_sakit,status')
+    .select('id,tanggal_mulai_sakit,status,site')
     .eq('id', episodeId)
     .maybeSingle();
   if (epError) return NextResponse.json({ error: epError.message }, { status: 500 });
   if (!episode) return NextResponse.json({ error: 'Episode tidak ditemukan' }, { status: 404 });
+  if (caller.role === 'pic'
+    && (!caller.site || String(episode.site || '').toLowerCase() !== caller.site.toLowerCase())) {
+    return NextResponse.json({ error: 'Episode tidak ditemukan pada site Anda' }, { status: 404 });
+  }
 
   if (jenis === 'pemantauan') {
     const tanggal = String(body.tanggal ?? '').slice(0, 10);
@@ -153,6 +157,14 @@ export async function GET(req: NextRequest) {
   if (!episodeId) return NextResponse.json({ error: 'episodeId wajib diisi' }, { status: 400 });
 
   const client = adminClient();
+  if (caller.role === 'pic') {
+    if (!caller.site) return NextResponse.json({ error: 'Site PIC belum ditetapkan' }, { status: 403 });
+    const { data: episode, error } = await client.from('sakit_episode').select('site').eq('id', episodeId).maybeSingle();
+    if (error) return NextResponse.json({ error: 'Gagal memverifikasi episode' }, { status: 500 });
+    if (!episode || String(episode.site || '').toLowerCase() !== caller.site.toLowerCase()) {
+      return NextResponse.json({ error: 'Episode tidak ditemukan pada site Anda' }, { status: 404 });
+    }
+  }
   const [{ data: pemantauan }, { data: rekomendasi }, { data: sks }] = await Promise.all([
     client.from('sakit_pemantauan').select('*').eq('episode_id', episodeId).order('tanggal', { ascending: true }),
     client.from('sakit_rekomendasi').select('*').eq('episode_id', episodeId).order('tanggal_penilaian', { ascending: false }),

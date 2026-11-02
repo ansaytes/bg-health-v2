@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { readRegistrationLookupToken } from '@/lib/registration-lookup-token';
 import { decryptEmployee, hashField } from '@/lib/encryption';
+import { getServerCaller } from '@/lib/server-auth';
+import { MIN_PASSWORD_LENGTH } from '@/app/api/auth/change-password-action';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
@@ -9,33 +11,9 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey || 'placeholder-anon-
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : supabase;
 
-// Preview mode handling
-const PREVIEW_ROLE = process.env.NEXT_PUBLIC_PREVIEW_ROLE as string | undefined;
-
 async function getCallerRole(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  let accessToken = authHeader?.replace('Bearer ', '');
-  if (!accessToken) {
-    const cookie = req.cookies.get('sb-access-token')?.value;
-    if (cookie) accessToken = cookie;
-  }
-  if (!accessToken) return null;
-  // Preview mode bypass
-  if (accessToken === 'preview-access-token' && PREVIEW_ROLE) {
-    return { userId: 'preview-0000-0000-0000-000000000001', role: PREVIEW_ROLE };
-  }
-
-  const client = supabaseServiceKey ? supabaseAdmin : createClient(supabaseUrl, supabaseAnonKey);
-  const { data: { user }, error } = await client.auth.getUser(accessToken);
-  if (error || !user) return null;
-
-  const { data: profile } = await client
-    .from('user_profiles')
-    .select('role')
-    .eq('user_id', user.id)
-    .single();
-  if (!profile) return null;
-  return { userId: user.id, role: profile.role };
+  const caller = await getServerCaller(req);
+  return caller ? { userId: caller.userId, role: caller.role } : null;
 }
 
 /** GET /api/notifications — list pending approvals (superuser only) */
@@ -46,10 +24,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
     }
 
-    const client = supabaseServiceKey ? supabaseAdmin : createClient(supabaseUrl, supabaseAnonKey);
-    const { data, error } = await client
+    if (!supabaseServiceKey) {
+      return NextResponse.json({ error: 'Layanan persetujuan belum dikonfigurasi' }, { status: 503 });
+    }
+    const { data, error } = await supabaseAdmin
       .from('user_approvals')
-      .select('*')
+      .select('id,email,full_name,national_id,nik,jabatan,jobsite,username,role,status,created_at')
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
 
@@ -75,12 +55,14 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'ID dan action wajib diisi' }, { status: 400 });
     }
 
-    const client = supabaseServiceKey ? supabaseAdmin : createClient(supabaseUrl, supabaseAnonKey);
+    if (!supabaseServiceKey) {
+      return NextResponse.json({ error: 'Layanan persetujuan belum dikonfigurasi' }, { status: 503 });
+    }
 
     // Get the approval request
-    const { data: approval, error: fetchError } = await client
+    const { data: approval, error: fetchError } = await supabaseAdmin
       .from('user_approvals')
-      .select('*')
+      .select('id,email,full_name,national_id,nik,jabatan,jobsite,username,role,status,auth_user_id')
       .eq('id', id)
       .single();
 
@@ -103,7 +85,10 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: 'Karyawan aktif tidak ditemukan. Request tidak dapat disetujui.' }, { status: 400 });
       }
       const employeeData = decryptEmployee(employee);
-      const requestedRole = approval.role || 'viewer';
+      const requestedRole = 'employee';
+      if (!approval.auth_user_id) {
+        return NextResponse.json({ error: 'Permintaan lama tidak memiliki akun tertunda. Minta karyawan mendaftar ulang.' }, { status: 409 });
+      }
       const { data: linkedProfile, error: linkedProfileError } = await supabaseAdmin
         .from('user_profiles')
         .select('id,user_id,role,username,full_name,national_id,employee_nik_hash,site')
@@ -114,72 +99,24 @@ export async function PATCH(req: NextRequest) {
       }
 
       if (linkedProfile) {
-        if (linkedProfile.role !== 'employee') {
-          return NextResponse.json({ error: 'Karyawan ini sudah memiliki akun dengan role lebih tinggi.' }, { status: 409 });
-        }
-        const oldProfile = {
-          username: linkedProfile.username,
-          full_name: linkedProfile.full_name,
-          role: linkedProfile.role,
-          national_id: linkedProfile.national_id,
-          employee_nik_hash: linkedProfile.employee_nik_hash,
-          site: linkedProfile.site,
-        };
-        const { error: updateProfileError } = await supabaseAdmin
-          .from('user_profiles')
-          .update({
-            username: approval.username || approval.email,
-            full_name: employeeData.nama || approval.full_name,
-            role: requestedRole,
-            national_id: employeeData.national_id || approval.national_id,
-            employee_nik_hash: employeeHash,
-            site: employeeData.site_name || null,
-          })
-          .eq('id', linkedProfile.id);
-        if (updateProfileError) {
-          return NextResponse.json({ error: updateProfileError.message }, { status: 500 });
-        }
-        const { data: existingAuthUser, error: existingAuthError } = await supabaseAdmin.auth.admin.getUserById(linkedProfile.user_id);
-        if (existingAuthError || !existingAuthUser.user) {
-          await supabaseAdmin.from('user_profiles').update(oldProfile).eq('id', linkedProfile.id);
-          return NextResponse.json({ error: 'Akun karyawan tidak dapat diverifikasi' }, { status: 500 });
-        }
-        const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(linkedProfile.user_id, {
-          email: approval.email,
-          password: approval.password,
-          email_confirm: true,
-          app_metadata: { ...existingAuthUser.user.app_metadata, must_change_password: false },
-        });
-        if (updateAuthError) {
-          await supabaseAdmin.from('user_profiles').update(oldProfile).eq('id', linkedProfile.id);
-          return NextResponse.json({ error: updateAuthError.message }, { status: 500 });
-        }
-        const { error: approvalUpdateError } = await client.from('user_approvals')
-          .update({ status: 'approved', reviewed_at: new Date().toISOString(), reviewed_by: caller.userId })
-          .eq('id', id);
-        if (approvalUpdateError) {
-          console.error('Failed to mark approved user request:', approvalUpdateError);
-          return NextResponse.json({ error: 'Akun diperbarui, tetapi status request gagal diperbarui.' }, { status: 500 });
-        }
-        return NextResponse.json({ success: true, message: 'Akun Employee berhasil ditingkatkan. Role lama telah diganti.' });
+        return NextResponse.json({ error: 'Karyawan ini sudah memiliki profil akun. Tinjau akun tersebut melalui Kelola Pengguna.' }, { status: 409 });
       }
 
-      // Create auth user via admin API
-      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-        email: approval.email,
-        password: approval.password,
-        email_confirm: true,
+      const { data: pendingAuth, error: pendingAuthError } = await supabaseAdmin.auth.admin.getUserById(approval.auth_user_id);
+      if (pendingAuthError || !pendingAuth.user) {
+        return NextResponse.json({ error: 'Akun tertunda tidak dapat diverifikasi' }, { status: 409 });
+      }
+      const { error: activateError } = await supabaseAdmin.auth.admin.updateUserById(approval.auth_user_id, {
+        app_metadata: { ...pendingAuth.user.app_metadata, approval_pending: false },
       });
-
-      if (createError || !newUser.user) {
-        return NextResponse.json({ error: createError?.message || 'Gagal membuat user' }, { status: 500 });
+      if (activateError) {
+        return NextResponse.json({ error: 'Gagal mengaktifkan akun' }, { status: 500 });
       }
 
-      // Insert profile
       const { error: profileError } = await supabaseAdmin
         .from('user_profiles')
         .insert({
-          user_id: newUser.user.id,
+          user_id: approval.auth_user_id,
           username: approval.username || approval.email,
           full_name: employeeData.nama || approval.full_name,
           role: requestedRole,
@@ -189,28 +126,35 @@ export async function PATCH(req: NextRequest) {
         });
 
       if (profileError) {
-        await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
-        return NextResponse.json({ error: profileError.message }, { status: 500 });
+        await supabaseAdmin.auth.admin.updateUserById(approval.auth_user_id, {
+          app_metadata: { ...pendingAuth.user.app_metadata, approval_pending: true },
+        });
+        return NextResponse.json({ error: 'Gagal membuat profil akun' }, { status: 500 });
       }
 
       // Update approval status
-      const { error: approvalUpdateError } = await client
+      const { error: approvalUpdateError } = await supabaseAdmin
         .from('user_approvals')
         .update({ status: 'approved', reviewed_at: new Date().toISOString(), reviewed_by: caller.userId })
         .eq('id', id);
       if (approvalUpdateError) {
         console.error('Failed to mark approved user request:', approvalUpdateError);
-        return NextResponse.json({ error: 'Akun dibuat, tetapi status request gagal diperbarui.' }, { status: 500 });
+        return NextResponse.json({ error: 'Akun disetujui, tetapi status request gagal diperbarui.' }, { status: 500 });
       }
 
-      return NextResponse.json({ success: true, message: 'User berhasil disetujui dan dibuat' });
+      return NextResponse.json({ success: true, message: 'Akun Employee berhasil disetujui' });
     }
 
     if (action === 'reject') {
-      await client
+      const { error: rejectError } = await supabaseAdmin
         .from('user_approvals')
         .update({ status: 'rejected', reviewed_at: new Date().toISOString(), reviewed_by: caller.userId, reject_reason: body.reason || 'Ditolak' })
         .eq('id', id);
+      if (rejectError) return NextResponse.json({ error: 'Gagal menolak permintaan' }, { status: 500 });
+      if (approval.auth_user_id) {
+        const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(approval.auth_user_id);
+        if (deleteError) console.error('Failed to remove rejected pending account:', deleteError);
+      }
 
       return NextResponse.json({ success: true, message: 'Request ditolak' });
     }
@@ -228,14 +172,26 @@ export async function POST(req: NextRequest) {
     const { email, password, employee_lookup_token } = body;
     const employee = readRegistrationLookupToken(employee_lookup_token);
 
-    if (!email || !password || !employee) {
+    if (typeof email !== 'string' || typeof password !== 'string' || !employee) {
       return NextResponse.json({ error: 'Email, password, dan hasil lookup karyawan yang masih berlaku wajib diisi.' }, { status: 400 });
     }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || password.length < MIN_PASSWORD_LENGTH) {
+      return NextResponse.json({ error: 'Email atau password tidak memenuhi kebijakan keamanan.' }, { status: 400 });
+    }
 
-    const client = supabaseServiceKey ? supabaseAdmin : createClient(supabaseUrl, supabaseAnonKey);
+    if (!supabaseServiceKey) {
+      return NextResponse.json({ error: 'Layanan pendaftaran belum dikonfigurasi' }, { status: 503 });
+    }
+    const employeeHash = hashField(employee.nik);
+    if (!employeeHash) return NextResponse.json({ error: 'Identitas karyawan tidak valid' }, { status: 400 });
+    const { data: existingProfile } = await supabaseAdmin.from('user_profiles')
+      .select('id').eq('employee_nik_hash', employeeHash).maybeSingle();
+    if (existingProfile) {
+      return NextResponse.json({ error: 'Karyawan sudah memiliki akun. Silakan login atau hubungi Superuser.' }, { status: 409 });
+    }
 
     // Check if email already pending
-    const { data: existing } = await client
+    const { data: existing } = await supabaseAdmin
       .from('user_approvals')
       .select('id, status')
       .eq('email', email)
@@ -245,24 +201,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email sudah terdaftar dan menunggu persetujuan' }, { status: 409 });
     }
 
-    const { data, error } = await client
+    const { data: createdAuth, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      app_metadata: { approval_pending: true },
+    });
+    if (createAuthError || !createdAuth.user) {
+      return NextResponse.json({ error: 'Tidak dapat membuat akun tertunda. Periksa email atau hubungi administrator.' }, { status: 409 });
+    }
+
+    const { data, error } = await supabaseAdmin
       .from('user_approvals')
       .insert({
+        auth_user_id: createdAuth.user.id,
         email,
-        password,
         full_name: employee.nama,
         national_id: employee.nationalId,
         nik: employee.nik,
         jabatan: employee.jabatan || null,
         jobsite: employee.jobsite || null,
         username: employee.nik,
-        role: 'viewer',
+        role: 'employee',
         status: 'pending',
       })
-      .select()
+      .select('id,email,status,created_at')
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      await supabaseAdmin.auth.admin.deleteUser(createdAuth.user.id);
+      return NextResponse.json({ error: 'Gagal mengirim permintaan persetujuan' }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true, message: 'Pendaftaran berhasil! Menunggu persetujuan superuser.', data });
   } catch (err) {

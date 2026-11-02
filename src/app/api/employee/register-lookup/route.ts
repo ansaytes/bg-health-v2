@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { decryptEmployee, hashField } from '@/lib/encryption';
@@ -6,9 +7,6 @@ import { createRegistrationLookupToken } from '@/lib/registration-lookup-token';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const supabaseAdmin = serviceKey ? createClient(supabaseUrl, serviceKey) : null;
-const LOOKUP_WINDOW_MS = 60_000;
-const LOOKUP_LIMIT = 10;
-const lookupAttempts = new Map<string, { count: number; resetAt: number }>();
 
 type SearchBy = 'national_id' | 'nik' | 'nama';
 type RegistrationEmployeeRow = {
@@ -19,37 +17,11 @@ type RegistrationEmployeeRow = {
   site_name: string | null;
 };
 
-function getRateLimitKey(request: NextRequest): string {
-  return request.headers.get('x-real-ip')
-    || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || 'unknown';
-}
-
-function checkRateLimit(request: NextRequest): boolean {
-  const now = Date.now();
-  for (const [key, bucket] of lookupAttempts) {
-    if (bucket.resetAt <= now) lookupAttempts.delete(key);
-  }
-
-  const key = getRateLimitKey(request);
-  const current = lookupAttempts.get(key);
-  if (!current || current.resetAt <= now) {
-    lookupAttempts.set(key, { count: 1, resetAt: now + LOOKUP_WINDOW_MS });
-    return true;
-  }
-  if (current.count >= LOOKUP_LIMIT) return false;
-  current.count += 1;
-  return true;
-}
-
 function response(body: unknown, status = 200) {
   return NextResponse.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 
 export async function POST(request: NextRequest) {
-  if (!checkRateLimit(request)) {
-    return response({ success: false, error: 'Terlalu banyak percobaan. Coba lagi sebentar.' }, 429);
-  }
   if (!supabaseAdmin) {
     return response({ success: false, error: 'Layanan lookup pendaftaran belum dikonfigurasi.' }, 503);
   }
@@ -65,6 +37,21 @@ export async function POST(request: NextRequest) {
   }
   if (typeof body !== 'object' || body === null) {
     return response({ success: false, error: 'Permintaan lookup tidak valid.' }, 400);
+  }
+
+  const clientIp = request.headers.get('x-real-ip')?.trim() || 'unknown';
+  const rateLimitHash = crypto.createHash('sha256').update(`registration-lookup:${clientIp}`).digest('hex');
+  const { data: allowed, error: rateLimitError } = await supabaseAdmin.rpc('consume_login_attempt', {
+    p_identifier_hash: rateLimitHash,
+    p_limit: 10,
+    p_window_seconds: 60,
+  });
+  if (rateLimitError) {
+    console.error('[Registration lookup] Persistent rate limit check failed:', rateLimitError.code);
+    return response({ success: false, error: 'Layanan lookup pendaftaran belum tersedia.' }, 503);
+  }
+  if (allowed !== true) {
+    return response({ success: false, error: 'Terlalu banyak percobaan. Coba lagi sebentar.' }, 429);
   }
 
   const payload = body as Record<string, unknown>;
@@ -137,8 +124,8 @@ export async function POST(request: NextRequest) {
     return employees.length
       ? response({ success: true, data: employees })
       : response({ success: false, error: 'Karyawan tidak ditemukan.' }, 404);
-  } catch (error) {
-    console.error('Registration employee lookup request failed:', error);
+  } catch {
+    console.error('[Registration lookup] Request failed.');
     return response({ success: false, error: 'Gagal memproses pencarian karyawan.' }, 500);
   }
 }

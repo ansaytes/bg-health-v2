@@ -210,11 +210,18 @@ export default function LingkunganDashboard({ site }: { site?: string }) {
   );
 }
 
-/** Pesan di dalam kartu bila belum ada data — kartu tetap tampil. */
+/** Pesan di dalam kartu bila belum ada data.
+ *  Memakai spinner logo yang sama dengan dashboard lain (Ergonomi, Hearing)
+ *  agar tampilan "belum ada data" seragam — bukan teks telanjang. */
 function Kosong() {
   return (
-    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--muted-foreground)' }}>
-      Belum ada data pengukuran
+    <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Belum ada data pengukuran">
+      <div className="bm-loading-spinner">
+        <div className="bm-loading-ring" aria-hidden="true" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+      </div>
+      <p className="bm-loading-label">Belum ada data pengukuran</p>
     </div>
   );
 }

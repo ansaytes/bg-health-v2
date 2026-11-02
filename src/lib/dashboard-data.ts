@@ -25,7 +25,7 @@ async function tokenSesi(): Promise<string | null> {
     // Abaikan — lanjut ke fallback preview.
   }
   // Mode preview (hanya aktif bila env diset): token khusus yang diterima server.
-  return process.env.NEXT_PUBLIC_PREVIEW_ROLE ? 'preview-access-token' : null;
+  return process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_PREVIEW_ROLE ? 'preview-access-token' : null;
 }
 
 export function fetchDashboardData<T>(url: string, force = false): Promise<T> {

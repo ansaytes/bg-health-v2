@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
   const p = new URL(req.url).searchParams;
   const resource = p.get('resource') || 'dashboard';
   try {
+    if (auth.caller.role === 'manager' && resource === 'recommendation') return fail('Akses ditolak', 403);
     if (resource === 'survey') {
       let q = db.from('ergo_survey').select('*').order('tanggal', { ascending: false }).limit(500);
       for (const k of ['site', 'metode', 'status']) { const v = p.get(k); if (v && v !== 'all') q = q.eq(k, v); }
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
       return ok(data);
     }
     if (resource === 'dashboard') {
-      if (!ADMIN_ROLES.includes(auth.caller.role)) return fail('Akses ditolak', 403);
+      if (!ADMIN_ROLES.includes(auth.caller.role) && auth.caller.role !== 'manager') return fail('Akses ditolak', 403);
       return ok(await buildDashboard(p.get('site') || ''));
     }
     return fail('resource tidak dikenal');
@@ -160,7 +161,7 @@ export async function PATCH(req: NextRequest) {
       if (b.action === 'approve' || b.action === 'reject') {
         // Persetujuan hanya oleh QSHE Manager / PJO (role manager); superuser sebagai cadangan.
         if (!APPROVER_ROLES.includes(caller.role)) return fail('Persetujuan hanya dapat diberikan oleh role Manager', 403);
-      } else if (!ADMIN_ROLES.includes(caller.role) && caller.role !== 'manager') {
+      } else if (!ADMIN_ROLES.includes(caller.role)) {
         return fail('Akses ditolak', 403);
       }
       if (b.action === 'approve') {

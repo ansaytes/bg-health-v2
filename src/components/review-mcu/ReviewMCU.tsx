@@ -27,6 +27,7 @@ import {
   GEMINI_OCR_MODELS,
   getGeminiOcrModel,
 } from '@/lib/gemini-ocr-models';
+import DriveFileUpload from '@/components/settings/DriveFileUpload';
 import { calcEgfrCkdEpi2021, getMissingZonasiInputs } from '@/lib/zonasi-engine';
 
 type SearchBy = 'nik' | 'national_id' | 'nama';
@@ -669,6 +670,9 @@ export default function ReviewMCU() {
                 onChange={(e) => setOcrText(e.target.value)}
                 className="min-h-[200px] text-sm rounded-xl bg-background resize-none"
               />
+              <div className="mt-3">
+                <DriveFileUpload category="mcu" accept="application/pdf,image/jpeg,image/png" onUploaded={setOcrText} />
+              </div>
 
               <div className="mt-3 flex flex-col gap-1.5">
                 <label htmlFor="ocr-model-mode" className="text-xs font-medium text-muted-foreground">

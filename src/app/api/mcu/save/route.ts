@@ -1,15 +1,12 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
+import { NextRequest, NextResponse } from 'next/server';
 import { MCU_FIELDS } from '@/lib/mcu-fields';
 import { encryptMCURecord } from '@/lib/encryption';
 import { applyMCUCalculations } from '@/lib/mcu-calculations';
 import { refreshQuestionnaireSnapshot } from '@/lib/questionnaire-store';
+import { getServerCaller, requireServerRole, STAFF_ROLES } from '@/lib/server-auth';
+import { integrationAdminClient } from '@/lib/integration-settings';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = () => integrationAdminClient();
 
 /**
  * Segarkan salinan skor kuesioner pada MCU yang baru disimpan, lalu hitung
@@ -25,7 +22,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
  */
 async function syncQuestionnaireForMCU(recordId: string): Promise<void> {
   try {
-    const { data: row } = await supabase
+    const { data: row } = await supabase()
       .from('mcu_records')
       .select('nik_karyawan_hash, tgl_mcu')
       .eq('id', recordId)
@@ -38,8 +35,11 @@ async function syncQuestionnaireForMCU(recordId: string): Promise<void> {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const caller = await getServerCaller(req);
+    const denied = requireServerRole(caller, STAFF_ROLES);
+    if (denied) return denied;
     const body = await req.json();
     const { formData } = body;
     const calculatedFormData = applyMCUCalculations(formData || {});
@@ -47,6 +47,10 @@ export async function POST(req: Request) {
     const nikKaryawan = calculatedFormData?.nikKaryawan || calculatedFormData?.nationalId;
     if (!formData || !nikKaryawan) {
       return NextResponse.json({ success: false, error: 'NIK Karyawan is required' }, { status: 400 });
+    }
+    if (caller!.role === 'pic'
+      && (!caller!.site || String(calculatedFormData.site || '').trim().toLowerCase() !== caller!.site.trim().toLowerCase())) {
+      return NextResponse.json({ success: false, error: 'PIC hanya dapat menyimpan data MCU di site sendiri' }, { status: 403 });
     }
 
     // Convert formData camelCase keys to snake_case for Supabase, strictly using MCU_FIELDS
@@ -65,7 +69,18 @@ export async function POST(req: Request) {
 
     // Upsert logic: if an ID is provided, strictly update that record
     if (recordId) {
-      const { error } = await supabase
+      if (caller!.role === 'pic') {
+        const { data: existingRecord, error: existingError } = await supabase()
+          .from('mcu_records')
+          .select('site')
+          .eq('id', recordId)
+          .maybeSingle();
+        if (existingError) throw existingError;
+        if (!existingRecord || String(existingRecord.site || '').trim().toLowerCase() !== caller!.site!.trim().toLowerCase()) {
+          return NextResponse.json({ success: false, error: 'Rekaman MCU tidak ditemukan pada site Anda' }, { status: 404 });
+        }
+      }
+      const { error } = await supabase()
         .from('mcu_records')
         .update(encryptedData)
         .eq('id', recordId);
@@ -76,7 +91,7 @@ export async function POST(req: Request) {
     }
 
     // Otherwise, check if one exists for the same tgl_mcu
-    const { data: existing, error: searchError } = await supabase
+    const { data: existing, error: searchError } = await supabase()
       .from('mcu_records')
       .select('id')
       .eq('nik_karyawan_hash', encryptedData.nik_karyawan_hash)
@@ -86,7 +101,7 @@ export async function POST(req: Request) {
     let savedId: string;
     if (existing && existing.id) {
       // Update
-      const { error } = await supabase
+      const { error } = await supabase()
         .from('mcu_records')
         .update(encryptedData)
         .eq('id', existing.id);
@@ -97,7 +112,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, action: 'updated' });
     } else {
       // Insert
-      const { data, error } = await supabase
+      const { data, error } = await supabase()
         .from('mcu_records')
         .insert(encryptedData)
         .select('id')
@@ -111,6 +126,6 @@ export async function POST(req: Request) {
 
   } catch (err: any) {
     console.error('Error saving MCU to Supabase:', err);
-    return NextResponse.json({ success: false, error: err.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Gagal menyimpan data MCU' }, { status: 500 });
   }
 }

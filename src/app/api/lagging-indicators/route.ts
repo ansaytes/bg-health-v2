@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getServerCaller, READ_ROLES, STAFF_ROLES, requireServerRole } from '@/lib/server-auth';
 
 const MKEYS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 
@@ -26,9 +27,19 @@ const LAGGING_MAP: Record<string, string> = {
 };
 
 export async function GET(req: NextRequest) {
+  const caller = await getServerCaller(req);
+  const denied = requireServerRole(caller, READ_ROLES);
+  if (denied) return denied;
   const url = req.nextUrl.searchParams;
   const tahun = url.get('tahun') || '2026';
-  const site = url.get('site') || 'All Site';
+  let site = url.get('site') || 'All Site';
+  if (caller!.role === 'pic') {
+    if (!caller!.site) return NextResponse.json({ error: 'Site PIC belum ditetapkan' }, { status: 403 });
+    if (site !== 'All Site' && site.toLowerCase() !== caller!.site.toLowerCase()) {
+      return NextResponse.json({ error: 'PIC hanya dapat melihat site sendiri' }, { status: 403 });
+    }
+    site = caller!.site;
+  }
   const bulan = url.get('bulan');
 
   let q = supabase
@@ -89,11 +100,17 @@ const ALL_FIELDS = [
 
 export async function POST(req: NextRequest) {
   try {
+    const caller = await getServerCaller(req);
+    const denied = requireServerRole(caller, STAFF_ROLES);
+    if (denied) return denied;
     const body = await req.json();
     const { tahun, bulan, jobsite, ...fields } = body;
 
     if (!tahun || !bulan || !jobsite) {
       return NextResponse.json({ success: false, error: 'tahun, bulan, dan jobsite wajib diisi' }, { status: 400 });
+    }
+    if (caller!.role === 'pic' && (!caller!.site || String(jobsite).toLowerCase() !== caller!.site.toLowerCase())) {
+      return NextResponse.json({ success: false, error: 'PIC hanya dapat mencatat data pada site sendiri' }, { status: 403 });
     }
 
     const row: Record<string, unknown> = {
@@ -121,11 +138,17 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
+    const caller = await getServerCaller(req);
+    const denied = requireServerRole(caller, STAFF_ROLES);
+    if (denied) return denied;
     const body = await req.json();
     const { tahun, bulan, jobsite, ...fields } = body;
 
     if (!tahun || !bulan || !jobsite) {
       return NextResponse.json({ success: false, error: 'tahun, bulan, dan jobsite wajib diisi' }, { status: 400 });
+    }
+    if (caller!.role === 'pic' && (!caller!.site || String(jobsite).toLowerCase() !== caller!.site.toLowerCase())) {
+      return NextResponse.json({ success: false, error: 'PIC hanya dapat mengubah data pada site sendiri' }, { status: 403 });
     }
 
     const updateData: Record<string, unknown> = {};
@@ -151,6 +174,9 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const caller = await getServerCaller(req);
+    const denied = requireServerRole(caller, STAFF_ROLES);
+    if (denied) return denied;
     const { searchParams } = new URL(req.url);
     const tahun = searchParams.get('tahun');
     const bulan = searchParams.get('bulan');
@@ -158,6 +184,9 @@ export async function DELETE(req: NextRequest) {
 
     if (!tahun || !bulan || !jobsite) {
       return NextResponse.json({ success: false, error: 'tahun, bulan, dan jobsite wajib diisi' }, { status: 400 });
+    }
+    if (caller!.role === 'pic' && (!caller!.site || jobsite.toLowerCase() !== caller!.site.toLowerCase())) {
+      return NextResponse.json({ success: false, error: 'PIC hanya dapat menghapus data pada site sendiri' }, { status: 403 });
     }
 
     const { error } = await supabase

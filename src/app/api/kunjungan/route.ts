@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { integrationAdminClient } from '@/lib/integration-settings';
+import { getServerCaller, STAFF_ROLES, requireServerRole } from '@/lib/server-auth';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
-const supabase = createClient(supabaseUrl, supabaseKey);
+const READ_ROLES = STAFF_ROLES;
 
 /* ═══════════════════════════════════
    GET — Fetch kunjungan_berobat with filters
@@ -11,6 +10,13 @@ const supabase = createClient(supabaseUrl, supabaseKey);
    ═══════════════════════════════════ */
 export async function GET(request: NextRequest) {
   try {
+    const caller = await getServerCaller(request);
+    const denied = requireServerRole(caller, READ_ROLES);
+    if (denied) return denied;
+    if (caller!.role === 'pic' && !caller!.site) {
+      return NextResponse.json({ success: false, error: 'Site PIC belum ditetapkan' }, { status: 403 });
+    }
+    const supabase = integrationAdminClient();
     const { searchParams } = new URL(request.url);
     const jobsite = searchParams.get('jobsite') || '';
     const bulan = searchParams.get('bulan') || '';
@@ -19,6 +25,13 @@ export async function GET(request: NextRequest) {
 
     let query = supabase.from('kunjungan_berobat').select('*').order('tanggal', { ascending: false });
 
+    if (caller!.role === 'pic') {
+      if (jobsite && jobsite !== 'All Site' && jobsite !== 'all'
+        && jobsite.toLowerCase() !== caller!.site!.toLowerCase()) {
+        return NextResponse.json({ success: false, error: 'PIC hanya dapat melihat site sendiri' }, { status: 403 });
+      }
+      query = query.eq('jobsite', caller!.site);
+    }
     if (jobsite && jobsite !== 'All Site' && jobsite !== 'all') {
       query = query.eq('jobsite', jobsite);
     }
@@ -38,13 +51,13 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query;
 
     if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      console.error('[Kunjungan] Failed to read visit records:', error.code);
+      return NextResponse.json({ success: false, error: 'Gagal mengambil data kunjungan.' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, data: data || [] });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Gagal mengambil data kunjungan';
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Gagal mengambil data kunjungan.' }, { status: 500 });
   }
 }
 
@@ -53,23 +66,39 @@ export async function GET(request: NextRequest) {
    ═══════════════════════════════════ */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { nik, nama, departemen, jobsite, tanggal, diagnosa, jenis_obat, rujuk_rs, nama_rs, usia, jk, jabatan, keluhan } = body;
+    const caller = await getServerCaller(request);
+    const denied = requireServerRole(caller, STAFF_ROLES);
+    if (denied) return denied;
+    const body: unknown = await request.json();
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ success: false, error: 'Body permintaan tidak valid.' }, { status: 400 });
+    }
+    const input = body as Record<string, unknown>;
+    const { nik, nama, departemen, jobsite, tanggal, diagnosa, jenis_obat, rujuk_rs, nama_rs, usia, jk, jabatan, keluhan, kategori } = input;
 
     // NIK is optional (e.g. for new hires or interns not yet registered in employee table)
-    if (!nama || !jobsite || !tanggal) {
+    if (typeof nama !== 'string' || !nama.trim() || typeof jobsite !== 'string' || !jobsite.trim()
+      || typeof tanggal !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) {
       return NextResponse.json(
         { success: false, error: 'Nama, Jobsite, dan Tanggal wajib diisi' },
         { status: 400 }
       );
+    }
+    if (!['Umum', 'Kecelakaan Kerja', 'Penyakit Akibat Kerja'].includes(String(kategori))) {
+      return NextResponse.json({ success: false, error: 'Kategori kunjungan tidak valid.' }, { status: 400 });
+    }
+    if (caller!.role === 'pic'
+      && (!caller!.site || String(jobsite).trim().toLowerCase() !== caller!.site.trim().toLowerCase())) {
+      return NextResponse.json({ success: false, error: 'PIC hanya dapat mencatat kunjungan di site sendiri' }, { status: 403 });
     }
 
     const row = {
       nik: nik && String(nik).trim() ? String(nik).trim() : null,
       nama: String(nama).trim(),
       departemen: departemen || null,
-      jobsite,
+      jobsite: String(jobsite).trim(),
       tanggal,
+      kategori,
       diagnosa: diagnosa || null,
       jenis_obat: jenis_obat || null,
       rujuk_rs: rujuk_rs === 'Ya' || rujuk_rs === true,
@@ -80,10 +109,11 @@ export async function POST(request: NextRequest) {
       keluhan: keluhan || null,
     };
 
-    const { data, error } = await supabase.from('kunjungan_berobat').insert(row).select();
+    const { data, error } = await integrationAdminClient().from('kunjungan_berobat').insert(row).select();
 
     if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      console.error('[Kunjungan] Failed to save visit record:', error.code);
+      return NextResponse.json({ success: false, error: 'Gagal menyimpan data kunjungan.' }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -91,8 +121,7 @@ export async function POST(request: NextRequest) {
       message: 'Data kunjungan berhasil disimpan',
       data,
     });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Gagal menyimpan data kunjungan';
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Gagal menyimpan data kunjungan.' }, { status: 500 });
   }
 }

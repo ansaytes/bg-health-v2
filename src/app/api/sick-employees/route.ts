@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { getServerCaller } from '@/lib/server-auth';
+import { integrationAdminClient } from '@/lib/integration-settings';
 
 /**
  * Klien dengan SERVICE ROLE untuk membaca/menulis data.
@@ -15,55 +15,26 @@ import { supabase } from '@/lib/supabase';
  * hilang: pemeriksaan login & role tetap dilakukan SEBELUM query (lihat
  * periksaPemanggil), dan `anon` tetap tidak punya akses langsung ke tabel.
  */
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
-const supabaseData = createClient(supabaseUrl, serviceKey || anonKey);
+const supabaseData = () => integrationAdminClient();
 
 /**
- * Endpoint rekap bulanan karyawan sakit.
- *
- * KEAMANAN (hasil audit): sebelumnya GET & POST tidak memeriksa autentikasi,
- * sehingga siapa pun bisa mengunduh 795 baris berisi NIK plaintext, nama,
- * dan riwayat sakit lewat HTTP biasa. Sekarang:
- *   GET  → hanya pengguna login (semua role boleh melihat dashboard)
- *   POST → hanya QSHE Medic / administrator
- *
- * Catatan: pemeriksaan dilakukan di route karena klien Supabase di sini
- * memakai anon key, sehingga RLS saja tidak cukup untuk membedakan role.
+ * The server uses service-role access, so every request is authorized here
+ * before any employee health data is queried.
  */
-async function periksaPemanggil(request: NextRequest): Promise<string | null> {
-  const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || '';
-  if (!token) return null;
-
-  // Mode preview (hanya aktif bila env diset) — sama seperti route lain.
-  if (token === 'preview-access-token' && process.env.NEXT_PUBLIC_PREVIEW_ROLE) {
-    return process.env.NEXT_PUBLIC_PREVIEW_ROLE;
-  }
-
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) return null;
-
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('role')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  return profile?.role ?? null;
-}
-
-const ROLES_BACA = ['superuser', 'administrator', 'pic', 'manager'];
+const ROLES_BACA = ['superuser', 'administrator', 'pic'];
 const ROLES_TULIS = ['superuser', 'administrator'];
 
 export async function GET(request: NextRequest) {
   try {
-    const role = await periksaPemanggil(request);
-    if (!role) {
+    const caller = await getServerCaller(request);
+    if (!caller) {
       return NextResponse.json({ success: false, error: 'Sesi login tidak ditemukan' }, { status: 401 });
     }
-    if (!ROLES_BACA.includes(role)) {
+    if (!ROLES_BACA.includes(caller.role)) {
       return NextResponse.json({ success: false, error: 'Akses ditolak' }, { status: 403 });
+    }
+    if (caller.role === 'pic' && !caller.site) {
+      return NextResponse.json({ success: false, error: 'Site PIC belum ditetapkan' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -73,14 +44,21 @@ export async function GET(request: NextRequest) {
     const periodStart = searchParams.get('period_start') || '';
     const periodEnd = searchParams.get('period_end') || '';
 
-    let query = supabaseData
+    let query = supabaseData()
       .from('sick_employees')
       .select('*')
       .order('jobsite', { ascending: true })
       .order('nama', { ascending: true })
       .range(0, 9999);
 
-    if (jobsite && jobsite !== 'All Site') query = query.eq('jobsite', jobsite);
+    if (caller.role === 'pic') {
+      if (jobsite && jobsite !== 'All Site' && jobsite.toLowerCase() !== caller.site!.toLowerCase()) {
+        return NextResponse.json({ success: false, error: 'PIC hanya dapat melihat site sendiri' }, { status: 403 });
+      }
+      query = query.eq('jobsite', caller.site);
+    } else if (jobsite && jobsite !== 'All Site') {
+      query = query.eq('jobsite', jobsite);
+    }
     if (bulan) query = query.eq('bulan', parseInt(bulan));
     if (tahun) query = query.eq('tahun', parseInt(tahun));
     // Note: period_start/period_end filter dihapus karena sebagian besar rows
@@ -90,51 +68,96 @@ export async function GET(request: NextRequest) {
     // if (periodEnd) query = query.lte('tgl_mulai_a', periodEnd);
 
     const { data, error } = await query;
-    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    if (error) {
+      console.error('[Sick employees] Failed to read report:', error.code);
+      return NextResponse.json({ success: false, error: 'Gagal mengambil data karyawan sakit.' }, { status: 500 });
+    }
     return NextResponse.json({ success: true, data: data || [] });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Gagal mengambil data';
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Gagal mengambil data karyawan sakit.' }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const role = await periksaPemanggil(request);
-    if (!role) {
+    const caller = await getServerCaller(request);
+    if (!caller) {
       return NextResponse.json({ success: false, error: 'Sesi login tidak ditemukan' }, { status: 401 });
     }
-    if (!ROLES_TULIS.includes(role)) {
+    if (!ROLES_TULIS.includes(caller.role)) {
       return NextResponse.json({ success: false, error: 'Hanya administrator yang dapat menambah data' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { nik, nama, jobsite, jabatan, bulan, tahun,
-      tgl_mulai_a, tgl_selesai_a, hari_a, diag_a,
-      tgl_mulai_b, tgl_selesai_b, hari_b, diag_b,
-      tgl_mulai_c, tgl_selesai_c, hari_c, diag_c,
-      jumlah_spell, spell, is_pak } = body;
+    const body: unknown = await request.json().catch(() => null);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ success: false, error: 'Body permintaan tidak valid.' }, { status: 400 });
+    }
+    const input = body as Record<string, unknown>;
+    const readText = (key: string, maxLength: number): string | null => {
+      const value = input[key];
+      if (value == null || value === '') return null;
+      if (typeof value !== 'string' || value.length > maxLength) throw new Error(`Field ${key} tidak valid`);
+      return value.trim();
+    };
+    const readInteger = (key: string, min: number, max: number, fallback: number | null): number | null => {
+      const value = input[key];
+      if (value == null || value === '') return fallback;
+      const parsed = typeof value === 'number' ? value : typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : NaN;
+      if (!Number.isInteger(parsed) || parsed < min || parsed > max) throw new Error(`Field ${key} tidak valid`);
+      return parsed;
+    };
+
+    let nik: string | null;
+    let nama: string | null;
+    let jobsite: string | null;
+    let jabatan: string | null;
+    let bulan: number | null;
+    let tahun: number | null;
+    let hariA: number | null;
+    let hariB: number | null;
+    let hariC: number | null;
+    let jumlahSpell: number | null;
+    let dates: Record<string, string | null>;
+    let diagnoses: Record<string, string | null>;
+    try {
+      nik = readText('nik', 32);
+      nama = readText('nama', 200);
+      jobsite = readText('jobsite', 200);
+      jabatan = readText('jabatan', 200);
+      bulan = readInteger('bulan', 1, 12, null);
+      tahun = readInteger('tahun', 2000, 2100, null);
+      hariA = readInteger('hari_a', 0, 366, 0);
+      hariB = readInteger('hari_b', 0, 366, 0);
+      hariC = readInteger('hari_c', 0, 366, 0);
+      jumlahSpell = readInteger('jumlah_spell', 1, 100, null) ?? readInteger('spell', 1, 100, 1);
+      dates = {
+        tgl_mulai_a: readText('tgl_mulai_a', 10), tgl_selesai_a: readText('tgl_selesai_a', 10),
+        tgl_mulai_b: readText('tgl_mulai_b', 10), tgl_selesai_b: readText('tgl_selesai_b', 10),
+        tgl_mulai_c: readText('tgl_mulai_c', 10), tgl_selesai_c: readText('tgl_selesai_c', 10),
+      };
+      diagnoses = {
+        diag_a: readText('diag_a', 500), diag_b: readText('diag_b', 500), diag_c: readText('diag_c', 500),
+      };
+    } catch (error) {
+      return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Input tidak valid' }, { status: 400 });
+    }
 
     if (!nama || !jobsite) return NextResponse.json({ success: false, error: 'Nama dan Jobsite wajib diisi' }, { status: 400 });
 
     const row = {
-      nik: nik ? String(nik) : null, nama, jobsite, jabatan: jabatan || null,
-      bulan: bulan ? parseInt(bulan) : null, tahun: tahun ? parseInt(tahun) : null,
-      tgl_mulai_a: tgl_mulai_a || null, tgl_selesai_a: tgl_selesai_a || null,
-      hari_a: parseInt(hari_a) || 0, diag_a: diag_a || null,
-      tgl_mulai_b: tgl_mulai_b || null, tgl_selesai_b: tgl_selesai_b || null,
-      hari_b: parseInt(hari_b) || 0, diag_b: diag_b || null,
-      tgl_mulai_c: tgl_mulai_c || null, tgl_selesai_c: tgl_selesai_c || null,
-      hari_c: parseInt(hari_c) || 0, diag_c: diag_c || null,
-      jumlah_spell: parseInt(jumlah_spell ?? spell) || 1,
-      is_pak: is_pak === 'Ya' || is_pak === true,
+      nik, nama, jobsite, jabatan, bulan, tahun,
+      ...dates, ...diagnoses, hari_a: hariA, hari_b: hariB, hari_c: hariC,
+      jumlah_spell: jumlahSpell,
+      is_pak: input.is_pak === 'Ya' || input.is_pak === true,
     };
 
-    const { data, error } = await supabaseData.from('sick_employees').insert(row).select();
-    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    const { data, error } = await supabaseData().from('sick_employees').insert(row).select();
+    if (error) {
+      console.error('[Sick employees] Failed to save report:', error.code);
+      return NextResponse.json({ success: false, error: 'Gagal menyimpan data karyawan sakit.' }, { status: 500 });
+    }
     return NextResponse.json({ success: true, data });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Gagal menyimpan data';
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Gagal menyimpan data karyawan sakit.' }, { status: 500 });
   }
 }

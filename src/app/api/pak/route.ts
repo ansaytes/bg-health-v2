@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 type Row = Record<string, any>;
 
 const WRITE_ROLES = ['superuser', 'administrator'];
-const READ_ROLES = [...WRITE_ROLES, 'manager', 'pic'];
+const READ_ROLES = [...WRITE_ROLES, 'pic'];
 
 /** Ambil pengaturan (batas waktu PAK + prefiks) dari app_settings. */
 async function getSettings(): Promise<ReturnType<typeof mergeSettings>> {
@@ -46,7 +46,12 @@ export async function GET(req: NextRequest) {
   const resource = p.get('resource') || 'list';
   try {
     if (resource === 'list') {
-      const { data, error } = await db.from('pak_cases').select('*').order('tanggal_diterima', { ascending: false }).limit(300);
+      let query = db.from('pak_cases').select('*').order('tanggal_diterima', { ascending: false }).limit(300);
+      if (auth.caller.role === 'pic') {
+        if (!auth.caller.site) return fail('Site PIC belum ditetapkan.', 403);
+        query = query.eq('jobsite_nama', auth.caller.site);
+      }
+      const { data, error } = await query;
       if (error) throw new Error(error.message);
       const settings = await getSettings();
       const now = new Date();
@@ -68,10 +73,14 @@ export async function GET(req: NextRequest) {
       const kategori = (p.get('kategori') || null) as 'A' | 'B' | 'C' | null;
       if (!nik) return fail('nik wajib disertakan');
       const { data: mcus, error } = await db.from('mcu_records')
-        .select('id,tgl_mcu,acr_2k,acr_3k,acr_4k,acl_2k,acl_3k,acl_4k,acr_500,acr_1k,acr_6k,acr_8k,acl_500,acl_1k,acl_6k,acl_8k,pta,aud_interp,fev1_fvc_act,fev1_pct,fvc_pct,spi_interp,sgot,sgpt,kreatinin,egfr,hb,leukosit,trombosit,chest_xr,visus_jauh,lbp,riwayat_epilepsi')
+        .select('id,tgl_mcu,site,acr_2k,acr_3k,acr_4k,acl_2k,acl_3k,acl_4k,acr_500,acr_1k,acr_6k,acr_8k,acl_500,acl_1k,acl_6k,acl_8k,pta,aud_interp,fev1_fvc_act,fev1_pct,fvc_pct,spi_interp,sgot,sgpt,kreatinin,egfr,hb,leukosit,trombosit,chest_xr,visus_jauh,lbp,riwayat_epilepsi')
         .eq('nik_karyawan_hash', nik)
         .order('tgl_mcu', { ascending: true });
       if (error) throw new Error(error.message);
+      if (auth.caller.role === 'pic' && (!auth.caller.site || (mcus ?? []).some((row: Row) =>
+        String(row.site ?? '').trim().toLowerCase() !== auth.caller.site!.trim().toLowerCase()))) {
+        return fail('PIC hanya dapat melihat data MCU site sendiri.', 403);
+      }
 
       // Dekripsi & konversi snake_case → camelCase ala McuLike.
       const { decryptMCURecord } = await import('@/lib/encryption');
@@ -102,6 +111,10 @@ export async function GET(req: NextRequest) {
       if (!id) return fail('id wajib disertakan');
       const { data, error } = await db.from('pak_cases').select('*').eq('id', id).maybeSingle();
       if (error) throw new Error(error.message);
+      if (auth.caller.role === 'pic' && data
+        && (!auth.caller.site || String(data.jobsite_nama ?? '').trim().toLowerCase() !== auth.caller.site.trim().toLowerCase())) {
+        return fail('PIC hanya dapat melihat kasus site sendiri.', 403);
+      }
       return ok(data);
     }
 

@@ -23,7 +23,7 @@ async function getCallerRole(req: NextRequest): Promise<{ userId: string; role: 
   }
   if (!accessToken) return null;
   // Preview mode bypass — preview mode is set in .env.local via NEXT_PUBLIC_PREVIEW_ROLE
-  if (accessToken === 'preview-access-token' && PREVIEW_ROLE) {
+  if (process.env.NODE_ENV !== 'production' && accessToken === 'preview-access-token' && PREVIEW_ROLE) {
     return { userId: 'preview-0000-0000-0000-000000000001', role: PREVIEW_ROLE };
   }
 

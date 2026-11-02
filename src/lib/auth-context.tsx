@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { supabase } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
-export type UserRole = 'superuser' | 'administrator' | 'manager' | 'pic' | 'viewer' | 'employee';
+export type UserRole = 'superuser' | 'administrator' | 'manager' | 'pic' | 'employee' | 'disabled';
 
 export interface UserProfile {
   id: string;
@@ -59,11 +59,11 @@ async function fetchProfile(userId: string): Promise<UserProfile | null> {
     .eq('user_id', userId)
     .single();
 
-  if (error || !data) return null;
+  if (error || !data || data.role === 'viewer' || data.role === 'disabled') return null;
   return data as UserProfile;
 }
 
-const PREVIEW_ROLE = (typeof process !== 'undefined'
+const PREVIEW_ROLE = (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production'
   ? (process.env.NEXT_PUBLIC_PREVIEW_ROLE as UserRole | '' | undefined)
   : '') || '';
 
@@ -78,8 +78,8 @@ function buildMockProfile(role: UserRole): UserProfile {
     administrator: { username: 'admin.preview', fullName: 'Preview Administrator' },
     manager: { username: 'manager.preview', fullName: 'Ir. Budi Manager, QSHE' },
     pic: { username: 'pic.preview', fullName: 'Preview PIC' },
-    viewer: { username: 'viewer.preview', fullName: 'Preview Viewer' },
     employee: { username: 'employee.preview', fullName: 'Preview Employee' },
+    disabled: { username: 'disabled.preview', fullName: 'Disabled Preview' },
   };
   const label = labelMap[role];
   return {
@@ -127,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const role = profile?.role ?? null;
-  // Admin panels: superuser, administrator, pic. Manager = viewer + hak persetujuan (tidak membuka panel admin).
+  // Admin panels: superuser, QSHE Medic (legacy key: administrator), and PIC.
   const isAdmin = role === 'superuser' || role === 'administrator' || role === 'pic';
   const isSuperuser = role === 'superuser';
   const isManager = role === 'manager';

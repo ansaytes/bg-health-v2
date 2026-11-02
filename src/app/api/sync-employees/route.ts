@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { encryptEmployee } from '@/lib/encryption';
+import { getServerCaller, requireServerRole, SYSTEM_ROLES } from '@/lib/server-auth';
 
 // NOTE: Scheduled sync moved to GitHub Actions (no Vercel Hobby timeout limit)
 // This endpoint is for manual trigger only.
@@ -132,7 +133,10 @@ function isEligibleEmployee(employee: Record<string, unknown>): boolean {
     && String(employee.employment_status || '').trim().toLowerCase() === 'aktif';
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const denied = requireServerRole(await getServerCaller(request), SYSTEM_ROLES);
+  if (denied) return denied;
+  if (!supabaseServiceKey) return NextResponse.json({ error: 'Sinkronisasi belum dikonfigurasi' }, { status: 503 });
   if (!csvUrl) {
     return NextResponse.json({ error: 'GOOGLE_SHEETS_CSV_URL not configured' }, { status: 500 });
   }
@@ -140,12 +144,15 @@ export async function GET() {
     return NextResponse.json({ error: 'Supabase credentials not configured' }, { status: 500 });
   }
 
-  const supabase = createClient(supabaseUrl, supabaseServiceKey || 'placeholder-service-key');
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
   const { count, error } = await supabase
     .from('employees')
     .select('*', { count: 'exact', head: true });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[Employee sync] Failed to count employees:', error.code);
+    return NextResponse.json({ error: 'Gagal membaca data karyawan.' }, { status: 500 });
+  }
 
   return NextResponse.json({
     status: 'ok',
@@ -156,6 +163,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const denied = requireServerRole(await getServerCaller(request), SYSTEM_ROLES);
+  if (denied) return denied;
+  if (!supabaseServiceKey) return NextResponse.json({ error: 'Sinkronisasi belum dikonfigurasi' }, { status: 503 });
   const startTime = Date.now();
 
   if (!csvUrl) {
@@ -174,10 +184,30 @@ export async function POST(request: NextRequest) {
     });
     if (!csvRes.ok) {
       return NextResponse.json({
-        error: `Gagal fetch CSV dari Google Sheets: HTTP ${csvRes.status} ${csvRes.statusText}. URL: ${csvUrl.substring(0, 50)}...`,
+        error: `Gagal mengambil sumber data karyawan (HTTP ${csvRes.status}).`,
       }, { status: 502 });
     }
-    const csvText = await csvRes.text();
+    const maxCsvBytes = 25 * 1024 * 1024;
+    const contentLength = Number(csvRes.headers.get('content-length') || 0);
+    if (contentLength > maxCsvBytes) {
+      return NextResponse.json({ error: 'Sumber data melebihi batas ukuran 25 MB.' }, { status: 413 });
+    }
+    const reader = csvRes.body?.getReader();
+    if (!reader) return NextResponse.json({ error: 'Sumber data tidak dapat dibaca.' }, { status: 502 });
+    const decoder = new TextDecoder();
+    let csvText = '';
+    let receivedBytes = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      receivedBytes += value.byteLength;
+      if (receivedBytes > maxCsvBytes) {
+        await reader.cancel();
+        return NextResponse.json({ error: 'Sumber data melebihi batas ukuran 25 MB.' }, { status: 413 });
+      }
+      csvText += decoder.decode(value, { stream: true });
+    }
+    csvText += decoder.decode();
 
     if (!csvText || csvText.length < 50) {
       return NextResponse.json({ error: 'CSV kosong atau tidak valid' }, { status: 400 });
@@ -197,10 +227,9 @@ export async function POST(request: NextRequest) {
     const filteredByCriteria = validEmployees.length - employees.length;
 
     // 3. Upsert to Supabase: batch 500 → fallback 50 → fallback 1
-    const supabase = createClient(supabaseUrl, supabaseServiceKey || 'placeholder-service-key');
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     let totalUpserted = 0;
     let batchErrors = 0;
-    const failedNiks: string[] = [];
 
     for (let i = 0; i < employees.length; i += 500) {
       const batch = employees.slice(i, i + 500);
@@ -209,7 +238,7 @@ export async function POST(request: NextRequest) {
         .upsert(batch, { onConflict: 'nik_hash', count: 'exact' });
 
       if (error) {
-        console.error(`Batch@${i} (500) failed: ${error.message}`);
+        console.error(`[Employee sync] Batch upsert failed at row ${i}:`, error.code);
 
         // Fallback: try sub-batches of 50
         for (let j = 0; j < batch.length; j += 50) {
@@ -219,7 +248,7 @@ export async function POST(request: NextRequest) {
             .upsert(sub, { onConflict: 'nik_hash', count: 'exact' });
 
           if (subErr) {
-            console.error(`  Sub@${i + j} (50) failed: ${subErr.message}`);
+            console.error(`[Employee sync] Sub-batch upsert failed at row ${i + j}:`, subErr.code);
 
             // Last resort: try one-by-one
             for (const emp of sub) {
@@ -227,7 +256,7 @@ export async function POST(request: NextRequest) {
                 .from('employees')
                 .upsert(emp, { onConflict: 'nik_hash' });
               if (singleErr) {
-                failedNiks.push(String(emp.nik));
+                console.error('[Employee sync] Single-row upsert failed:', singleErr.code);
                 batchErrors++;
               } else {
                 totalUpserted++;
@@ -252,11 +281,10 @@ export async function POST(request: NextRequest) {
       skipped: skipped,
       filtered_by_criteria: filteredByCriteria,
       errors: batchErrors,
-      failed_niks: failedNiks.slice(0, 20),
       duration_seconds: duration,
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error('[Employee sync] Unexpected synchronization failure.');
+    return NextResponse.json({ error: 'Sinkronisasi karyawan gagal.' }, { status: 500 });
   }
 }

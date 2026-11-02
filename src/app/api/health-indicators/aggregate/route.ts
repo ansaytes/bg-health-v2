@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-
-/** Returns true if Supabase is properly configured (not placeholder) */
-function isSupabaseConfigured(): boolean {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  return !!(url && key && !url.includes('placeholder'));
-}
+import { getServerCaller, STAFF_ROLES, requireServerRole } from '@/lib/server-auth';
+import { integrationAdminClient } from '@/lib/integration-settings';
 
 /**
  * GET /api/health-indicators/aggregate
@@ -40,18 +34,22 @@ function isSupabaseConfigured(): boolean {
  *   }
  */
 export async function GET(request: NextRequest) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({
-      success: false,
-      error: 'Supabase belum dikonfigurasi. Isi NEXT_PUBLIC_SUPABASE_URL dan NEXT_PUBLIC_SUPABASE_ANON_KEY di .env.local untuk menggunakan auto-aggregate.',
-    }, { status: 503 });
-  }
+  const caller = await getServerCaller(request);
+  const denied = requireServerRole(caller, STAFF_ROLES);
+  if (denied) return denied;
 
   try {
     const { searchParams } = new URL(request.url);
     const tahun = searchParams.get('tahun');
     const bulan = searchParams.get('bulan');
-    const jobsite = searchParams.get('jobsite') || 'All Site';
+    let jobsite = searchParams.get('jobsite') || 'All Site';
+    if (caller!.role === 'pic') {
+      if (!caller!.site) return NextResponse.json({ success: false, error: 'Site PIC belum ditetapkan' }, { status: 403 });
+      if (jobsite !== 'All Site' && jobsite.toLowerCase() !== caller!.site.toLowerCase()) {
+        return NextResponse.json({ success: false, error: 'PIC hanya dapat mengagregasi site sendiri' }, { status: 403 });
+      }
+      jobsite = caller!.site;
+    }
 
     if (!tahun || !bulan) {
       return NextResponse.json(
@@ -60,8 +58,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const tahunNum = parseInt(tahun);
-    const bulanNum = parseInt(bulan);
+    const tahunNum = Number(tahun);
+    const bulanNum = Number(bulan);
+    if (!Number.isInteger(tahunNum) || tahunNum < 2000 || tahunNum > 2100
+      || !Number.isInteger(bulanNum) || bulanNum < 1 || bulanNum > 12) {
+      return NextResponse.json({ success: false, error: 'tahun atau bulan tidak valid' }, { status: 400 });
+    }
+    const client = integrationAdminClient();
 
     // ── 1. Aggregate from kunjungan_berobat ────────────────────
     // NOTE: Kunjungan Berobat form is only filled for Head Office.
@@ -69,7 +72,7 @@ export async function GET(request: NextRequest) {
     // (the form auto-aggregate will leave it at 0).
     let kunjungan_klinik = 0;
     if (jobsite === 'Head Office' || jobsite === 'All Site') {
-      let kunjQuery = supabase
+      let kunjQuery = client
         .from('kunjungan_berobat')
         .select('id, jobsite, tanggal', { count: 'exact', head: false });
 
@@ -86,7 +89,7 @@ export async function GET(request: NextRequest) {
       const { data: kunjRows, error: kunjErr } = await kunjQuery;
       if (kunjErr) {
         return NextResponse.json(
-          { success: false, error: `Gagal query kunjungan_berobat: ${kunjErr.message}` },
+          { success: false, error: 'Gagal mengambil data kunjungan berobat.' },
           { status: 500 }
         );
       }
@@ -94,7 +97,7 @@ export async function GET(request: NextRequest) {
     }
 
     // ── 2. Aggregate from sick_employees ────────────────────────
-    let sickQuery = supabase
+    let sickQuery = client
       .from('sick_employees')
       .select('id, nik, jobsite, hari_a, hari_b, hari_c, jumlah_spell, is_pak')
       .eq('tahun', tahunNum)
@@ -107,7 +110,7 @@ export async function GET(request: NextRequest) {
     const { data: sickRows, error: sickErr } = await sickQuery;
     if (sickErr) {
       return NextResponse.json(
-        { success: false, error: `Gagal query sick_employees: ${sickErr.message}` },
+        { success: false, error: 'Gagal mengambil data karyawan sakit.' },
         { status: 500 }
       );
     }
@@ -151,7 +154,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Gagal meng-aggregate data';
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+    console.error('[Health indicators aggregate] Request failed:', err instanceof Error ? err.name : 'unknown error');
+    return NextResponse.json({ success: false, error: 'Gagal mengagregasi data.' }, { status: 500 });
   }
 }

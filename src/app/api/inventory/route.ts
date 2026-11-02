@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getInventoryCallerRole, inventorySupabase } from '@/lib/inventory-auth';
-
-const supabase = inventorySupabase;
+import { createInventoryClient, getInventoryCallerRole } from '@/lib/inventory-auth';
 
 export async function GET(request: NextRequest) {
   try {
+    const role = await getInventoryCallerRole(request);
+    if (!role || !['administrator', 'superuser', 'pic'].includes(role)) {
+      return NextResponse.json({ success: false, error: 'Akses ditolak' }, { status: 403 });
+    }
+    const supabase = createInventoryClient();
     const { data, error } = await supabase.from('v_inventory_summary').select('*').order('name', { ascending: true });
-    if (error) throw error;
+    if (error) return NextResponse.json({ success: false, error: 'Gagal mengambil data inventory.' }, { status: 500 });
     
     // Convert property names to camelCase or frontend expected format
     const formattedData = data?.map(d => ({
@@ -21,9 +24,8 @@ export async function GET(request: NextRequest) {
     })) || [];
     
     return NextResponse.json({ success: true, data: formattedData });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Gagal mengambil data inventory';
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Gagal mengambil data inventory.' }, { status: 500 });
   }
 }
 
@@ -33,6 +35,7 @@ export async function POST(request: NextRequest) {
     if (!role || !['administrator', 'superuser'].includes(role)) {
       return NextResponse.json({ success: false, error: 'Hanya administrator dan superuser yang dapat menambah item' }, { status: 403 });
     }
+    const supabase = createInventoryClient();
 
     const body = await request.json();
     const { name, category, unit, avg_monthly_usage } = body;
@@ -53,9 +56,8 @@ export async function POST(request: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ success: true, data });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Gagal menyimpan data inventory';
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Gagal menyimpan data inventory.' }, { status: 500 });
   }
 }
 
@@ -65,6 +67,7 @@ export async function PATCH(request: NextRequest) {
     if (!role || !['administrator', 'superuser'].includes(role)) {
       return NextResponse.json({ success: false, error: 'Hanya administrator dan superuser yang dapat mengubah item' }, { status: 403 });
     }
+    const supabase = createInventoryClient();
 
     const body = await request.json();
     const id = typeof body.id === 'string' ? body.id : '';
@@ -89,9 +92,8 @@ export async function PATCH(request: NextRequest) {
     if (!data) return NextResponse.json({ success: false, error: 'Item tidak ditemukan' }, { status: 404 });
 
     return NextResponse.json({ success: true });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Gagal mengubah data inventory';
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Gagal mengubah data inventory.' }, { status: 500 });
   }
 }
 
@@ -101,6 +103,7 @@ export async function DELETE(request: NextRequest) {
     if (role !== 'superuser') {
       return NextResponse.json({ success: false, error: 'Hanya superuser yang dapat menghapus item' }, { status: 403 });
     }
+    const supabase = createInventoryClient();
 
     const id = new URL(request.url).searchParams.get('id');
     if (!id) return NextResponse.json({ success: false, error: 'ID item wajib diisi' }, { status: 400 });
@@ -116,8 +119,7 @@ export async function DELETE(request: NextRequest) {
     if (!data) return NextResponse.json({ success: false, error: 'Item tidak ditemukan' }, { status: 404 });
 
     return NextResponse.json({ success: true });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Gagal menghapus data inventory';
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Gagal menghapus data inventory.' }, { status: 500 });
   }
 }

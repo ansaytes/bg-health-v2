@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getServerCaller, READ_ROLES, STAFF_ROLES, requireServerRole } from '@/lib/server-auth';
 
 const ALLOWED_FIELDS = [
   'man_power','man_hours','kunjungan_klinik','tk_sakit','absensi_sakit','spell',
@@ -9,13 +10,26 @@ const ALLOWED_FIELDS = [
 
 export async function GET(request: NextRequest) {
   try {
+    const caller = await getServerCaller(request);
+    const denied = requireServerRole(caller, READ_ROLES);
+    if (denied) return denied;
     const { searchParams } = new URL(request.url);
     const tahun = searchParams.get('tahun');
     const bulan = searchParams.get('bulan');
-    const jobsite = searchParams.get('jobsite');
+    let jobsite = searchParams.get('jobsite');
     const asr_ranking = searchParams.get('asr_ranking');
     const sites_list = searchParams.get('sites_list');
     const view = searchParams.get('view'); // 'all_site' | 'ytd'
+    if (caller!.role === 'pic') {
+      if (!caller!.site) return NextResponse.json({ error: 'Site PIC belum ditetapkan' }, { status: 403 });
+      if (jobsite && jobsite !== 'All Site' && jobsite.toLowerCase() !== caller!.site.toLowerCase()) {
+        return NextResponse.json({ error: 'PIC hanya dapat melihat site sendiri' }, { status: 403 });
+      }
+      if (view === 'all_site' || asr_ranking === 'true') {
+        return NextResponse.json({ error: 'Rekap lintas site tidak tersedia untuk PIC' }, { status: 403 });
+      }
+      jobsite = caller!.site;
+    }
 
     // ── Distinct jobsite list (used by selectors) ──────────────
     if (sites_list === 'true') {
@@ -23,6 +37,7 @@ export async function GET(request: NextRequest) {
         .from('health_indicators')
         .select('jobsite')
         .neq('jobsite', 'All Site');
+      if (caller!.role === 'pic') q = q.eq('jobsite', caller!.site);
       if (tahun) q = q.eq('tahun', parseInt(tahun));
       q = q.order('jobsite', { ascending: true });
       const { data, error } = await q;
@@ -66,7 +81,7 @@ export async function GET(request: NextRequest) {
     }
 
     // ── "All Site" aggregation view (preferred over manual All Site rows) ──
-    if (view === 'all_site' || (jobsite === 'All Site' && !bulan)) {
+    if (caller!.role !== 'pic' && (view === 'all_site' || (jobsite === 'All Site' && !bulan))) {
       let q = supabase.from('v_health_all_site').select('*');
       if (tahun) q = q.eq('tahun', parseInt(tahun));
       if (bulan) q = q.eq('bulan', parseInt(bulan));
@@ -96,11 +111,17 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const caller = await getServerCaller(request);
+    const denied = requireServerRole(caller, STAFF_ROLES);
+    if (denied) return denied;
     const body = await request.json();
     const { tahun, bulan, jobsite, ...fields } = body;
 
     if (!tahun || !bulan || !jobsite) {
       return NextResponse.json({ success: false, error: 'tahun, bulan, dan jobsite wajib diisi' }, { status: 400 });
+    }
+    if (caller!.role === 'pic' && (!caller!.site || String(jobsite).toLowerCase() !== caller!.site.toLowerCase())) {
+      return NextResponse.json({ error: 'PIC hanya dapat mencatat data pada site sendiri' }, { status: 403 });
     }
 
     const row: Record<string, unknown> = {
@@ -128,11 +149,17 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const caller = await getServerCaller(request);
+    const denied = requireServerRole(caller, STAFF_ROLES);
+    if (denied) return denied;
     const body = await request.json();
     const { tahun, bulan, jobsite, ...fields } = body;
 
     if (!tahun || !bulan || !jobsite) {
       return NextResponse.json({ success: false, error: 'tahun, bulan, dan jobsite wajib diisi' }, { status: 400 });
+    }
+    if (caller!.role === 'pic' && (!caller!.site || String(jobsite).toLowerCase() !== caller!.site.toLowerCase())) {
+      return NextResponse.json({ error: 'PIC hanya dapat mengubah data pada site sendiri' }, { status: 403 });
     }
 
     const updateData: Record<string, unknown> = {};
@@ -158,6 +185,9 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const caller = await getServerCaller(request);
+    const denied = requireServerRole(caller, STAFF_ROLES);
+    if (denied) return denied;
     const { searchParams } = new URL(request.url);
     const tahun = searchParams.get('tahun');
     const bulan = searchParams.get('bulan');
@@ -165,6 +195,9 @@ export async function DELETE(request: NextRequest) {
 
     if (!tahun || !bulan || !jobsite) {
       return NextResponse.json({ success: false, error: 'tahun, bulan, dan jobsite wajib diisi' }, { status: 400 });
+    }
+    if (caller!.role === 'pic' && (!caller!.site || jobsite.toLowerCase() !== caller!.site.toLowerCase())) {
+      return NextResponse.json({ error: 'PIC hanya dapat menghapus data pada site sendiri' }, { status: 403 });
     }
 
     const { error } = await supabase

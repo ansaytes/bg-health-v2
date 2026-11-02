@@ -1,34 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { decryptEmployee, decryptMCURecord, hashField, isEncryptedValue } from '@/lib/encryption';
 import { MCU_FIELDS } from '@/lib/mcu-fields';
+import { getServerCaller, requireServerRole, STAFF_ROLES } from '@/lib/server-auth';
+import { integrationAdminClient } from '@/lib/integration-settings';
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const client = createClient(url, serviceKey || anonKey);
-
-async function getCaller(req: NextRequest) {
-  const token = req.headers.get('authorization')?.replace('Bearer ', '') || req.cookies.get('sb-access-token')?.value;
-  if (!token) return null;
-  if (token === 'preview-access-token' && process.env.NEXT_PUBLIC_PREVIEW_ROLE) {
-    return { role: process.env.NEXT_PUBLIC_PREVIEW_ROLE };
-  }
-  const { data: { user } } = await client.auth.getUser(token);
-  if (!user) return null;
-  const { data: profile } = await client.from('user_profiles').select('role').eq('user_id', user.id).single();
-  return profile;
-}
+const client = () => integrationAdminClient();
 
 export async function GET(req: NextRequest) {
-  const caller = await getCaller(req);
-  if (!caller || !['pic', 'superuser', 'administrator'].includes(caller.role)) {
-    return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
+  const caller = await getServerCaller(req);
+  const denied = requireServerRole(caller, STAFF_ROLES);
+  if (denied) return denied;
+  if (caller!.role === 'pic' && !caller!.site) {
+    return NextResponse.json({ error: 'Site PIC belum ditetapkan' }, { status: 403 });
   }
 
   const params = new URL(req.url).searchParams;
   const nik = params.get('nik')?.trim() || '';
   const nationalId = params.get('national_id')?.trim() || '';
+  if (caller!.role === 'pic' && (nik || nationalId)) {
+    const digest = hashField(nik || nationalId);
+    if (!digest) return NextResponse.json({ record: null });
+    const { data: employee } = await client()
+      .from('employees')
+      .select('site_name')
+      .or(`nik_hash.eq.${digest},national_id_hash.eq.${digest}`)
+      .maybeSingle();
+    if (!employee?.site_name
+      || String(employee.site_name).trim().toLowerCase() !== caller!.site!.trim().toLowerCase()) {
+      return NextResponse.json({ record: null });
+    }
+  }
   if (!nik && !nationalId) {
     const requestedPage = Number.parseInt(params.get('page') || '1', 10);
     // Mode batch (?batch=1&offset=0&limit=500): dipakai tabel Record MCU untuk memuat SEMUA data
@@ -45,16 +46,20 @@ export async function GET(req: NextRequest) {
       : (page - 1) * pageSize;
     const search = batchMode ? '' : (params.get('search')?.trim() || '');
     // id sebagai pengurut kedua: tgl_mcu tidak unik, tanpa ini baris bisa terlewat/ganda antar halaman.
-    let listQuery = client.from('mcu_records').select('*', { count: 'exact' })
+    let listQuery = client().from('mcu_records').select('*', { count: 'exact' })
       .order('tgl_mcu', { ascending: false })
       .order('id', { ascending: true })
       .range(from, from + pageSize - 1);
+    if (caller!.role === 'pic') listQuery = listQuery.eq('site', caller!.site);
     if (search) {
       const hash = hashField(search);
       listQuery = listQuery.or(`nik_karyawan_hash.eq.${hash},national_id_hash.eq.${hash}`);
     }
     const { data: records, count, error: listError } = await listQuery;
-    if (listError) return NextResponse.json({ error: listError.message }, { status: 500 });
+    if (listError) {
+      console.error('[MCU records] Failed to fetch records:', listError.code);
+      return NextResponse.json({ error: 'Gagal memuat data MCU' }, { status: 500 });
+    }
 
     // NIK Karyawan perlu dicari dari tabel employees bila:
     //  1) kolom NIK Karyawan sebenarnya berisi NIK KTP (hash sama), atau
@@ -70,11 +75,14 @@ export async function GET(req: NextRequest) {
     const employeeNikByNationalId = new Map<string, string>();
     // Dipecah per 100 hash agar URL query tidak terlalu panjang.
     for (let index = 0; index < nationalIdHashes.length; index += 100) {
-      const { data: employees, error: employeeError } = await client
+      const { data: employees, error: employeeError } = await client()
         .from('employees')
         .select('nik,national_id_hash')
         .in('national_id_hash', nationalIdHashes.slice(index, index + 100));
-      if (employeeError) return NextResponse.json({ error: employeeError.message }, { status: 500 });
+      if (employeeError) {
+        console.error('[MCU records] Failed to resolve employee data:', employeeError.code);
+        return NextResponse.json({ error: 'Gagal memuat data MCU' }, { status: 500 });
+      }
 
       for (const employee of employees || []) {
         const nationalIdHash = employee.national_id_hash;
@@ -110,16 +118,19 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  let query = client.from('mcu_records').select('*').order('tgl_mcu', { ascending: false }).limit(1);
+  let query = client().from('mcu_records').select('*').order('tgl_mcu', { ascending: false }).limit(1);
   if (nik) query = query.eq('nik_karyawan_hash', hashField(nik));
   else query = query.eq('national_id_hash', hashField(nationalId));
 
   const { data, error } = await query.maybeSingle();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[MCU records] Failed to fetch latest record:', error.code);
+    return NextResponse.json({ error: 'Gagal memuat data MCU' }, { status: 500 });
+  }
   if (!data) {
     // Fallback: NIK Karyawan di employees sebenarnya bisa berupa NIK KTP.
     if (nik) {
-      const { data: byNationalId } = await client.from('mcu_records').select('*')
+      const { data: byNationalId } = await client().from('mcu_records').select('*')
         .eq('national_id_hash', hashField(nik))
         .order('tgl_mcu', { ascending: false })
         .limit(1)

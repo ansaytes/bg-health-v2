@@ -18,18 +18,14 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 
 import { decryptEmployee, decryptMCURecord, encryptMCURecord, hashField } from '@/lib/encryption';
 import { MCU_FIELDS } from '@/lib/mcu-fields';
 import { applyMCUCalculations } from '@/lib/mcu-calculations';
-
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+import { integrationAdminClient } from '@/lib/integration-settings';
 
 export function adminClient() {
-  return createClient(url, serviceKey || anonKey);
+  return integrationAdminClient();
 }
 
 export interface CallerProfile {
@@ -46,7 +42,7 @@ export interface CallerProfile {
 }
 
 const ALLOWED_ROLES = ['pic', 'superuser', 'administrator'];
-const QUESTIONNAIRE_ROLES = [...ALLOWED_ROLES, 'employee', 'viewer'];
+const QUESTIONNAIRE_ROLES = [...ALLOWED_ROLES, 'employee'];
 
 /** Mengambil peran pemanggil, atau null bila tidak terautentikasi. */
 export async function getCaller(req: NextRequest): Promise<CallerProfile | null> {
@@ -54,7 +50,9 @@ export async function getCaller(req: NextRequest): Promise<CallerProfile | null>
   const token = req.headers.get('authorization')?.replace('Bearer ', '')
     || req.cookies.get('sb-access-token')?.value;
   if (!token) return null;
-  if (token === 'preview-access-token' && process.env.NEXT_PUBLIC_PREVIEW_ROLE) {
+  if (process.env.NODE_ENV !== 'production'
+    && token === 'preview-access-token'
+    && process.env.NEXT_PUBLIC_PREVIEW_ROLE) {
     return {
       role: process.env.NEXT_PUBLIC_PREVIEW_ROLE,
       userId: 'preview-0000-0000-0000-000000000001',
@@ -64,6 +62,7 @@ export async function getCaller(req: NextRequest): Promise<CallerProfile | null>
   }
   const { data: { user } } = await client.auth.getUser(token);
   if (!user) return null;
+  if (user.app_metadata?.approval_pending === true) return null;
   const { data: profile } = await client
     .from('user_profiles')
     .select('role,employee_nik_hash,site')
@@ -113,6 +112,13 @@ export function denyUnlessOwnEmployee(
   caller: CallerProfile,
   identity: EmployeeIdentity,
 ): NextResponse | null {
+  if (caller.role === 'pic') {
+    if (!caller.site || !identity.site
+      || caller.site.trim().toLowerCase() !== identity.site.trim().toLowerCase()) {
+      return NextResponse.json({ error: 'PIC hanya dapat mengakses kuesioner karyawan di site sendiri.' }, { status: 403 });
+    }
+    return null;
+  }
   if (canWriteQuestionnaires(caller)) return null;
   if (!caller.employeeNikHash || caller.employeeNikHash !== identity.nikKaryawanHash) {
     return NextResponse.json({ error: 'Akun ini hanya dapat mengakses kuesioner milik sendiri.' }, { status: 403 });
@@ -179,15 +185,34 @@ export async function findEmployeeIdentity(query: string): Promise<EmployeeIdent
   const trimmed = query.trim();
   if (!trimmed) return null;
 
-  const digest = hashField(trimmed);
-  const filters = [`nik_hash.eq."${digest}"`, `national_id_hash.eq."${digest}"`, `nama.ilike."%${trimmed.replace(/["%\\]/g, '')}%"`];
-
-  const { data: matches, error } = await client
-    .from('employees')
-    .select('nik, national_id, nama, gender, age, job_position, site_name, department, employee_status, employment_status, nik_hash, national_id_hash')
-    .or(filters.join(','))
-    .limit(5);
-  if (error) throw new Error(error.message);
+  const columns = 'nik, national_id, nama, gender, age, job_position, site_name, department, employee_status, employment_status, nik_hash, national_id_hash';
+  let matches: Record<string, unknown>[] | null = null;
+  if (/^\d+$/.test(trimmed)) {
+    const digest = hashField(trimmed);
+    if (!digest) return null;
+    const [nikResult, nationalIdResult] = await Promise.all([
+      client.from('employees').select(columns).eq('nik_hash', digest).limit(1),
+      client.from('employees').select(columns).eq('national_id_hash', digest).limit(1),
+    ]);
+    if (nikResult.error || nationalIdResult.error) {
+      console.error('[Questionnaire] Employee identity lookup failed:', nikResult.error?.code || nationalIdResult.error?.code);
+      throw new Error('Gagal mencari identitas karyawan.');
+    }
+    matches = nikResult.data?.length ? nikResult.data : nationalIdResult.data;
+  } else {
+    const nameQuery = trimmed.replace(/[%_\\]/g, '').trim();
+    if (nameQuery.length < 3) return null;
+    const { data, error } = await client
+      .from('employees')
+      .select(columns)
+      .ilike('nama', `%${nameQuery}%`)
+      .limit(5);
+    if (error) {
+      console.error('[Questionnaire] Employee name lookup failed:', error.code);
+      throw new Error('Gagal mencari identitas karyawan.');
+    }
+    matches = data;
+  }
 
   const match = (matches ?? [])[0];
   if (!match) return null;

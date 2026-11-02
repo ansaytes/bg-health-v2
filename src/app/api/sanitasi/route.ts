@@ -31,14 +31,23 @@ export async function GET(req: NextRequest) {
   }
 
   const client = adminClient();
-  const picSite = caller.role === 'pic' ? caller.site ?? null : null;
-  const site = picSite || req.nextUrl.searchParams.get('site')?.trim() || null;
+  const siteParam = req.nextUrl.searchParams.get('site')?.trim() || '';
+  if (caller.role === 'pic' && !caller.site) {
+    return NextResponse.json({ error: 'Site PIC belum ditetapkan.' }, { status: 403 });
+  }
+  if (caller.role === 'pic' && siteParam && siteParam.toLowerCase() !== caller.site!.toLowerCase()) {
+    return NextResponse.json({ error: 'PIC hanya dapat melihat site sendiri.' }, { status: 403 });
+  }
+  const site = caller.role === 'pic' ? caller.site! : siteParam || null;
   const id = req.nextUrl.searchParams.get('id')?.trim();
 
   if (id) {
     const { data, error } = await client.from('sanitasi_inspeksi').select('*').eq('id', id).maybeSingle();
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: 'Gagal membaca inspeksi.' }, { status: 500 });
     if (!data) return NextResponse.json({ error: 'Inspeksi tidak ditemukan' }, { status: 404 });
+    if (caller.role === 'pic' && String(data.site ?? '').toLowerCase() !== caller.site!.toLowerCase()) {
+      return NextResponse.json({ error: 'PIC hanya dapat melihat site sendiri.' }, { status: 403 });
+    }
     return NextResponse.json({ success: true, inspeksi: data });
   }
 
@@ -60,7 +69,7 @@ export async function GET(req: NextRequest) {
         catatan: 'Tabel belum dibuat. Jalankan migration 20261028_sanitasi_inspeksi.sql.',
       });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Gagal membaca riwayat inspeksi.' }, { status: 500 });
   }
 
   return NextResponse.json({ success: true, data: data ?? [], tabelSiap: true, site });
@@ -72,13 +81,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Hanya QSHE Medic / PIC yang dapat menyimpan inspeksi' }, { status: 403 });
   }
 
-  const body = await req.json().catch(() => ({}));
+  const parsedBody: unknown = await req.json().catch(() => null);
+  if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
+    return NextResponse.json({ error: 'Body permintaan tidak valid.' }, { status: 400 });
+  }
+  const body = parsedBody as Record<string, unknown>;
   const site = String(body.site ?? '').trim();
   const tanggal = String(body.tanggal ?? '').slice(0, 10);
   if (!site || !tanggal) {
     return NextResponse.json({ error: 'site dan tanggal wajib diisi' }, { status: 400 });
   }
-  if (caller.role === 'pic' && caller.site && caller.site.toLowerCase() !== site.toLowerCase()) {
+  if (caller.role === 'pic' && (!caller.site || caller.site.toLowerCase() !== site.toLowerCase())) {
     return NextResponse.json({ error: 'PIC hanya dapat mengisi inspeksi site sendiri' }, { status: 403 });
   }
 
@@ -98,6 +111,9 @@ export async function POST(req: NextRequest) {
     updated_at: new Date().toISOString(),
   }, { onConflict: 'site,tanggal' });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[Sanitasi] Failed to save inspection:', error.code);
+    return NextResponse.json({ error: 'Gagal menyimpan inspeksi.' }, { status: 500 });
+  }
   return NextResponse.json({ success: true, ringkasan: hasil.ringkasan, items: hasil.items });
 }

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { decrypt, decryptEmployee, hashField, isEncryptedValue } from '@/lib/encryption';
 import { siteDihitung } from '@/lib/site-filter';
+import { getServerCaller, requireServerRole, STAFF_ROLES } from '@/lib/server-auth';
+import { integrationAdminClient } from '@/lib/integration-settings';
 import {
   EXEMPT_TEXT,
   NO_DATA_TEXT,
@@ -23,48 +24,11 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const client = createClient(supabaseUrl, serviceKey || anonKey);
-const previewRole = process.env.NEXT_PUBLIC_PREVIEW_ROLE;
+const client = () => integrationAdminClient();
 
 type Row = Record<string, any>;
 
 // ---------------------------------------------------------------- auth ------
-
-async function getCaller(request: NextRequest): Promise<{ role: string; site: string | null } | null> {
-  const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
-    || request.cookies.get('sb-access-token')?.value;
-  if (!token) return null;
-  if (token === 'preview-access-token' && previewRole) {
-    return { role: previewRole, site: process.env.NEXT_PUBLIC_PREVIEW_SITE || 'Head Office' };
-  }
-
-  const { data: { user }, error: authError } = await client.auth.getUser(token);
-  if (authError || !user) return null;
-
-  const { data: profile, error: profileError } = await client
-    .from('user_profiles')
-    .select('role,site,username,national_id,employee_nik_hash')
-    .eq('user_id', user.id)
-    .maybeSingle();
-  if (profileError || !profile) return null;
-
-  let site = profile.site || null;
-  if (profile.role === 'pic') {
-    const employeeHash = profile.employee_nik_hash || hashField(profile.username);
-    const nationalIdHash = profile.national_id ? hashField(profile.national_id) : null;
-    const employeeQuery = employeeHash
-      ? client.from('employees').select('site_name').eq('nik_hash', employeeHash).maybeSingle()
-      : nationalIdHash
-        ? client.from('employees').select('site_name').eq('national_id_hash', nationalIdHash).maybeSingle()
-        : Promise.resolve({ data: null });
-    const { data: employee } = await employeeQuery;
-    site = employee?.site_name || site;
-  }
-  return { role: profile.role, site };
-}
 
 // ------------------------------------------------------------- data fetch ---
 
@@ -83,7 +47,7 @@ async function fetchAll(
   const run = async (select: string) => {
     const rows: Row[] = [];
     for (let from = 0; ; from += PAGE_SIZE) {
-      let query: any = client.from(table).select(select);
+      let query: any = client().from(table).select(select);
       if (configure) query = configure(query);
       const { data, error } = await query.order('id', { ascending: true }).range(from, from + PAGE_SIZE - 1);
       if (error) throw error;
@@ -278,16 +242,10 @@ async function getRows(force: boolean): Promise<Row[]> {
 
 export async function GET(request: NextRequest) {
   try {
-    if (!serviceKey) {
-      return NextResponse.json({
-        error: 'Tabel Monitor MCU memerlukan SUPABASE_SERVICE_ROLE_KEY di environment server.',
-      }, { status: 500 });
-    }
-
-    const caller = await getCaller(request);
-    if (!caller || !['pic', 'administrator', 'superuser'].includes(caller.role)) {
-      return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
-    }
+    const caller = await getServerCaller(request);
+    const denied = requireServerRole(caller, STAFF_ROLES);
+    if (denied) return denied;
+    if (!caller) return NextResponse.json({ error: 'Sesi login tidak valid' }, { status: 401 });
     if (caller.role === 'pic' && !caller.site) {
       return NextResponse.json({ error: 'Site akun PIC belum ditentukan' }, { status: 403 });
     }
@@ -303,10 +261,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ rows, total: rows.length });
   } catch (error) {
-    console.error('Gagal memuat tabel monitor MCU:', error);
-    const message = error instanceof Error
-      ? error.message
-      : (typeof error === 'object' && error && 'message' in error ? String((error as any).message) : 'Gagal memuat tabel monitor MCU');
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('Gagal memuat tabel monitor MCU:', error instanceof Error ? error.name : 'unknown error');
+    return NextResponse.json({ error: 'Gagal memuat tabel monitor MCU' }, { status: 500 });
   }
 }

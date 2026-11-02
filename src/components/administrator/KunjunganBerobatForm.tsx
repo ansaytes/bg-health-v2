@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Plus, Trash2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
+import { authFetch } from '@/lib/api-client';
 
 const JOBSITES = [
   'Aceh','Angsana','Balikpapan','Banjarmasin','Banyuwangi',
@@ -275,9 +276,8 @@ export default function KunjunganBerobatForm() {
 
     setSaving(true);
     try {
-      const res = await fetch('/api/kunjungan', {
+      const json = await authFetch<{ success: true; data?: Array<{ id?: string }> }>('/api/kunjungan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nik: form.nik && form.nik.trim() ? form.nik.trim() : null,
           nama: form.nama.trim(),
@@ -289,12 +289,11 @@ export default function KunjunganBerobatForm() {
           diagnosa: JSON.stringify(diagnoses.map(d => d.text).filter(Boolean)), 
           jenis_obat: JSON.stringify(medications.filter(m => m.nama).map(({ nama, aturan, jumlah, satuan }) => ({ nama, aturan, jumlah, satuan }))),
           rujuk_rs: form.rujukRS === 'Ya',
+          kategori: form.kategori,
           nama_rs: form.namaRS || null,
           keluhan: form.catatan || null,
         }),
       });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error || 'Gagal menyimpan');
 
       // ── TINDAK LANJUT OTOMATIS ─────────────────────────────────────────
       // Rujuk RS → episode Monitoring Karyawan Sakit.
@@ -302,21 +301,12 @@ export default function KunjunganBerobatForm() {
       // Kegagalan integrasi TIDAK menggagalkan penyimpanan kunjungan; hasilnya
       // dilaporkan di pesan sukses agar terlihat jelas.
       try {
-        const integrasi = await fetch('/api/kunjungan/integrasi', {
+        const ik = await authFetch<{ catatan?: string[] }>('/api/kunjungan/integrasi', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            nik: form.nik && form.nik.trim() ? form.nik.trim() : null,
-            nama: form.nama.trim(),
-            tanggal: form.tanggalKunjungan,
-            site: form.site,
-            kategori: form.kategori,
-            rujukRS: form.rujukRS === 'Ya',
-            namaRS: form.namaRS,
-            keluhan: form.catatan,
+            kunjunganId: json.data?.[0]?.id,
           }),
         });
-        const ik = await integrasi.json();
         if (Array.isArray(ik.catatan) && ik.catatan.length) {
           setInfoMsg(ik.catatan.join(' '));
         }

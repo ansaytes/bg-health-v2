@@ -43,8 +43,14 @@ export async function GET(req: NextRequest) {
   }
 
   const client = adminClient();
-  const picSite = caller.role === 'pic' ? caller.site ?? null : null;
-  const site = picSite || req.nextUrl.searchParams.get('site')?.trim() || '';
+  const siteParam = req.nextUrl.searchParams.get('site')?.trim() || '';
+  if (caller.role === 'pic' && !caller.site) {
+    return NextResponse.json({ error: 'Site PIC belum ditetapkan.' }, { status: 403 });
+  }
+  if (caller.role === 'pic' && siteParam && siteParam.toLowerCase() !== caller.site!.toLowerCase()) {
+    return NextResponse.json({ error: 'PIC hanya dapat melihat site sendiri.' }, { status: 403 });
+  }
+  const site = caller.role === 'pic' ? caller.site! : siteParam;
 
   const ruangQuery = client.from('lingkungan_ruang').select('*').order('nama_ruang');
   const { data: ruang, error } = site
@@ -148,6 +154,9 @@ export async function POST(req: NextRequest) {
   if (!site || !namaRuang) return NextResponse.json({ error: 'Site dan nama ruang wajib diisi' }, { status: 400 });
   if (!tanggal) return NextResponse.json({ error: 'Tanggal pengukuran wajib diisi' }, { status: 400 });
   if (!NAB_LUX[peruntukan]) return NextResponse.json({ error: 'Peruntukan ruang tidak dikenal' }, { status: 400 });
+  if (caller.role === 'pic' && (!caller.site || caller.site.toLowerCase() !== site.toLowerCase())) {
+    return NextResponse.json({ error: 'PIC hanya dapat mengubah data site sendiri.' }, { status: 403 });
+  }
 
   const client = adminClient();
 

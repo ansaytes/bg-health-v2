@@ -8,9 +8,6 @@ import {
   type EmployeeLoginProfile,
 } from '@/lib/auth-employee-profile';
 
-const MIN_PASSWORD_LENGTH = 8;
-const EMPLOYEE_AUTH_DOMAIN = 'employee.bg-health.local';
-
 export function isNumericIdentifier(username: string): boolean {
   return /^\d+$/.test(username);
 }
@@ -29,8 +26,7 @@ export function requireEmployeeLoginConfigured(supabaseServiceKey: string): Next
 export async function resolveEmployeeLogin(
   supabaseAdmin: SupabaseClient,
   username: string,
-  password: string,
-  employeeDefaultPassword: string,
+  _password: string,
 ): Promise<{ loginEmail?: string; error?: string; status?: number }> {
   const identifierHash = hashField(username);
   if (!identifierHash) {
@@ -78,34 +74,7 @@ export async function resolveEmployeeLogin(
   }
 
   if (!profile) {
-    // First login: provision the employee account with the default password.
-    if (employeeDefaultPassword.length < MIN_PASSWORD_LENGTH) {
-      console.error('EMPLOYEE_DEFAULT_PASSWORD belum diatur / kurang dari 8 karakter.');
-      return { error: 'Login pertama karyawan belum dikonfigurasi. Hubungi administrator.', status: 500 };
-    }
-    if (password !== employeeDefaultPassword) {
-      return { error: 'NIK/National ID atau password salah', status: 401 };
-    }
-    const email = `emp-${employeeHash}@${EMPLOYEE_AUTH_DOMAIN}`;
-    const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email, password: employeeDefaultPassword, email_confirm: true,
-      app_metadata: { must_change_password: true },
-    });
-    if (createError || !created.user) {
-      console.error('Employee auth account creation failed:', createError);
-      return { error: 'Gagal membuat akun karyawan. Silakan coba kembali atau hubungi administrator.', status: 500 };
-    }
-    const { error: profileError } = await supabaseAdmin.from('user_profiles').insert({
-      user_id: created.user.id, username: email, full_name: employeeData.nama || null,
-      role: 'employee', national_id: employeeData.national_id || null,
-      employee_nik_hash: employeeHash, site: employeeData.site_name || null,
-    });
-    if (profileError) {
-      await supabaseAdmin.auth.admin.deleteUser(created.user.id);
-      console.error('Employee profile creation failed:', profileError);
-      return { error: 'Gagal membuat profil karyawan', status: 500 };
-    }
-    profile = { id: '', user_id: created.user.id, role: 'employee', username: email, employee_nik_hash: employeeHash };
+    return { error: 'NIK/National ID atau password salah', status: 401 };
   } else if (!profile.employee_nik_hash) {
     const { error: linkError } = await supabaseAdmin
       .from('user_profiles')
@@ -128,12 +97,34 @@ export async function resolveEmployeeLogin(
 export async function handleLogin(
   req: NextRequest,
   body: Record<string, unknown>,
-  ctx: { supabase: SupabaseClient; supabaseAdmin: SupabaseClient; supabaseServiceKey: string; employeeDefaultPassword: string },
+  ctx: { supabase: SupabaseClient; supabaseAdmin: SupabaseClient; supabaseServiceKey: string },
 ): Promise<NextResponse> {
   const username = String(body.username ?? '').trim();
   const password = String(body.password ?? '');
   if (!username || !password) {
     return NextResponse.json({ error: 'NIK Karyawan, National ID, atau email dan password wajib diisi' }, { status: 400 });
+  }
+  if (!ctx.supabaseServiceKey) {
+    return NextResponse.json({ error: 'Layanan autentikasi belum dikonfigurasi' }, { status: 503 });
+  }
+  const identifierHash = hashField(username.toLowerCase());
+  if (!identifierHash) {
+    return NextResponse.json({ error: 'NIK/National ID/email atau password salah' }, { status: 401 });
+  }
+  const { data: allowed, error: throttleError } = await ctx.supabaseAdmin.rpc('consume_login_attempt', {
+    p_identifier_hash: identifierHash,
+    p_limit: 10,
+    p_window_seconds: 900,
+  });
+  if (throttleError) {
+    console.error('Login rate limiter is unavailable:', throttleError);
+    return NextResponse.json({ error: 'Layanan autentikasi sementara tidak tersedia' }, { status: 503 });
+  }
+  if (allowed !== true) {
+    return NextResponse.json(
+      { error: 'Terlalu banyak percobaan masuk. Coba kembali beberapa menit lagi.' },
+      { status: 429, headers: { 'Retry-After': '900' } },
+    );
   }
 
   let loginEmail = username;
@@ -141,10 +132,12 @@ export async function handleLogin(
     const notConfigured = requireEmployeeLoginConfigured(ctx.supabaseServiceKey);
     if (notConfigured) return notConfigured;
     const resolved = await resolveEmployeeLogin(
-      ctx.supabaseAdmin, username, password, ctx.employeeDefaultPassword,
+      ctx.supabaseAdmin, username, password,
     );
     if (resolved.error) {
-      return NextResponse.json({ error: resolved.error }, { status: resolved.status ?? 500 });
+      return NextResponse.json({
+        error: resolved.status === 401 ? 'NIK/National ID/email atau password salah' : resolved.error,
+      }, { status: resolved.status ?? 500 });
     }
     if (!resolved.loginEmail) {
       return NextResponse.json({ error: 'Akun karyawan tidak dapat diverifikasi' }, { status: 500 });
@@ -155,13 +148,19 @@ export async function handleLogin(
   const { data, error } = await ctx.supabase.auth.signInWithPassword({ email: loginEmail, password });
   if (error) return NextResponse.json({ error: 'NIK/National ID/email atau password salah' }, { status: 401 });
 
-  let profile = null;
+  let profile: ({ role: string } & Record<string, unknown>) | null = null;
   if (data.user) {
     const { data: pData } = await ctx.supabaseAdmin
       .from('user_profiles').select('*').eq('user_id', data.user.id).single();
     profile = pData;
   }
   if (!profile) return NextResponse.json({ error: 'Profil akun tidak ditemukan. Hubungi administrator.' }, { status: 403 });
+  if (profile.role === 'viewer' || profile.role === 'disabled') {
+    return NextResponse.json({ error: 'Akses akun dinonaktifkan. Hubungi Superuser.' }, { status: 403 });
+  }
+  if (data.user?.app_metadata?.approval_pending === true) {
+    return NextResponse.json({ error: 'Pendaftaran masih menunggu persetujuan Superuser.' }, { status: 403 });
+  }
 
   return NextResponse.json({
     session: data.session, user: data.user, profile,
