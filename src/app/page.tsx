@@ -606,7 +606,7 @@ function ReviewMCUWithTabs() {
   return (
     <div
       className="admin-form-container"
-      style={{ width: '90%', margin: '0 auto', padding: 16, overflow: 'hidden', flex: 1, minHeight: 0 }}
+      style={{ width: '100%', padding: 16, overflow: 'hidden', flex: 1, minHeight: 0 }}
     >
       <ReviewMCU />
     </div>
@@ -970,8 +970,8 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
             </button>
           </p>
           <p className="login-footer-text" style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-            Employee dapat login dengan NIK Karyawan atau National ID. Akun dibuat otomatis pada login pertama;
-            gunakan password yang dibuat saat mendaftar; akun baru dapat dipakai setelah disetujui Superuser.
+            Login menggunakan email atau NIK Karyawan/NIK KTP yang terhubung ke akun. Akun karyawan harus
+            didaftarkan dan disetujui Superuser terlebih dahulu; gunakan password yang ditetapkan untuk akun Anda.
           </p>
           </>
           ) : (

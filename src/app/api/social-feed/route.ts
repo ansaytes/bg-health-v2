@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -26,28 +27,11 @@ let cacheTime = 0;
  * CACHE DUA LAPIS
  *
  * 1. Memori (`cachedNews` …) — cepat, tapi HILANG setiap server restart/deploy.
- * 2. Supabase (`app_settings.instagram_feed`) — bertahan 24 jam.
+ * 2. Supabase (`instagram_posts`) — sumber data persisten untuk Home.
  *
- * MASALAH YANG DISELESAIKAN
- * Cache memori saja tidak cukup: setiap kali server dev di-restart atau
- * deployment baru berjalan, memori kosong → RapidAPI dipanggil lagi → kuota
- * habis dalam beberapa hari. Dengan cache 24 jam di database, RapidAPI
- * dipanggil maksimal SEKALI per hari per instance, berapa pun seringnya
- * halaman Home dibuka atau server restart.
- *
- * `revalidate=1` / `sync=1` tetap bisa memaksa pembaruan manual.
+ * RapidAPI hanya dipanggil melalui endpoint cron yang terautentikasi.
  */
 const CACHE_DURATION = 60 * 60 * 1000; // memori: 1 jam
-const DB_CACHE_DURATION = 24 * 60 * 60 * 1000; // database: 24 jam (1× sehari)
-
-/** Apakah data di app_settings masih segar (< 24 jam)? */
-function databaseCacheSegar(value: unknown): value is { posts: FeedItem[]; updated_at: string } {
-  if (!value || typeof value !== 'object') return false;
-  const v = value as { posts?: unknown; updated_at?: unknown };
-  if (!Array.isArray(v.posts) || typeof v.updated_at !== 'string') return false;
-  const umur = Date.now() - new Date(v.updated_at).getTime();
-  return Number.isFinite(umur) && umur >= 0 && umur < DB_CACHE_DURATION && v.posts.length > 0;
-}
 const YOUTUBE_RSS_CHANNEL_ID = 'UCtTDlDNQNYH3jv97LD9cuJg';
 const YOUTUBE_VIDEOS_PAGE_CHANNEL_ID = 'UCmwnNhvM3VomoVkAkjR5AoQ';
 
@@ -468,47 +452,30 @@ async function getInstagramPostsFromDatabase(): Promise<FeedItem[]> {
   return [];
 }
 
-/** Membaca metadata cache (updated_at) dari app_settings tanpa memuat ulang data. */
-async function bacaMetaCache(): Promise<unknown> {
-  if (!supabaseAdmin) return null;
-  try {
-    const { data } = await supabaseAdmin
-      .from('app_settings')
-      .select('value')
-      .eq('key', 'instagram_feed')
-      .maybeSingle();
-    return data?.value ?? null;
-  } catch {
-    return null;
-  }
-}
-
 async function saveInstagramPostsToDatabase(posts: FeedItem[]): Promise<void> {
-  if (!supabaseAdmin || posts.length === 0) return;
-  
-  // 1. Coba simpan ke tabel instagram_posts
-  try {
-    await supabaseAdmin.from('instagram_posts').upsert(
-      posts.map(p => ({
-        id: p.id,
-        title: p.title,
-        caption: p.caption,
-        media_url: p.media_url,
-        video_url: p.video_url || null,
-        external_url: p.external_url || 'https://www.instagram.com/bagongnews/',
-        source: 'instagram',
-        published_at: p.published_at,
-        updated_at: new Date().toISOString(),
-      })),
-      { onConflict: 'id' }
-    );
-  } catch {
-    // Abaikan bila tabel belum dibuat di SQL editor
+  if (!supabaseAdmin) throw new Error('Supabase service role is not configured');
+  if (posts.length === 0) throw new Error('Instagram scraper returned no posts');
+
+  const { error: postsError } = await supabaseAdmin.from('instagram_posts').upsert(
+    posts.map(p => ({
+      id: p.id,
+      title: p.title,
+      caption: p.caption,
+      media_url: p.media_url,
+      video_url: p.video_url || null,
+      external_url: p.external_url || 'https://www.instagram.com/bagongnews/',
+      source: 'instagram',
+      published_at: p.published_at,
+      updated_at: new Date().toISOString(),
+    })),
+    { onConflict: 'id' }
+  );
+  if (postsError) {
+    console.error('[Instagram] Failed to save posts to instagram_posts:', postsError);
+    throw new Error('Failed to save Instagram posts to Supabase');
   }
 
-  // 2. Simpan juga ke app_settings agar selalu ada backup
-  try {
-    await supabaseAdmin.from('app_settings').upsert({
+  const { error: backupError } = await supabaseAdmin.from('app_settings').upsert({
       key: 'instagram_feed',
       value: {
         posts,
@@ -516,21 +483,63 @@ async function saveInstagramPostsToDatabase(posts: FeedItem[]): Promise<void> {
       },
       updated_at: new Date().toISOString(),
     }, { onConflict: 'key' });
-  } catch (err) {
-    console.error('[Instagram] Error updating app_settings fallback:', err);
+  if (backupError) {
+    console.error('[Instagram] Failed to update app_settings backup:', backupError);
   }
+}
+
+export async function runInstagramFeedSync(): Promise<number> {
+  if (!process.env.RAPIDAPI_KEY) throw new Error('RapidAPI is not configured');
+  if (!supabaseAdmin) throw new Error('Supabase service role is not configured');
+
+  const posts = await fetchInstagramPosts();
+  if (posts.length === 0) throw new Error('Instagram scraper returned no posts');
+
+  await saveInstagramPostsToDatabase(posts);
+  cachedNews = null;
+  cacheTime = 0;
+  return posts.length;
+}
+
+function isAuthorizedCronRequest(request: Request): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+
+  const authorization = request.headers.get('authorization') ?? '';
+  const expected = Buffer.from(`Bearer ${secret}`);
+  const received = Buffer.from(authorization);
+  return received.length === expected.length && timingSafeEqual(received, expected);
 }
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const forceRevalidate = searchParams.get('revalidate') === '1';
   const forceSync = searchParams.get('sync') === '1';
+  const refreshFromDatabase = searchParams.get('database') === '1';
 
-  if (!forceRevalidate && !forceSync && isCacheValid()) {
+  if (forceSync) {
+    if (!process.env.CRON_SECRET) {
+      return NextResponse.json({ error: 'Instagram sync is not configured' }, { status: 503 });
+    }
+    if (!isAuthorizedCronRequest(request)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    try {
+      const postsSaved = await runInstagramFeedSync();
+      return NextResponse.json({ ok: true, postsSaved });
+    } catch (error) {
+      console.error('[Instagram] Scheduled sync failed:', error);
+      return NextResponse.json({ error: 'Instagram sync failed; check server logs' }, { status: 502 });
+    }
+  }
+
+  if (!forceRevalidate && !refreshFromDatabase && isCacheValid()) {
     return NextResponse.json({ news: cachedNews, healthTalks: cachedTalks, podcasts: cachedPodcasts });
   }
 
-  const allVideos = await fetchYouTubeVideos();
+  const allVideos = refreshFromDatabase && cachedTalks !== null && cachedPodcasts !== null
+    ? []
+    : await fetchYouTubeVideos();
   const talks: FeedItem[] = [];
   const podcasts: FeedItem[] = [];
   
@@ -544,24 +553,6 @@ export async function GET(request: Request) {
 
   // 1. Baca cache Instagram dari Supabase.
   let igPosts = await getInstagramPostsFromDatabase();
-
-  // 2. Panggil RapidAPI HANYA bila:
-  //    • cache database kosong / lebih tua dari 24 jam, ATAU
-  //    • admin meminta sinkron manual (?sync=1)
-  // Dengan aturan ini RapidAPI dipanggil maksimal 1× per hari, sehingga kuota
-  // tidak habis walau halaman Home dibuka berkali-kali atau server restart.
-  const segar = databaseCacheSegar(await bacaMetaCache());
-  if ((!segar && igPosts.length === 0) || forceSync) {
-    const freshPosts = await fetchInstagramPosts();
-    if (freshPosts.length > 0) {
-      igPosts = freshPosts;
-      await saveInstagramPostsToDatabase(freshPosts);
-    } else if (igPosts.length > 0) {
-      // Fetch gagal tetapi database punya data lama — tetap tampilkan, jangan
-      // sampai halaman Home kosong hanya karena kuota habis.
-      console.warn('[Instagram] Fetch gagal, memakai cache database terakhir.');
-    }
-  }
 
   const news: FeedItem[] = igPosts.map(p => ({ ...p, type: 'news' as const }));
 

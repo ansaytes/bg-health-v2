@@ -45,7 +45,6 @@ const ROLE_OPTIONS = [
   { value: 'manager', label: 'Manager (QSHE)' },
   { value: 'administrator', label: 'QSHE Medic' },
   { value: 'superuser', label: 'Superuser' },
-  { value: 'disabled', label: 'Akses dinonaktifkan' },
 ];
 
 export default function UserManagement() {
@@ -171,8 +170,9 @@ export default function UserManagement() {
             <div>
               <label className="admin-label">Password</label>
               <input type="password" value={regForm.password}
+                minLength={12}
                 onChange={(e) => setRegForm({ ...regForm, password: e.target.value })}
-                placeholder="Min. 6 karakter" className="admin-input" />
+                placeholder="Min. 12 karakter" className="admin-input" />
             </div>
             <div>
               <label className="admin-label">Nama Lengkap</label>
@@ -195,20 +195,25 @@ export default function UserManagement() {
             <div>
               <EmployeeLookupInput
                 value={regForm.employee_nik || ''}
-                onChange={(v) => setRegForm({ ...regForm, employee_nik: v })}
+                onChange={(v) => setRegForm((prev) => ({
+                  ...prev,
+                  employee_nik: v,
+                  full_name: '',
+                  national_id: '',
+                  site: '',
+                }))}
                 onEmployeeFound={(emp) => {
                   setRegForm((prev) => ({
                     ...prev,
-                    employee_nik: emp.nik ? String(emp.nik) : prev.employee_nik,
-                    full_name: emp.nama || prev.full_name,
-                    national_id: emp.national_id || prev.national_id,
-                    site: emp.site_name || prev.site,
+                    employee_nik: emp.nik ? String(emp.nik) : '',
+                    full_name: emp.nama || '',
+                    national_id: emp.national_id || '',
+                    site: emp.site_name || '',
                   }));
                 }}
                 placeholder="Ketik Nama, NIK, atau KTP Karyawan"
                 label={<span className="admin-label" style={{ marginBottom: 0 }}>Cari Data Karyawan *</span>}
                 required
-                inputStyle={{ width: '100%', height: 38, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)', padding: '0 12px', fontSize: 13, color: 'var(--foreground)' }}
               />
             </div>
             <div>
@@ -282,7 +287,7 @@ export default function UserManagement() {
                       <td>{u.employee_site || '—'}</td>
                       <td style={{ fontWeight: 500 }}>{u.username}</td>
                       <td>
-                        {isSuperuser ? (
+                        {isSuperuser && u.role !== 'disabled' && u.role !== 'viewer' ? (
                           <select
                             value={u.role} onChange={(e) => handleRoleChange(u.id, e.target.value)}
                             style={{ padding: '3px 8px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--input)', color: 'var(--foreground)', fontSize: 10, fontWeight: 600 }}

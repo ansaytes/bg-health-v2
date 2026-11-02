@@ -391,7 +391,7 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
     async function fetchData() {
       try {
         // Fetch social feed (YouTube RSS)
-        const socialRes = await fetch('/api/social-feed');
+        const socialRes = await fetch('/api/social-feed?database=1', { cache: 'no-store' });
         if (socialRes.ok) {
           const socialJson = await socialRes.json();
           const news: FeedItem[] = (socialJson.news || []).map((p: any) => ({

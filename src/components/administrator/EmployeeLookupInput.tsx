@@ -104,6 +104,11 @@ export default function EmployeeLookupInput({
 
   const applyEmployee = useCallback(
     (emp: EmployeeData) => {
+      // Update the controlled search value first so consumers can clear stale identity fields.
+      if (emp.nik) {
+        onChange(emp.nik);
+        lastSearchedValue.current = emp.nik;
+      }
       onEmployeeFound(emp);
       if (autoFill && onAutoFill) {
         const entries = Object.entries(autoFill) as [string, string][];
@@ -113,10 +118,6 @@ export default function EmployeeLookupInput({
         }
       }
       // Always set the visible input value to NIK Karyawan so the field never keeps the typed name
-      if (emp.nik) {
-        onChange(emp.nik);
-        lastSearchedValue.current = emp.nik;
-      }
       setStatus('found');
       setShowSuggestions(false);
       setSuggestions([]);
