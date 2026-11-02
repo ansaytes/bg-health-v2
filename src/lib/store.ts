@@ -114,7 +114,7 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
   setActivePage: (tab) => set({ activePage: tab }),
   activeDashSidebar: 'statistik',
   setActiveDashSidebar: (tab) => set({ activeDashSidebar: tab }),
-  activeAdminSidebar: 'lagging-indicator',
+  activeAdminSidebar: 'layanan-kuratif-admin',
   setActiveAdminSidebar: (tab) => set({ activeAdminSidebar: tab }),
   activeDataEntrySidebar: 'input-jadwal-mcu',
   setActiveDataEntrySidebar: (tab) => set({ activeDataEntrySidebar: tab }),

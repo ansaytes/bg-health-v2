@@ -1164,7 +1164,7 @@ export default function Home() {
     if (page === 'home') setActiveHomeSidebar('semua-feed');
     else if (page === 'dashboard') setActiveDashSidebar('statistik');
     else if (page === 'data-entry') setActiveDataEntrySidebar('input-jadwal-mcu');
-    else if (page === 'administrator') setActiveAdminSidebar('lagging-indicator');
+    else if (page === 'administrator') setActiveAdminSidebar('layanan-kuratif-admin');
   }, [setActiveHomeSidebar, setActiveDashSidebar, setActiveDataEntrySidebar, setActiveAdminSidebar]);
 
   useEffect(() => {
