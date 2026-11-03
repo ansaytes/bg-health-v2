@@ -65,8 +65,8 @@ export async function PUT(request: NextRequest) {
       if (provider !== 'gemini' && provider !== 'openai-compatible') {
         return NextResponse.json({ success: false, error: 'Provider AI tidak didukung.' }, { status: 400 });
       }
-      if (typeof model !== 'string' || !model.trim() || model.length > 200) {
-        return NextResponse.json({ success: false, error: 'Nama model wajib diisi dan maksimal 200 karakter.' }, { status: 400 });
+      if (typeof model !== 'string' || model.length > 200) {
+        return NextResponse.json({ success: false, error: 'Model tidak valid.' }, { status: 400 });
       }
       const normalizedBaseUrl = provider === 'openai-compatible' ? normalizeBaseUrl(baseUrl) : '';
       if (provider === 'openai-compatible' && !normalizedBaseUrl) {

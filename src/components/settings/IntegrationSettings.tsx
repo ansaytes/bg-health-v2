@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CloudUpload, Loader2, Save } from 'lucide-react';
+import { CloudUpload, Loader2, RefreshCw, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authFetch } from '@/lib/api-client';
@@ -10,6 +10,7 @@ type SettingsData = {
   ai: { provider: 'gemini' | 'openai-compatible'; baseUrl: string; model: string; hasApiKey: boolean };
   drive: { folderId: string; connected: boolean; accountEmail: string };
 };
+type AvailableModel = { id: string; name: string };
 
 const initial: SettingsData = {
   ai: { provider: 'gemini', baseUrl: '', model: '', hasApiKey: false },
@@ -24,6 +25,9 @@ export default function IntegrationSettings() {
   const [saving, setSaving] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [message, setMessage] = useState('');
+  const [availableModels, setAvailableModels] = useState<AvailableModel[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+  const [modelError, setModelError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -33,9 +37,19 @@ export default function IntegrationSettings() {
       .finally(() => { if (active) setLoading(false); });
     const driveStatus = new URLSearchParams(window.location.search).get('drive');
     if (driveStatus) {
-      setMessage(driveStatus === 'connected'
-        ? 'Google Drive berhasil dihubungkan.'
-        : `Koneksi Google Drive belum berhasil (${driveStatus}).`);
+      const driveMessages: Record<string, string> = {
+        connected: 'Google Drive berhasil dihubungkan.',
+        oauth_config_incomplete: 'Koneksi Google Drive gagal: konfigurasi OAuth server belum lengkap. Atur GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET, dan GOOGLE_DRIVE_REDIRECT_URI pada environment server.',
+        invalid_state: 'Koneksi Google Drive gagal karena validasi keamanan tidak cocok atau sesi OAuth kedaluwarsa. Mulai koneksi kembali.',
+        expired_state: 'Sesi OAuth Google Drive kedaluwarsa. Mulai koneksi kembali.',
+        authorization_failed: 'Izin Google Drive tidak diberikan atau proses otorisasi dibatalkan.',
+        access_denied: 'Hanya superuser yang memulai koneksi dapat menyelesaikan otorisasi Google Drive.',
+        token_exchange_failed: 'Google menolak penukaran kode OAuth. Periksa Client ID, Client Secret, dan URL callback di Google Cloud Console.',
+        account_lookup_failed: 'Akun Google berhasil diotorisasi, tetapi alamat akun tidak dapat dibaca.',
+        missing_refresh_token: 'Google tidak memberikan refresh token. Cabut akses aplikasi di akun Google lalu hubungkan kembali dengan persetujuan baru.',
+        connection_failed: 'Koneksi Google Drive gagal saat menyimpan pengaturan. Periksa konfigurasi server dan coba kembali.',
+      };
+      setMessage(driveMessages[driveStatus] || `Koneksi Google Drive belum berhasil (${driveStatus}).`);
     }
     return () => { active = false; };
   }, []);
@@ -83,34 +97,79 @@ export default function IntegrationSettings() {
     }
   }
 
+  async function loadModels() {
+    setLoadingModels(true);
+    setModelError('');
+    try {
+      const result = await authFetch<{ provider: SettingsData['ai']['provider']; configuredModel: string; models: AvailableModel[] }>('/api/integrations/ai/models');
+      setAvailableModels(result.models);
+      setSettings((current) => ({
+        ...current,
+        ai: {
+          ...current.ai,
+          model: result.models.some((model) => model.id === current.ai.model)
+            ? current.ai.model
+            : result.models.some((model) => model.id === result.configuredModel)
+              ? result.configuredModel
+              : result.models[0]?.id || '',
+        },
+      }));
+      if (result.provider !== settings.ai.provider) {
+        setModelError('Provider yang tersimpan berbeda. Simpan pengaturan provider terlebih dahulu, lalu muat ulang model.');
+        setAvailableModels([]);
+      }
+    } catch (error) {
+      setModelError(error instanceof Error ? error.message : 'Gagal memuat daftar model.');
+      setAvailableModels([]);
+    } finally {
+      setLoadingModels(false);
+    }
+  }
+
   const inputClass = 'h-9 rounded-lg text-sm';
   return (
     <div className="flex flex-col gap-4">
-      {message && <div role="status" className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">{message}</div>}
+      {message && <div role="status" className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm break-words">{message}</div>}
       <section className="rounded-xl border border-border bg-card p-4">
         <h3 className="mb-1 text-sm font-bold">AI / OCR</h3>
         <p className="mb-4 text-xs text-muted-foreground">API key disimpan terenkripsi dan tidak pernah ditampilkan kembali. Endpoint lokal hanya dapat diatur Superuser.</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-xs font-semibold">
             Provider
-            <select className={inputClass} value={settings.ai.provider} disabled={loading} onChange={(event) => setSettings({ ...settings, ai: { ...settings.ai, provider: event.target.value as SettingsData['ai']['provider'] } })}>
+            <select className={inputClass} value={settings.ai.provider} disabled={loading} onChange={(event) => { setAvailableModels([]); setSettings({ ...settings, ai: { ...settings.ai, provider: event.target.value as SettingsData['ai']['provider'], model: '' } }); }}>
               <option value="gemini">Google Gemini</option>
               <option value="openai-compatible">OpenAI-compatible</option>
             </select>
           </label>
-          <label className="flex flex-col gap-1 text-xs font-semibold">
-            Model
-            <Input className={inputClass} value={settings.ai.model} disabled={loading} maxLength={200} onChange={(event) => setSettings({ ...settings, ai: { ...settings.ai, model: event.target.value } })} placeholder={settings.ai.provider === 'gemini' ? 'gemini-2.5-flash' : 'model name'} />
-          </label>
+          <div className="flex flex-col gap-1 text-xs font-semibold">
+            Model AI
+            <div className="flex gap-2">
+              <select
+                className={`${inputClass} min-w-0 flex-1`}
+                value={settings.ai.model}
+                disabled={loading || availableModels.length === 0}
+                onChange={(event) => setSettings({ ...settings, ai: { ...settings.ai, model: event.target.value } })}
+              >
+                {availableModels.length === 0 && <option value="">Muat daftar model terlebih dahulu</option>}
+                {availableModels.map((model) => <option key={model.id} value={model.id}>{model.name} ({model.id})</option>)}
+              </select>
+              <Button type="button" variant="outline" className="h-9 shrink-0" disabled={loading || loadingModels} onClick={() => void loadModels()}>
+                {loadingModels ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+                <span className="sr-only">Muat model yang tersedia</span>
+              </Button>
+            </div>
+            {modelError && <span role="alert" className="font-normal text-destructive">{modelError}</span>}
+            <span className="font-normal text-muted-foreground">Simpan provider, URL, dan API key terlebih dahulu. Lalu muat ulang daftar model dari provider.</span>
+          </div>
           {settings.ai.provider === 'openai-compatible' && (
             <label className="flex flex-col gap-1 text-xs font-semibold sm:col-span-2">
               Base URL
-              <Input className={inputClass} value={settings.ai.baseUrl} disabled={loading} maxLength={500} onChange={(event) => setSettings({ ...settings, ai: { ...settings.ai, baseUrl: event.target.value } })} placeholder="http://host-lokal:port/v1" />
+              <Input className={inputClass} value={settings.ai.baseUrl} disabled={loading} maxLength={500} onChange={(event) => { setAvailableModels([]); setSettings({ ...settings, ai: { ...settings.ai, baseUrl: event.target.value } }); }} placeholder="http://host-lokal:port/v1" />
             </label>
           )}
           <label className="flex flex-col gap-1 text-xs font-semibold sm:col-span-2">
             API Key {settings.ai.hasApiKey ? '(sudah tersimpan; kosongkan untuk mempertahankan)' : ''}
-            <Input className={inputClass} type="password" autoComplete="new-password" value={apiKey} disabled={loading} maxLength={4096} onChange={(event) => { setApiKey(event.target.value); setClearApiKey(false); }} />
+            <Input className={inputClass} type="password" autoComplete="new-password" value={apiKey} disabled={loading} maxLength={4096} onChange={(event) => { setApiKey(event.target.value); setAvailableModels([]); setClearApiKey(false); }} />
           </label>
           {settings.ai.hasApiKey && (
             <label className="flex items-center gap-2 text-xs sm:col-span-2">

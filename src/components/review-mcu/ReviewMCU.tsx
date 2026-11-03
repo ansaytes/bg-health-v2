@@ -8,7 +8,7 @@ import {
   User, Activity, Eye, HeartPulse, Droplets, FlaskConical,
   Shield, Pill, ScanLine, Wind, Ear, Brain, Dumbbell,
   ClipboardCheck, Calculator, Zap, Save, RotateCcw,
-  ChevronRight, Loader2, AlertCircle, CheckCircle2, FileText, Lightbulb,
+  ChevronRight, Loader2, AlertCircle, CheckCircle2, FileText, Lightbulb, RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,15 +23,12 @@ import { useMCUStore, type EmployeeData as MCUEmployeeData } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { getEmployeeLookupAccessToken } from '@/lib/employee-lookup-client';
 import { MCU_FIELDS, MCU_SECTIONS, getFieldsBySection, type MCUFieldDef } from '@/lib/mcu-fields';
-import {
-  DEFAULT_GEMINI_OCR_MODEL,
-  GEMINI_OCR_MODELS,
-  getGeminiOcrModel,
-} from '@/lib/gemini-ocr-models';
+import { authFetch } from '@/lib/api-client';
 import MCUPdfRedactor from './MCUPdfRedactor';
 import { calcEgfrCkdEpi2021, getMissingZonasiInputs } from '@/lib/zonasi-engine';
 
 type SearchBy = 'nik' | 'national_id' | 'nama';
+type AvailableAIModel = { id: string; name: string };
 
 function calculateAge(birthDate?: string | null) {
   if (!birthDate) return '';
@@ -223,7 +220,31 @@ export default function ReviewMCU() {
   const [direction, setDirection] = useState(1);
   const [ocrProgress, setOcrProgress] = useState(0);
   const [extractionCooldown, setExtractionCooldown] = useState(0);
-  const [ocrModelId, setOcrModelId] = useState(DEFAULT_GEMINI_OCR_MODEL);
+  const [ocrModelId, setOcrModelId] = useState('');
+  const [ocrModels, setOcrModels] = useState<AvailableAIModel[]>([]);
+  const [loadingOcrModels, setLoadingOcrModels] = useState(true);
+  const [ocrModelError, setOcrModelError] = useState('');
+  const loadOcrModels = useCallback(async () => {
+    setLoadingOcrModels(true);
+    setOcrModelError('');
+    try {
+      const result = await authFetch<{ configuredModel: string; models: AvailableAIModel[] }>('/api/integrations/ai/models');
+      setOcrModels(result.models);
+      setOcrModelId((current) => result.models.some((model) => model.id === current)
+        ? current
+        : result.models.some((model) => model.id === result.configuredModel)
+          ? result.configuredModel
+          : result.models[0]?.id || '');
+    } catch (error) {
+      setOcrModels([]);
+      setOcrModelError(error instanceof Error ? error.message : 'Daftar model AI gagal dimuat.');
+    } finally {
+      setLoadingOcrModels(false);
+    }
+  }, []);
+
+  useEffect(() => { void loadOcrModels(); }, [loadOcrModels]);
+
   useEffect(() => {
     if (extractionCooldown <= 0) return;
     const timer = window.setInterval(() => {
@@ -677,21 +698,35 @@ export default function ReviewMCU() {
 
               <div className="mt-3 flex flex-col gap-1.5">
                 <label htmlFor="ocr-model-mode" className="text-xs font-medium text-muted-foreground">
-                  Mode Ekstraksi Data
+                  Model AI untuk Ekstraksi
                 </label>
-                <select
-                  id="ocr-model-mode"
-                  value={ocrModelId}
-                  onChange={(e) => setOcrModelId(e.target.value)}
-                  disabled={store.extractingOCR || extractionCooldown > 0}
-                  className="h-10 rounded-xl border border-input bg-background px-3 text-sm text-foreground"
-                >
-                  {GEMINI_OCR_MODELS.map((model) => (
-                    <option key={model.id} value={model.id}>{model.label}</option>
-                  ))}
-                </select>
+                <div className="flex gap-2">
+                  <select
+                    id="ocr-model-mode"
+                    value={ocrModelId}
+                    onChange={(e) => setOcrModelId(e.target.value)}
+                    disabled={loadingOcrModels || ocrModels.length === 0 || store.extractingOCR || extractionCooldown > 0}
+                    className="h-10 min-w-0 flex-1 rounded-xl border border-input bg-background px-3 text-sm text-foreground"
+                  >
+                    {loadingOcrModels && <option value="">Memuat model dari provider...</option>}
+                    {!loadingOcrModels && ocrModels.length === 0 && <option value="">Model tidak tersedia</option>}
+                    {ocrModels.map((model) => <option key={model.id} value={model.id}>{model.name} ({model.id})</option>)}
+                  </select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => void loadOcrModels()}
+                    disabled={loadingOcrModels || store.extractingOCR || extractionCooldown > 0}
+                    aria-label="Muat ulang daftar model AI"
+                    title="Muat ulang daftar model AI"
+                  >
+                    {loadingOcrModels ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+                  </Button>
+                </div>
+                {ocrModelError && <p role="alert" className="text-xs text-destructive">{ocrModelError}</p>}
                 <p className="text-xs text-muted-foreground">
-                  {getGeminiOcrModel(ocrModelId)?.description}
+                  Daftar model diambil dari provider berdasarkan API key yang tersimpan di Pengaturan Integrasi.
                 </p>
               </div>
 

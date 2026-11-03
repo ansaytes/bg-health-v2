@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 import { GoogleGenAI } from '@google/genai';
 import { MCU_FIELDS } from '@/lib/mcu-fields';
-import {
-  DEFAULT_GEMINI_OCR_MODEL,
-  isGeminiOcrModel,
-} from '@/lib/gemini-ocr-models';
 import { decryptIntegrationSecret, integrationAdminClient, readIntegration } from '@/lib/integration-settings';
 import { getServerCaller, requireServerRole, STAFF_ROLES } from '@/lib/server-auth';
 
@@ -134,24 +130,20 @@ export async function POST(req: NextRequest) {
     const provider = aiIntegration?.config.provider === 'openai-compatible' ? 'openai-compatible' : 'gemini';
     const savedApiKey = typeof aiSecrets.apiKey === 'string' ? aiSecrets.apiKey : '';
     const apiKey = savedApiKey;
-    const model = typeof aiIntegration?.config.model === 'string' && aiIntegration.config.model
-      ? aiIntegration.config.model
-      : DEFAULT_GEMINI_OCR_MODEL;
+    const configuredModel = typeof aiIntegration?.config.model === 'string' ? aiIntegration.config.model : '';
+    const model = typeof modelId === 'string' && modelId.trim() ? modelId.trim() : configuredModel;
+    if (modelId !== undefined && (typeof modelId !== 'string' || !modelId.trim() || modelId.length > 200)) {
+      return NextResponse.json({ success: false, error: 'Model AI tidak valid.' }, { status: 400 });
+    }
     if (!apiKey) {
       return NextResponse.json({ success: false, error: 'API key AI belum diatur pada menu Pengaturan > Integrasi.' }, { status: 503 });
+    }
+    if (!model) {
+      return NextResponse.json({ success: false, error: 'Pilih dan simpan model AI yang tersedia di Pengaturan > Integrasi.' }, { status: 503 });
     }
 
     let outputText = '';
     if (provider === 'gemini') {
-      const selectedModel = typeof modelId === 'string' && modelId.length > 0
-        ? modelId
-        : model;
-      if (modelId !== undefined && (typeof modelId !== 'string' || !isGeminiOcrModel(modelId))) {
-        return NextResponse.json(
-          { success: false, error: 'Model ekstraksi yang dipilih tidak tersedia. Pilih model dari daftar Mode Ekstraksi Data.' },
-          { status: 400 },
-        );
-      }
       const parts: Array<{ text: string } | { inlineData: { data: string; mimeType: string } }> = images.map((image) => ({
         inlineData: image,
       }));
@@ -159,7 +151,7 @@ export async function POST(req: NextRequest) {
       try {
         const ai = new GoogleGenAI({ apiKey });
         const response = await ai.models.generateContent({
-          model: selectedModel,
+          model,
           contents: [{ role: 'user', parts }],
           config: {
             systemInstruction: generatePromptSchema(),

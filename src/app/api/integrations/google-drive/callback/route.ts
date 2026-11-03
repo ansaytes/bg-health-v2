@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     const clientId = process.env.GOOGLE_DRIVE_CLIENT_ID || '';
     const clientSecret = process.env.GOOGLE_DRIVE_CLIENT_SECRET || '';
     const redirectUri = process.env.GOOGLE_DRIVE_REDIRECT_URI || '';
-    if (!clientId || !clientSecret || !redirectUri) return redirectToSettings('server_not_configured');
+    if (!clientId || !clientSecret || !redirectUri) return redirectToSettings('oauth_config_incomplete');
 
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',

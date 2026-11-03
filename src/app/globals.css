@@ -2599,6 +2599,27 @@ select.admin-input.compact-input {
   font-size: 12px;
   line-height: 1.45;
 }
+.app-settings-page {
+  box-sizing: border-box;
+  width: min(100%, 1440px);
+  margin: 0 auto;
+  padding: 14px clamp(14px, 2vw, 28px) 24px;
+}
+.app-settings-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-top: 4px;
+}
+.app-settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 16px;
+}
 .review-mcu-page .text-lg {
   font-size: 15px;
   line-height: 1.35;
@@ -2661,6 +2682,8 @@ select.admin-input.compact-input {
   }
 }
 @media (max-width: 760px) {
+  .app-settings-page { padding: 12px 12px 20px; }
+  .app-settings-content { gap: 12px; padding-top: 12px; }
   .mcu-records-modern,
   .mcu-entry-modern-shell { padding: 10px; }
   .mcu-records-modern .mcu-records-card { padding: 13px; }

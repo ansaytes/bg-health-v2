@@ -11,9 +11,18 @@ export async function POST(request: NextRequest) {
   if (denied) return denied;
 
   const clientId = process.env.GOOGLE_DRIVE_CLIENT_ID || '';
+  const clientSecret = process.env.GOOGLE_DRIVE_CLIENT_SECRET || '';
   const redirectUri = process.env.GOOGLE_DRIVE_REDIRECT_URI || '';
-  if (!clientId || !redirectUri) {
-    return NextResponse.json({ success: false, error: 'OAuth Google Drive belum dikonfigurasi di server.' }, { status: 503 });
+  const missing = [
+    !clientId && 'GOOGLE_DRIVE_CLIENT_ID',
+    !clientSecret && 'GOOGLE_DRIVE_CLIENT_SECRET',
+    !redirectUri && 'GOOGLE_DRIVE_REDIRECT_URI',
+  ].filter((value): value is string => Boolean(value));
+  if (missing.length) {
+    return NextResponse.json({
+      success: false,
+      error: `Konfigurasi OAuth Google Drive di server belum lengkap: ${missing.join(', ')}.`,
+    }, { status: 503 });
   }
 
   try {

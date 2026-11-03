@@ -65,8 +65,8 @@ export default function AppSettingsPage() {
   const inputCls = 'h-9 rounded-lg text-sm';
 
   return (
-    <div className="relative review-mcu-page" style={{ overflowY: 'auto', maxHeight: '100%', padding: '0 4px 20px' }}>
-      <div className="flex items-center justify-between gap-4 flex-wrap mb-3" style={{ paddingTop: 10 }}>
+    <div className="relative review-mcu-page app-settings-page" style={{ overflowY: 'auto', maxHeight: '100%' }}>
+      <div className="app-settings-heading">
         <div>
           <h1 style={{ fontSize: 17, fontWeight: 800, color: 'var(--foreground)', margin: 0 }}>Pengaturan Aplikasi</h1>
           <p style={{ fontSize: 11.5, color: 'var(--muted-foreground)', margin: '2px 0 0' }}>
@@ -103,7 +103,7 @@ export default function AppSettingsPage() {
 
       <CenteredTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Pengaturan aplikasi" compact />
 
-      <div style={{ paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="app-settings-content">
         {tab === 'integrasi' && <IntegrationSettings />}
         {tab === 'perusahaan' && (
           <section style={{ background: 'var(--card)', borderRadius: 12, padding: 16, border: '1px solid var(--border)' }}>
