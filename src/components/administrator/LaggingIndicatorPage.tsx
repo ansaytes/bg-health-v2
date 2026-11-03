@@ -2,15 +2,11 @@
 
 import { useState } from 'react';
 import { JOBSITES } from '@/lib/lagging-data';
-import InputLaggingIndicator from './InputLaggingIndicator';
 
 /**
  * Lagging Indicator admin page.
- * Two internal tabs:
- *   Tab A: Statistik Kesehatan — monthly leading+lagging input per site per month
- *          POST /api/health-indicators
- *   Tab B: Data Karyawan Sakit — sick employee detail input (existing form)
- *          POST /api/sick-employees
+ * Statistik Kesehatan tetap menerima input rekap manual per site dan bulan.
+ * Input laporan sakit individu berada di dalam workflow Monitoring Karyawan Sakit.
  */
 
 const FULL_MONTHS = [
@@ -66,10 +62,10 @@ const DENOMINATOR_FIELDS: { key: keyof IndicatorRow; label: string; hint?: strin
 
 const AGGREGATE_FIELDS: { key: keyof IndicatorRow; label: string; hint?: string; sourcePage?: string }[] = [
   { key: 'kunjungan_klinik', label: 'Total Kunjungan Klinik', hint: 'Hanya Head Office yang ter-auto-aggregate dari Halaman Kunjungan Berobat' },
-  { key: 'tk_sakit', label: 'Tenaga Kerja Sakit', hint: 'Jumlah karyawan yang sakit', sourcePage: 'Tab Data Karyawan Sakit' },
-  { key: 'absensi_sakit', label: 'Total Absensi Sakit (hari)', hint: 'Total hari sakit', sourcePage: 'Tab Data Karyawan Sakit' },
-  { key: 'spell', label: 'Spell', hint: 'Jumlah Spell (Kepdirjen 1855.K/2019)', sourcePage: 'Tab Data Karyawan Sakit' },
-  { key: 'penyakit_akibat_kerja', label: 'Penyakit Akibat Kerja (PAK)', hint: 'Jumlah kasus PAK', sourcePage: 'Tab Data Karyawan Sakit' },
+  { key: 'tk_sakit', label: 'Tenaga Kerja Sakit', hint: 'Jumlah karyawan yang sakit', sourcePage: 'Monitoring Karyawan Sakit' },
+  { key: 'absensi_sakit', label: 'Total Absensi Sakit (hari)', hint: 'Total hari sakit', sourcePage: 'Monitoring Karyawan Sakit' },
+  { key: 'spell', label: 'Spell', hint: 'Jumlah Spell (Kepdirjen 1855.K/2019)', sourcePage: 'Monitoring Karyawan Sakit' },
+  { key: 'penyakit_akibat_kerja', label: 'Penyakit Akibat Kerja (PAK)', hint: 'Jumlah kasus PAK', sourcePage: 'Monitoring Karyawan Sakit' },
   { key: 'kejadian_penyakit_tk', label: 'Kejadian Akibat Penyakit TK', hint: 'Jumlah kejadian KAPTK' },
 ];
 
@@ -83,11 +79,7 @@ const LAGGING_FIELDS: { key: keyof IndicatorRow; label: string; formula: string;
   { key: 'kaptk',  label: 'Kejadian Akibat Penyakit TK (KAPTK)',   formula: 'Count kejadian' },
 ];
 
-type TabKey = 'statistik' | 'karyawan-sakit';
-
 export default function LaggingIndicatorPage() {
-  const [tab, setTab] = useState<TabKey>('statistik');
-
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', width: '100%', height: '100%', margin: '0 auto', paddingBottom: 0 }}>
       <div className="admin-form-inner">
@@ -99,23 +91,7 @@ export default function LaggingIndicatorPage() {
           </p>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="admin-tab-row">
-          <button
-            className={`admin-tab-btn${tab === 'statistik' ? ' active' : ''}`}
-            onClick={() => setTab('statistik')}
-          >
-            Statistik Kesehatan
-          </button>
-          <button
-            className={`admin-tab-btn${tab === 'karyawan-sakit' ? ' active' : ''}`}
-            onClick={() => setTab('karyawan-sakit')}
-          >
-            Data Karyawan Sakit
-          </button>
-        </div>
-
-        {tab === 'statistik' ? <StatistikKesehatanForm /> : <InputLaggingIndicator />}
+        <StatistikKesehatanForm />
       </div>
     </div>
   );

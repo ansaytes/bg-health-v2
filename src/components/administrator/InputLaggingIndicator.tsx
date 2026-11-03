@@ -267,7 +267,7 @@ export default function InputLaggingIndicator() {
       <form onSubmit={handleSickSubmit}>
         <div className="admin-form-card">
           <p style={{ margin: '0 0 14px', fontSize: 11, lineHeight: 1.5, color: 'var(--muted-foreground)' }}>
-            Data sakit individu tetap dicatat untuk Lagging Indicator. Periode yang memiliki tanggal juga dibuat sebagai episode pemantauan, sehingga tidak perlu diinput ulang pada halaman Monitoring Karyawan Sakit. Rekap statistik bulanan tetap dapat diinput manual secara terpisah.
+            Laporan sakit individu dan episode pemantauan diproses bersama: setiap periode bertanggal otomatis ditautkan atau dibuatkan episode. Rekap statistik Lagging Indicator bulanan tetap diinput manual pada menu Lagging Indicator.
           </p>
           {/* Section: Identitas Karyawan */}
           <div className="admin-section-header">

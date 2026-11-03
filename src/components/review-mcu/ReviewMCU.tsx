@@ -20,6 +20,7 @@ import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from '@/components/ui/accordion';
 import { useMCUStore, type EmployeeData as MCUEmployeeData } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
 import { getEmployeeLookupAccessToken } from '@/lib/employee-lookup-client';
 import { MCU_FIELDS, MCU_SECTIONS, getFieldsBySection, type MCUFieldDef } from '@/lib/mcu-fields';
 import {
@@ -132,8 +133,6 @@ function employeeFormData(employee: MCUEmployeeData): Record<string, string> {
     usia: employee.usia,
   };
 }
-import { supabase } from '@/lib/supabase';
-
 // Icon map for section icons
 const SECTION_ICONS: Record<string, React.ReactNode> = {
   User: <User className="size-4" />,
@@ -339,9 +338,15 @@ export default function ReviewMCU() {
     }, 300);
 
     try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!session?.access_token) throw new Error('Sesi login tidak tersedia. Silakan masuk kembali.');
       const res = await fetch('/api/ocr', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({ images, modelId: ocrModelId }),
       });
       clearInterval(interval);
@@ -650,7 +655,7 @@ export default function ReviewMCU() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-card rounded-2xl p-5"
+              className="bg-card mx-auto w-full max-w-5xl rounded-2xl p-4 sm:p-5"
             >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">

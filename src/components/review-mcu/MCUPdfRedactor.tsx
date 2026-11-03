@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Loader2, ScanLine, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/supabase';
 
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
 const MAX_PAGES = 12;
@@ -204,42 +205,46 @@ export default function MCUPdfRedactor({
 
     const pdfjs = await import('pdfjs-dist');
     pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
-    const document = await pdfjs.getDocument({ data: new Uint8Array(bytes) }).promise;
-    if (document.numPages > MAX_PAGES) {
-      await document.destroy();
-      throw new Error(`PDF dibatasi hingga ${MAX_PAGES} halaman. Pecah dokumen lalu proses bagian per bagian.`);
-    }
+    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(bytes) });
+    const pdfDocument = await loadingTask.promise;
+    try {
+      if (pdfDocument.numPages > MAX_PAGES) {
+        throw new Error(`PDF dibatasi hingga ${MAX_PAGES} halaman. Pecah dokumen lalu proses bagian per bagian.`);
+      }
 
-    const renderedPages: PdfPagePreview[] = [];
-    for (let number = 1; number <= document.numPages; number += 1) {
-      const pdfPage = await document.getPage(number);
-      const baseViewport = pdfPage.getViewport({ scale: 1 });
-      const scale = Math.min(2, 1500 / baseViewport.width);
-      const viewport = pdfPage.getViewport({ scale });
-      const canvas = window.document.createElement('canvas');
-      canvas.width = Math.ceil(viewport.width);
-      canvas.height = Math.ceil(viewport.height);
-      const context = canvas.getContext('2d');
-      if (!context) throw new Error('Browser tidak dapat menyiapkan pratinjau PDF.');
-      await pdfPage.render({ canvasContext: context, viewport }).promise;
-      renderedPages.push({
-        number,
-        canvas,
-        previewUrl: canvas.toDataURL('image/jpeg', 0.82),
-        redactions: [],
-        identityAbsent: false,
-      });
+      const renderedPages: PdfPagePreview[] = [];
+      for (let number = 1; number <= pdfDocument.numPages; number += 1) {
+        const pdfPage = await pdfDocument.getPage(number);
+        const baseViewport = pdfPage.getViewport({ scale: 1 });
+        const scale = Math.min(2, 1500 / baseViewport.width);
+        const viewport = pdfPage.getViewport({ scale });
+        const canvas = window.document.createElement('canvas');
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Browser tidak dapat menyiapkan pratinjau PDF.');
+        await pdfPage.render({ canvasContext: context, viewport }).promise;
+        renderedPages.push({
+          number,
+          canvas,
+          previewUrl: canvas.toDataURL('image/jpeg', 0.82),
+          redactions: [],
+          identityAbsent: false,
+        });
+      }
+      setPages(renderedPages);
+      setSourceName(name);
+    } finally {
+      await pdfDocument.destroy();
     }
-    await document.destroy();
-    setPages(renderedPages);
-    setSourceName(name);
   }
 
   async function openLocalFile(file: File | undefined) {
     if (!file) return;
     setError('');
     setPages([]);
-    if (file.type !== 'application/pdf' || file.size > MAX_FILE_BYTES) {
+    setSourceName('');
+    if ((file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) || file.size > MAX_FILE_BYTES) {
       setError(file.size > MAX_FILE_BYTES
         ? 'Ukuran PDF maksimal 15 MB.'
         : 'Pilih file PDF.');
@@ -258,11 +263,16 @@ export default function MCUPdfRedactor({
   async function openDriveFile() {
     setError('');
     setPages([]);
+    setSourceName('');
     setLoading(true);
     try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!session?.access_token) throw new Error('Sesi login tidak tersedia. Silakan masuk kembali.');
       const fileId = parseDriveFileId(driveUrl);
       const response = await fetch(`/api/ocr/source?fileId=${encodeURIComponent(fileId)}`, {
         cache: 'no-store',
+        headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (!response.ok) {
         const result = await response.json().catch(() => null);
@@ -310,18 +320,32 @@ export default function MCUPdfRedactor({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto w-full max-w-4xl space-y-4 text-sm">
       <div className="grid gap-3 rounded-xl border border-border bg-muted/40 p-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-2 text-sm font-medium">
-          Pilih PDF dari perangkat
+        <div className="flex min-w-0 flex-col gap-2">
+          <span className="text-sm font-medium">PDF dari perangkat</span>
+          <label
+            htmlFor="mcu-local-pdf"
+            className={`flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-primary/40 bg-background px-3 py-2 text-center text-sm font-semibold text-primary transition-colors hover:bg-primary/5 ${loading || busy ? 'pointer-events-none opacity-50' : ''}`}
+          >
+            <Upload className="size-4 shrink-0" />
+            <span>Pilih file PDF</span>
+          </label>
           <input
+            id="mcu-local-pdf"
             type="file"
             accept="application/pdf,.pdf"
             disabled={loading || busy}
-            onChange={(event) => void openLocalFile(event.target.files?.[0])}
-            className="min-w-0 rounded-lg border border-input bg-background p-2 text-xs"
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              event.currentTarget.value = '';
+              void openLocalFile(file);
+            }}
+            className="sr-only"
           />
-        </label>
+          {sourceName && <span role="status" className="truncate text-xs text-muted-foreground">{sourceName}</span>}
+          <p className="text-xs text-muted-foreground">PDF maksimal 15 MB, hingga {MAX_PAGES} halaman.</p>
+        </div>
         <div className="flex min-w-0 flex-col gap-2">
           <label htmlFor="mcu-drive-link" className="text-sm font-medium">Atau tautan Google Drive</label>
           <div className="flex min-w-0 gap-2">
