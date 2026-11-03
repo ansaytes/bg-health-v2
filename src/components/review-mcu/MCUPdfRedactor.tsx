@@ -3,10 +3,17 @@
 import { useMemo, useState } from 'react';
 import { Loader2, ScanLine, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { supabase } from '@/lib/supabase';
 
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
-const MAX_PAGES = 12;
+const MAX_PAGES = 30;
 const MAX_IMAGES_CHARS = 3_600_000;
 
 interface Redaction {
@@ -182,13 +189,14 @@ export default function MCUPdfRedactor({
   onExtract,
 }: {
   busy: boolean;
-  onExtract: (images: string[]) => Promise<void>;
+  onExtract: (images: string[]) => Promise<boolean>;
 }) {
   const [driveUrl, setDriveUrl] = useState('');
   const [pages, setPages] = useState<PdfPagePreview[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [sourceName, setSourceName] = useState('');
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const readyToExtract = useMemo(
     () => pages.length > 0 && pages.every((page) => page.redactions.length > 0 || page.identityAbsent),
@@ -234,6 +242,7 @@ export default function MCUPdfRedactor({
       }
       setPages(renderedPages);
       setSourceName(name);
+      setPreviewOpen(true);
     } finally {
       await pdfDocument.destroy();
     }
@@ -292,7 +301,7 @@ export default function MCUPdfRedactor({
     if (!readyToExtract || busy) return;
     setError('');
     try {
-      const images = pages.map((page) => {
+      const createImages = (quality: number) => pages.map((page) => {
         const canvas = window.document.createElement('canvas');
         canvas.width = page.canvas.width;
         canvas.height = page.canvas.height;
@@ -308,12 +317,18 @@ export default function MCUPdfRedactor({
             Math.ceil(area.height * canvas.height),
           );
         }
-        return canvas.toDataURL('image/jpeg', 0.78);
+        return canvas.toDataURL('image/jpeg', quality);
       });
+      let images = createImages(0.78);
+      if (images.reduce((total, image) => total + image.length, 0) > MAX_IMAGES_CHARS) {
+        images = createImages(0.62);
+      }
       if (images.reduce((total, image) => total + image.length, 0) > MAX_IMAGES_CHARS) {
         throw new Error('Ukuran gambar hasil penyamaran terlalu besar. Gunakan PDF yang lebih kecil atau kurangi jumlah halaman.');
       }
-      await onExtract(images);
+      const extracted = await onExtract(images);
+      if (extracted) setPreviewOpen(false);
+      else setError('Ekstraksi belum berhasil. Periksa notifikasi untuk melihat penyebabnya.');
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Gambar hasil penyamaran tidak dapat diproses.');
     }
@@ -343,7 +358,12 @@ export default function MCUPdfRedactor({
             }}
             className="sr-only"
           />
-          {sourceName && <span role="status" className="truncate text-xs text-muted-foreground">{sourceName}</span>}
+          {sourceName && <span role="status" className="truncate text-xs text-muted-foreground">{sourceName} · {pages.length} halaman</span>}
+          {pages.length > 0 && (
+            <Button type="button" variant="outline" className="h-9 cursor-pointer" onClick={() => setPreviewOpen(true)}>
+              Pratinjau / Samarkan
+            </Button>
+          )}
           <p className="text-xs text-muted-foreground">PDF maksimal 15 MB, hingga {MAX_PAGES} halaman.</p>
         </div>
         <div className="flex min-w-0 flex-col gap-2">
@@ -377,34 +397,47 @@ export default function MCUPdfRedactor({
       )}
       {error && <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
 
-      {pages.length > 0 && !loading && (
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-sm font-semibold">{sourceName} · {pages.length} halaman</p>
-              <p className="text-xs text-muted-foreground">Tinjau tiap halaman. Buat kotak hitam pada identitas atau tandai bahwa halaman tidak memuat identitas.</p>
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent
+          showCloseButton
+          className="flex h-[92dvh] max-h-[92dvh] max-w-5xl flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl"
+        >
+          <DialogHeader className="shrink-0 border-b border-border px-5 py-4 pr-12">
+            <DialogTitle>Pratinjau dan Samarkan PDF</DialogTitle>
+            <DialogDescription>
+              {sourceName} · {pages.length} halaman. Samarkan identitas pada setiap halaman sebelum ekstraksi.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
+            {error && <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+            {!readyToExtract && (
+              <p className="text-xs font-medium text-amber-700">
+                Setiap halaman harus memiliki area yang disamarkan atau ditandai tanpa identitas.
+              </p>
+            )}
+            <div className="grid gap-4">
+              {pages.map((page) => (
+                <PagePreview
+                  key={page.number}
+                  page={page}
+                  onChange={(update) => updatePage(page.number, update)}
+                />
+              ))}
             </div>
-            <Button type="button" onClick={() => void extract()} disabled={!readyToExtract || busy} className="h-10">
+          </div>
+          <div className="shrink-0 border-t border-border bg-background px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <Button
+              type="button"
+              onClick={() => void extract()}
+              disabled={!readyToExtract || busy}
+              className="h-11 w-full bg-orange-500 text-white hover:bg-orange-600 sm:w-auto sm:min-w-56"
+            >
               {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : <ScanLine className="mr-2 size-4" />}
               {busy ? 'Mengekstrak...' : 'Kirim hasil tersamar'}
             </Button>
           </div>
-          {!readyToExtract && (
-            <p className="text-xs font-medium text-amber-700">
-              Setiap halaman harus memiliki area yang disamarkan atau ditandai tanpa identitas.
-            </p>
-          )}
-          <div className="grid gap-4">
-            {pages.map((page) => (
-              <PagePreview
-                key={page.number}
-                page={page}
-                onChange={(update) => updatePage(page.number, update)}
-              />
-            ))}
-          </div>
-        </>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

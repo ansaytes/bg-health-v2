@@ -118,12 +118,14 @@ export default function KunjunganBerobat() {
   const [rujukVisible, setRujukVisible] = useState(false);
   const [records, setRecords] = useState<KunjunganRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [isDark, setIsDark] = useState(
     () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
   );
 
   // Filters
   const [selectedBulan, setSelectedBulan] = useState<string>('all');
+  const [selectedTahun, setSelectedTahun] = useState<string>('all');
   const [selectedWeek, setSelectedWeek] = useState<string>('all');
   const [selectedDept, setSelectedDept] = useState<string>('all');
 
@@ -187,9 +189,14 @@ export default function KunjunganBerobat() {
       const json = await fetchDashboardData<{ success: boolean; data?: KunjunganRecord[] }>('/api/kunjungan', force);
       if (json.success && Array.isArray(json.data)) {
         setRecords(json.data);
+        setLoadError('');
+      } else {
+        throw new Error('Respons data kunjungan tidak valid.');
       }
     } catch (err) {
       console.error('Failed to fetch kunjungan data:', err);
+      setRecords([]);
+      setLoadError(err instanceof Error ? err.message : 'Gagal memuat data kunjungan.');
     } finally {
       setLoading(false);
     }
@@ -197,6 +204,12 @@ export default function KunjunganBerobat() {
 
   useEffect(() => {
     loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    const refresh = () => { void loadData(true); };
+    window.addEventListener('kunjungan-data-updated', refresh);
+    return () => window.removeEventListener('kunjungan-data-updated', refresh);
   }, [loadData]);
 
   // Unique departments for filter dropdown
@@ -210,6 +223,13 @@ export default function KunjunganBerobat() {
     return Array.from(depts).sort((a, b) => a.localeCompare(b));
   }, [records]);
 
+  const yearOptions = useMemo(() => {
+    const years = new Set(records.map((record) => String(record.tanggal || '').slice(0, 4)));
+    return Array.from(years)
+      .filter((year) => /^\d{4}$/.test(year))
+      .sort((a, b) => b.localeCompare(a));
+  }, [records]);
+
   // Filtered dataset
   const filteredRecords = useMemo(() => {
     return records.filter(r => {
@@ -218,6 +238,9 @@ export default function KunjunganBerobat() {
       const monthNum = d.getMonth() + 1;
       const weekNum = getWeekOfMonth(r.tanggal);
 
+      if (selectedTahun !== 'all' && String(r.tanggal).slice(0, 4) !== selectedTahun) {
+        return false;
+      }
       if (selectedBulan !== 'all' && monthNum !== parseInt(selectedBulan, 10)) {
         return false;
       }
@@ -229,7 +252,7 @@ export default function KunjunganBerobat() {
       }
       return true;
     });
-  }, [records, selectedBulan, selectedWeek, selectedDept]);
+  }, [records, selectedTahun, selectedBulan, selectedWeek, selectedDept]);
 
   // Top bar metrics
   const totalKunjungan = filteredRecords.length;
@@ -725,6 +748,11 @@ export default function KunjunganBerobat() {
     <div className="dashboard" ref={containerRef} style={{ overflowY: 'auto', overflowX: 'hidden' }}>
       {/* Top Bar with Filters and Metrics */}
       <div className="kunjungan-top-bar" style={{ flexShrink: 0, paddingBottom: 6 }}>
+        {loadError && (
+          <p role="alert" style={{ width: '100%', color: '#b3261e', fontSize: 12 }}>
+            Data kunjungan gagal dimuat: {loadError}
+          </p>
+        )}
         <div className="kunjungan-filter-bar">
           <div className="filter-tag">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -734,6 +762,15 @@ export default function KunjunganBerobat() {
           </div>
 
           {/* Filter Bulan */}
+          <select
+            value={selectedTahun}
+            onChange={(e) => setSelectedTahun(e.target.value)}
+            className="admin-filter-select"
+          >
+            <option value="all">Semua Tahun</option>
+            {yearOptions.map((year) => <option key={year} value={year}>{year}</option>)}
+          </select>
+
           <select
             value={selectedBulan}
             onChange={(e) => setSelectedBulan(e.target.value)}
@@ -826,7 +863,9 @@ export default function KunjunganBerobat() {
                 </div>
                 <div>
                   <h2>Tren Kunjungan per Bulan</h2>
-                  <p>Jumlah kunjungan klinik sepanjang tahun 2026</p>
+                  <p>
+                    Jumlah kunjungan klinik {selectedTahun === 'all' ? 'semua tahun' : `tahun ${selectedTahun}`}
+                  </p>
                 </div>
               </div>
               <div className="chart-box" style={{ position: 'relative', width: '100%', height: '100%', minHeight: 180 }}>

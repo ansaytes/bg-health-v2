@@ -64,6 +64,13 @@ export function clearDashboardDataCache() {
   dashboardCache.clear();
 }
 
+export function invalidateKunjunganDashboardData() {
+  dashboardCache.delete('/api/kunjungan');
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('kunjungan-data-updated'));
+  }
+}
+
 export async function preloadDashboardData({
   canViewMCU,
   canViewInventory,

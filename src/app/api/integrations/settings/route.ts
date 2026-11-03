@@ -29,13 +29,15 @@ export async function GET(request: NextRequest) {
     ]);
     const aiSecrets = decryptIntegrationSecret(aiRecord?.secret_ciphertext ?? null);
     const driveSecrets = decryptIntegrationSecret(driveRecord?.secret_ciphertext ?? null);
+    const aiProvider = aiRecord?.config.provider === 'openai-compatible' ? 'openai-compatible' : 'gemini';
+    const databaseApiKey = typeof aiSecrets.apiKey === 'string' && aiSecrets.apiKey.length > 0;
     return NextResponse.json({
       success: true,
       ai: {
-        provider: aiRecord?.config.provider === 'openai-compatible' ? 'openai-compatible' : 'gemini',
+        provider: aiProvider,
         baseUrl: typeof aiRecord?.config.baseUrl === 'string' ? aiRecord.config.baseUrl : '',
         model: typeof aiRecord?.config.model === 'string' ? aiRecord.config.model : '',
-        hasApiKey: typeof aiSecrets.apiKey === 'string' && aiSecrets.apiKey.length > 0,
+        hasApiKey: databaseApiKey,
       },
       drive: {
         folderId: typeof driveRecord?.config.folderId === 'string' ? driveRecord.config.folderId : '',

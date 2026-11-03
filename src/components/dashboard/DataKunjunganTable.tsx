@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 import DownloadButton from '@/components/ui/download-button';
+import { invalidateKunjunganDashboardData } from '@/lib/dashboard-data';
 const JOBSITES = [
   'All Site','Aceh','Angsana','Balikpapan','Banjarmasin','Banyuwangi',
   'Batu Kajang','Bengalon','Binuang','Binungan','Bontang','Bukit Pinang',
@@ -36,7 +37,7 @@ const JOBSITES = [
 ];
 
 const MONTHS = ['Semua','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-const YEARS = ['2024','2025','2026','2027'];
+const YEARS = ['Semua','2024','2025','2026','2027'];
 
 const COLUMNS = [
   { key: 'tanggal', label: 'Tanggal' },
@@ -73,6 +74,7 @@ const EDITABLE_FIELDS = [
 /* Get auth token for API calls */
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('Sesi login tidak valid. Silakan masuk kembali.');
   return {
     'Content-Type': 'application/json',
     ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
@@ -103,9 +105,10 @@ interface DataKunjunganTableProps {
 export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTableProps) {
   const [siteFilter, setSiteFilter] = useState('All Site');
   const [monthFilter, setMonthFilter] = useState('Semua');
-  const [yearFilter, setYearFilter] = useState('2026');
+  const [yearFilter, setYearFilter] = useState('Semua');
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   // Edit state
   const [editRow, setEditRow] = useState<any>(null);
@@ -117,21 +120,32 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
   const [deleteRow, setDeleteRow] = useState<any>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [auditRow, setAuditRow] = useState<any>(null);
+  const [auditLogs, setAuditLogs] = useState<Array<Record<string, any>>>([]);
+  const [auditOpen, setAuditOpen] = useState(false);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState('');
 
   /* Fetch from Supabase */
   const fetchData = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const params = new URLSearchParams();
       if (siteFilter !== 'All Site') params.set('jobsite', siteFilter);
-      if (monthFilter !== 'Semua') params.set('bulan', String(MONTHS.indexOf(monthFilter)));
-      params.set('tahun', yearFilter);
+      if (monthFilter !== 'Semua' && yearFilter !== 'Semua') {
+        params.set('bulan', String(MONTHS.indexOf(monthFilter)));
+      }
+      if (yearFilter !== 'Semua') params.set('tahun', yearFilter);
 
-      const res = await fetch(`/api/kunjungan?${params}`);
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/kunjungan?${params}`, { headers });
       const json = await res.json();
       if (json.success) setRows(json.data || []);
-    } catch {
-      // Supabase not connected
+      else throw new Error(json.error || 'Gagal memuat data kunjungan.');
+    } catch (error) {
+      console.error('Gagal memuat data kunjungan:', error);
+      setLoadError(error instanceof Error ? error.message : 'Gagal memuat data kunjungan.');
     } finally {
       setLoading(false);
     }
@@ -139,7 +153,12 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const rujukCount = rows.filter(r => r.rujuk_rs === true || r.rujukRS === 'Ya').length;
+  const visibleRows = rows.filter((row) => {
+    if (monthFilter === 'Semua' || yearFilter !== 'Semua') return true;
+    const month = String(row.tanggal ?? '').slice(5, 7);
+    return month === String(MONTHS.indexOf(monthFilter)).padStart(2, '0');
+  });
+  const rujukCount = visibleRows.filter(r => r.rujuk_rs === true || r.rujukRS === 'Ya').length;
 
   /* Edit handlers */
   const openEdit = (row: any) => {
@@ -182,6 +201,7 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
       });
       const json = await res.json();
       if (json.success) {
+        invalidateKunjunganDashboardData();
         setEditOpen(false);
         fetchData();
       }
@@ -209,6 +229,7 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
       });
       const json = await res.json();
       if (json.success) {
+        invalidateKunjunganDashboardData();
         setDeleteOpen(false);
         setDeleteRow(null);
         fetchData();
@@ -220,8 +241,45 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
     }
   };
 
+  const openAudit = async (row: any) => {
+    setAuditRow(row);
+    setAuditLogs([]);
+    setAuditError('');
+    setAuditOpen(true);
+    setAuditLoading(true);
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/kunjungan/${row.id}/audit`, { headers });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'Gagal mengambil riwayat kunjungan.');
+      setAuditLogs(Array.isArray(result.data) ? result.data : []);
+    } catch (error) {
+      setAuditError(error instanceof Error ? error.message : 'Gagal mengambil riwayat kunjungan.');
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
+  const auditFieldLabel = (key: string) => COLUMNS.find((column) => column.key === key)?.label
+    || EDITABLE_FIELDS.find((field) => field.key === key)?.label
+    || key;
+  const auditValue = (value: unknown) => {
+    if (value === null || value === undefined || value === '') return '—';
+    if (typeof value === 'string') {
+      try {
+        const parsed: unknown = JSON.parse(value);
+        if (Array.isArray(parsed)) return parsed.map((item) => typeof item === 'object' && item !== null
+          ? Object.values(item).join(' · ')
+          : String(item)).join(', ');
+      } catch {
+        return value;
+      }
+    }
+    return typeof value === 'object' ? JSON.stringify(value) : String(value);
+  };
+
   const tableDataForExport = () => {
-    return rows.map((r, idx) => {
+    return visibleRows.map((r, idx) => {
       let diagStr = '-';
       try {
         const parsed = typeof r.diagnosa === 'string' && r.diagnosa.startsWith('[') ? JSON.parse(r.diagnosa) : r.diagnosa;
@@ -268,7 +326,7 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
       <div className="raw-table-header-bar">
         <span style={{ fontWeight: 700 }}>Data Kunjungan Berobat</span>
         <span style={{ color: 'var(--muted-foreground)' }}>
-          {rows.length} kunjungan
+          {visibleRows.length} kunjungan
           <span style={{ margin: '0 6px', opacity: 0.3 }}>|</span>
           {rujukCount} rujuk RS
         </span>
@@ -310,13 +368,13 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
               {COLUMNS.map(col => (
                 <th key={col.key}>{col.label}</th>
               ))}
-              {canEdit && <th style={{ width: 70 }}>Aksi</th>}
+              <th style={{ width: canEdit ? 104 : 54 }}>Aksi</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={COLUMNS.length + 1 + (canEdit ? 1 : 0)} style={{ padding: 0 }}>
+                <td colSpan={COLUMNS.length + 2} style={{ padding: 0 }}>
                   <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data kunjungan berobat">
                     <div className="bm-loading-spinner">
                       <div className="bm-loading-ring" aria-hidden="true" />
@@ -326,14 +384,20 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
                   </div>
                 </td>
               </tr>
-            ) : rows.length === 0 ? (
+            ) : loadError ? (
               <tr>
-                <td colSpan={COLUMNS.length + 1 + (canEdit ? 1 : 0)} style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>
+                <td role="alert" colSpan={COLUMNS.length + 2} style={{ padding: 40, textAlign: 'center', color: 'var(--destructive)', fontSize: 12 }}>
+                  Gagal memuat data: {loadError}
+                </td>
+              </tr>
+            ) : visibleRows.length === 0 ? (
+              <tr>
+                <td colSpan={COLUMNS.length + 2} style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>
                   Tidak ada data untuk filter ini.
                 </td>
               </tr>
             ) : (
-              rows.map((row, idx) => {
+              visibleRows.map((row, idx) => {
                 const rujukVal = row.rujuk_rs === true ? 'Ya' : row.rujuk_rs === false ? 'Tidak' : row.rujukRS || '-';
                 return (
                   <tr key={row.id || idx}>
@@ -397,9 +461,19 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
                         </td>
                       );
                     })}
-                    {canEdit && (
-                      <td>
+                    <td>
                         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          <button
+                            onClick={() => void openAudit(row)}
+                            title="Riwayat perubahan"
+                            aria-label={`Riwayat perubahan ${row.nama}`}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--muted-foreground)', display: 'flex', alignItems: 'center' }}
+                          >
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
+                            </svg>
+                          </button>
+                          {canEdit && <>
                           <button
                             onClick={() => openEdit(row)}
                             title="Edit"
@@ -418,9 +492,9 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
                               <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                             </svg>
                           </button>
+                          </>}
                         </div>
-                      </td>
-                    )}
+                    </td>
                   </tr>
                 );
               })
@@ -498,6 +572,74 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={auditOpen} onOpenChange={setAuditOpen}>
+        <DialogContent className="sm:max-w-2xl" style={{ maxHeight: '85vh', overflowY: 'auto' }}>
+          <DialogHeader>
+            <DialogTitle>Riwayat Kunjungan</DialogTitle>
+            <DialogDescription>
+              {auditRow?.tanggal ? fmtDate(auditRow.tanggal) : '-'} · {auditRow?.nama || '-'} · NIK {auditRow?.nik || '-'}
+            </DialogDescription>
+          </DialogHeader>
+          {auditLoading ? (
+            <p role="status" className="py-6 text-center text-sm text-muted-foreground">Memuat riwayat perubahan...</p>
+          ) : auditError ? (
+            <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{auditError}</p>
+          ) : auditLogs.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Belum ada riwayat. Perubahan sejak audit log diaktifkan akan tercatat di sini.
+            </p>
+          ) : (
+            <ol className="space-y-3">
+              {auditLogs.map((log) => {
+                const before = log.before_data && typeof log.before_data === 'object' ? log.before_data : {};
+                const after = log.after_data && typeof log.after_data === 'object' ? log.after_data : {};
+                const ignoredFields = ['id', 'created_by', 'created_by_role', 'updated_by', 'updated_by_role', 'created_at', 'updated_at'];
+                const changedFields = log.action === 'INSERT'
+                  ? Object.keys(after).filter((key) => !ignoredFields.includes(key))
+                  : log.action === 'DELETE'
+                    ? Object.keys(before).filter((key) => !ignoredFields.includes(key))
+                    : Array.from(new Set([...Object.keys(before), ...Object.keys(after)]))
+                      .filter((key) => !ignoredFields.includes(key)
+                        && JSON.stringify(before[key] ?? null) !== JSON.stringify(after[key] ?? null));
+                return (
+                  <li key={log.id} className="rounded-lg border border-border p-3 text-xs">
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <strong>{log.action === 'INSERT' ? 'Data dicatat' : log.action === 'UPDATE' ? 'Data diperbarui' : 'Data dihapus'}</strong>
+                      <time dateTime={log.occurred_at} className="text-muted-foreground">
+                        {new Date(log.occurred_at).toLocaleString('id-ID')}
+                      </time>
+                    </div>
+                    <p className="mb-2 text-muted-foreground">
+                      Pelaku: {log.actor_role || 'role tidak tercatat'} · {log.actor_user_id || 'pengguna historis tidak diketahui'}
+                    </p>
+                    {changedFields.length > 0 && (
+                      <ul className="space-y-1">
+                        {changedFields.map((key) => (
+                          <li key={key}>
+                            <span className="font-medium">{auditFieldLabel(key)}:</span>{' '}
+                            {log.action === 'INSERT' ? (
+                              <span>{auditValue(after[key])}</span>
+                            ) : log.action === 'DELETE' ? (
+                              <span className="text-muted-foreground">{auditValue(before[key])}</span>
+                            ) : (
+                              <>
+                                <span className="text-muted-foreground">{auditValue(before[key])}</span>
+                                {' → '}
+                                <span>{auditValue(after[key])}</span>
+                              </>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

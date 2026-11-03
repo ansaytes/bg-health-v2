@@ -108,6 +108,10 @@ export async function POST(request: NextRequest) {
       jk: jk || null,
       jabatan: jabatan || null,
       keluhan: keluhan || null,
+      created_by: caller!.userId,
+      created_by_role: caller!.role,
+      updated_by: caller!.userId,
+      updated_by_role: caller!.role,
     };
 
     const { data, error } = await integrationAdminClient().from('kunjungan_berobat').insert(row).select();

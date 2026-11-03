@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerCaller } from '@/lib/server-auth';
 import { integrationAdminClient } from '@/lib/integration-settings';
-import { encrypt, hashField } from '@/lib/encryption';
 
 /**
  * Klien dengan SERVICE ROLE untuk membaca/menulis data.
@@ -167,117 +166,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Gagal menyimpan data karyawan sakit.' }, { status: 500 });
     }
 
-    const reportId = String(data.id);
-    const nikHash = nik ? hashField(nik) : null;
-    const periods = [
-      { start: dates.tgl_mulai_a, end: dates.tgl_selesai_a, diagnosis: diagnoses.diag_a },
-      { start: dates.tgl_mulai_b, end: dates.tgl_selesai_b, diagnosis: diagnoses.diag_b },
-      { start: dates.tgl_mulai_c, end: dates.tgl_selesai_c, diagnosis: diagnoses.diag_c },
-    ].filter((period): period is { start: string; end: string | null; diagnosis: string | null } => Boolean(period.start));
-
-    const linkedEpisodeIds: string[] = [];
-    const createdEpisodeIds: string[] = [];
-    const linkedExistingEpisodeIds: string[] = [];
-    const rollbackReport = async () => {
-      const failures: string[] = [];
-      if (linkedExistingEpisodeIds.length) {
-        const { error: unlinkError } = await client.from('sakit_episode').update({ sick_employee_id: null })
-          .in('id', linkedExistingEpisodeIds).eq('sick_employee_id', reportId);
-        if (unlinkError) failures.push(`unlink:${unlinkError.code}`);
-      }
-      if (createdEpisodeIds.length) {
-        const { error: episodeDeleteError } = await client.from('sakit_episode').delete().in('id', createdEpisodeIds);
-        if (episodeDeleteError) failures.push(`episodes:${episodeDeleteError.code}`);
-      }
-      const { error: reportDeleteError } = await client.from('sick_employees').delete().eq('id', reportId);
-      if (reportDeleteError) failures.push(`report:${reportDeleteError.code}`);
-      if (failures.length) console.error('[Sick employees] Report rollback was incomplete:', failures.join(','));
-      return failures.length === 0;
-    };
-    if (nikHash && nik && periods.length) {
-      for (const period of periods) {
-        const { data: existing, error: lookupError } = await client
-          .from('sakit_episode')
-          .select('id,sick_employee_id')
-          .eq('nik_hash', nikHash)
-          .eq('tanggal_mulai_sakit', period.start)
-          .limit(1)
-          .maybeSingle();
-        if (lookupError) {
-          const rolledBack = await rollbackReport();
-          console.error('[Sick employees] Failed to find a matching monitoring episode:', lookupError.code);
-          return NextResponse.json({
-            success: false,
-            error: rolledBack
-              ? 'Gagal menghubungkan laporan dengan pemantauan karyawan sakit.'
-              : 'Gagal menghubungkan laporan. Sebagian perubahan belum dapat dibatalkan; periksa kembali data laporan.',
-          }, { status: 500 });
-        }
-
-        if (existing) {
-          if (!existing.sick_employee_id) {
-            const { error: linkError } = await client
-              .from('sakit_episode')
-              .update({ sick_employee_id: reportId })
-              .eq('id', String(existing.id))
-              .is('sick_employee_id', null);
-            if (linkError) {
-              const rolledBack = await rollbackReport();
-              console.error('[Sick employees] Failed to link an existing monitoring episode:', linkError.code);
-              return NextResponse.json({
-                success: false,
-                error: rolledBack
-                  ? 'Gagal menghubungkan laporan dengan pemantauan karyawan sakit.'
-                  : 'Gagal menghubungkan laporan. Sebagian perubahan belum dapat dibatalkan; periksa kembali data laporan.',
-              }, { status: 500 });
-            }
-            linkedExistingEpisodeIds.push(String(existing.id));
-            linkedEpisodeIds.push(String(existing.id));
-          } else if (String(existing.sick_employee_id) === reportId) {
-            linkedEpisodeIds.push(String(existing.id));
-          }
-          continue;
-        }
-
-        const finished = period.end ? period.end < new Date().toISOString().slice(0, 10) : false;
-        const { data: episode, error: episodeError } = await client
-          .from('sakit_episode')
-          .insert({
-            nik_hash: nikHash,
-            nik_enc: encrypt(nik),
-            nama_enc: encrypt(nama),
-            site: jobsite,
-            jabatan,
-            tanggal_mulai_sakit: period.start,
-            tanggal_selesai_sakit: period.end,
-            diagnosis_awal: period.diagnosis,
-            sumber_laporan: 'LAPORAN_SITE',
-            jenis_sakit: 'AKUT',
-            status: finished ? 'SELESAI' : 'AKTIF',
-            sick_employee_id: reportId,
-            catatan: `Dibuat dari rekap sakit site ${bulan}/${tahun}.`,
-            dibuat_oleh: caller.userId,
-          })
-          .select('id')
-          .single();
-        if (episodeError || !episode) {
-          const rolledBack = await rollbackReport();
-          console.error('[Sick employees] Failed to create a monitoring episode:', episodeError?.code ?? 'missing episode');
-          return NextResponse.json({
-            success: false,
-            error: rolledBack && /sick_employee_id|sumber_laporan|does not exist|PGRST204|42703/i.test(episodeError?.message ?? '')
-              ? 'Perubahan database untuk penghubung laporan sakit belum diterapkan.'
-              : rolledBack
-                ? 'Gagal membuat episode pemantauan dari laporan sakit.'
-                : 'Gagal membuat episode pemantauan. Sebagian perubahan belum dapat dibatalkan; periksa kembali data laporan.',
-          }, { status: 500 });
-        }
-        createdEpisodeIds.push(String(episode.id));
-        linkedEpisodeIds.push(String(episode.id));
-      }
-    }
-
-    return NextResponse.json({ success: true, data, linkedEpisodes: linkedEpisodeIds.length });
+    return NextResponse.json({ success: true, data });
   } catch {
     return NextResponse.json({ success: false, error: 'Gagal menyimpan data karyawan sakit.' }, { status: 500 });
   }

@@ -5,6 +5,7 @@ import { Plus, Trash2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
 import { authFetch } from '@/lib/api-client';
+import { invalidateKunjunganDashboardData } from '@/lib/dashboard-data';
 
 const JOBSITES = [
   'Aceh','Angsana','Balikpapan','Banjarmasin','Banyuwangi',
@@ -295,6 +296,7 @@ export default function KunjunganBerobatForm() {
           keluhan: form.catatan || null,
         }),
       });
+      invalidateKunjunganDashboardData();
 
       // ── TINDAK LANJUT OTOMATIS ─────────────────────────────────────────
       // Surat izin/absen atau rujukan → episode Monitoring Karyawan Sakit.

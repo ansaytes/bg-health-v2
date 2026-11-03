@@ -108,8 +108,8 @@ export async function POST(req: NextRequest) {
     }
     const { modelId } = input;
     const rawImages = input.images;
-    if (!Array.isArray(rawImages) || rawImages.length < 1 || rawImages.length > 12) {
-      return NextResponse.json({ success: false, error: 'Kirim 1 sampai 12 gambar halaman yang sudah disamarkan.' }, { status: 400 });
+    if (!Array.isArray(rawImages) || rawImages.length < 1 || rawImages.length > 30) {
+      return NextResponse.json({ success: false, error: 'Kirim 1 sampai 30 gambar halaman yang sudah disamarkan.' }, { status: 400 });
     }
     const images: Array<{ data: string; mimeType: string }> = [];
     let totalImageChars = 0;
@@ -131,8 +131,9 @@ export async function POST(req: NextRequest) {
 
     const aiIntegration = await readIntegration('ai');
     const aiSecrets = decryptIntegrationSecret(aiIntegration?.secret_ciphertext ?? null);
-    const apiKey = typeof aiSecrets.apiKey === 'string' ? aiSecrets.apiKey : '';
     const provider = aiIntegration?.config.provider === 'openai-compatible' ? 'openai-compatible' : 'gemini';
+    const savedApiKey = typeof aiSecrets.apiKey === 'string' ? aiSecrets.apiKey : '';
+    const apiKey = savedApiKey;
     const model = typeof aiIntegration?.config.model === 'string' && aiIntegration.config.model
       ? aiIntegration.config.model
       : DEFAULT_GEMINI_OCR_MODEL;

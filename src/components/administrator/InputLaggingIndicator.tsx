@@ -124,7 +124,6 @@ export default function InputLaggingIndicator() {
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [linkedEpisodes, setLinkedEpisodes] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
   const [customSite, setCustomSite] = useState('');
 
@@ -223,7 +222,6 @@ export default function InputLaggingIndicator() {
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Gagal menyimpan');
-      setLinkedEpisodes(Number(json.linkedEpisodes) || 0);
       setSaved(true);
       setForm({});
       setTimeout(() => setSaved(false), 3000);
@@ -267,7 +265,7 @@ export default function InputLaggingIndicator() {
       <form onSubmit={handleSickSubmit}>
         <div className="admin-form-card">
           <p style={{ margin: '0 0 14px', fontSize: 11, lineHeight: 1.5, color: 'var(--muted-foreground)' }}>
-            Laporan sakit individu dan episode pemantauan diproses bersama: setiap periode bertanggal otomatis ditautkan atau dibuatkan episode. Rekap statistik Lagging Indicator bulanan tetap diinput manual pada menu Lagging Indicator.
+            Form ini mencatat rekap absensi sakit bulanan dari site untuk perhitungan Lagging Indicator. Data rekap ini tidak otomatis membuat episode pemantauan; kasus real-time dicatat terpisah pada Monitoring Karyawan Sakit.
           </p>
           {/* Section: Identitas Karyawan */}
           <div className="admin-section-header">
@@ -387,9 +385,7 @@ export default function InputLaggingIndicator() {
           {errorMsg && <p className="login-error-msg" style={{ marginTop: 16 }}>{errorMsg}</p>}
           {saved && (
             <p role="status" style={{ marginTop: 12, fontSize: 11, color: 'var(--brand-primary)' }}>
-              Laporan tersimpan. {linkedEpisodes
-                ? `${linkedEpisodes} episode terhubung ke Monitoring Karyawan Sakit.`
-                : 'Tidak ada periode bertanggal untuk dibuatkan episode pemantauan.'}
+              Rekap sakit site berhasil disimpan untuk Lagging Indicator.
             </p>
           )}
           <div style={{ marginTop: 20, display: 'flex', gap: 10, maxWidth: '100%' }}>

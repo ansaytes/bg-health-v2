@@ -26,7 +26,6 @@ import { Input } from '@/components/ui/input';
 import { authFetch } from '@/lib/api-client';
 import { useMCUStore } from '@/lib/store';
 import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
-import InputLaggingIndicator from './InputLaggingIndicator';
 import {
   FASE, JENIS_SAKIT_LABEL, MEDIA_LABEL, STATUS_KELAYAKAN_LABEL, STATUS_KELAYAKAN_WARNA,
 } from '@/lib/karyawan-sakit';
@@ -78,36 +77,8 @@ interface Ringkasan {
 const fmt = (v: string | null | undefined) =>
   v ? new Date(`${String(v).slice(0, 10)}T00:00:00`).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
-type SickView = 'monitoring' | 'laporan';
-
-function SickWorkflowTabs({ active, onChange }: { active: SickView; onChange: (view: SickView) => void }) {
-  return (
-    <div className="admin-tab-row" role="tablist" aria-label="Alur karyawan sakit" style={{ flexShrink: 0, padding: '0 12px' }}>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={active === 'monitoring'}
-        className={`admin-tab-btn${active === 'monitoring' ? ' active' : ''}`}
-        onClick={() => onChange('monitoring')}
-      >
-        Pemantauan
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={active === 'laporan'}
-        className={`admin-tab-btn${active === 'laporan' ? ' active' : ''}`}
-        onClick={() => onChange('laporan')}
-      >
-        Input Laporan Sakit
-      </button>
-    </div>
-  );
-}
-
 export default function MonitoringKaryawanSakit() {
   const store = useMCUStore();
-  const [view, setView] = useState<SickView>('monitoring');
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [ringkasan, setRingkasan] = useState<Ringkasan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -146,20 +117,8 @@ export default function MonitoringKaryawanSakit() {
 
   const aktifTerpilih = filtered.find((e) => e.id === selected) ?? filtered[0] ?? null;
 
-  if (view === 'laporan') {
-    return (
-      <div className="dashboard" style={{ overflow: 'hidden' }}>
-        <SickWorkflowTabs active={view} onChange={setView} />
-        <div className="admin-form-container" style={{ overflowY: 'auto' }}>
-          <InputLaggingIndicator />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="dashboard" style={{ overflowY: 'hidden', overflowX: 'hidden' }}>
-      <SickWorkflowTabs active={view} onChange={setView} />
       {/* Toolbar */}
       <div className="kunjungan-top-bar" style={{ flexShrink: 0 }}>
         <div className="kunjungan-filter-bar">
@@ -187,7 +146,7 @@ export default function MonitoringKaryawanSakit() {
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
           <button type="button" onClick={() => setMembuat((v) => !v)} className="mcu-dashboard-refresh">
-            <Plus size={13} /> Kasus Non-Rekap
+            <Plus size={13} /> Kasus Baru (Real-Time)
           </button>
         </div>
         {ringkasan && (
@@ -428,7 +387,7 @@ function DetailEpisode({ episode, onBerubah, toast }: {
               value={`${fmt(episode.kunjunganTanggal)}${episode.kunjunganDenganAbsen ? ' · izin/absen' : ''}${episode.kunjunganDirujuk ? ' · dirujuk' : ''}`}
             />
           )}
-          {episode.sickEmployeeId && <Info label="Terkait rekap lagging" value="Data individu dari laporan site" />}
+          {episode.sickEmployeeId && <Info label="Catatan keterkaitan lama" value="Terhubung dari laporan site versi sebelumnya" />}
           <Info label="Kontak terakhir" value={fmt(episode.kontakTerakhir)} />
         </div>
 
@@ -680,7 +639,7 @@ const SUMBER_LAPORAN_LABEL: Record<string, string> = {
   SURAT_PERNYATAAN_MANDIRI: 'Pernyataan mandiri',
   RUMAH_SAKIT: 'Rumah sakit',
   KUNJUNGAN_KLINIK: 'Kunjungan klinik',
-  LAPORAN_SITE: 'Rekap sakit site',
+  LAPORAN_SITE: 'Laporan site (data historis)',
   KECELAKAAN_KERJA: 'Kecelakaan kerja',
   LAINNYA: 'Lainnya',
 };
@@ -751,7 +710,7 @@ function FormEpisodeBaru({ onSelesai }: { onSelesai: () => void }) {
       <form className="admin-form-card" onSubmit={(event) => { event.preventDefault(); void kirim(); }}>
         <div className="admin-section-header">
           <span style={{ width: 14, color: 'var(--brand-primary)' }}>+</span>
-          <h3 className="admin-section-title">Kasus Pemantauan Non-Rekap</h3>
+          <h3 className="admin-section-title">Kasus Pemantauan Real-Time</h3>
         </div>
         <div className="sick-episode-form-grid">
           <div>
@@ -789,9 +748,6 @@ function FormEpisodeBaru({ onSelesai }: { onSelesai: () => void }) {
               <option value="KECELAKAAN_KERJA">Kecelakaan kerja</option>
               <option value="LAINNYA">Lainnya</option>
             </select>
-            <span style={{ fontSize: 9.5, color: 'var(--muted-foreground)' }}>
-              Laporan rekap sakit site diinput melalui tab Input Laporan Sakit agar otomatis tercatat ke Lagging Indicator dan pemantauan.
-            </span>
           </label>
           <label>
             <span className="admin-label">Jenis sakit</span>

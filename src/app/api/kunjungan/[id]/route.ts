@@ -39,10 +39,11 @@ export async function PATCH(
         updates[key] = typeof value === 'string' ? value.slice(0, 2000) : value;
       }
     }
-
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'Tidak ada field yang diperbarui' }, { status: 400 });
     }
+    updates.updated_by = caller!.userId;
+    updates.updated_by_role = caller!.role;
 
     const { data, error } = await integrationAdminClient()
       .from('kunjungan_berobat')
@@ -78,7 +79,17 @@ export async function DELETE(
     const { id } = await params;
     if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ error: 'ID tidak valid' }, { status: 400 });
 
-    const { data, error } = await integrationAdminClient()
+    const client = integrationAdminClient();
+    const { error: attributionError } = await client
+      .from('kunjungan_berobat')
+      .update({ updated_by: caller!.userId, updated_by_role: caller!.role })
+      .eq('id', id);
+    if (attributionError) {
+      console.error('[Kunjungan] Failed to attribute deletion:', attributionError.code);
+      return NextResponse.json({ error: 'Gagal mencatat pelaku penghapusan data kunjungan.' }, { status: 500 });
+    }
+
+    const { data, error } = await client
       .from('kunjungan_berobat')
       .delete()
       .eq('id', id)

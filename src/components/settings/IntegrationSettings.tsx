@@ -57,8 +57,13 @@ export default function IntegrationSettings() {
       });
       setApiKey('');
       setClearApiKey(false);
-      setSettings((current) => ({ ...current, ai: { ...current.ai, hasApiKey: clearApiKey ? false : current.ai.hasApiKey || Boolean(apiKey) } }));
       setMessage('Pengaturan integrasi berhasil disimpan.');
+      try {
+        const updated = await authFetch<SettingsData>('/api/integrations/settings');
+        setSettings(updated);
+      } catch {
+        setMessage('Pengaturan berhasil disimpan, tetapi status terbaru gagal dimuat.');
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Gagal menyimpan pengaturan.');
     } finally {

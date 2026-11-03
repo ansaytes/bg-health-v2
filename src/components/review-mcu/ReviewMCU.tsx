@@ -327,8 +327,8 @@ export default function ReviewMCU() {
   }, [store, goStep]);
 
   // Step 2: OCR extraction
-  const handleExtract = useCallback(async (images: string[]) => {
-    if (!images.length) return;
+  const handleExtract = useCallback(async (images: string[]): Promise<boolean> => {
+    if (!images.length) return false;
     store.setExtractingOCR(true);
     setOcrProgress(0);
 
@@ -361,6 +361,7 @@ export default function ReviewMCU() {
         });
         store.showToast('Data berhasil diekstrak', 'success');
         setTimeout(() => goStep('form', 1), 500);
+        return true;
       } else {
         const retrySeconds = Number(json.retryAfterSeconds || res.headers.get('Retry-After') || 0);
         if (retrySeconds > 0) setExtractionCooldown(retrySeconds);
@@ -368,6 +369,7 @@ export default function ReviewMCU() {
           ? `${json.error || 'Batas penggunaan sementara tercapai.'} Jangan menekan tombol selama penghitung berjalan. Setelah selesai, coba satu kali. Jika masih ditolak, quota proyek masih penuh dan perlu menunggu window berikutnya.`
           : (json.error || 'Gagal mengekstrak data');
         store.showToast(message, 'error');
+        return false;
       }
     } catch (error) {
       clearInterval(interval);
@@ -377,6 +379,7 @@ export default function ReviewMCU() {
           : 'Koneksi ke layanan ekstraksi gagal. Periksa koneksi internet dan server.',
         'error',
       );
+      return false;
     } finally {
       store.setExtractingOCR(false);
       setTimeout(() => setOcrProgress(0), 600);
