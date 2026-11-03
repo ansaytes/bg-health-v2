@@ -10,6 +10,7 @@ type SettingsData = {
   ai: { provider: 'gemini' | 'openai-compatible'; baseUrl: string; model: string; hasApiKey: boolean };
   drive: { folderId: string; connected: boolean; accountEmail: string };
   googleDriveOAuthConfigured: boolean;
+  encryptionKeyConfigured: boolean;
 };
 type AvailableModel = { id: string; name: string };
 
@@ -17,6 +18,7 @@ const initial: SettingsData = {
   ai: { provider: 'gemini', baseUrl: '', model: '', hasApiKey: false },
   drive: { folderId: '', connected: false, accountEmail: '' },
   googleDriveOAuthConfigured: false,
+  encryptionKeyConfigured: false,
 };
 
 export default function IntegrationSettings({ canEdit }: { canEdit: boolean }) {
@@ -24,6 +26,7 @@ export default function IntegrationSettings({ canEdit }: { canEdit: boolean }) {
   const [apiKey, setApiKey] = useState('');
   const [clearApiKey, setClearApiKey] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [settingsLoadError, setSettingsLoadError] = useState('');
   const [saving, setSaving] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [message, setMessage] = useState('');
@@ -39,9 +42,14 @@ export default function IntegrationSettings({ canEdit }: { canEdit: boolean }) {
         if (active) {
           setSettings(result);
           setSavedModel(result.ai.model);
+          setSettingsLoadError('');
         }
       })
-      .catch((error: unknown) => { if (active) setMessage(error instanceof Error ? error.message : 'Gagal memuat pengaturan.'); })
+      .catch((error: unknown) => {
+        if (active) {
+          setSettingsLoadError(error instanceof Error ? error.message : 'Gagal memuat pengaturan.');
+        }
+      })
       .finally(() => { if (active) setLoading(false); });
     const driveStatus = new URLSearchParams(window.location.search).get('drive');
     if (driveStatus) {
@@ -86,8 +94,10 @@ export default function IntegrationSettings({ canEdit }: { canEdit: boolean }) {
       setAvailableModels([]);
       setMessage('API key dan pengaturan AI tersimpan. Memuat model yang tersedia...');
       if (updated.ai.hasApiKey && !clearApiKey) {
-        await loadModels(updated.ai.provider, updated.ai.model);
-        setMessage('API key tersimpan. Pilih model dari daftar; simpan pilihan model jika Anda mengubahnya.');
+        const modelsLoaded = await loadModels(updated.ai.provider, updated.ai.model);
+        setMessage(modelsLoaded
+          ? 'API key tersimpan. Pilih model dari daftar; simpan pilihan model jika Anda mengubahnya.'
+          : 'API key tersimpan, tetapi daftar model gagal dimuat. Lihat pesan error di bagian Model AI.');
       } else {
         setMessage('Pengaturan AI tersimpan. Tambahkan API key untuk memuat model.');
       }
@@ -152,7 +162,7 @@ export default function IntegrationSettings({ canEdit }: { canEdit: boolean }) {
   async function loadModels(
     expectedProvider: SettingsData['ai']['provider'] = settings.ai.provider,
     currentModel: string = settings.ai.model,
-  ) {
+  ): Promise<boolean> {
     setLoadingModels(true);
     setModelError('');
     try {
@@ -161,7 +171,7 @@ export default function IntegrationSettings({ canEdit }: { canEdit: boolean }) {
       if (result.provider !== expectedProvider) {
         setModelError('Provider yang tersimpan berbeda. Simpan provider terlebih dahulu, lalu muat ulang model.');
         setAvailableModels([]);
-        return;
+        return false;
       }
       const selectedModel = result.models.some((model) => model.id === currentModel)
         ? currentModel
@@ -172,9 +182,11 @@ export default function IntegrationSettings({ canEdit }: { canEdit: boolean }) {
         ...current,
         ai: { ...current.ai, model: selectedModel },
       }));
+      return true;
     } catch (error) {
       setModelError(error instanceof Error ? error.message : 'Gagal memuat daftar model.');
       setAvailableModels([]);
+      return false;
     } finally {
       setLoadingModels(false);
     }
@@ -189,6 +201,24 @@ export default function IntegrationSettings({ canEdit }: { canEdit: boolean }) {
         </div>
       )}
       {message && <div role="status" className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm break-words">{message}</div>}
+      {settingsLoadError && (
+        <div role="alert" className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm break-words">
+          Pengaturan integrasi gagal dimuat: {settingsLoadError}
+        </div>
+      )}
+      {!loading && !settingsLoadError && !settings.encryptionKeyConfigured && (
+        <div role="alert" className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-3 text-sm">
+          <strong>API key belum bisa disimpan.</strong>
+          <p className="mt-1">
+            Tambahkan <code>INTEGRATION_ENCRYPTION_KEY</code> di Vercel → Project → Settings → Environment Variables.
+            Buat nilainya satu kali dengan perintah:
+          </p>
+          <code className="mt-2 block select-all break-all rounded bg-background/70 p-2 text-xs">
+            node -e &quot;console.log(require(&apos;crypto&apos;).randomBytes(32).toString(&apos;hex&apos;))&quot;
+          </code>
+          <p className="mt-1">Salin 64 karakter hasilnya ke Vercel, lalu redeploy. Simpan key cadangan dengan aman; jangan ganti setelah API key disimpan karena data terenkripsi lama tidak bisa dibuka dengan key baru.</p>
+        </div>
+      )}
       <section className="rounded-xl border border-border bg-card p-4">
         <h3 className="mb-1 text-sm font-bold">AI / OCR</h3>
         <p className="mb-4 text-xs text-muted-foreground">1. Pilih provider dan isi key. 2. Simpan key untuk mengambil daftar model. 3. Pilih model lalu simpan pilihan.</p>
@@ -237,7 +267,7 @@ export default function IntegrationSettings({ canEdit }: { canEdit: boolean }) {
             </label>
           )}
           <div className="flex flex-wrap gap-2 sm:col-span-2">
-            <Button type="button" disabled={loading || !canEdit || saving || (!apiKey && !settings.ai.hasApiKey && !clearApiKey)} onClick={() => void saveAI()}>
+            <Button type="button" disabled={loading || !canEdit || saving || !settings.encryptionKeyConfigured || (!apiKey && !settings.ai.hasApiKey && !clearApiKey)} onClick={() => void saveAI()}>
               {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
               Simpan API key & pengaturan
             </Button>
@@ -260,7 +290,7 @@ export default function IntegrationSettings({ canEdit }: { canEdit: boolean }) {
             <Input className={inputClass} value={settings.drive.folderId} disabled={loading || !canEdit} maxLength={200} onChange={(event) => setSettings({ ...settings, drive: { ...settings.drive, folderId: event.target.value } })} />
           </label>
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="button" disabled={loading || !canEdit || saving} onClick={() => void saveDriveFolder()}>
+            <Button type="button" disabled={loading || !canEdit || saving || !settings.encryptionKeyConfigured} onClick={() => void saveDriveFolder()}>
               {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
               Simpan Folder
             </Button>

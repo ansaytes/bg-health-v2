@@ -17,6 +17,10 @@ function masterKey(): Buffer {
   return Buffer.from(raw, 'hex');
 }
 
+export function isIntegrationEncryptionKeyConfigured(): boolean {
+  return /^[\da-fA-F]{64}$/.test(process.env.INTEGRATION_ENCRYPTION_KEY || '');
+}
+
 function deriveKey(purpose: string): Buffer {
   return crypto.createHmac('sha256', masterKey()).update(`bg-health:${purpose}`).digest();
 }
@@ -71,7 +75,13 @@ export async function readIntegration(key: string): Promise<IntegrationRecord | 
     .select('key,config,secret_ciphertext')
     .eq('key', key)
     .maybeSingle();
-  if (error) throw new Error('Gagal membaca konfigurasi integrasi.');
+  if (error) {
+    console.error('[Integration settings] Database read failed:', error.code);
+    if (error.code === '42P01' || error.code === 'PGRST205') {
+      throw new Error('INTEGRATION_SETTINGS_TABLE_MISSING');
+    }
+    throw new Error(`INTEGRATION_SETTINGS_READ_FAILED:${error.code || 'UNKNOWN'}`);
+  }
   return data as IntegrationRecord | null;
 }
 
@@ -90,7 +100,13 @@ export async function writeIntegration(input: {
       updated_by: input.updatedBy,
       updated_at: new Date().toISOString(),
     });
-  if (error) throw new Error('Gagal menyimpan konfigurasi integrasi.');
+  if (error) {
+    console.error('[Integration settings] Database write failed:', error.code);
+    if (error.code === '42P01' || error.code === 'PGRST205') {
+      throw new Error('INTEGRATION_SETTINGS_TABLE_MISSING');
+    }
+    throw new Error(`INTEGRATION_SETTINGS_WRITE_FAILED:${error.code || 'UNKNOWN'}`);
+  }
 }
 
 export async function getDriveAccessToken(): Promise<string> {

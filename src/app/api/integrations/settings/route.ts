@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { decryptIntegrationSecret, readIntegration, writeIntegration } from '@/lib/integration-settings';
+import {
+  decryptIntegrationSecret,
+  isIntegrationEncryptionKeyConfigured,
+  readIntegration,
+  writeIntegration,
+} from '@/lib/integration-settings';
 import { getServerCaller, requireServerRole, SYSTEM_ROLES } from '@/lib/server-auth';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -49,8 +54,23 @@ export async function GET(request: NextRequest) {
         && process.env.GOOGLE_DRIVE_CLIENT_SECRET
         && process.env.GOOGLE_DRIVE_REDIRECT_URI,
       ),
+      encryptionKeyConfigured: isIntegrationEncryptionKeyConfigured(),
     });
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message === 'INTEGRATION_SETTINGS_TABLE_MISSING') {
+      return NextResponse.json({
+        success: false,
+        error: 'Tabel pengaturan integrasi belum tersedia di Supabase. Terapkan migrasi supabase/migrations/20261103090000_integration_settings.sql.',
+      }, { status: 503 });
+    }
+    if (message.startsWith('INTEGRATION_SETTINGS_READ_FAILED:')) {
+      return NextResponse.json({
+        success: false,
+        error: `Supabase gagal membaca pengaturan integrasi (${message.split(':')[1]}).`,
+      }, { status: 500 });
+    }
+    console.error('[Integration settings] Load request failed:', error instanceof Error ? error.name : 'unknown error');
     return NextResponse.json({ success: false, error: 'Gagal membaca pengaturan integrasi.' }, { status: 500 });
   }
 }
@@ -62,6 +82,12 @@ export async function PUT(request: NextRequest) {
 
   const body: unknown = await request.json().catch(() => null);
   if (!isRecord(body)) return NextResponse.json({ success: false, error: 'Body tidak valid.' }, { status: 400 });
+  if (body.ai !== undefined && !isIntegrationEncryptionKeyConfigured()) {
+    return NextResponse.json({
+      success: false,
+      error: 'API key belum dapat disimpan: INTEGRATION_ENCRYPTION_KEY belum diatur di Vercel sebagai 64 karakter hexadecimal (32 byte).',
+    }, { status: 503 });
+  }
 
   try {
     if (body.ai !== undefined) {
@@ -114,7 +140,21 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Tidak ada pengaturan untuk disimpan.' }, { status: 400 });
     }
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message === 'INTEGRATION_SETTINGS_TABLE_MISSING') {
+      return NextResponse.json({
+        success: false,
+        error: 'Tabel pengaturan integrasi belum tersedia di Supabase. Terapkan migrasi supabase/migrations/20261103090000_integration_settings.sql.',
+      }, { status: 503 });
+    }
+    if (message.startsWith('INTEGRATION_SETTINGS_WRITE_FAILED:')) {
+      return NextResponse.json({
+        success: false,
+        error: `Supabase menolak penyimpanan pengaturan integrasi (${message.split(':')[1]}). Periksa migrasi dan hak akses tabel.`,
+      }, { status: 500 });
+    }
+    console.error('[Integration settings] Save request failed:', error instanceof Error ? error.name : 'unknown error');
     return NextResponse.json({ success: false, error: 'Gagal menyimpan pengaturan integrasi.' }, { status: 500 });
   }
 }

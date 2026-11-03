@@ -11,6 +11,23 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
+async function providerError(response: Response, apiKey: string): Promise<string> {
+  const body = await response.text();
+  let message = '';
+  try {
+    const payload: unknown = JSON.parse(body);
+    if (isRecord(payload) && isRecord(payload.error) && typeof payload.error.message === 'string') {
+      message = payload.error.message;
+    }
+  } catch {
+    message = '';
+  }
+  const safeMessage = message
+    ? message.split(apiKey).join('[redacted]').slice(0, 300)
+    : 'Provider menolak permintaan.';
+  return `HTTP ${response.status}: ${safeMessage}`;
+}
+
 export async function GET(request: NextRequest) {
   const caller = await getServerCaller(request);
   const denied = requireServerRole(caller, STAFF_ROLES);
@@ -42,7 +59,11 @@ export async function GET(request: NextRequest) {
         });
         if (!response.ok) {
           console.error('[AI models] Gemini model listing failed:', response.status);
-          return NextResponse.json({ success: false, error: 'Daftar model Gemini gagal diambil. Periksa API key dan akses API.' }, { status: 502 });
+          const reason = await providerError(response, apiKey);
+          return NextResponse.json({
+            success: false,
+            error: `Daftar model Gemini gagal (${reason}). Periksa validitas API key, akses Gemini API, dan kuota project.`,
+          }, { status: 502 });
         }
         const payload: unknown = await response.json();
         if (!isRecord(payload) || !Array.isArray(payload.models)) {
@@ -74,7 +95,11 @@ export async function GET(request: NextRequest) {
       });
       if (!response.ok) {
         console.error('[AI models] OpenAI-compatible model listing failed:', response.status);
-        return NextResponse.json({ success: false, error: 'Daftar model gagal diambil dari endpoint OpenAI-compatible.' }, { status: 502 });
+        const reason = await providerError(response, apiKey);
+        return NextResponse.json({
+          success: false,
+          error: `Daftar model dari endpoint OpenAI-compatible gagal (${reason}).`,
+        }, { status: 502 });
       }
       const payload: unknown = await response.json();
       if (!isRecord(payload) || !Array.isArray(payload.data)) {

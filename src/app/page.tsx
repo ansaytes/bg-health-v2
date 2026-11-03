@@ -841,10 +841,6 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (regLookupStatus !== 'found' || !regEmployee) {
-      setError('Pastikan data karyawan berhasil ditemukan sebelum mendaftar.');
-      return;
-    }
     setLoading(true);
 
     try {
