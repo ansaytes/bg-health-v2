@@ -68,7 +68,7 @@ function PeriodBlock({ label, prefix, form, onChange }: {
         }}>{label}</span>
         Periode {label}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px', gap: 10 }}>
+      <div className="sick-period-grid">
         <div>
           <label className="admin-label">Tanggal Mulai</label>
           <input
@@ -124,6 +124,7 @@ export default function InputLaggingIndicator() {
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [linkedEpisodes, setLinkedEpisodes] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
   const [customSite, setCustomSite] = useState('');
 
@@ -222,6 +223,7 @@ export default function InputLaggingIndicator() {
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Gagal menyimpan');
+      setLinkedEpisodes(Number(json.linkedEpisodes) || 0);
       setSaved(true);
       setForm({});
       setTimeout(() => setSaved(false), 3000);
@@ -264,6 +266,9 @@ export default function InputLaggingIndicator() {
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto', width: '100%', paddingBottom: 0, gap: 8 }}>
       <form onSubmit={handleSickSubmit}>
         <div className="admin-form-card">
+          <p style={{ margin: '0 0 14px', fontSize: 11, lineHeight: 1.5, color: 'var(--muted-foreground)' }}>
+            Data sakit individu tetap dicatat untuk Lagging Indicator. Periode yang memiliki tanggal juga dibuat sebagai episode pemantauan, sehingga tidak perlu diinput ulang pada halaman Monitoring Karyawan Sakit. Rekap statistik bulanan tetap dapat diinput manual secara terpisah.
+          </p>
           {/* Section: Identitas Karyawan */}
           <div className="admin-section-header">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--brand-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: -2 }}>
@@ -271,7 +276,7 @@ export default function InputLaggingIndicator() {
             </svg>
             <h3 className="admin-section-title">Identitas Karyawan</h3>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div className="sick-lagging-grid">
             <div>
               <EmployeeLookupInput
                 value={form.nik || ''}
@@ -353,7 +358,7 @@ export default function InputLaggingIndicator() {
             </svg>
             <h3 className="admin-section-title">Klasifikasi Penyakit</h3>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div className="sick-lagging-grid">
             <div>
               <label className="admin-label">Jumlah Spell (Otomatis)</label>
               <input
@@ -380,13 +385,20 @@ export default function InputLaggingIndicator() {
 
           {/* Error + Buttons */}
           {errorMsg && <p className="login-error-msg" style={{ marginTop: 16 }}>{errorMsg}</p>}
+          {saved && (
+            <p role="status" style={{ marginTop: 12, fontSize: 11, color: 'var(--brand-primary)' }}>
+              Laporan tersimpan. {linkedEpisodes
+                ? `${linkedEpisodes} episode terhubung ke Monitoring Karyawan Sakit.`
+                : 'Tidak ada periode bertanggal untuk dibuatkan episode pemantauan.'}
+            </p>
+          )}
           <div style={{ marginTop: 20, display: 'flex', gap: 10, maxWidth: '100%' }}>
             <button
               type="submit"
               className={`admin-form-btn-primary${saved ? ' saved' : ''}`}
               disabled={saving}
             >
-              {saving ? 'Menyimpan...' : saved ? 'Tersimpan!' : 'Simpan Data Sakit'}
+              {saving ? 'Menyimpan...' : saved ? 'Tersimpan!' : 'Simpan Laporan Sakit'}
             </button>
             <button
               type="button"

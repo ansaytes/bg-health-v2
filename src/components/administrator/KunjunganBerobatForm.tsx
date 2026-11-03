@@ -288,6 +288,7 @@ export default function KunjunganBerobatForm() {
           jk: form.jk || null,
           diagnosa: JSON.stringify(diagnoses.map(d => d.text).filter(Boolean)), 
           jenis_obat: JSON.stringify(medications.filter(m => m.nama).map(({ nama, aturan, jumlah, satuan }) => ({ nama, aturan, jumlah, satuan }))),
+          absen: form.absen === 'Ya',
           rujuk_rs: form.rujukRS === 'Ya',
           kategori: form.kategori,
           nama_rs: form.namaRS || null,
@@ -296,7 +297,7 @@ export default function KunjunganBerobatForm() {
       });
 
       // ── TINDAK LANJUT OTOMATIS ─────────────────────────────────────────
-      // Rujuk RS → episode Monitoring Karyawan Sakit.
+      // Surat izin/absen atau rujukan → episode Monitoring Karyawan Sakit.
       // Kategori Penyakit Akibat Kerja → kasus baru di Register PAK.
       // Kegagalan integrasi TIDAK menggagalkan penyimpanan kunjungan; hasilnya
       // dilaporkan di pesan sukses agar terlihat jelas.
@@ -311,7 +312,7 @@ export default function KunjunganBerobatForm() {
           setInfoMsg(ik.catatan.join(' '));
         }
       } catch {
-        // Integrasi bersifat tambahan — jangan gagalkan penyimpanan utama.
+        setInfoMsg('Kunjungan tersimpan, tetapi tautan ke pemantauan karyawan sakit gagal dibuat.');
       }
 
       setSaved(true);
@@ -417,7 +418,7 @@ export default function KunjunganBerobatForm() {
               </svg>
               <h3 className="admin-section-title">Detail Kunjungan</h3>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="kunjungan-form-grid">
               {FORM_FIELDS.map((field) => {
                 const isFullWidth = field.type === 'textarea';
 

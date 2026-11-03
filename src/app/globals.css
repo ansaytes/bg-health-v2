@@ -629,6 +629,37 @@
   min-height: 0;
   min-width: 0;
 }
+.ergonomi-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+}
+.sick-monitor-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+  gap: 8px;
+}
+.sick-episode-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+.kunjungan-form-grid,
+.sick-lagging-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+.sick-period-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 80px;
+  gap: 10px;
+}
 .sick-list {
   overflow: auto;
   flex: 1;
@@ -2131,9 +2162,15 @@ select.admin-input.compact-input {
 }
 .mcu-dashboard-refresh:disabled { cursor: wait; opacity: .65; }
 .mcu-live-chart-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
   flex: 1 1 0;
   min-height: 0;
 }
+.mcu-live-chart-row--four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.mcu-live-chart-row--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.mcu-live-chart-row--two-rows { grid-template-rows: repeat(2, minmax(0, 1fr)); }
 .mcu-dashboard-card {
   min-width: 0;
   min-height: 0;
@@ -2864,9 +2901,17 @@ select.admin-input.compact-input {
     grid-template-columns: minmax(0, 1fr);
   }
   .mcu-live-chart-row {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
     flex: 0 0 auto;
     min-height: 0;
     grid-auto-rows: minmax(225px, auto);
+  }
+  .ergonomi-chart-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-auto-rows: minmax(225px, auto);
+    flex: 0 0 auto;
   }
 }
 
@@ -2879,6 +2924,15 @@ select.admin-input.compact-input {
   .dashboard { overflow-y: visible; overflow-x: hidden; flex: unset; height: auto; min-height: 0; padding: 6px; gap: 6px; }
   .health-main-grid { height: auto; flex: unset; grid-template-columns: 1fr; }
   .health-left-col { flex: unset; height: auto; }
+  .sick-monitor-grid {
+    flex: 0 0 auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(220px, 38vh) auto;
+  }
+  .sick-episode-form-grid,
+  .kunjungan-form-grid,
+  .sick-lagging-grid,
+  .sick-period-grid { grid-template-columns: minmax(0, 1fr); }
   .header {
   height: 52px; padding: 6px 10px 6px 44px; }
   .header-right-logo { height: 18px; }

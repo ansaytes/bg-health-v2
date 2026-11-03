@@ -19,10 +19,9 @@ export const dynamic = 'force-dynamic';
  *
  * Endpoint ini dipanggil SETELAH kunjungan tersimpan, dan:
  *
- *   rujukRS === true
- *     → membuat episode `sakit_episode` (status AKTIF, sumber RUMAH_SAKIT)
- *       sehingga otomatis muncul di Monitoring Karyawan Sakit dan ikut
- *       dihitung pada notifikasi jadwal pemantauan.
+ *   rujukRS === true atau izin_absen === true
+ *     → membuat episode `sakit_episode` dan menautkannya ke kunjungan
+ *       sehingga muncul di Monitoring Karyawan Sakit.
  *
  *   kategori === 'Penyakit Akibat Kerja'
  *     → membuat kasus di Register PAK dengan sumber dugaan MCU/pelayanan
@@ -51,7 +50,7 @@ export async function POST(req: NextRequest) {
   const client = integrationAdminClient();
   const { data: kunjungan, error: kunjunganError } = await client
     .from('kunjungan_berobat')
-    .select('nik,nama,jobsite,tanggal,rujuk_rs,nama_rs,keluhan,kategori')
+    .select('nik,nama,jobsite,tanggal,rujuk_rs,nama_rs,keluhan,kategori,izin_absen')
     .eq('id', kunjunganId)
     .maybeSingle();
   if (kunjunganError) return NextResponse.json({ success: false, error: 'Gagal memverifikasi kunjungan.' }, { status: 500 });
@@ -63,6 +62,7 @@ export async function POST(req: NextRequest) {
   const site = String(kunjungan.jobsite ?? '').trim();
   const kategori = String(kunjungan.kategori ?? '').trim();
   const rujukRS = kunjungan.rujuk_rs === true;
+  const perluPemantauanSakit = rujukRS || kunjungan.izin_absen === true;
   const namaRS = String(kunjungan.nama_rs ?? '').trim();
   const keluhan = String(kunjungan.keluhan ?? '').trim();
   if (caller!.role === 'pic' && (!caller!.site || caller!.site.toLowerCase() !== site.toLowerCase())) {
@@ -78,19 +78,33 @@ export async function POST(req: NextRequest) {
   const hasil: { karyawanSakit?: string; registerPak?: string; catatan: string[] } = { catatan: [] };
 
   /* ── 1. Rujuk RS → episode karyawan sakit ───────────────────────────── */
-  if (rujukRS) {
+  if (perluPemantauanSakit) {
     try {
       // Idempoten: episode dengan NIK + tanggal mulai yang sama tidak dibuat ulang.
       const { data: ada } = await client
         .from('sakit_episode')
-        .select('id')
+        .select('id,kunjungan_id,sick_employee_id')
         .eq('nik_hash', nikHash)
         .eq('tanggal_mulai_sakit', tanggal)
         .maybeSingle();
 
       if (ada?.id) {
         hasil.karyawanSakit = 'sudah-ada';
-        hasil.catatan.push('Episode karyawan sakit untuk tanggal ini sudah ada.');
+        if (!ada.kunjungan_id) {
+          const { error: linkError } = await client
+            .from('sakit_episode')
+            .update({ kunjungan_id: kunjunganId })
+            .eq('id', String(ada.id))
+            .is('kunjungan_id', null);
+          if (linkError) {
+            console.error('[Kunjungan integration] Sick episode link failed:', linkError.code);
+            hasil.catatan.push('Episode sudah ada, tetapi tautan ke kunjungan belum tersimpan.');
+          } else {
+            hasil.catatan.push('Kunjungan dihubungkan dengan episode karyawan sakit yang sudah ada.');
+          }
+        } else {
+          hasil.catatan.push('Episode karyawan sakit untuk tanggal ini sudah terhubung.');
+        }
       } else {
         const { error } = await client.from('sakit_episode').insert({
           nik_hash: nikHash,
@@ -100,10 +114,10 @@ export async function POST(req: NextRequest) {
           tanggal_mulai_sakit: tanggal,
           diagnosis_awal: keluhan || null,
           dokter_faskes: namaRS || null,
-          // Rujukan ke rumah sakit = perawatan di luar tim medik perusahaan.
-          sumber_laporan: 'RUMAH_SAKIT',
+          sumber_laporan: rujukRS ? 'RUMAH_SAKIT' : 'KUNJUNGAN_KLINIK',
           jenis_sakit: 'AKUT',
           status: 'AKTIF',
+          kunjungan_id: kunjunganId,
           catatan: `Dibuat otomatis dari kunjungan berobat${namaRS ? ` (rujukan ke ${namaRS})` : ''}.`,
           dibuat_oleh: caller.userId,
         });
@@ -112,7 +126,7 @@ export async function POST(req: NextRequest) {
           hasil.catatan.push('Gagal membuat episode karyawan sakit.');
         } else {
           hasil.karyawanSakit = 'dibuat';
-          hasil.catatan.push('Episode karyawan sakit dibuat dari rujukan RS.');
+          hasil.catatan.push('Episode karyawan sakit dibuat dan dihubungkan dari kunjungan klinik.');
         }
       }
     } catch {

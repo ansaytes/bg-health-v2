@@ -146,7 +146,7 @@ export default function InputMentalHealthPage() {
       return;
     }
     if (!consent.accepted) {
-      submit.failure('Persetujuan (FORM/098) wajib diberikan sebelum menyimpan hasil skrining.');
+      submit.failure('Persetujuan wajib diberikan sebelum menyimpan hasil skrining.');
       return;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(tglPemeriksaan)) {

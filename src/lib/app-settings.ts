@@ -3,17 +3,15 @@
 // ============================================================
 //
 // Satu sumber kebenaran untuk nilai yang bisa diubah tanpa deploy ulang:
-// nomor dokumen, identitas perusahaan, batas waktu PAK, faskes rekanan,
-// dsb. Disimpan di tabel `app_settings` (key -> value JSON).
+// identitas perusahaan, batas waktu PAK, faskes rekanan, dan konfigurasi.
 //
 // Nilai DEFAULT di bawah dipakai bila database belum berisi key tersebut,
 // sehingga aplikasi tetap berjalan sebelum admin mengisi Setting.
 //
-// ROLE: baca = superuser/administrator/pic/manager (laporan butuh nomor
-// dokumen); ubah = superuser saja (satu sumber kebenaran, bukan area kerja).
+// ROLE: baca = superuser/administrator/pic/manager; ubah = superuser.
 
 export interface PakDeadlines {
-  /** Triase dokter maks N hari kerja sejak diterima (PAK-01). */
+  /** Batas triase dokter dalam hari kerja sejak laporan diterima. */
   triaseHariKerja: number;
   /** Laporan medis ke QSHE Manager/PJO maks N x 24 jam. */
   laporanMedisJam: number;
@@ -23,17 +21,6 @@ export interface PakDeadlines {
   kesimpulanBpjsHari: number;
   /** Jawab permintaan informasi BPJS/pengawas maks N hari kerja. */
   jawabInfoHariKerja: number;
-}
-
-export interface DokumenSetting {
-  /** Nomor resmi Form PAK-01/02/03 — draft belum bernomor. */
-  formPak: string;
-  /** Nomor resmi FORM/123 — penilaian kelaikan kerja. */
-  form123: string;
-  /** Nomor resmi FORM/116-118 (RULA/ROSA/WERA). */
-  formRula: string;
-  formRosa: string;
-  formWera: string;
 }
 
 export interface PerusahaanSetting {
@@ -56,7 +43,6 @@ export interface FaskesSetting {
 
 export interface AppSettings {
   perusahaan: PerusahaanSetting;
-  dokumen: DokumenSetting;
   pak: PakDeadlines;
   faskes: FaskesSetting;
 }
@@ -67,14 +53,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
     prefiksId: 'BG',
     alamat: '',
     zonaWaktu: 'WITA',
-  },
-  dokumen: {
-    // Draft Form PAK belum bernumber — diisi lewat Setting saat resmi.
-    formPak: 'BG/QSHE/FORM/___ (Form PAK — draft)',
-    form123: 'BG/QSHE/FORM/123',
-    formRula: 'BG/QSHE/FORM/116',
-    formRosa: 'BG/QSHE/FORM/117',
-    formWera: 'BG/QSHE/FORM/118',
   },
   pak: {
     // INK/017: triase maks 1 hari kerja; laporan medis 1x24 jam;
@@ -97,7 +75,6 @@ export function mergeSettings(stored: Partial<AppSettings> | null | undefined): 
   if (!stored) return { ...DEFAULT_SETTINGS };
   return {
     perusahaan: { ...DEFAULT_SETTINGS.perusahaan, ...(stored.perusahaan ?? {}) },
-    dokumen: { ...DEFAULT_SETTINGS.dokumen, ...(stored.dokumen ?? {}) },
     pak: { ...DEFAULT_SETTINGS.pak, ...(stored.pak ?? {}) },
     faskes: { ...DEFAULT_SETTINGS.faskes, ...(stored.faskes ?? {}) },
   };
@@ -108,7 +85,7 @@ export function mergeSettings(stored: Partial<AppSettings> | null | undefined): 
 // ============================================================
 //
 // Format sesuai keputusan: PAK + prefiks perusahaan + MMYY + nomor urut.
-// MMYY diambil dari tanggal-jam DITERIMA di Register (PAK-01 bagian A) —
+// MMYY diambil dari tanggal-jam diterima di Register —
 // momen pertama yang tercatat dan tidak berubah (triase/diagnosis bisa
 // mundur-maju, penerimaan tidak). Nomor urut direset per bulan.
 

@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authFetch } from '@/lib/api-client';
 import { useMCUStore } from '@/lib/store';
+import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
 import {
   FASE, JENIS_SAKIT_LABEL, MEDIA_LABEL, STATUS_KELAYAKAN_LABEL, STATUS_KELAYAKAN_WARNA,
 } from '@/lib/karyawan-sakit';
@@ -33,6 +34,11 @@ interface Episode {
   id: string;
   nik: string | null;
   nama: string | null;
+  kunjunganId: string | null;
+  kunjunganTanggal: string | null;
+  kunjunganDenganAbsen: boolean;
+  kunjunganDirujuk: boolean;
+  sickEmployeeId: string | null;
   site: string | null;
   department: string | null;
   jabatan: string | null;
@@ -154,8 +160,7 @@ export default function MonitoringKaryawanSakit() {
 
       {!tabelSiap && (
         <div style={{ flexShrink: 0, padding: '7px 12px', borderRadius: 8, background: 'rgba(255,196,0,0.10)', border: '1px solid rgba(255,196,0,0.4)', color: '#9a6b00', fontSize: 10.5 }}>
-          Tabel modul ini belum dibuat. Jalankan migration
-          <code style={{ marginLeft: 3 }}>20261028_karyawan_sakit.sql</code>.
+          Skema pemantauan karyawan sakit belum tersedia. Terapkan pembaruan database terlebih dahulu.
         </div>
       )}
 
@@ -167,14 +172,14 @@ export default function MonitoringKaryawanSakit() {
 
       {membuat && <FormEpisodeBaru onSelesai={() => { setMembuat(false); void load(); }} />}
 
-      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'minmax(280px, 380px) minmax(0, 1fr)', gap: 8 }}>
+      <div className="sick-monitor-grid">
         {/* Daftar episode */}
         <div className="card" style={{ minHeight: 0, display: 'flex', flexDirection: 'column', padding: '8px 6px' }}>
           <div className="card-head" style={{ flexShrink: 0, paddingBottom: 4 }}>
             <span style={{ width: 3, height: 18, borderRadius: 2, background: '#E63946', flexShrink: 0 }} />
             <div>
               <h2 style={{ fontSize: 12 }}>Daftar Episode</h2>
-              <p style={{ fontSize: 9 }}>{filtered.length} episode · SOP/027</p>
+              <p style={{ fontSize: 9 }}>{filtered.length} episode</p>
             </div>
           </div>
           <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
@@ -335,7 +340,7 @@ function DetailEpisode({ episode, onBerubah, toast }: {
           responsTatalaksana: 'STABIL',
         }),
       });
-      toast('Rekomendasi (FORM/123) diterbitkan', 'success');
+      toast('Rekomendasi karyawan sakit diterbitkan', 'success');
       await muat(); onBerubah();
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Gagal menerbitkan rekomendasi';
@@ -375,6 +380,14 @@ function DetailEpisode({ episode, onBerubah, toast }: {
           <Info label="Diagnosis awal" value={episode.diagnosisAwal ?? '—'} />
           <Info label="Faskes pemeriksa" value={episode.dokterFaskes ?? '—'} />
           <Info label="Jenis sakit" value={episode.jenisSakit ? JENIS_SAKIT_LABEL[episode.jenisSakit] ?? episode.jenisSakit : '—'} />
+          <Info label="Sumber laporan" value={episode.sumberLaporan ? SUMBER_LAPORAN_LABEL[episode.sumberLaporan] ?? episode.sumberLaporan : '—'} />
+          {episode.kunjunganId && (
+            <Info
+              label="Kunjungan klinik"
+              value={`${fmt(episode.kunjunganTanggal)}${episode.kunjunganDenganAbsen ? ' · izin/absen' : ''}${episode.kunjunganDirujuk ? ' · dirujuk' : ''}`}
+            />
+          )}
+          {episode.sickEmployeeId && <Info label="Terkait rekap lagging" value="Data individu dari laporan site" />}
           <Info label="Kontak terakhir" value={fmt(episode.kontakTerakhir)} />
         </div>
 
@@ -402,7 +415,7 @@ function DetailEpisode({ episode, onBerubah, toast }: {
         {/* Kewajiban fase */}
         <div style={{ marginTop: 8 }}>
           <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)', marginBottom: 3 }}>
-            Kewajiban {episode.faseLabel} (SOP/027 6.5)
+            Kewajiban {episode.faseLabel}
           </div>
           <ul style={{ margin: 0, paddingLeft: 16, fontSize: 10, color: 'var(--foreground)', lineHeight: 1.55 }}>
             {episode.kewajiban.map((k) => <li key={k}>{k}</li>)}
@@ -416,7 +429,7 @@ function DetailEpisode({ episode, onBerubah, toast }: {
           <span style={{ width: 3, height: 18, borderRadius: 2, background: '#3498DB', flexShrink: 0 }} />
           <div>
             <h2 style={{ fontSize: 12 }}>Catat Kontak Pemantauan</h2>
-            <p style={{ fontSize: 9.5 }}>FORM/101 bagian C — dicatat setiap sesi kontak</p>
+            <p style={{ fontSize: 9.5 }}>Catat setiap sesi kontak dan tindak lanjut.</p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
@@ -503,12 +516,11 @@ function DetailEpisode({ episode, onBerubah, toast }: {
         )}
       </div>
 
-      {/* FORM/123 */}
       <div className="card" style={kartu}>
         <div className="card-head" style={{ marginBottom: 8 }}>
           <span style={{ width: 3, height: 18, borderRadius: 2, background: '#E63946', flexShrink: 0 }} />
           <div>
-            <h2 style={{ fontSize: 12 }}>Surat Rekomendasi Karyawan Sakit (FORM/123)</h2>
+            <h2 style={{ fontSize: 12 }}>Surat Rekomendasi Karyawan Sakit</h2>
             <p style={{ fontSize: 9.5 }}>
               Penilaian ulang QSHE Medic — TERPISAH dari kesimpulan vendor MCU
             </p>
@@ -584,12 +596,12 @@ function DetailEpisode({ episode, onBerubah, toast }: {
           }}>
             {episode.syaratUnfit.boleh ? (
               <span style={{ color: '#00806a', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                <CheckCircle2 size={12} /> Syarat penerbitan Unfit terpenuhi (SOP/027 6.5.5)
+                <CheckCircle2 size={12} /> Syarat penerbitan Unfit terpenuhi
               </span>
             ) : (
               <>
                 <span style={{ color: '#9a6b00', display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 700 }}>
-                  <ShieldAlert size={12} /> Syarat Unfit belum terpenuhi (SOP/027 6.5.5)
+                  <ShieldAlert size={12} /> Syarat Unfit belum terpenuhi
                 </span>
                 <ul style={{ margin: '3px 0 0', paddingLeft: 18 }}>
                   {episode.syaratUnfit.belumTerpenuhi.map((s) => <li key={s}>{s}</li>)}
@@ -622,6 +634,16 @@ const TH: React.CSSProperties = {
 };
 const TD: React.CSSProperties = { padding: '5px 7px', borderBottom: '1px solid var(--border)', fontSize: 10.5 };
 
+const SUMBER_LAPORAN_LABEL: Record<string, string> = {
+  SKS: 'Surat keterangan sakit',
+  SURAT_PERNYATAAN_MANDIRI: 'Pernyataan mandiri',
+  RUMAH_SAKIT: 'Rumah sakit',
+  KUNJUNGAN_KLINIK: 'Kunjungan klinik',
+  LAPORAN_SITE: 'Rekap sakit site',
+  KECELAKAAN_KERJA: 'Kecelakaan kerja',
+  LAINNYA: 'Lainnya',
+};
+
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ padding: '5px 8px', borderRadius: 8, background: 'var(--muted)', minWidth: 0 }}>
@@ -635,7 +657,6 @@ function Info({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** Form episode baru — tanggal mulai sakit wajib (SOP/027 poin 6.6.1). */
 function FormEpisodeBaru({ onSelesai }: { onSelesai: () => void }) {
   const store = useMCUStore();
   const [nik, setNik] = useState('');
@@ -644,23 +665,35 @@ function FormEpisodeBaru({ onSelesai }: { onSelesai: () => void }) {
   const [department, setDepartment] = useState('');
   const [mulai, setMulai] = useState(new Date().toISOString().slice(0, 10));
   const [sks, setSks] = useState('');
+  const [selesai, setSelesai] = useState('');
   const [diagnosis, setDiagnosis] = useState('');
   const [faskes, setFaskes] = useState('');
   const [jenis, setJenis] = useState('BERKEPANJANGAN');
+  const [sumber, setSumber] = useState('SKS');
   const [simpan, setSimpan] = useState(false);
+  const [jabatan, setJabatan] = useState('');
+
+  const handleEmployeeFound = (data: EmployeeData) => {
+    if (data.nama) setNama(data.nama);
+    if (data.department) setDepartment(data.department);
+    if (data.job_position) setJabatan(data.job_position);
+    if (data.site_name) setSite(data.site_name);
+  };
 
   async function kirim() {
-    if (!nik.trim() || !mulai) return;
+    if (!nik.trim() || !nama.trim() || !site.trim() || !mulai) return;
     setSimpan(true);
     try {
       await authFetch('/api/karyawan-sakit', {
         method: 'POST',
         body: JSON.stringify({
-          nik: nik.trim(), nama, site, department,
+          nik: nik.trim(), nama: nama.trim(), site, department, jabatan,
           tanggalMulaiSakit: mulai,
           tanggalSksPertama: sks || null,
+          tanggalSelesaiSakit: selesai || null,
           diagnosisAwal: diagnosis, dokterFaskes: faskes,
-          jenisSakit: jenis, sumberLaporan: 'SKS', status: 'AKTIF',
+          jenisSakit: jenis, sumberLaporan: sumber,
+          status: selesai && selesai < new Date().toISOString().slice(0, 10) ? 'SELESAI' : 'AKTIF',
         }),
       });
       store.showToast('Episode karyawan sakit dicatat', 'success');
@@ -673,60 +706,84 @@ function FormEpisodeBaru({ onSelesai }: { onSelesai: () => void }) {
   }
 
   return (
-    <div className="card" style={{ padding: '10px 12px', flexShrink: 0 }}>
-      <div className="card-head" style={{ marginBottom: 8 }}>
-        <span style={{ width: 3, height: 18, borderRadius: 2, background: '#ff4d00', flexShrink: 0 }} />
-        <div>
-          <h2 style={{ fontSize: 12 }}>Episode Sakit Baru</h2>
-          <p style={{ fontSize: 9.5 }}>Tanggal mulai sakit = dasar perhitungan fase & hari sakit (SOP/027 6.6.1)</p>
+    <div className="admin-form-inner" style={{ padding: '8px 0', flexShrink: 0 }}>
+      <form className="admin-form-card" onSubmit={(event) => { event.preventDefault(); void kirim(); }}>
+        <div className="admin-section-header">
+          <span style={{ width: 14, color: 'var(--brand-primary)' }}>+</span>
+          <h3 className="admin-section-title">Data Kasus Karyawan Sakit</h3>
         </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-        <label className="flex flex-col gap-1">
-          <span className="text-[10px] font-semibold text-muted-foreground">NIK karyawan</span>
-          <Input value={nik} onChange={(e) => setNik(e.target.value)} className="h-8 rounded-lg text-sm" />
-        </label>
-        <label className="flex flex-col gap-1 sm:col-span-2">
-          <span className="text-[10px] font-semibold text-muted-foreground">Nama</span>
-          <Input value={nama} onChange={(e) => setNama(e.target.value)} className="h-8 rounded-lg text-sm" />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-[10px] font-semibold text-muted-foreground">Jenis sakit</span>
-          <select value={jenis} onChange={(e) => setJenis(e.target.value)} className="h-8 rounded-lg border-input bg-background px-2 text-sm">
-            {Object.entries(JENIS_SAKIT_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-[10px] font-semibold text-muted-foreground">Site</span>
-          <Input value={site} onChange={(e) => setSite(e.target.value)} className="h-8 rounded-lg text-sm" />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-[10px] font-semibold text-muted-foreground">Departemen</span>
-          <Input value={department} onChange={(e) => setDepartment(e.target.value)} className="h-8 rounded-lg text-sm" />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-[10px] font-semibold text-muted-foreground">Mulai sakit</span>
-          <Input type="date" value={mulai} onChange={(e) => setMulai(e.target.value)} className="h-8 rounded-lg text-sm" />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-[10px] font-semibold text-muted-foreground">SKS pertama</span>
-          <Input type="date" value={sks} onChange={(e) => setSks(e.target.value)} className="h-8 rounded-lg text-sm" />
-        </label>
-        <label className="flex flex-col gap-1 sm:col-span-2">
-          <span className="text-[10px] font-semibold text-muted-foreground">Diagnosis awal (SKS)</span>
-          <Input value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} className="h-8 rounded-lg text-sm" />
-        </label>
-        <label className="flex flex-col gap-1 sm:col-span-2">
-          <span className="text-[10px] font-semibold text-muted-foreground">Dokter / faskes pemeriksa</span>
-          <Input value={faskes} onChange={(e) => setFaskes(e.target.value)} className="h-8 rounded-lg text-sm" />
-        </label>
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, marginTop: 8 }}>
-        <Button variant="outline" size="sm" onClick={onSelesai}>Batal</Button>
-        <Button size="sm" disabled={simpan || !nik.trim()} onClick={() => void kirim()} style={{ gap: 5 }}>
-          {simpan ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />} Simpan Episode
-        </Button>
-      </div>
+        <div className="sick-episode-form-grid">
+          <div>
+            <EmployeeLookupInput
+              value={nik}
+              onChange={setNik}
+              onEmployeeFound={handleEmployeeFound}
+              autoFill={{ nama: 'nama', department: 'department', job_position: 'jabatan' }}
+              required
+            />
+          </div>
+          <label>
+            <span className="admin-label">Nama karyawan *</span>
+            <Input value={nama} onChange={(event) => setNama(event.target.value)} className="admin-input" />
+          </label>
+          <label>
+            <span className="admin-label">Jobsite *</span>
+            <Input value={site} onChange={(event) => setSite(event.target.value)} className="admin-input" />
+          </label>
+          <label>
+            <span className="admin-label">Departemen</span>
+            <Input value={department} onChange={(event) => setDepartment(event.target.value)} className="admin-input" />
+          </label>
+          <label>
+            <span className="admin-label">Jabatan</span>
+            <Input value={jabatan} onChange={(event) => setJabatan(event.target.value)} className="admin-input" />
+          </label>
+          <label>
+            <span className="admin-label">Sumber laporan *</span>
+            <select value={sumber} onChange={(event) => setSumber(event.target.value)} className="admin-input">
+              <option value="SKS">Surat keterangan sakit</option>
+              <option value="SURAT_PERNYATAAN_MANDIRI">Pernyataan mandiri</option>
+              <option value="RUMAH_SAKIT">Rumah sakit</option>
+              <option value="KUNJUNGAN_KLINIK">Kunjungan klinik</option>
+              <option value="LAPORAN_SITE">Rekap sakit site</option>
+              <option value="KECELAKAAN_KERJA">Kecelakaan kerja</option>
+              <option value="LAINNYA">Lainnya</option>
+            </select>
+          </label>
+          <label>
+            <span className="admin-label">Jenis sakit</span>
+            <select value={jenis} onChange={(event) => setJenis(event.target.value)} className="admin-input">
+              {Object.entries(JENIS_SAKIT_LABEL).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+            </select>
+          </label>
+          <label>
+            <span className="admin-label">Mulai sakit *</span>
+            <Input type="date" value={mulai} onChange={(event) => setMulai(event.target.value)} className="admin-input" />
+          </label>
+          <label>
+            <span className="admin-label">Sakit selesai (jika sudah pulih)</span>
+            <Input type="date" value={selesai} onChange={(event) => setSelesai(event.target.value)} className="admin-input" />
+          </label>
+          <label>
+            <span className="admin-label">SKS pertama (jika ada)</span>
+            <Input type="date" value={sks} onChange={(event) => setSks(event.target.value)} className="admin-input" />
+          </label>
+          <label>
+            <span className="admin-label">Dokter / faskes pemeriksa</span>
+            <Input value={faskes} onChange={(event) => setFaskes(event.target.value)} className="admin-input" />
+          </label>
+          <label style={{ gridColumn: '1 / -1' }}>
+            <span className="admin-label">Diagnosis awal</span>
+            <Input value={diagnosis} onChange={(event) => setDiagnosis(event.target.value)} className="admin-input" />
+          </label>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <Button type="button" variant="outline" onClick={onSelesai}>Batal</Button>
+          <Button type="submit" disabled={simpan || !nik.trim() || !nama.trim() || !site.trim()} style={{ gap: 5 }}>
+            {simpan ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />} Simpan Episode
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }

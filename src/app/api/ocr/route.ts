@@ -6,7 +6,7 @@ import {
   DEFAULT_GEMINI_OCR_MODEL,
   isGeminiOcrModel,
 } from '@/lib/gemini-ocr-models';
-import { decryptIntegrationSecret, getDriveAccessToken, integrationAdminClient, readIntegration } from '@/lib/integration-settings';
+import { decryptIntegrationSecret, integrationAdminClient, readIntegration } from '@/lib/integration-settings';
 import { getServerCaller, requireServerRole, STAFF_ROLES } from '@/lib/server-auth';
 
 // Create a schema mapping dynamically from MCU_FIELDS
@@ -53,7 +53,7 @@ DETAIL WAJIB:
 19. Normalisasi identitas: Laki-laki/Pria menjadi "Laki - Laki"; Perempuan/Wanita menjadi "Perempuan".
 20. Status MCU wajib mengikuti dropdown kolom H spreadsheet secara persis: Pre Employee, Annual, Specific, Retirement, Follow Up - Pre Employee, Follow Up - Annual.
 21. Format dokumen dapat berupa pasangan Item/Hasil atau teks berurutan. Gunakan label item sebagai batas nilai, termasuk bila seluruh data menempel tanpa pemisah baris.
-22. Isi NIK KTP, Nama, Usia, Jenis Kelamin, Jabatan, dan Site hanya dari identitas yang terbaca. Jangan mengisi NIK KTP dari NIK Karyawan atau dari nama.
+22. Jangan mengekstrak atau mengembalikan NIK KTP, NIK karyawan, nama, usia, jenis kelamin, jabatan, atau site. Identitas dan demografi diisi aplikasi dari karyawan yang dipilih, bukan dari dokumen.
 23. Normalisasi kesimpulan vendor berbahasa Indonesia ke opsi terdekat: "Fit dengan Catatan" menjadi "Fit With Note", "Fit dengan Pembatasan" menjadi "Fit With Restriction", "Tidak Layak Sementara" menjadi "Temporary Unfit", dan "Tidak Layak" menjadi "Unfit".
 24. Status MCU berbeda dari Kesimpulan Vendor. Jangan mengisi statusMCU dengan "Fit With Note" atau kesimpulan kelayakan kerja.
 25. Rekomendasi Follow Up yang menyebut dokter spesialis penyakit dalam dipetakan ke "Dokter Sp. PD"; saran diet/olahraga dipetakan ke opsi gaya hidup yang tersedia. Gunakan beberapa opsi bila beberapa tindakan jelas tertulis.
@@ -85,15 +85,49 @@ export async function POST(req: NextRequest) {
         { status: 429, headers: { 'Retry-After': '3600' } },
       );
     }
-    const body = await req.json();
-    const { text, modelId } = body;
-
-    if (typeof text !== 'string' || text.trim().length === 0) {
-      return NextResponse.json({ success: false, error: 'Teks OCR kosong' }, { status: 400 });
+    const contentLength = Number(req.headers.get('content-length') || 0);
+    if (contentLength > 4_000_000) {
+      return NextResponse.json({ success: false, error: 'Ukuran gambar hasil penyamaran melebihi batas.' }, { status: 413 });
     }
-    if (text.length > 100_000) {
-      return NextResponse.json({ success: false, error: 'Teks OCR melebihi batas ukuran' }, { status: 413 });
+    const requestBody = await req.text();
+    if (Buffer.byteLength(requestBody, 'utf8') > 4_000_000) {
+      return NextResponse.json({ success: false, error: 'Ukuran gambar hasil penyamaran melebihi batas.' }, { status: 413 });
     }
+    let body: unknown;
+    try {
+      body = JSON.parse(requestBody);
+    } catch {
+      return NextResponse.json({ success: false, error: 'Permintaan OCR tidak valid.' }, { status: 400 });
+    }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ success: false, error: 'Permintaan OCR tidak valid.' }, { status: 400 });
+    }
+    const input = body as Record<string, unknown>;
+    if (Object.keys(input).some((key) => !['images', 'modelId'].includes(key))) {
+      return NextResponse.json({ success: false, error: 'Endpoint OCR hanya menerima gambar hasil penyamaran.' }, { status: 400 });
+    }
+    const { modelId } = input;
+    const rawImages = input.images;
+    if (!Array.isArray(rawImages) || rawImages.length < 1 || rawImages.length > 12) {
+      return NextResponse.json({ success: false, error: 'Kirim 1 sampai 12 gambar halaman yang sudah disamarkan.' }, { status: 400 });
+    }
+    const images: Array<{ data: string; mimeType: string }> = [];
+    let totalImageChars = 0;
+    for (const rawImage of rawImages) {
+      if (typeof rawImage !== 'string') {
+        return NextResponse.json({ success: false, error: 'Format gambar hasil penyamaran tidak valid.' }, { status: 400 });
+      }
+      const match = rawImage.match(/^data:(image\/(?:jpeg|png));base64,([A-Za-z0-9+/]+={0,2})$/);
+      if (!match || match[2].length > 1_500_000) {
+        return NextResponse.json({ success: false, error: 'Gambar harus berupa JPEG atau PNG hasil penyamaran.' }, { status: 400 });
+      }
+      totalImageChars += match[2].length;
+      if (totalImageChars > 3_600_000) {
+        return NextResponse.json({ success: false, error: 'Ukuran gambar hasil penyamaran melebihi batas.' }, { status: 413 });
+      }
+      images.push({ mimeType: match[1], data: match[2] });
+    }
+    const promptText = `Ekstrak hasil pemeriksaan MCU dari ${images.length} gambar halaman terlampir. Identitas telah dipilih terpisah di aplikasi.`;
 
     const aiIntegration = await readIntegration('ai');
     const aiSecrets = decryptIntegrationSecret(aiIntegration?.secret_ciphertext ?? null);
@@ -104,38 +138,6 @@ export async function POST(req: NextRequest) {
       : DEFAULT_GEMINI_OCR_MODEL;
     if (!apiKey) {
       return NextResponse.json({ success: false, error: 'API key AI belum diatur pada menu Pengaturan > Integrasi.' }, { status: 503 });
-    }
-
-    const gDriveMatch = text.match(/(?:drive\.google\.com\/.*[?&]id=|drive\.google\.com\/file\/d\/|docs\.google\.com\/(?:document|spreadsheets|presentation)\/d\/)([-\w]{20,})/);
-    let document: { data: string; mimeType: string } | null = null;
-    let promptText = text;
-    if (gDriveMatch?.[1]) {
-      try {
-        const accessToken = await getDriveAccessToken();
-        const fileResponse = await fetch(
-          `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(gDriveMatch[1])}?alt=media`,
-          { headers: { Authorization: `Bearer ${accessToken}` }, signal: AbortSignal.timeout(20_000), cache: 'no-store' },
-        );
-        if (!fileResponse.ok) {
-          return NextResponse.json({ success: false, error: 'File tidak dapat diakses melalui akun Google Drive yang terhubung.' }, { status: 400 });
-        }
-        const contentLength = Number(fileResponse.headers.get('content-length') || 0);
-        if (contentLength > 15 * 1024 * 1024) {
-          return NextResponse.json({ success: false, error: 'Dokumen melebihi batas ukuran 15 MB.' }, { status: 413 });
-        }
-        const contentType = (fileResponse.headers.get('content-type') || 'application/pdf').split(';')[0].trim();
-        if (!['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(contentType)) {
-          return NextResponse.json({ success: false, error: 'Format dokumen tidak didukung untuk ekstraksi.' }, { status: 415 });
-        }
-        const bytes = await fileResponse.arrayBuffer();
-        if (bytes.byteLength > 15 * 1024 * 1024) {
-          return NextResponse.json({ success: false, error: 'Dokumen melebihi batas ukuran 15 MB.' }, { status: 413 });
-        }
-        document = { data: Buffer.from(bytes).toString('base64'), mimeType: contentType };
-        promptText = 'Tolong ekstrak data MCU dari dokumen terlampir.';
-      } catch {
-        return NextResponse.json({ success: false, error: 'Gagal mengunduh dokumen dari Google Drive.' }, { status: 502 });
-      }
     }
 
     let outputText = '';
@@ -149,8 +151,9 @@ export async function POST(req: NextRequest) {
           { status: 400 },
         );
       }
-      const parts: Array<{ text: string } | { inlineData: { data: string; mimeType: string } }> = [];
-      if (document) parts.push({ inlineData: document });
+      const parts: Array<{ text: string } | { inlineData: { data: string; mimeType: string } }> = images.map((image) => ({
+        inlineData: image,
+      }));
       parts.push({ text: promptText });
       try {
         const ai = new GoogleGenAI({ apiKey });
@@ -193,10 +196,8 @@ export async function POST(req: NextRequest) {
       if (!baseUrl) return NextResponse.json({ success: false, error: 'Base URL AI belum diatur.' }, { status: 503 });
       const endpoint = baseUrl.endsWith('/chat/completions') ? baseUrl : `${baseUrl}/chat/completions`;
       const userContent: Array<Record<string, unknown>> = [{ type: 'text', text: promptText }];
-      if (document?.mimeType.startsWith('image/')) {
-        userContent.push({ type: 'image_url', image_url: { url: `data:${document.mimeType};base64,${document.data}` } });
-      } else if (document) {
-        userContent.push({ type: 'file', file: { filename: 'mcu-document.pdf', file_data: `data:${document.mimeType};base64,${document.data}` } });
+      for (const image of images) {
+        userContent.push({ type: 'image_url', image_url: { url: `data:${image.mimeType};base64,${image.data}` } });
       }
       try {
         const response = await fetch(endpoint, {
@@ -242,8 +243,8 @@ export async function POST(req: NextRequest) {
     let parsedData = {};
     try {
         parsedData = JSON.parse(outputText);
-    } catch (e) {
-        console.error("Failed to parse Gemini output:", outputText);
+    } catch {
+        console.error('[OCR] Provider returned invalid JSON.');
         return NextResponse.json({ success: false, error: 'Hasil ekstraksi tidak dapat dibaca. Coba ulangi dokumen tersebut.' }, { status: 500 });
     }
 
@@ -276,7 +277,9 @@ export async function POST(req: NextRequest) {
     
     for (const [k, v] of Object.entries(parsedData)) {
         const fieldId = fieldAliases.get(normalizeKey(k));
-        if (fieldId && fieldId !== 'catatan' && v !== null && v !== undefined) {
+        if (fieldId
+          && !['nationalId', 'nikKaryawan', 'nama', 'usia', 'jenisKelamin', 'jabatan', 'site'].includes(fieldId)
+          && fieldId !== 'catatan' && v !== null && v !== undefined) {
             const value = Array.isArray(v) ? v.map(String).join(' | ') : String(v);
             validData[fieldId] = /^n\/a|null$/i.test(value.trim()) ? '' : value;
         }

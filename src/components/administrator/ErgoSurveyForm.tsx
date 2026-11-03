@@ -136,7 +136,7 @@ export default function ErgoSurveyForm() {
           {step === 0 && (
             <>
               <div style={{ background: 'var(--muted)', borderRadius: 8, padding: '10px 14px', fontSize: 12, marginBottom: 14 }}>
-                <b>Petunjuk umum ({def.formNo})</b>
+                <b>Petunjuk umum</b>
                 <ul style={{ margin: '6px 0 0 18px', padding: 0, lineHeight: 1.6 }}>{def.intro.map((t) => <li key={t}>{t}</li>)}</ul>
               </div>
               <div style={{ ...grid2, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
@@ -229,7 +229,7 @@ export default function ErgoSurveyForm() {
                   )}
                   {q.image && (
                     <details style={{ marginTop: 14, fontSize: 11 }}>
-                      <summary style={{ cursor: 'pointer', color: BRAND, fontWeight: 600 }}>Lihat gambar referensi asli pada formulir ({def.formNo})</summary>
+                      <summary style={{ cursor: 'pointer', color: BRAND, fontWeight: 600 }}>Lihat gambar referensi instrumen</summary>
                       <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 8, padding: 8, marginTop: 6 }}>
                         <img src={q.image} alt={q.imageCaption || q.title} style={{ width: '100%', height: 'auto', display: 'block' }} />
                         <div style={{ fontSize: 10, color: '#667', marginTop: 4 }}>{def.source}</div>

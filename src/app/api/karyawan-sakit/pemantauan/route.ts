@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
 
       if (!syarat.boleh) {
         return NextResponse.json({
-          error: 'Syarat penerbitan status Unfit belum terpenuhi (SOP/027 poin 6.5.5)',
+          error: 'Syarat penerbitan status Unfit belum terpenuhi.',
           belumTerpenuhi: syarat.belumTerpenuhi,
         }, { status: 422 });
       }
@@ -107,7 +107,6 @@ export async function POST(req: NextRequest) {
 
     const { error } = await client.from('sakit_rekomendasi').insert({
       episode_id: episodeId,
-      no_dokumen: body.noDokumen || null,
       tanggal_penilaian: tanggalPenilaian,
       diagnosis_terkini: body.diagnosisTerkini || null,
       status_fungsional: body.statusFungsional || null,

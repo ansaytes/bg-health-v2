@@ -1,0 +1,386 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import { Loader2, ScanLine, Trash2, Upload } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+const MAX_FILE_BYTES = 15 * 1024 * 1024;
+const MAX_PAGES = 12;
+const MAX_IMAGES_CHARS = 3_600_000;
+
+interface Redaction {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface PdfPagePreview {
+  number: number;
+  canvas: HTMLCanvasElement;
+  previewUrl: string;
+  redactions: Redaction[];
+  identityAbsent: boolean;
+}
+
+interface Point {
+  x: number;
+  y: number;
+}
+
+function parseDriveFileId(rawUrl: string): string {
+  let url: URL;
+  try {
+    url = new URL(rawUrl.trim());
+  } catch {
+    throw new Error('Masukkan tautan Google Drive yang valid.');
+  }
+  if (url.protocol !== 'https:' || !['drive.google.com', 'docs.google.com'].includes(url.hostname)) {
+    throw new Error('Sumber PDF harus berupa tautan Google Drive.');
+  }
+
+  const pathId = url.pathname.match(/\/(?:file|document|spreadsheets|presentation)\/d\/([A-Za-z0-9_-]+)/)?.[1];
+  const fileId = pathId || url.searchParams.get('id') || '';
+  if (!/^[A-Za-z0-9_-]{10,256}$/.test(fileId)) {
+    throw new Error('ID file pada tautan Google Drive tidak valid.');
+  }
+  return fileId;
+}
+
+function getPoint(event: React.PointerEvent<HTMLDivElement>): Point {
+  const bounds = event.currentTarget.getBoundingClientRect();
+  return {
+    x: Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width)),
+    y: Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height)),
+  };
+}
+
+function makeRedaction(start: Point, end: Point): Redaction {
+  return {
+    x: Math.min(start.x, end.x),
+    y: Math.min(start.y, end.y),
+    width: Math.abs(end.x - start.x),
+    height: Math.abs(end.y - start.y),
+  };
+}
+
+function PagePreview({
+  page,
+  onChange,
+}: {
+  page: PdfPagePreview;
+  onChange: (update: (current: PdfPagePreview) => PdfPagePreview) => void;
+}) {
+  const [start, setStart] = useState<Point | null>(null);
+  const [draft, setDraft] = useState<Redaction | null>(null);
+
+  const begin = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const point = getPoint(event);
+    setStart(point);
+    setDraft({ x: point.x, y: point.y, width: 0, height: 0 });
+  };
+
+  const move = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!start) return;
+    setDraft(makeRedaction(start, getPoint(event)));
+  };
+
+  const finish = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!start) return;
+    const redaction = makeRedaction(start, getPoint(event));
+    if (redaction.width >= 0.008 && redaction.height >= 0.006) {
+      onChange((current) => ({
+        ...current,
+        redactions: [...current.redactions, redaction],
+        identityAbsent: false,
+      }));
+    }
+    setStart(null);
+    setDraft(null);
+  };
+
+  return (
+    <article className="rounded-xl border border-border bg-background p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <strong className="text-sm">Halaman {page.number}</strong>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={!page.redactions.length}
+          onClick={() => onChange((current) => ({ ...current, redactions: [] }))}
+        >
+          <Trash2 className="mr-1 size-3.5" /> Hapus samaran
+        </Button>
+      </div>
+
+      <div
+        className="relative mx-auto w-full max-w-[760px] touch-none select-none overflow-hidden rounded-md border border-border bg-muted"
+        onPointerDown={begin}
+        onPointerMove={move}
+        onPointerUp={finish}
+        onPointerCancel={finish}
+        aria-label={`Area pratinjau halaman ${page.number}; tarik untuk menyamarkan identitas`}
+      >
+        <img
+          src={page.previewUrl}
+          alt={`Pratinjau halaman ${page.number}`}
+          draggable={false}
+          className="block h-auto w-full"
+        />
+        {page.redactions.map((area, index) => (
+          <span
+            key={`${page.number}-${index}`}
+            aria-hidden="true"
+            className="pointer-events-none absolute bg-black"
+            style={{
+              left: `${area.x * 100}%`,
+              top: `${area.y * 100}%`,
+              width: `${area.width * 100}%`,
+              height: `${area.height * 100}%`,
+            }}
+          />
+        ))}
+        {draft && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute border-2 border-red-500 bg-black/80"
+            style={{
+              left: `${draft.x * 100}%`,
+              top: `${draft.y * 100}%`,
+              width: `${draft.width * 100}%`,
+              height: `${draft.height * 100}%`,
+            }}
+          />
+        )}
+      </div>
+
+      <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+        <input
+          type="checkbox"
+          checked={page.identityAbsent}
+          onChange={(event) => onChange((current) => ({
+            ...current,
+            identityAbsent: event.target.checked,
+          }))}
+        />
+        Halaman ini tidak memuat area identitas
+      </label>
+      <p className="mt-1 text-[11px] text-muted-foreground">
+        Tarik kotak hitam menutupi nama, NIK, alamat, barcode, atau identitas lain yang terlihat.
+      </p>
+    </article>
+  );
+}
+
+export default function MCUPdfRedactor({
+  busy,
+  onExtract,
+}: {
+  busy: boolean;
+  onExtract: (images: string[]) => Promise<void>;
+}) {
+  const [driveUrl, setDriveUrl] = useState('');
+  const [pages, setPages] = useState<PdfPagePreview[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [sourceName, setSourceName] = useState('');
+
+  const readyToExtract = useMemo(
+    () => pages.length > 0 && pages.every((page) => page.redactions.length > 0 || page.identityAbsent),
+    [pages],
+  );
+
+  const updatePage = (pageNumber: number, update: (page: PdfPagePreview) => PdfPagePreview) => {
+    setPages((current) => current.map((page) => page.number === pageNumber ? update(page) : page));
+  };
+
+  async function renderPdf(bytes: ArrayBuffer, name: string) {
+    const signature = new TextDecoder().decode(bytes.slice(0, 5));
+    if (signature !== '%PDF-') throw new Error('File yang dipilih bukan PDF yang valid.');
+
+    const pdfjs = await import('pdfjs-dist');
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+    const document = await pdfjs.getDocument({ data: new Uint8Array(bytes) }).promise;
+    if (document.numPages > MAX_PAGES) {
+      await document.destroy();
+      throw new Error(`PDF dibatasi hingga ${MAX_PAGES} halaman. Pecah dokumen lalu proses bagian per bagian.`);
+    }
+
+    const renderedPages: PdfPagePreview[] = [];
+    for (let number = 1; number <= document.numPages; number += 1) {
+      const pdfPage = await document.getPage(number);
+      const baseViewport = pdfPage.getViewport({ scale: 1 });
+      const scale = Math.min(2, 1500 / baseViewport.width);
+      const viewport = pdfPage.getViewport({ scale });
+      const canvas = window.document.createElement('canvas');
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Browser tidak dapat menyiapkan pratinjau PDF.');
+      await pdfPage.render({ canvasContext: context, viewport }).promise;
+      renderedPages.push({
+        number,
+        canvas,
+        previewUrl: canvas.toDataURL('image/jpeg', 0.82),
+        redactions: [],
+        identityAbsent: false,
+      });
+    }
+    await document.destroy();
+    setPages(renderedPages);
+    setSourceName(name);
+  }
+
+  async function openLocalFile(file: File | undefined) {
+    if (!file) return;
+    setError('');
+    setPages([]);
+    if (file.type !== 'application/pdf' || file.size > MAX_FILE_BYTES) {
+      setError(file.size > MAX_FILE_BYTES
+        ? 'Ukuran PDF maksimal 15 MB.'
+        : 'Pilih file PDF.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await renderPdf(await file.arrayBuffer(), file.name);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'PDF tidak dapat dibuka.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function openDriveFile() {
+    setError('');
+    setPages([]);
+    setLoading(true);
+    try {
+      const fileId = parseDriveFileId(driveUrl);
+      const response = await fetch(`/api/ocr/source?fileId=${encodeURIComponent(fileId)}`, {
+        cache: 'no-store',
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(result?.error || 'PDF tidak dapat diambil dari Google Drive.');
+      }
+      const bytes = await response.arrayBuffer();
+      if (bytes.byteLength > MAX_FILE_BYTES) throw new Error('Ukuran PDF maksimal 15 MB.');
+      await renderPdf(bytes, 'PDF dari Google Drive');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Gagal membuka PDF dari Google Drive.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function extract() {
+    if (!readyToExtract || busy) return;
+    setError('');
+    try {
+      const images = pages.map((page) => {
+        const canvas = window.document.createElement('canvas');
+        canvas.width = page.canvas.width;
+        canvas.height = page.canvas.height;
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Browser tidak dapat menyiapkan hasil yang disamarkan.');
+        context.drawImage(page.canvas, 0, 0);
+        context.fillStyle = '#000000';
+        for (const area of page.redactions) {
+          context.fillRect(
+            Math.floor(area.x * canvas.width),
+            Math.floor(area.y * canvas.height),
+            Math.ceil(area.width * canvas.width),
+            Math.ceil(area.height * canvas.height),
+          );
+        }
+        return canvas.toDataURL('image/jpeg', 0.78);
+      });
+      if (images.reduce((total, image) => total + image.length, 0) > MAX_IMAGES_CHARS) {
+        throw new Error('Ukuran gambar hasil penyamaran terlalu besar. Gunakan PDF yang lebih kecil atau kurangi jumlah halaman.');
+      }
+      await onExtract(images);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Gambar hasil penyamaran tidak dapat diproses.');
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 rounded-xl border border-border bg-muted/40 p-3 sm:grid-cols-2">
+        <label className="flex flex-col gap-2 text-sm font-medium">
+          Pilih PDF dari perangkat
+          <input
+            type="file"
+            accept="application/pdf,.pdf"
+            disabled={loading || busy}
+            onChange={(event) => void openLocalFile(event.target.files?.[0])}
+            className="min-w-0 rounded-lg border border-input bg-background p-2 text-xs"
+          />
+        </label>
+        <div className="flex min-w-0 flex-col gap-2">
+          <label htmlFor="mcu-drive-link" className="text-sm font-medium">Atau tautan Google Drive</label>
+          <div className="flex min-w-0 gap-2">
+            <input
+              id="mcu-drive-link"
+              type="url"
+              value={driveUrl}
+              onChange={(event) => setDriveUrl(event.target.value)}
+              placeholder="https://drive.google.com/file/d/..."
+              disabled={loading || busy}
+              className="h-10 min-w-0 flex-1 rounded-lg border border-input bg-background px-3 text-xs"
+            />
+            <Button type="button" variant="outline" onClick={() => void openDriveFile()} disabled={!driveUrl.trim() || loading || busy}>
+              <Upload className="mr-1 size-4" /> Buka
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        PDF asli tetap di perangkat atau Drive. Hanya gambar hasil penyamaran yang dikirim untuk dibaca.
+        Maksimal 15 MB dan {MAX_PAGES} halaman per proses.
+      </p>
+
+      {loading && (
+        <div className="flex items-center justify-center gap-2 rounded-xl border border-border p-8 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" /> Menyiapkan pratinjau PDF...
+        </div>
+      )}
+      {error && <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+
+      {pages.length > 0 && !loading && (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold">{sourceName} · {pages.length} halaman</p>
+              <p className="text-xs text-muted-foreground">Tinjau tiap halaman. Buat kotak hitam pada identitas atau tandai bahwa halaman tidak memuat identitas.</p>
+            </div>
+            <Button type="button" onClick={() => void extract()} disabled={!readyToExtract || busy} className="h-10">
+              {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : <ScanLine className="mr-2 size-4" />}
+              {busy ? 'Mengekstrak...' : 'Kirim hasil tersamar'}
+            </Button>
+          </div>
+          {!readyToExtract && (
+            <p className="text-xs font-medium text-amber-700">
+              Setiap halaman harus memiliki area yang disamarkan atau ditandai tanpa identitas.
+            </p>
+          )}
+          <div className="grid gap-4">
+            {pages.map((page) => (
+              <PagePreview
+                key={page.number}
+                page={page}
+                onChange={(update) => updatePage(page.number, update)}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

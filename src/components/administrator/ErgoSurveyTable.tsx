@@ -2,7 +2,7 @@
 // Halaman Administrator > Ergonomi (panel "Data Survei & PICA"): persetujuan, rekomendasi/PICA, verifikasi efektivitas.
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { authFetch } from '@/lib/api-client';
-import { FORM_NO, KLAS_COLOR, type Klasifikasi, type Metode } from '@/lib/hc-ergo';
+import { KLAS_COLOR, type Klasifikasi } from '@/lib/hc-ergo';
 import { Btn, BtnRow, Chip, Field, Notice, SITES, fmtDate, grid3, inputStyle, smallInput, tableStyle, tdStyle, thStyle } from './hc-ergo-ui';
 
 type Row = Record<string, any>;
@@ -65,7 +65,7 @@ export default function ErgoSurveyTable() {
                 <Fragment key={s.id}>
                   <tr>
                     <td style={tdStyle}>{fmtDate(s.tanggal)}</td>
-                    <td style={tdStyle}>{s.metode}<div style={{ fontSize: 9, color: 'var(--muted-foreground)' }}>{FORM_NO[s.metode as Metode].slice(-8)}</div></td>
+                    <td style={tdStyle}>{s.metode}</td>
                     <td style={tdStyle}>{s.site}<div style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>{s.area_kerja}</div></td>
                     <td style={tdStyle}>{s.aktivitas}<div style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>{s.pekerja_diamati}</div></td>
                     <td style={tdStyle}><b>{s.skor_akhir}</b></td>

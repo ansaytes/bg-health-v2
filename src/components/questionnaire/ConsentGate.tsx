@@ -102,7 +102,7 @@ export default function ConsentGate({
             Persetujuan — {instrumen}
           </h2>
           <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '3px 0 0' }}>
-            BG/QSHE/FORM/098 Rev.000 · Gulir sampai paling bawah untuk melanjutkan.
+            Gulir sampai paling bawah untuk membaca seluruh pernyataan dan melanjutkan.
           </p>
         </div>
 

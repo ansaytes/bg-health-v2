@@ -114,7 +114,7 @@ export async function GET(req: NextRequest) {
       { nilai: 'RUSAK_BERAT', label: 'Rusak berat', arti: 'Tidak dapat dipakai; wajib diperbaiki atau diganti' },
       { nilai: 'TIDAK_ADA', label: 'Tidak ada', arti: 'Belum tersedia di site' },
     ],
-    catatanStandar: 'SOP/028 poin 5.5 menetapkan daftar sarana, tetapi tidak menetapkan skala penilaian kondisi. Standar di atas diturunkan dari praktik umum pemeliharaan peralatan medis (Permenkes 54/2015 tentang Pengujian & Kalibrasi Alat Kesehatan) dan disetujui sebagai acuan internal.',
+    catatanStandar: 'Gunakan kategori kondisi yang tersedia secara konsisten saat menilai sarana dan peralatan.',
   });
 }
 

@@ -17,7 +17,7 @@ export interface Question {
   imageChoices?: boolean;      // (tidak dipakai lagi; kartu bergambar otomatis bila ada pilihan ber-gambar)
 }
 export interface WizardDef {
-  metode: Metode; formNo: string; title: string; source: string; intro: string[]; questions: Question[]; interpretasi: { range: string; text: string }[];
+  metode: Metode; title: string; source: string; intro: string[]; questions: Question[]; interpretasi: { range: string; text: string }[];
 }
 
 export type Answer = { choice?: string; mods: string[] };
@@ -48,8 +48,8 @@ const FORCE: Choice[] = [
 
 /* ═════════════ RULA — FORM/116 (McAtamney & Corlett) ═════════════ */
 export const RULA_DEF: WizardDef = {
-  metode: 'RULA', formNo: 'BG/QSHE/FORM/116', title: 'RULA — Rapid Upper Limb Assessment',
-  source: 'Gambar: RULA Employee Assessment Worksheet pada FORM/116 (McAtamney & Corlett, 1993)',
+  metode: 'RULA', title: 'RULA — Rapid Upper Limb Assessment',
+  source: 'Gambar: RULA Employee Assessment Worksheet (McAtamney & Corlett, 1993)',
   intro: [
     'Amati satu siklus kerja yang representatif (foto/video), pilih sisi tubuh yang paling berisiko.',
     'Jawab langkah demi langkah sesuai worksheet RULA: tentukan posisi, lalu centang penyesuaian (adjust) bila ada.',
@@ -107,8 +107,8 @@ export const RULA_DEF: WizardDef = {
 /* ═════════════ ROSA — FORM/117 (Sonne et al., 2012) ═════════════ */
 const NA = (label = 'Tidak dapat diatur / non-adjustable (+1)'): Modifier => ({ id: 'na', label, delta: 1 });
 export const ROSA_DEF: WizardDef = {
-  metode: 'ROSA', formNo: 'BG/QSHE/FORM/117', title: 'ROSA — Rapid Office Strain Assessment',
-  source: 'Gambar: Sonne et al., Applied Ergonomics 43 (2012) 98–108, sebagaimana dimuat pada FORM/117',
+  metode: 'ROSA', title: 'ROSA — Rapid Office Strain Assessment',
+  source: 'Gambar: Sonne et al., Applied Ergonomics 43 (2012) 98–108',
   intro: [
     'Nilai workstation pekerja kantor: kursi (tinggi, kedalaman dudukan, sandaran tangan, sandaran punggung), lalu monitor, telepon, mouse, dan keyboard.',
     'Pada tiap bagian pilih kondisi dasar sesuai gambar, lalu centang penambahan (+) yang berlaku.',
@@ -154,8 +154,8 @@ const WERA_GUIDE = 'Nilai setiap faktor berdasarkan kriteria Low/Medium/High pad
 const w = (key: string, group: string, title: string, f: string, labels: [string, string, string], extra: string[] = []): Question =>
   ({ key, group, title, guide: [WERA_GUIDE, ...extra], choices: lv(f, labels), imageChoices: true, min: 1, max: 3 });
 export const WERA_DEF: WizardDef = {
-  metode: 'WERA', formNo: 'BG/QSHE/FORM/118', title: 'WERA — Workplace Ergonomic Risk Assessment',
-  source: 'Gambar: kriteria Low / Medium / High pada FORM/118',
+  metode: 'WERA', title: 'WERA — Workplace Ergonomic Risk Assessment',
+  source: 'Gambar: kriteria Low / Medium / High pada instrumen WERA',
   intro: [
     'Nilai 9 faktor risiko fisik: bahu, pergelangan tangan, punggung, leher, kaki, kuat, getaran, tekanan langsung, dan durasi kerja.',
     'Klik gambar yang paling sesuai dengan kondisi kerja (LOW / MED / HIGH).',

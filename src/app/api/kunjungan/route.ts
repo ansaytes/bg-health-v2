@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Body permintaan tidak valid.' }, { status: 400 });
     }
     const input = body as Record<string, unknown>;
-    const { nik, nama, departemen, jobsite, tanggal, diagnosa, jenis_obat, rujuk_rs, nama_rs, usia, jk, jabatan, keluhan, kategori } = input;
+    const { nik, nama, departemen, jobsite, tanggal, diagnosa, jenis_obat, absen, rujuk_rs, nama_rs, usia, jk, jabatan, keluhan, kategori } = input;
 
     // NIK is optional (e.g. for new hires or interns not yet registered in employee table)
     if (typeof nama !== 'string' || !nama.trim() || typeof jobsite !== 'string' || !jobsite.trim()
@@ -101,6 +101,7 @@ export async function POST(request: NextRequest) {
       kategori,
       diagnosa: diagnosa || null,
       jenis_obat: jenis_obat || null,
+      izin_absen: absen === 'Ya' || absen === true,
       rujuk_rs: rujuk_rs === 'Ya' || rujuk_rs === true,
       nama_rs: nama_rs || null,
       usia: usia ? parseInt(String(usia), 10) || null : null,

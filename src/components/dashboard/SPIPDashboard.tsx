@@ -130,7 +130,7 @@ export default function SPIPDashboard() {
       </div>
 
       {/* Baris 1 — tiga donut */}
-      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, flex: 1, minHeight: 0 }}>
+      <div className="mcu-live-chart-row">
         <div className="card mcu-dashboard-card">
           <div className="card-head"><div><h2>Kelengkapan</h2><p>Tersedia vs belum tersedia</p></div></div>
           <div className="mcu-dashboard-chart">
@@ -178,7 +178,7 @@ export default function SPIPDashboard() {
       </div>
 
       {/* Baris 2 — top 10 rusak, top 10 belum, per kategori */}
-      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, flex: 1, minHeight: 0 }}>
+      <div className="mcu-live-chart-row">
         <KartuChart judul="Top 10 SPIP Rusak" sub="Jumlah site dengan alat rusak" kosong={!data.topRusak.length} pesanKosong="Tidak ada alat rusak">
           <MCUChart
             type="bar"
@@ -217,7 +217,7 @@ export default function SPIPDashboard() {
       </div>
 
       {/* Baris 3 — per site + kalibrasi lewat */}
-      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8, flex: 1, minHeight: 0 }}>
+      <div className="mcu-live-chart-row mcu-live-chart-row--two">
         <div className="card mcu-dashboard-card">
           <div className="card-head"><div><h2>Kelengkapan per Site</h2><p>10 site terendah (%)</p></div></div>
           <div className="mcu-dashboard-chart">

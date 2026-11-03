@@ -8,7 +8,7 @@
 // Pola UI mengikuti tema aplikasi (var(--card)/var(--border)).
 
 import { useEffect, useState } from 'react';
-import { Building2, FileText, Clock, Hospital, Save, Loader2, Users, Plug } from 'lucide-react';
+import { Building2, Clock, Hospital, Save, Loader2, Users, Plug } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/lib/use-app-settings';
@@ -18,11 +18,10 @@ import CenteredTabs from '@/components/ui/centered-tabs';
 import UserManagement from '@/components/administrator/UserManagement';
 import IntegrationSettings from '@/components/settings/IntegrationSettings';
 
-type Tab = 'perusahaan' | 'dokumen' | 'pak' | 'faskes' | 'integrasi' | 'pengguna';
+type Tab = 'perusahaan' | 'pak' | 'faskes' | 'integrasi' | 'pengguna';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'perusahaan', label: 'Perusahaan' },
-  { key: 'dokumen', label: 'Nomor Dokumen' },
   { key: 'pak', label: 'Batas Waktu PAK' },
   { key: 'faskes', label: 'Faskes & BPJS' },
   { key: 'integrasi', label: 'Integrasi' },
@@ -55,7 +54,6 @@ export default function AppSettingsPage() {
     setDraft((prev) => {
       const next = structuredClone(prev);
       const keys = path.split('.');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- traversal dinamis nested
       let cur = next as any;
       for (let i = 0; i < keys.length - 1; i++) cur = cur[keys[i]];
       cur[keys[keys.length - 1]] = value;
@@ -72,7 +70,7 @@ export default function AppSettingsPage() {
         <div>
           <h1 style={{ fontSize: 17, fontWeight: 800, color: 'var(--foreground)', margin: 0 }}>Pengaturan Aplikasi</h1>
           <p style={{ fontSize: 11.5, color: 'var(--muted-foreground)', margin: '2px 0 0' }}>
-            Nomor dokumen, identitas perusahaan, dan batas waktu yang dipakai laporan cetak.
+            Identitas perusahaan dan konfigurasi operasional aplikasi.
           </p>
         </div>
         {canEdit && (
@@ -119,7 +117,7 @@ export default function AppSettingsPage() {
                 <Input className={inputCls} value={draft.perusahaan.nama} disabled={!canEdit} onChange={(e) => set('perusahaan.nama', e.target.value)} />
               </label>
               <label className="flex flex-col gap-1">
-                <span className={labelCls}>Prefiks ID Dokumen (mis. PAK-BG0926-001)</span>
+                <span className={labelCls}>Awalan ID Kasus PAK</span>
                 <Input className={inputCls} value={draft.perusahaan.prefiksId} disabled={!canEdit} onChange={(e) => set('perusahaan.prefiksId', e.target.value.toUpperCase())} maxLength={4} />
               </label>
               <label className="flex flex-col gap-1">
@@ -138,40 +136,14 @@ export default function AppSettingsPage() {
           </section>
         )}
 
-        {tab === 'dokumen' && (
-          <section style={{ background: 'var(--card)', borderRadius: 12, padding: 16, border: '1px solid var(--border)' }}>
-            <div className="flex items-center gap-2 mb-1">
-              <FileText className="size-4 text-primary" />
-              <h3 style={{ fontSize: 12.5, fontWeight: 700, margin: 0 }}>Nomor Dokumen Resmi</h3>
-            </div>
-            <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: '0 0 12px' }}>
-              Ditampilkan pada laporan cetak. Form PAK masih draft — isi nomor resminya di sini saat terbit.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {([
-                ['dokumen.formPak', 'Form PAK-01/02/03'],
-                ['dokumen.form123', 'FORM/123 — Kelaikan Kerja'],
-                ['dokumen.formRula', 'FORM/116 — RULA'],
-                ['dokumen.formRosa', 'FORM/117 — ROSA'],
-                ['dokumen.formWera', 'FORM/118 — WERA'],
-              ] as const).map(([path, label]) => (
-                <label key={path} className="flex flex-col gap-1">
-                  <span className={labelCls}>{label}</span>
-                  <Input className={inputCls} value={path.split('.').reduce((o: unknown, k: string) => (o as Record<string, string>)[k], draft as unknown) as string} disabled={!canEdit} onChange={(e) => set(path, e.target.value)} />
-                </label>
-              ))}
-            </div>
-          </section>
-        )}
-
         {tab === 'pak' && (
           <section style={{ background: 'var(--card)', borderRadius: 12, padding: 16, border: '1px solid var(--border)' }}>
             <div className="flex items-center gap-2 mb-1">
               <Clock className="size-4 text-primary" />
-              <h3 style={{ fontSize: 12.5, fontWeight: 700, margin: 0 }}>Batas Waktu PAK (INK/017)</h3>
+              <h3 style={{ fontSize: 12.5, fontWeight: 700, margin: 0 }}>Batas Waktu PAK</h3>
             </div>
             <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: '0 0 12px' }}>
-              Dipakai engine deadline Register PAK. Default mengikuti INK/017 dan Permenaker.
+              Dipakai untuk menghitung tenggat tindak lanjut dan pelaporan PAK.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="flex flex-col gap-1">

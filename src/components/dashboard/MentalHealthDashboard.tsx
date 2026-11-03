@@ -284,7 +284,7 @@ export default function MentalHealthDashboard() {
       {/* TEMPLATE SERAGAM Monitoring MCU: 4 diagram berjajar.
           Kotak KPI terpisah DIHAPUS — angkanya sudah tampil pada donut
           (total di tengah + persentase per potongan). */}
-      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, flex: 1, minHeight: 0 }}>
+      <div className="mcu-live-chart-row mcu-live-chart-row--four">
         <ChartCard title="SRQ-20" sub="Ambang ≥6 = perlu tindak lanjut" accent="#E74C3C" empty={!i.srq20.terisi}>
           <MCUChart
             type="doughnut"
@@ -317,7 +317,7 @@ export default function MentalHealthDashboard() {
           `sds.perIndikator`. Sebelumnya empat diagram sebelumnya hanya
           menunjukkan total, bukan DERAJAT — sehingga tidak informatif untuk
           menentukan prioritas tindak lanjut. */}
-      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, flex: 1, minHeight: 0 }}>
+      <div className="mcu-live-chart-row">
         <ChartCard title="Sebaran Skor SRQ-20" sub="Ringan · sedang · berat" accent="#E74C3C" empty={!Object.keys(i.srq20.band || {}).length}>
           <MCUChart
             type="bar"

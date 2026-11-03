@@ -5,7 +5,7 @@
 // ============================================================
 // Superuser/administrator: kelola kasus (input, triase, diagnosis, laporan).
 // Manager/pic: read-only (menandatangani laporan Tahap I).
-// Cetak PAK-01/02/03 via print CSS — nomor dokumen dari Setting.
+// Dokumen register dicetak melalui print CSS.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2, Printer, Plus, AlertTriangle, RefreshCw, Search, Trash2, ShieldCheck, ShieldAlert } from 'lucide-react';
@@ -67,7 +67,7 @@ interface PakCase {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  DITERIMA: 'Diterima', DITRIASE: 'Ditriase', PENEGAKAN: 'Penegakan (PAK-02)',
+  DITERIMA: 'Diterima', DITRIASE: 'Ditriase', PENEGAKAN: 'Penegakan',
   PAK: 'PAK', DUGAAN_PAK: 'Dugaan PAK', BUKAN_PAK: 'Bukan PAK',
   TAHAP_I: 'Tahap I (pelaporan)', TAHAP_II: 'Tahap II', DITUTUP: 'Ditutup',
 };
@@ -122,7 +122,7 @@ export default function PakRegister() {
     try {
       const res = await authFetch('/api/pak?resource=list');
       setCases(Array.isArray(res.data) ? res.data : []);
-      if (res.pak) setSettings(mergeSettings({ pak: res.pak, dokumen: res.dokumen }));
+      if (res.pak) setSettings(mergeSettings({ pak: res.pak }));
     } catch (e) {
       store.showToast(e instanceof Error ? e.message : 'Gagal memuat Register PAK', 'error');
     } finally {
@@ -201,7 +201,7 @@ export default function PakRegister() {
         <div>
           <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>Register PAK</h2>
           <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '2px 0 0' }}>
-            INK/017 · {cases.length} kasus · {lewatDeadline > 0 ? <b style={{ color: '#FF2D2D' }}>{lewatDeadline} lewat batas waktu</b> : 'semua tepat waktu'}
+            {cases.length} kasus · {lewatDeadline > 0 ? <b style={{ color: '#FF2D2D' }}>{lewatDeadline} lewat batas waktu</b> : 'semua tepat waktu'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -274,7 +274,7 @@ export default function PakRegister() {
                           </Button>
                         ) : (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 700, color: '#9a6b00', cursor: 'help' }}
-                            title="Periksa dokumen HRA (Health Risk Assessment) unit kerja karyawan sebagai rujukan klarifikasi pajanan — INK/017 Lampiran 1">
+                            title="Periksa dokumen HRA (Health Risk Assessment) unit kerja karyawan sebagai rujukan klarifikasi pajanan">
                             <AlertTriangle size={10} /> Belum diverifikasi
                           </span>
                         )
@@ -283,7 +283,7 @@ export default function PakRegister() {
                     <td className={td} style={{ whiteSpace: 'nowrap', fontSize: 10.5 }}>{fmtJam(c.tanggal_diterima)}<div style={{ fontSize: 9.5, color: 'var(--muted-foreground)' }}>{c.diterima_oleh}</div></td>
                     <td className={td} style={{ fontSize: 10 }}>
                       {c.triase_keputusan
-                        ? <><b>{c.triase_keputusan === 'TIDAK_MEMENUHI' ? 'Tidak memenuhi' : c.triase_keputusan === 'LANJUT_PAK02' ? 'Lanjut PAK-02' : 'Perlu tambahan'}</b><div style={{ fontSize: 9.5, color: 'var(--muted-foreground)' }}>{fmtJam(c.triase_tgl)}</div></>
+                        ? <><b>{c.triase_keputusan === 'TIDAK_MEMENUHI' ? 'Tidak memenuhi' : c.triase_keputusan === 'LANJUT_PAK02' ? 'Lanjut pemeriksaan' : 'Perlu tambahan'}</b><div style={{ fontSize: 9.5, color: 'var(--muted-foreground)' }}>{fmtJam(c.triase_tgl)}</div></>
                         : <DeadlineBadge sisaJam={c.deadline_info?.triaseSisaJam ?? null} label="Triase" />}
                     </td>
                     <td className={td} style={{ fontSize: 10 }}>
@@ -403,7 +403,7 @@ function NewCaseForm({ saving, onCancel, onSubmit }: {
             <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
             <span>
               Periksa dokumen <b>HRA (Health Risk Assessment)</b> untuk memastikan hubungan pajanan
-              dengan keluhan/diagnosis sebelum menetapkan dugaan PAK (INK/017 Lampiran 1). Sumber
+              dengan keluhan/diagnosis sebelum menetapkan dugaan PAK. Sumber
               pajanan yang tercantum di HRA unit kerja karyawan menjadi dasar klarifikasi.
             </span>
           </div>
@@ -421,7 +421,7 @@ function NewCaseForm({ saving, onCancel, onSubmit }: {
           <Input value={form.diagnosis_klinis ?? ''} onChange={(e) => set('diagnosis_klinis', e.target.value)} placeholder="mis. NIHL bilateral, Silikosis" className="h-9 rounded-lg text-sm" />
         </label>
         <label className="flex flex-col gap-1 sm:col-span-3">
-          <span className={label}>Hasil MCU Pemicu (rujuk Lampiran 1 SOP/INK 017)</span>
+          <span className={label}>Hasil MCU Pemicu</span>
           <Textarea rows={2} value={form.hasil_mcu_pemicu ?? ''} onChange={(e) => set('hasil_mcu_pemicu', e.target.value)} placeholder="mis. STS kanan 12 dB vs baseline 2025" className="text-sm rounded-lg bg-background" />
         </label>
       </div>
@@ -452,7 +452,7 @@ function TriaseRow({ kasus, saving, onSubmit }: {
       <select value={keputusan} onChange={(e) => setKeputusan(e.target.value)} className="h-9 rounded-lg border-input bg-background px-2 text-xs">
         <option value="TIDAK_MEMENUHI">Tidak memenuhi dugaan PAK</option>
         <option value="PERLU_TAMBAHAN">Perlu pemeriksaan tambahan</option>
-        <option value="LANJUT_PAK02">Dugaan PAK — lanjut PAK-02</option>
+        <option value="LANJUT_PAK02">Dugaan PAK — lanjut pemeriksaan</option>
       </select>
       <Input value={alasan} onChange={(e) => setAlasan(e.target.value)} placeholder="Alasan / catatan triase" className="h-9 flex-1 rounded-lg text-sm min-w-[200px]" />
       <Button size="sm" onClick={() => onSubmit(keputusan, alasan)} disabled={saving || (keputusan === 'TIDAK_MEMENUHI' && !alasan.trim())}>

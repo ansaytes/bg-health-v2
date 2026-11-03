@@ -27,7 +27,7 @@ import {
   GEMINI_OCR_MODELS,
   getGeminiOcrModel,
 } from '@/lib/gemini-ocr-models';
-import DriveFileUpload from '@/components/settings/DriveFileUpload';
+import MCUPdfRedactor from './MCUPdfRedactor';
 import { calcEgfrCkdEpi2021, getMissingZonasiInputs } from '@/lib/zonasi-engine';
 
 type SearchBy = 'nik' | 'national_id' | 'nama';
@@ -221,7 +221,6 @@ function getNormalRangeText(field: MCUFieldDef, gender?: string): string {
 export default function ReviewMCU() {
   const store = useMCUStore();
   const [nikInput, setNikInput] = useState('');
-  const [ocrText, setOcrText] = useState('');
   const [direction, setDirection] = useState(1);
   const [ocrProgress, setOcrProgress] = useState(0);
   const [extractionCooldown, setExtractionCooldown] = useState(0);
@@ -329,8 +328,8 @@ export default function ReviewMCU() {
   }, [store, goStep]);
 
   // Step 2: OCR extraction
-  const handleExtract = useCallback(async () => {
-    if (!ocrText.trim()) return;
+  const handleExtract = useCallback(async (images: string[]) => {
+    if (!images.length) return;
     store.setExtractingOCR(true);
     setOcrProgress(0);
 
@@ -343,7 +342,7 @@ export default function ReviewMCU() {
       const res = await fetch('/api/ocr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: ocrText.trim(), modelId: ocrModelId }),
+        body: JSON.stringify({ images, modelId: ocrModelId }),
       });
       clearInterval(interval);
       setOcrProgress(100);
@@ -377,7 +376,7 @@ export default function ReviewMCU() {
       store.setExtractingOCR(false);
       setTimeout(() => setOcrProgress(0), 600);
     }
-  }, [ocrText, ocrModelId, store, goStep]);
+  }, [ocrModelId, store, goStep]);
 
   // Save to Supabase
   const handleSave = useCallback(async () => {
@@ -398,7 +397,6 @@ export default function ReviewMCU() {
       if (json.success) {
         store.showToast(`Data MCU berhasil disimpan ke database (${json.action})`, 'success');
         setNikInput('');
-        setOcrText('');
         store.resetForm();
       } else {
         store.showToast(json.error || 'Gagal menyimpan', 'error');
@@ -660,19 +658,14 @@ export default function ReviewMCU() {
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold">Ekstraksi Data MCU</h2>
-                  <p className="text-sm text-muted-foreground">Tempel teks scan MCU atau Link Google Drive (PDF)</p>
+                  <p className="text-sm text-muted-foreground">Tinjau dan samarkan identitas pada setiap halaman sebelum ekstraksi</p>
                 </div>
               </div>
 
-              <Textarea
-                placeholder="Tempel teks hasil OCR atau Link Google Drive (PDF) di sini..."
-                value={ocrText}
-                onChange={(e) => setOcrText(e.target.value)}
-                className="min-h-[200px] text-sm rounded-xl bg-background resize-none"
+              <MCUPdfRedactor
+                busy={store.extractingOCR || extractionCooldown > 0}
+                onExtract={handleExtract}
               />
-              <div className="mt-3">
-                <DriveFileUpload category="mcu" accept="application/pdf,image/jpeg,image/png" onUploaded={setOcrText} />
-              </div>
 
               <div className="mt-3 flex flex-col gap-1.5">
                 <label htmlFor="ocr-model-mode" className="text-xs font-medium text-muted-foreground">
@@ -699,7 +692,7 @@ export default function ReviewMCU() {
                   <Progress value={ocrProgress} className="h-2 rounded-full" />
                   <p className="text-xs text-muted-foreground text-center">
                     {ocrProgress < 30
-                      ? 'Menganalisis teks...'
+                      ? 'Menganalisis hasil pemeriksaan...'
                       : ocrProgress < 70
                         ? 'Mengekstrak data medis...'
                         : 'Menyusun hasil...'}
@@ -708,20 +701,6 @@ export default function ReviewMCU() {
               )}
 
               <div className="flex gap-2 mt-4">
-                <motion.div {...buttonTap} className="flex-1">
-                  <Button
-                    onClick={handleExtract}
-                    disabled={store.extractingOCR || !ocrText.trim() || extractionCooldown > 0}
-                    className="w-full h-11 rounded-xl"
-                  >
-                    {store.extractingOCR ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <ScanLine className="size-4" />
-                    )}
-                    {extractionCooldown > 0 ? `Tunggu ${extractionCooldown} detik` : 'Proses Dokumen'}
-                  </Button>
-                </motion.div>
                 <motion.div {...buttonTap}>
                   <Button
                     variant="outline"

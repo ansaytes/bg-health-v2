@@ -241,8 +241,8 @@ export default function ErgonomiDashboard() {
         </span>
       </div>
 
-      {/* Grafik utama — 3 kolom × 2 baris mengisi frame */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gridTemplateRows: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8, flex: 1, minHeight: 0 }}>
+      {/* Grafik utama — jumlah dan jenis diagram sama di desktop maupun mobile. */}
+      <div className="ergonomi-chart-grid">
         <ChartCard title="Distribusi Klasifikasi Risiko" sub="Seluruh survei disetujui, semua metode" accent="#E63946" empty={!grandTotal}><canvas ref={klasRef} /></ChartCard>
         <ChartCard title="Klasifikasi per Metode" sub="RULA · ROSA · WERA" accent="#F5A623" empty={!grandTotal}><canvas ref={metodeRef} /></ChartCard>
         <ChartCard title="Status Rekomendasi" sub="Open · progress · closed · lewat tempo" accent="#00B894" empty={!rekomTotal}><canvas ref={rekomRef} /></ChartCard>

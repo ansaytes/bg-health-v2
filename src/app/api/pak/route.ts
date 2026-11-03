@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
           tahap1SisaJam: r.tahap1_batas ? sisaJam(new Date(r.tahap1_batas), now) : null,
         },
       }));
-      return ok(rows, { pak: settings.pak, dokumen: settings.dokumen });
+      return ok(rows, { pak: settings.pak });
     }
 
     if (resource === 'saran') {

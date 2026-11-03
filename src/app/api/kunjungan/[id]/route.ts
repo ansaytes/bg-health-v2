@@ -26,7 +26,7 @@ export async function PATCH(
     const updates: Record<string, unknown> = {};
     const allowedFields = [
       'nik', 'nama', 'departemen', 'jobsite', 'tanggal',
-      'diagnosa', 'jenis_obat', 'rujuk_rs', 'nama_rs',
+      'diagnosa', 'jenis_obat', 'izin_absen', 'rujuk_rs', 'nama_rs',
       'usia', 'jk', 'jabatan', 'keluhan', 'kategori',
     ];
 

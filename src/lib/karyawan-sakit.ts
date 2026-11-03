@@ -54,7 +54,7 @@ export const FASE: DefinisiFase[] = [
     kewajiban: [
       'Asesmen awal melalui telepon/telemedicine maksimal 2×24 jam (untuk sakit ≥3 hari)',
       'Verifikasi keaslian SKS',
-      'Buka Formulir Pemantauan (FORM/101)',
+      'Buka formulir pemantauan',
       'Informasikan kondisi awal kepada QSHE Manager',
     ],
   },
@@ -79,7 +79,7 @@ export const FASE: DefinisiFase[] = [
     intervalKontakHari: 14,
     kewajiban: [
       'Kontak minimum setiap 14 hari',
-      'Isi FORM/101 bulanan',
+      'Isi formulir pemantauan bulanan',
       'Koordinasi spesialis bila diperlukan',
       'Verifikasi kepesertaan BPJS aktif',
       'Laporan bulanan ke QSHE Manager',
@@ -111,7 +111,7 @@ export const FASE: DefinisiFase[] = [
       'Kunjungan langsung minimal 1×',
       'Evaluasi komprehensif prognosis',
       'Kumpulkan seluruh dokumen pendukung',
-      'Pastikan FORM/101 seluruh periode lengkap tanpa jeda',
+      'Pastikan catatan pemantauan setiap periode lengkap tanpa jeda',
       'Susun Resume Medis final',
     ],
   },
@@ -123,7 +123,7 @@ export const FASE: DefinisiFase[] = [
     intervalKontakHari: 30,
     kunjunganLangsungPerBulan: 1,
     kewajiban: [
-      'Terbitkan Surat Rekomendasi (FORM/123) sesuai kondisi terkini',
+      'Terbitkan surat rekomendasi sesuai kondisi terkini',
       'Ajukan persetujuan QSHE Manager dan General Manager',
     ],
   },
@@ -239,7 +239,7 @@ export function periksaSyaratUnfit(input: {
 
   // (f) rekam pemantauan lengkap
   if (input.jumlahPemantauan < 2) {
-    belum.push('Rekam pemantauan (FORM/101) belum memadai — minimal 2 catatan kontak');
+    belum.push('Rekam pemantauan belum memadai — minimal 2 catatan kontak');
   }
 
   // (a) durasi signifikan

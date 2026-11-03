@@ -258,7 +258,7 @@ export default function HearingConservationDashboard() {
       </div>
 
       {/* Enam grafik mengisi seluruh sisa frame — tanpa scroll halaman */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gridTemplateRows: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8, flex: 1, minHeight: 0 }}>
+      <div className="mcu-live-chart-row mcu-live-chart-row--two-rows">
         <ChartCard title="Zona Kebisingan Area" sub="Area per zona hasil pengukuran terakhir" accent="#E63946" empty={!nAreaTot}><canvas ref={zonaRef} /></ChartCard>
         <ChartCard title="Karyawan Terpajan" sub="A rutin · B insidental · C tidak terpajan" accent="#F5A623" empty={!katTotal}><canvas ref={kategoriRef} /></ChartCard>
         <ChartCard title="Cakupan Audiometri Tahun Ini" sub="Kategori A & B — sudah vs belum diperiksa" accent="#2E86DE" empty={!cakTotal}><canvas ref={cakupanRef} /></ChartCard>

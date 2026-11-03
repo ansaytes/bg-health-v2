@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
     if (/does not exist|PGRST205|42P01/i.test(error.message)) {
       return NextResponse.json({
         success: true, data: [], tabelSiap: false,
-        catatan: 'Tabel belum dibuat. Jalankan migration 20261028_karyawan_sakit.sql.',
+        catatan: 'Skema pemantauan karyawan sakit belum tersedia.',
       });
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -66,6 +66,20 @@ export async function GET(req: NextRequest) {
 
   const rows = (episodes ?? []) as Record<string, unknown>[];
   const ids = rows.map((r) => String(r.id));
+  const kunjunganIds = [...new Set(rows.map((r) => String(r.kunjungan_id ?? '')).filter(Boolean))];
+  const kunjunganResult = kunjunganIds.length
+    ? await client.from('kunjungan_berobat').select('id,tanggal,izin_absen,rujuk_rs').in('id', kunjunganIds)
+    : { data: [], error: null };
+  if (kunjunganResult.error) {
+    console.error('[Sick monitoring] Failed to load linked clinic visits:', kunjunganResult.error.code);
+    return NextResponse.json({ error: 'Gagal mengambil hubungan kunjungan klinik.' }, { status: 500 });
+  }
+  const kunjunganById = new Map<string, Record<string, unknown>>(
+    (kunjunganResult.data ?? []).map((visit): [string, Record<string, unknown>] => [
+      String(visit.id),
+      visit,
+    ]),
+  );
 
   // Pemantauan & rekomendasi diambil sekaligus untuk episode yang tampil.
   const [pemantauanRes, rekomendasiRes] = await Promise.all([
@@ -95,6 +109,7 @@ export async function GET(req: NextRequest) {
   const sekarang = new Date();
   const data = rows.map((r) => {
     const id = String(r.id);
+    const linkedVisit = r.kunjungan_id ? kunjunganById.get(String(r.kunjungan_id)) : undefined;
     const pemantauan = pemantauanByEpisode.get(id) ?? [];
     const rekomendasi = rekomendasiByEpisode.get(id) ?? [];
     const mulai = String(r.tanggal_mulai_sakit ?? '').slice(0, 10);
@@ -132,6 +147,11 @@ export async function GET(req: NextRequest) {
       id,
       nik: r.nik_enc ? String(r.nik_enc) : null,
       nama: r.nama_enc ? String(r.nama_enc) : null,
+      kunjunganId: r.kunjungan_id ? String(r.kunjungan_id) : null,
+      kunjunganTanggal: linkedVisit?.tanggal ? String(linkedVisit.tanggal).slice(0, 10) : null,
+      kunjunganDenganAbsen: linkedVisit?.izin_absen === true,
+      kunjunganDirujuk: linkedVisit?.rujuk_rs === true,
+      sickEmployeeId: r.sick_employee_id ? String(r.sick_employee_id) : null,
       site: r.site ?? null,
       department: r.department ?? null,
       jabatan: r.jabatan ?? null,
@@ -211,7 +231,7 @@ export async function POST(req: NextRequest) {
   const mulai = toDate(body.tanggalMulaiSakit);
 
   if (!nik) return NextResponse.json({ error: 'NIK karyawan wajib diisi' }, { status: 400 });
-  if (!mulai) return NextResponse.json({ error: 'Tanggal mulai sakit wajib diisi (SOP/027 poin 6.6.1)' }, { status: 400 });
+  if (!mulai) return NextResponse.json({ error: 'Tanggal mulai sakit wajib diisi.' }, { status: 400 });
 
   const site = String(body.site ?? '').trim() || null;
   if (caller.role === 'pic' && (!caller.site || !site
@@ -262,7 +282,7 @@ export async function POST(req: NextRequest) {
   if (error) {
     if (/does not exist|PGRST205|42P01/i.test(error.message)) {
       return NextResponse.json({
-        error: 'Tabel belum dibuat. Jalankan migration 20261028_karyawan_sakit.sql.',
+        error: 'Skema pemantauan karyawan sakit belum tersedia.',
       }, { status: 500 });
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
