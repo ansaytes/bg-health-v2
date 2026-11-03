@@ -33,7 +33,7 @@ yarn-error.log*
 .env.local
 .env.*
 .env.*.local
-!.env.example
+.env.example
 
 # Local-only archive for legacy code and private source files
 /local-only/
