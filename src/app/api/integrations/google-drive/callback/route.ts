@@ -82,17 +82,23 @@ export async function GET(request: NextRequest) {
       return redirectToSettings('token_exchange_failed');
     }
 
-    const accountResponse = await fetch('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)', {
+    const accountResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
       signal: AbortSignal.timeout(10_000),
       cache: 'no-store',
     });
-    if (!accountResponse.ok) return redirectToSettings('account_lookup_failed');
+    if (!accountResponse.ok) {
+      console.error('[Google Drive OAuth] Account lookup failed:', accountResponse.status);
+      return redirectToSettings('account_lookup_failed');
+    }
     const accountData: unknown = await accountResponse.json();
     const accountEmail = accountData && typeof accountData === 'object'
-      && 'user' in accountData && accountData.user && typeof accountData.user === 'object'
-      && 'emailAddress' in accountData.user && typeof accountData.user.emailAddress === 'string'
-      ? accountData.user.emailAddress : '';
+      && 'email' in accountData && typeof accountData.email === 'string'
+      ? accountData.email : '';
+    if (!accountEmail) {
+      console.error('[Google Drive OAuth] Account lookup response did not contain an email address.');
+      return redirectToSettings('account_lookup_failed');
+    }
 
     const existing = await readIntegration('google_drive');
     const secrets = decryptIntegrationSecret(existing?.secret_ciphertext ?? null);
