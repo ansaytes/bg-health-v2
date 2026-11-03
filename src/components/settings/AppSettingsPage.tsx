@@ -29,7 +29,7 @@ const TABS: { key: Tab; label: string }[] = [
 ];
 
 export default function AppSettingsPage() {
-  const { settings, loading, save } = useAppSettings();
+  const { settings, loading, error: settingsError, save } = useAppSettings();
   const { role } = useAuth();
   const [tab, setTab] = useState<Tab>('perusahaan');
   const [draft, setDraft] = useState<AppSettings>(settings);
@@ -43,11 +43,17 @@ export default function AppSettingsPage() {
   async function handleSave() {
     setSaving(true);
     setMsg(null);
-    const ok = await save(draft);
-    setMsg(ok
-      ? { kind: 'ok', text: 'Pengaturan tersimpan.' }
-      : { kind: 'err', text: 'Gagal menyimpan — hanya superuser yang dapat mengubah pengaturan.' });
-    setSaving(false);
+    try {
+      await save(draft);
+      setMsg({ kind: 'ok', text: 'Pengaturan tersimpan.' });
+    } catch (error) {
+      setMsg({
+        kind: 'err',
+        text: error instanceof Error ? error.message : 'Gagal menyimpan pengaturan.',
+      });
+    } finally {
+      setSaving(false);
+    }
   }
 
   const set = (path: string, value: string | number) => {
@@ -73,7 +79,7 @@ export default function AppSettingsPage() {
             Identitas perusahaan dan konfigurasi operasional aplikasi.
           </p>
         </div>
-        {canEdit && (
+        {canEdit && tab !== 'integrasi' && (
           <Button onClick={handleSave} disabled={saving || loading} className="h-10 rounded-xl">
             {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
             Simpan
@@ -87,6 +93,14 @@ export default function AppSettingsPage() {
           background: 'rgba(255,196,0,0.10)', border: '1px solid rgba(255,196,0,0.4)', color: '#9a6b00',
         }}>
           Anda masuk sebagai <b>{role}</b> — pengaturan hanya dapat diubah oleh superuser. Nilai di bawah bersifat baca.
+        </div>
+      )}
+      {settingsError && (
+        <div role="alert" style={{
+          marginBottom: 12, padding: '8px 12px', borderRadius: 8, fontSize: 11.5,
+          background: 'rgba(255,45,45,0.08)', border: '1px solid rgba(255,45,45,0.4)', color: '#b3261e',
+        }}>
+          Pengaturan tidak dapat dimuat: {settingsError}
         </div>
       )}
 
@@ -104,7 +118,7 @@ export default function AppSettingsPage() {
       <CenteredTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Pengaturan aplikasi" compact />
 
       <div className="app-settings-content">
-        {tab === 'integrasi' && <IntegrationSettings />}
+        {tab === 'integrasi' && <IntegrationSettings canEdit={canEdit} />}
         {tab === 'perusahaan' && (
           <section style={{ background: 'var(--card)', borderRadius: 12, padding: 16, border: '1px solid var(--border)' }}>
             <div className="flex items-center gap-2 mb-3">

@@ -44,6 +44,11 @@ export async function GET(request: NextRequest) {
         connected: typeof driveSecrets.refreshToken === 'string' && driveSecrets.refreshToken.length > 0,
         accountEmail: typeof driveRecord?.config.accountEmail === 'string' ? driveRecord.config.accountEmail : '',
       },
+      googleDriveOAuthConfigured: Boolean(
+        process.env.GOOGLE_DRIVE_CLIENT_ID
+        && process.env.GOOGLE_DRIVE_CLIENT_SECRET
+        && process.env.GOOGLE_DRIVE_REDIRECT_URI,
+      ),
     });
   } catch {
     return NextResponse.json({ success: false, error: 'Gagal membaca pengaturan integrasi.' }, { status: 500 });

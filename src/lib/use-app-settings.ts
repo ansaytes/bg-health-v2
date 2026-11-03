@@ -5,22 +5,25 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { DEFAULT_SETTINGS, mergeSettings, type AppSettings } from './app-settings';
+import { authFetch } from './api-client';
 
 let cache: AppSettings | null = null;
 
 export function useAppSettings() {
   const [settings, setSettings] = useState<AppSettings>(cache ?? DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(!cache);
+  const [error, setError] = useState('');
 
   const reload = useCallback(async () => {
     setLoading(true);
+    setError('');
     try {
-      const res = await fetch('/api/settings');
-      const json = await res.json();
-      if (res.ok) {
-        cache = mergeSettings(json.settings);
-        setSettings(cache);
-      }
+      const result = await authFetch<{ settings: Partial<AppSettings> | null }>('/api/settings');
+      cache = mergeSettings(result.settings);
+      setSettings(cache);
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : 'Gagal memuat pengaturan aplikasi.';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -28,19 +31,14 @@ export function useAppSettings() {
 
   useEffect(() => { void reload(); }, [reload]);
 
-  const save = useCallback(async (next: AppSettings): Promise<boolean> => {
-    const res = await fetch('/api/settings', {
+  const save = useCallback(async (next: AppSettings): Promise<void> => {
+    await authFetch('/api/settings', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(next),
     });
-    if (res.ok) {
-      cache = next;
-      setSettings(next);
-      return true;
-    }
-    return false;
+    cache = next;
+    setSettings(next);
   }, []);
 
-  return { settings, loading, reload, save };
+  return { settings, loading, error, reload, save };
 }
