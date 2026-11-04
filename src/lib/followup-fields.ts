@@ -117,7 +117,11 @@ const BUKAN_PARAMETER = new Set([
   // Bacaan yang bukan angka per-parameter
   'ecgHasil', 'tmtHasil', 'tmHasil', 'tmtHasil', 'usg', 'visusDekat',
   'audInterp', 'spiInterp', 'chestXR', 'lumboXr', 'defWarna', 'lapangPandang',
-  'ul', 'catatanFisik',
+  'ul', 'ulWarna', 'ulKejernihan', 'ulBau', 'ulBeratJenis', 'ulPh',
+  'ulProtein', 'ulGlukosa', 'ulKeton', 'ulDarah', 'ulLeukositEsterase',
+  'ulNitrit', 'ulBilirubin', 'ulUrobilinogen', 'ulEritrosit', 'ulLeukosit',
+  'ulSelEpitel', 'ulSilinder', 'ulKristal', 'ulBakteri',
+  'catatanFisik',
   // Status administratif & hasil turunan — bukan parameter klinis
   // `statusMCU` (huruf besar) adalah id sebenarnya di MCU_FIELDS — jangan
   // hanya menulis `statusMcu`, karena filter bersifat case-sensitive.

@@ -12,7 +12,7 @@ import { buildDiagnosisList, formatDiagnosis } from '@/lib/mcu-diagnosis';
 import { summariseQuestionnaires } from '@/lib/questionnaire-scores';
 import { classifyFitnessTest } from '@/lib/clinical-classification';
 import { parseVisusPerMata } from '@/lib/visus-parser';
-import { normalizeMCUEcgOption } from '@/lib/mcu-fields';
+import { normalizeMCUEcgOption, buildUlComposite, URINALYSIS_FIELD_IDS } from '@/lib/mcu-fields';
 
 type MCUValues = Record<string, string | number | null | undefined>;
 
@@ -41,8 +41,48 @@ function abnormal(value: MCUValues[string], excluded = ['N/A', 'DBN', 'Normal'])
   return true;
 }
 
-function abnormalUrinalysis(value: MCUValues[string]): boolean {
-  const raw = text(value);
+/**
+ * Deteksi abnormalitas urinalisis.
+ *
+ * Sejak kolom dipecah per parameter, fungsi ini memeriksa 19 field `ul*`
+ * secara langsung. Bila field per-parameter kosong semua (record lama yang
+ * baru punya kolom komposit `ul`), fungsi jatuh ke parsing teks komposit
+ * supaya hasil pembacaan lama tetap terdeteksi.
+ */
+function abnormalUrinalysis(values: MCUValues): boolean {
+  const isAbnormalValue = (raw: string): boolean =>
+    /(?:^|[\s:])(?:\+{1,3}|\d+\s*\+)(?:$|\s)|(?:^|\s)(?:H|L|HIGH|LOW)(?:$|\s)|positif|positive|reaktif|reactive|trace|abnormal|tinggi|rendah|meningkat|menurun|keruh|hematuria|proteinuria|glukosuria|bakteri|kristal|silinder/i.test(raw);
+
+  const normalUrinalysisValues = new Set([
+    'negatif', 'normal', 'jernih', 'aromatik', 'sedikit', 'tidak diperiksa',
+    'kuning muda', 'kuning gelap', 'amber', 'keruh kemerahan',
+  ]);
+
+  // Jalur 1: per-parameter (data baru).
+  let adaNilaiPerParam = false;
+  for (const fieldId of URINALYSIS_FIELD_IDS) {
+    const v = text(values[fieldId]);
+    if (!v) continue;
+    adaNilaiPerParam = true;
+    if (normalUrinalysisValues.has(v.toLowerCase())) continue;
+    if (fieldId === 'ulBeratJenis' || fieldId === 'ulPh') {
+      const n = Number(v.replace(',', '.'));
+      if (Number.isFinite(n)) {
+        if (fieldId === 'ulBeratJenis' && n >= 1.005 && n <= 1.03) continue;
+        if (fieldId === 'ulPh' && n >= 4.6 && n <= 8) continue;
+      }
+    }
+    if (fieldId === 'ulEritrosit' || fieldId === 'ulLeukosit') {
+      if (/^0\s*\/LPB$/i.test(v) || /^1-2\s*\/LPB$/i.test(v)) continue;
+    }
+    if (isAbnormalValue(v)) return true;
+    // Nilai kualitatif lain yang tidak normal pun dianggap temuan.
+    return true;
+  }
+  if (adaNilaiPerParam) return false;
+
+  // Jalur 2: fallback komposit `ul` (data lama sebelum pemecahan kolom).
+  const raw = text(values.ul);
   if (!raw) return false;
   const segments = raw.split(/[\n;|]+/).map((part) => part.trim()).filter(Boolean);
   const structuredValues = segments.flatMap((segment) => {
@@ -50,9 +90,7 @@ function abnormalUrinalysis(value: MCUValues[string]): boolean {
     return match ? [match[1].trim()] : [];
   });
   if (!structuredValues.length) return abnormal(raw);
-  return structuredValues.some((result) =>
-    /(?:^|[\s:])(?:\+{1,3}|\d+\s*\+)(?:$|\s)|(?:^|\s)(?:H|L|HIGH|LOW)(?:$|\s)|positif|positive|reaktif|reactive|trace|abnormal|tinggi|rendah|meningkat|menurun|keruh|hematuria|proteinuria|glukosuria|bakteri|kristal|silinder/i.test(result),
-  );
+  return structuredValues.some((result) => isAbnormalValue(result));
 }
 
 function buildFormulaFollowUp(values: MCUValues) {
@@ -114,7 +152,7 @@ function buildFormulaFollowUp(values: MCUValues) {
   add(kreatinin !== null && kreatinin >= 1.4, `Kreatinin : ${text(values.kreatinin)} mg/dL`);
   add(sgot !== null && sgot >= 40, `SGOT : ${text(values.sgot)} U/L`);
   add(sgpt !== null && sgpt >= 41, `SGPT : ${text(values.sgpt)} U/L`);
-  add(abnormalUrinalysis(values.ul), `UL : ${text(values.ul)}`);
+  add(abnormalUrinalysis(values), `UL : ${text(values.ul)}`);
   add(abnormal(values.hbsag, ['N/A', 'Non - Reaktif']), `HbsAg : ${text(values.hbsag)}`);
   add(abnormal(values.vdrl, ['N/A', 'Non - Reaktif']), `VDRL : ${text(values.vdrl)}`);
   add(abnormal(values.tpha, ['N/A', 'Non - Reaktif']), `TPHA : ${text(values.tpha)}`);
@@ -174,7 +212,7 @@ export function buildAutomaticFollowUpRecommendations(values: MCUValues): string
     'ringkasanKuesioner', 'perluFU', 'rekFU', 'itemFU', 'linkMCU', 'tglExpired',
     'mchc', 'fvcPct', 'fev1Pct', 'fev1FvcAct', 'fev1FvcPct', 'pta', 'diabetes',
     'egfr', 'hasilKebugaran', 'framScore', 'framProb', 'framKat', 'zonasi', 'triggerZona', 'pengendalian',
-    'frekuensiEvaluasi', 'catatanSOP',
+    'frekuensiEvaluasi', 'catatanSOP', 'ul',
   ]);
   const hasExamResult = Object.entries(values).some(([key, value]) =>
     !nonResultFields.has(key) && value !== null && value !== undefined
@@ -186,7 +224,7 @@ export function buildAutomaticFollowUpRecommendations(values: MCUValues): string
     || hasEyeFinding
     || hasPositiveOrthoTest
     || hasMedicalFinding
-    || abnormalUrinalysis(values.ul)
+    || abnormalUrinalysis(values)
     || (bmi !== null && bmi >= 25);
   addIf(hasExamResult && !hasAbnormalFinding,
     'Pertahankan Kondisi Tubuh Bugar Dengan Diet Sehat & Rutin Olahraga');
@@ -203,6 +241,23 @@ function compactFollowUpRecommendation(value: unknown): string {
   if (specialists.length < 2) return String(value ?? '').trim();
   const unique = [...new Set(specialists)];
   return `Konsultasi dan terapi ke ${unique.join(', ')}`;
+}
+
+/**
+ * Rekomendasi QSHE Medic otomatis berdasarkan zonasi dan temuan.
+ * Nilai masih bisa ditimpa manual oleh operator — saran hanya ditulis
+ * saat rekQSHE kosong atau masih berisi nilai saran sebelumnya.
+ */
+export function suggestRekQSHE(values: MCUValues): string {
+  const zonasi = text(values.zonasi);
+  const itemFU = text(values.itemFU);
+  const hasFindings = itemFU.length > 0 || buildDiagnosisList(values).length > 0;
+  if (hasFindings) {
+    if (zonasi === 'Merah') return 'Currently Unfit';
+    if (zonasi === 'Kuning') return 'Fit With Note';
+  }
+  if (zonasi === 'Belum Lengkap') return 'Temporary Unfit';
+  return 'Fit To Work';
 }
 
 /**
@@ -266,6 +321,13 @@ export function applyMCUCalculations(values: MCUValues): MCUValues {
     ?? calcEgfrCkdEpi2021(result.kreatinin ?? undefined, result.usia ?? undefined, String(result.jenisKelamin || ''));
   if (egfr !== null) result.egfr = egfr;
 
+  // Ringkasan komposit `ul` dari 19 parameter — WAJIB dibangun sebelum
+  // buildDiagnosisList & zonasi karena keduanya membaca `ul`.
+  // Selalu dibangun ulang bila ada parameter per-param yang terisi, supaya
+  // suntingan operator langsung tercermin (bukan memakai `ul` lama).
+  const ulComposite = buildUlComposite(result as Record<string, string>);
+  if (ulComposite) result.ul = ulComposite;
+
   // Diagnosa medis dihitung otomatis dari seluruh temuan, memakai istilah
   // diagnosis bahasa Inggris hasil klasifikasi SOP (tanpa kode ICD-10).
   // Nilai lama dari Excel sengaja dikosongkan oleh pipeline import agar
@@ -302,6 +364,11 @@ export function applyMCUCalculations(values: MCUValues): MCUValues {
   result.pengendalian = zonasi.pengendalian;
   result.frekuensiEvaluasi = zonasi.frekuensiEvaluasi;
   result.catatanSOP = zonasi.catatanSOP.join(' | ');
+
+  // RekQSHE: auto-suggest from zonasi/findings when empty; preserve manual.
+  if (!text(result.rekQSHE)) {
+    result.rekQSHE = suggestRekQSHE(result);
+  }
 
   // Ringkasan parameter kuesioner, ditulis ke kolom catatan agar mudah
   // dibaca QSHE Medic tanpa membuka tabel kuesioner.

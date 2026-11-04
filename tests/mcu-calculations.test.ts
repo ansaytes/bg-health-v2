@@ -3,7 +3,7 @@ import {
   applyMCUCalculations,
   buildAutomaticFollowUpRecommendations,
 } from '@/lib/mcu-calculations';
-import { MCU_FIELDS } from '@/lib/mcu-fields';
+import { MCU_FIELDS, buildUlComposite, parseUlToParams } from '@/lib/mcu-fields';
 
 const maleBase = {
   jenisKelamin: 'Laki - Laki',
@@ -255,5 +255,60 @@ describe('buildAutomaticFollowUpRecommendations', () => {
     expect(ecg?.options).not.toContain('Normal');
     expect(MCU_FIELDS.filter((field) => field.type === 'select')
       .some((field) => field.options?.includes('N/A'))).toBe(false);
+  });
+});
+
+describe('urinalisis per parameter', () => {
+  it('exposes 19 individual urinalysis dropdown fields', () => {
+    const ids = [
+      'ulWarna', 'ulKejernihan', 'ulBau', 'ulBeratJenis', 'ulPh', 'ulProtein',
+      'ulGlukosa', 'ulKeton', 'ulDarah', 'ulLeukositEsterase', 'ulNitrit',
+      'ulBilirubin', 'ulUrobilinogen', 'ulEritrosit', 'ulLeukosit',
+      'ulSelEpitel', 'ulSilinder', 'ulKristal', 'ulBakteri',
+    ];
+    expect(ids).toHaveLength(19);
+    for (const id of ids) {
+      const field = MCU_FIELDS.find((entry) => entry.id === id);
+      expect(field, `field ${id} harus ada`).toBeDefined();
+      expect(field!.type).toBe('select');
+      expect(field!.options?.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('builds the composite ul summary from per-parameter values', () => {
+    expect(buildUlComposite({ ulWarna: 'Kuning Muda', ulProtein: '+1' }))
+      .toBe('Warna: Kuning Muda\nProtein / Albumin: +1');
+    expect(buildUlComposite({})).toBe('');
+  });
+
+  it('parses a legacy composite ul value into per-parameter fields', () => {
+    const parsed = parseUlToParams('Warna: Kuning Muda\nProtein / Albumin: +2\nNitrit: Positif');
+    expect(parsed.ulWarna).toBe('Kuning Muda');
+    expect(parsed.ulProtein).toBe('+2');
+    expect(parsed.ulNitrit).toBe('Positif');
+  });
+
+  it('detects abnormal per-parameter urinalysis and stays quiet for normal values', () => {
+    const normal = applyMCUCalculations({
+      ...maleBase,
+      ulWarna: 'Kuning Muda', ulKejernihan: 'Jernih', ulBau: 'Aromatik',
+      ulBeratJenis: '1.015', ulPh: '6.0', ulProtein: 'Negatif',
+      ulGlukosa: 'Negatif', ulKeton: 'Negatif', ulDarah: 'Negatif',
+      ulLeukositEsterase: 'Negatif', ulNitrit: 'Negatif',
+      ulBilirubin: 'Negatif', ulUrobilinogen: 'Normal',
+      ulEritrosit: '0 /LPB', ulLeukosit: '1-2 /LPB', ulSelEpitel: 'Sedikit',
+      ulSilinder: 'Negatif', ulKristal: 'Negatif', ulBakteri: 'Negatif',
+    });
+    expect(normal.itemFU).not.toContain('UL :');
+
+    const abnormal = applyMCUCalculations({ ...maleBase, ulProtein: '+2' });
+    expect(abnormal.itemFU).toContain('UL :');
+    expect(abnormal.ul).toContain('Protein / Albumin: +2');
+  });
+
+  it('keeps a manual composite ul when no per-parameter value is present', () => {
+    const legacy = applyMCUCalculations({ ...maleBase, ul: 'Warna: Kuning\nDarah: 1+' });
+    expect(legacy.ul).toBe('Warna: Kuning\nDarah: 1+');
+    expect(legacy.itemFU).toContain('UL :');
   });
 });

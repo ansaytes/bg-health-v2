@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 import { GoogleGenAI } from '@google/genai';
 import { MCU_FIELDS, normalizeMCUEcgOption } from '@/lib/mcu-fields';
@@ -60,7 +60,7 @@ DETAIL WAJIB:
 29. Untuk defWarna dan semua field Neurologi (balance, romberg, phalen, thinel, patrick, kontraPatrick, laseque, kernig), "DBN" menjadi "Normal". Hasil positif/negatif Neurologi ditulis "Positif"/"Negatif".
 30. Semua field tipe select wajib memakai salah satu teks opsi form secara persis. Untuk field yang tidak diperiksa, kembalikan string kosong, bukan "N/A".
 31. Visus jauh dan dekat harus menyertakan kedua mata bila ada: format "VOD: 20/200 | VOS: 20/400". Jangan gabungkan dua rasio tanpa label mata.
-32. UL/urinalisis harus berupa parameter yang memang tercetak, satu per baris dengan format "Protein: ...", "Darah: ...", "Leukosit: ...". Pertahankan tanda abnormal seperti +, H, L, trace, atau Positif bila tertulis; jangan membuat nilai parameter yang tidak tertulis.
+32. Urinalisis dipecah menjadi 19 field terindividual (ulWarna, ulKejernihan, ulBau, ulBeratJenis, ulPh, ulProtein, ulGlukosa, ulKeton, ulDarah, ulLeukositEsterase, ulNitrit, ulBilirubin, ulUrobilinogen, ulEritrosit, ulLeukosit, ulSelEpitel, ulSilinder, ulKristal, ulBakteri). Untuk setiap field, kembalikan salah satu nilai dari daftar opsi form: Warna (Kuning Muda/Kuning Gelap/Amber/Keruh Kemerahan/Tidak Diperiksa), Kejernihan (Jernih/Keruh Sedang/Keruh/Sangat Keruh), Bau (Aromatik/Manis/Amoniakal/Busuk), Berat Jenis (1.005–1.040 per 0.005), pH (4.5–8.0 per 0.5), Protein/Glukosa/Keton/Darah/Leukosit Esterase/Bilirubin (Negatif/+1/+2/+3/+4), Nitrit (Negatif/Positif), Urobilinogen (Normal/+1/+2/Tinggi), Eritrosit/Leukosit (0/LPB, 1-2/LPB, 3-5/LPB, 6-10/LPB, >10/LPB, RCBC), Sel Epitel (Sedikit/Moderat/Banyak/Tidak Diperiksa), Silinder/Kristal/Bakteri (Negatif/+1/+2/+3). Field tidak diperiksa = string kosong. Jangan mengarang parameter.
 33. ECG harus memakai salah satu opsi ECG yang tercantum. Bacaan normal/sinus rhythm yang tidak memiliki kelainan dipetakan ke "Normal Sinus Rhythm"; jangan gunakan "Normal" atau menambahkan teks bebas.
 `;
 }
@@ -402,3 +402,4 @@ export async function POST(req: NextRequest) {
     }, { status: 500 });
   }
 }
+

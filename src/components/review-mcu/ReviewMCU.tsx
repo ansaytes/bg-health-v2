@@ -7,7 +7,7 @@ import {
   Search, ClipboardPaste, ArrowRight, ArrowLeft,
   User, Activity, Eye, HeartPulse, Droplets, FlaskConical,
   Shield, Pill, ScanLine, Wind, Ear, Brain, Dumbbell,
-  ClipboardCheck, Calculator, Zap, Save, RotateCcw,
+  ClipboardCheck, Calculator, Save, RotateCcw,
   ChevronRight, Loader2, AlertCircle, CheckCircle2, FileText, Lightbulb, RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -939,7 +939,12 @@ function FieldRenderer({
             {field.label}
           </label>
           {field.autoCalc && (
-            <Zap className="size-3 text-amber-500" />
+            <span
+              className="rounded border border-amber-400/50 bg-amber-400/10 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400"
+              title="Isi otomatis oleh sistem, tetap bisa ditimpa manual"
+            >
+              Auto
+            </span>
           )}
           {field.unit && (
             <span className="text-[10px] text-muted-foreground">({field.unit})</span>

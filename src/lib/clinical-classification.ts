@@ -836,46 +836,46 @@ export function classifyTreadmill(tm: string | number | null | undefined): Class
 // =============================================================
 
 export const EPILEPSY_OPTIONS = [
-  'Tidak ada riwayat epilepsi',
-  'Epilepsi terkontrol (bebas kejang ≥12 bulan dengan terapi)',
-  'Epilepsi tidak terkontrol (kejang ≤12 bulan terakhir atau tidak patuh terapi)',
+  'Tidak Ada Riwayat Epilepsi',
+  'Epilepsi Terkontrol (Bebas Kejang ≥12 Bulan Dengan Terapi)',
+  'Epilepsi Tidak Terkontrol (Kejang ≤12 Bulan Terakhir Atau Tidak Patuh Terapi)',
 ] as const;
 
 export const CARDIAC_OPTIONS = [
-  'Tidak ada riwayat penyakit jantung',
-  'Penyakit jantung koroner / angina',
-  'Infark miokard',
-  'Gagal jantung',
-  'Kelainan katup jantung',
-  'Riwayat jantung dengan gejala residual',
+  'Tidak Ada Riwayat Penyakit Jantung',
+  'Penyakit Jantung Koroner / Angina',
+  'Infark Miokard',
+  'Gagal Jantung',
+  'Kelainan Katup Jantung',
+  'Riwayat Jantung Dengan Gejala Residual',
 ] as const;
 
 export const STROKE_OPTIONS = [
-  'Tidak ada riwayat stroke',
-  'Stroke iskemik',
-  'Stroke hemoragik',
-  'Stroke dengan gejala residual',
+  'Tidak Ada Riwayat Stroke',
+  'Stroke Iskemik',
+  'Stroke Hemoragik',
+  'Stroke Dengan Gejala Residual',
 ] as const;
 
 export const ASTHMA_OPTIONS = [
-  'Tidak ada riwayat asma',
-  'Asma ringan (terkontrol penuh)',
-  'Asma sedang',
-  'Asma berat',
+  'Tidak Ada Riwayat Asma',
+  'Asma Ringan (Terkontrol Penuh)',
+  'Asma Sedang',
+  'Asma Berat',
 ] as const;
 
 export const SLEEP_APNEA_OPTIONS = [
-  'Tidak ada riwayat sleep apnea',
+  'Tidak Ada Riwayat Sleep Apnea',
   'Obstructive Sleep Apnea (OSA)',
   'Central Sleep Apnea',
   'Obesity Hypoventilation Syndrome (OHS)',
 ] as const;
 
 export const LBP_OPTIONS = [
-  'Tidak ada nyeri punggung bawah kronis',
-  'Nyeri punggung bawah kronik (< 3 bulan)',
-  'Nyeri punggung bawah kronik (≥ 3 bulan) tanpa defisit neurologis',
-  'Nyeri punggung bawah kronik (≥ 3 bulan) dengan defisit neurologis',
+  'Tidak Ada Nyeri Punggung Bawah Kronis',
+  'Nyeri Punggung Bawah Kronik (< 3 Bulan)',
+  'Nyeri Punggung Bawah Kronik (≥ 3 Bulan) Tanpa Defisit Neurologis',
+  'Nyeri Punggung Bawah Kronik (≥ 3 Bulan) Dengan Defisit Neurologis',
 ] as const;
 
 /** Pecah nilai multi-select yang disimpan sebagai "A | B" atau "A, B". */
@@ -1081,7 +1081,7 @@ export const MENTAL_KONFIRMASI_OPTIONS = [
 
 export const ARTRITIS_URAT_OPTIONS = [
   'Tidak Ada',
-  'Ada Riwayat Artritis Gout / Nyeri Sendi Berulang',
+  'Ada Riwayat Artritis Gout / Nyeri Sendi Asam Urat Berulang',
 ] as const;
 
 export const DIAGNOSIS_HATI_OPTIONS = [
@@ -1104,7 +1104,7 @@ export const STATUS_TERAPI_ESS_OPTIONS = [
 export const EPILEPSI_KEPATUHAN_OPTIONS = [
   'Bukan Penyandang Epilepsi',
   'Patuh Terapi & Bebas Kejang ≥1 Tahun',
-  'Tidak Patuh Terapi / Ada Kejang dalam 1 Tahun Terakhir',
+  'Tidak Patuh Terapi / Ada Kejang Dalam 1 Tahun Terakhir',
 ] as const;
 
 export function hasDmKomplikasi(value: MultiValue): boolean {

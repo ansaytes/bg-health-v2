@@ -59,6 +59,7 @@ import {
 } from '@/lib/clinical-classification';
 import { classifyEcg, classifyTreadmill, DRUG_TEST_LABEL } from '@/lib/clinical-classification';
 import { dassBandLabel, dassCategory, essBandLabel, sdsBandLabel, type DassDomain } from '@/lib/questionnaire-scores';
+import { URINALYSIS_FIELD_IDS } from '@/lib/mcu-fields';
 
 export type MCURaw = Record<string, string | number | null | undefined>;
 
@@ -222,6 +223,12 @@ function buildLaboratoryEntries(values: MCURaw): DiagnosisEntry[] {
 
   if (isAbnormalFreeText(values.ul)) {
     entries.push({ diagnosis: 'Urine Routine (Urinalysis) Abnormal', evidence: txt(values.ul), severity: 'normal', system: 'Urine Routine' });
+  } else if (URINALYSIS_FIELD_IDS.some((fieldId) => !isNormalText(values[fieldId]))) {
+    const abnormalParams = URINALYSIS_FIELD_IDS
+      .filter((fieldId) => !isNormalText(values[fieldId]))
+      .map((fieldId) => `${fieldId}: ${txt(values[fieldId])}`)
+      .join(', ');
+    entries.push({ diagnosis: 'Urine Routine (Urinalysis) Abnormal', evidence: abnormalParams, severity: 'normal', system: 'Urine Routine' });
   }
 
   for (const [field, label] of Object.entries(DRUG_TEST_DIAGNOSIS)) {

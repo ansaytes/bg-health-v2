@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
-import { MCU_FIELDS, TOTAL_COLS } from './mcu-fields';
+import { MCU_FIELDS, TOTAL_COLS, parseUlToParams } from './mcu-fields';
 import { getMissingZonasiInputs } from './zonasi-engine';
-import { applyMCUCalculations, buildAutomaticFollowUpRecommendations } from './mcu-calculations';
+import { applyMCUCalculations, buildAutomaticFollowUpRecommendations, suggestRekQSHE } from './mcu-calculations';
 
 export type PageTab = 'home' | 'dashboard' | 'data-entry' | 'administrator';
 export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan' | 'layanan-kuratif' | 'inventory-dashboard' | 'hearing-dashboard' | 'ergonomi-dashboard' | 'mental-health-dashboard' | 'pemetaan-psikologis' | 'higiene-industri' | 'persetujuan-ergonomi' | 'prokawan-dashboard' | 'laporan-mingguan' | 'spip';
@@ -66,6 +66,7 @@ interface MCUStore {
   // MCU form data
   formData: Record<string, string>;
   autoRekFU: string;
+  autoRekQSHE: string;
   /** Zona hasil kalkulasi terakhir, untuk tampilan ringkasan. */
   zonasi: string;
   /**
@@ -134,24 +135,39 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
 
   formData: initialFormData(),
   autoRekFU: '',
+  autoRekQSHE: '',
   zonasi: '',
   parameterBelumDinilai: [],
   setFieldValue: (id, value) => {
     set(state => ({
       formData: { ...state.formData, [id]: value },
       ...(id === 'rekFU' ? { autoRekFU: '' } : {}),
+      ...(id === 'rekQSHE' ? { autoRekQSHE: '' } : {}),
     }));
     // Trigger auto-calcs after a short delay
     setTimeout(() => get().runAutoCalcs(), 0);
   },
   setFormBatch: (data) => {
+    // Data lama yang masih menyimpan `ul` komposit dipecah menjadi 19 field
+    // per-parameter agar dropdown urinalisis terisi. Nilai per-param yang
+    // sudah ada di `data` tidak ditimpa.
+    const normalized = { ...data };
+    if (normalized.ul && !normalized.ulWarna) {
+      const parsed = parseUlToParams(normalized.ul);
+      for (const [fieldId, value] of Object.entries(parsed)) {
+        if (normalized[fieldId] == null || normalized[fieldId] === '') {
+          normalized[fieldId] = value;
+        }
+      }
+    }
     set(state => ({
-      formData: { ...state.formData, ...data },
+      formData: { ...state.formData, ...normalized },
       ...('rekFU' in data ? { autoRekFU: '' } : {}),
+      ...('rekQSHE' in data ? { autoRekQSHE: '' } : {}),
     }));
     setTimeout(() => get().runAutoCalcs(), 0);
   },
-  resetForm: () => set({ formData: initialFormData(), autoRekFU: '', zonasi: '', parameterBelumDinilai: [], employee: null, reviewStep: 'search', ocrEnabled: false }),
+  resetForm: () => set({ formData: initialFormData(), autoRekFU: '', autoRekQSHE: '', zonasi: '', parameterBelumDinilai: [], employee: null, reviewStep: 'search', ocrEnabled: false }),
 
   searchingEmployee: false,
   setSearchingEmployee: (v) => set({ searchingEmployee: v }),
@@ -194,6 +210,8 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
       'itemFU', 'perluFU',
       'framScore', 'framProb', 'framKat',
       'zonasi', 'triggerZona', 'pengendalian',
+      // Ringkasan komposit urinalisis (dibangun dari 19 parameter ul*).
+      'ul',
     ] as const;
 
     const updates: Record<string, string> = {};
@@ -211,6 +229,14 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
     }
     const nextAutoRekFU = updates.rekFU !== undefined ? automaticRecommendations : currentState.autoRekFU;
 
+    // Rekomendasi QSHE Medic otomatis dari zonasi: pertahankan pilihan manual.
+    const qsheSuggestion = suggestRekQSHE(calculated as Record<string, string>);
+    const currentQshe = fd.rekQSHE || '';
+    if (!currentQshe || (currentState.autoRekQSHE && currentQshe === currentState.autoRekQSHE)) {
+      updates.rekQSHE = qsheSuggestion;
+    }
+    const nextAutoRekQSHE = updates.rekQSHE !== undefined ? qsheSuggestion : currentState.autoRekQSHE;
+
     // Apply only changed values
     const newFd = { ...get().formData };
     let changed = false;
@@ -225,11 +251,13 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
     const missingKey = missing.join('|');
     if (changed
       || nextAutoRekFU !== currentState.autoRekFU
+      || nextAutoRekQSHE !== currentState.autoRekQSHE
       || zonasi !== currentState.zonasi
       || missingKey !== currentState.parameterBelumDinilai.join('|')) {
       set({
         formData: newFd,
         autoRekFU: nextAutoRekFU,
+        autoRekQSHE: nextAutoRekQSHE,
         zonasi,
         parameterBelumDinilai: missing,
       });
