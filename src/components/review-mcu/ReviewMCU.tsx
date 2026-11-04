@@ -22,10 +22,17 @@ import {
 import { useMCUStore, type EmployeeData as MCUEmployeeData } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { getEmployeeLookupAccessToken } from '@/lib/employee-lookup-client';
-import { MCU_FIELDS, MCU_SECTIONS, getFieldsBySection, type MCUFieldDef } from '@/lib/mcu-fields';
+import {
+  MCU_FIELDS,
+  MCU_SECTIONS,
+  getFieldsBySection,
+  normalizeMCUEcgOption,
+  type MCUFieldDef,
+} from '@/lib/mcu-fields';
 import { authFetch } from '@/lib/api-client';
 import MCUPdfRedactor from './MCUPdfRedactor';
 import { calcEgfrCkdEpi2021, getMissingZonasiInputs } from '@/lib/zonasi-engine';
+import { parseVisusPerMata } from '@/lib/visus-parser';
 
 type SearchBy = 'nik' | 'national_id' | 'nama';
 type AvailableAIModel = { id: string; name: string };
@@ -71,6 +78,12 @@ function opsiDenganNilaiLama(options: string[] | undefined, value: string): { li
   const current = value?.trim();
   if (!current || list.includes(current)) return { list, nilaiLama: null };
   return { list: [current, ...list], nilaiLama: current };
+}
+
+function normalizeSelectValue(field: MCUFieldDef, value: string): string {
+  const current = value.trim();
+  if (/^n\/a$/i.test(current)) return '';
+  return field.id === 'ecgHasil' ? normalizeMCUEcgOption(current) : current;
 }
 
 // Nilai sentinel untuk opsi "isi manual", mengikuti pola yang sudah dipakai
@@ -417,21 +430,15 @@ export default function ReviewMCU() {
         store.setSaving(false);
         return;
       }
-      const res = await fetch('/api/mcu/save', {
+      const result = await authFetch<{ action: string }>('/api/mcu/save', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ formData }),
       });
-      const json = await res.json();
-      if (json.success) {
-        store.showToast(`Data MCU berhasil disimpan ke database (${json.action})`, 'success');
-        setNikInput('');
-        store.resetForm();
-      } else {
-        store.showToast(json.error || 'Gagal menyimpan', 'error');
-      }
-    } catch {
-      store.showToast('Gagal menghubungi server', 'error');
+      store.showToast(`Data MCU berhasil disimpan ke database (${result.action})`, 'success');
+      setNikInput('');
+      store.resetForm();
+    } catch (error) {
+      store.showToast(error instanceof Error ? error.message : 'Gagal menghubungi server', 'error');
     } finally {
       store.setSaving(false);
     }
@@ -907,8 +914,12 @@ function FieldRenderer({
 }) {
   const abnormal = isAbnormal(field, value, gender);
   const normalRange = getNormalRangeText(field, gender);
-  const selectedValues = field.multiple ? value.split(' | ').filter(Boolean) : [];
-  const opsiSelect = opsiDenganNilaiLama(field.options, value);
+  const selectValue = field.type === 'select' ? normalizeSelectValue(field, value) : value;
+  const selectedValues = field.multiple ? selectValue.split(' | ').filter(Boolean) : [];
+  const opsiSelect = opsiDenganNilaiLama(field.options, selectValue);
+  const visus = field.id === 'visusJauh' || field.id === 'visusDekat'
+    ? parseVisusPerMata(value)
+    : null;
   // Input manual hanya muncul setelah operator memilih "Lainnya". Nilai
   // lama yang tidak ada di dropdown ditampilkan sebagai opsi biasa, bukan
   // lewat input manual, supaya tidak harus disalin ulang.
@@ -946,6 +957,32 @@ function FieldRenderer({
           onChange={(e) => onChange(e.target.value)}
           className="min-h-[60px] text-sm rounded-xl bg-background"
         />
+      ) : visus ? (
+        <div className="grid grid-cols-2 gap-2">
+          {([
+            { key: 'od', label: 'VOD (mata kanan)' },
+            { key: 'os', label: 'VOS (mata kiri)' },
+          ] as const).map(({ key, label }) => (
+            <label key={key} className="flex flex-col gap-1 text-[10px] font-medium text-muted-foreground">
+              {label}
+              <Input
+                value={visus[key].mentah || ''}
+                onChange={(event) => {
+                  const next = {
+                    od: key === 'od' ? event.target.value : visus.od.mentah || '',
+                    os: key === 'os' ? event.target.value : visus.os.mentah || '',
+                  };
+                  onChange([
+                    next.od && `VOD: ${next.od}`,
+                    next.os && `VOS: ${next.os}`,
+                  ].filter(Boolean).join(' | '));
+                }}
+                placeholder="Contoh: 20/20"
+                className="h-9 rounded-lg bg-background text-sm"
+              />
+            </label>
+          ))}
+        </div>
       ) : field.type === 'select' ? (
         field.multiple ? (
           <details className="relative text-sm">
@@ -975,7 +1012,7 @@ function FieldRenderer({
         ) : (
           <>
           <select
-            value={selectMenampilkanNilai(opsiSelect, value, modeManual)}
+            value={selectMenampilkanNilai(opsiSelect, selectValue, modeManual)}
             onChange={(e) => {
               const picked = e.target.value;
               if (picked === OPSI_MANUAL) {
@@ -1000,7 +1037,7 @@ function FieldRenderer({
           </select>
           {field.allowCustom && modeManual && (
             <Input
-              value={value}
+              value={selectValue}
               onChange={(e) => onChange(e.target.value)}
               placeholder="Tulis hasil bacaan, mis. Sinus Rythm dg Peaked T Waves"
               className="mt-2 h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground"

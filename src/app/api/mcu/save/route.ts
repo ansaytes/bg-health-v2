@@ -57,8 +57,12 @@ export async function POST(req: NextRequest) {
     const dbData: Record<string, any> = {};
     for (const field of MCU_FIELDS) {
       const value = calculatedFormData[field.id];
-      if (value !== '' && value !== undefined && value !== null) {
-        const snakeKey = field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase();
+      const snakeKey = field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase();
+      if (field.type === 'select') {
+        dbData[snakeKey] = value == null || String(value).trim() === '' || /^n\/a$/i.test(String(value).trim())
+          ? null
+          : value;
+      } else if (value !== '' && value !== undefined && value !== null) {
         dbData[snakeKey] = value;
       }
     }

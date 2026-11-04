@@ -11,6 +11,8 @@ import {
 import { buildDiagnosisList, formatDiagnosis } from '@/lib/mcu-diagnosis';
 import { summariseQuestionnaires } from '@/lib/questionnaire-scores';
 import { classifyFitnessTest } from '@/lib/clinical-classification';
+import { parseVisusPerMata } from '@/lib/visus-parser';
+import { normalizeMCUEcgOption } from '@/lib/mcu-fields';
 
 type MCUValues = Record<string, string | number | null | undefined>;
 
@@ -37,6 +39,20 @@ function abnormal(value: MCUValues[string], excluded = ['N/A', 'DBN', 'Normal'])
   if (!current || excluded.some((entry) => entry.toLowerCase() === current.toLowerCase())) return false;
   if (/\bDBN\b|\bNEGATIF\b|\bNON\s*-\s*REAKTIF\b|\bNONREAKTIF\b|\bNORMAL\b/i.test(current)) return false;
   return true;
+}
+
+function abnormalUrinalysis(value: MCUValues[string]): boolean {
+  const raw = text(value);
+  if (!raw) return false;
+  const segments = raw.split(/[\n;|]+/).map((part) => part.trim()).filter(Boolean);
+  const structuredValues = segments.flatMap((segment) => {
+    const match = segment.match(/^[^:=]+[:=]\s*(.+)$/);
+    return match ? [match[1].trim()] : [];
+  });
+  if (!structuredValues.length) return abnormal(raw);
+  return structuredValues.some((result) =>
+    /(?:^|[\s:])(?:\+{1,3}|\d+\s*\+)(?:$|\s)|(?:^|\s)(?:H|L|HIGH|LOW)(?:$|\s)|positif|positive|reaktif|reactive|trace|abnormal|tinggi|rendah|meningkat|menurun|keruh|hematuria|proteinuria|glukosuria|bakteri|kristal|silinder/i.test(result),
+  );
 }
 
 function buildFormulaFollowUp(values: MCUValues) {
@@ -66,14 +82,15 @@ function buildFormulaFollowUp(values: MCUValues) {
   const sgot = numberValue(values.sgot);
   const sgpt = numberValue(values.sgpt);
   const gender = text(values.jenisKelamin);
-  const visus = text(values.visusJauh);
+  const visus = parseVisusPerMata(text(values.visusJauh));
 
   add(abnormal(values.gigiMulut), `Orodental : ${text(values.gigiMulut)}`);
   add(abnormal(values.fisikHeadToToe), `Fisik : ${text(values.fisikHeadToToe)}`);
   add(abnormal(values.hemoroid), /Menolak RT|N\/A/.test(text(values.hemoroid))
     ? 'RT : Pemeriksaan Hemoroid Belum Dilakukan' : `RT : ${text(values.hemoroid)}`);
   add(abnormal(values.fisikMata), `Mata : ${text(values.fisikMata)}`);
-  add(/\d+\/\d+/.test(visus) && !/6\/6|5\/5|20\/20|Koreksi/i.test(visus), `Visus Jauh : ${visus}`);
+  const visusJauhAbnormal = [visus.od, visus.os].some((eye) => eye.desimal !== null && eye.desimal < 1);
+  add(visusJauhAbnormal, `Visus Jauh : ${visus.label}`);
   add(abnormal(values.visusDekat, ['N/A']) && !/6\/6|5\/5|20\/20|J1|Koreksi/i.test(text(values.visusDekat)), `Visus Dekat : ${text(values.visusDekat)}`);
   add(Boolean(values.defWarna && !['Normal', 'N/A'].includes(text(values.defWarna))), `Defisiensi Persepsi Warna : ${text(values.defWarna)}`);
   add(abnormal(values.lapangPandang), `Lapang Pandang : ${text(values.lapangPandang)}`);
@@ -97,7 +114,7 @@ function buildFormulaFollowUp(values: MCUValues) {
   add(kreatinin !== null && kreatinin >= 1.4, `Kreatinin : ${text(values.kreatinin)} mg/dL`);
   add(sgot !== null && sgot >= 40, `SGOT : ${text(values.sgot)} U/L`);
   add(sgpt !== null && sgpt >= 41, `SGPT : ${text(values.sgpt)} U/L`);
-  add(abnormal(values.ul), `UL : ${text(values.ul)}`);
+  add(abnormalUrinalysis(values.ul), `UL : ${text(values.ul)}`);
   add(abnormal(values.hbsag, ['N/A', 'Non - Reaktif']), `HbsAg : ${text(values.hbsag)}`);
   add(abnormal(values.vdrl, ['N/A', 'Non - Reaktif']), `VDRL : ${text(values.vdrl)}`);
   add(abnormal(values.tpha, ['N/A', 'Non - Reaktif']), `TPHA : ${text(values.tpha)}`);
@@ -143,7 +160,7 @@ export function buildAutomaticFollowUpRecommendations(values: MCUValues): string
     'chol', 'tg', 'hdl', 'ldl', 'gdp', 'gd2pp', 'hba1c', 'au', 'ureum',
     'kreatinin', 'egfr', 'sgot', 'sgpt', 'ggt', 'alp', 'billirubin',
   ].some((field) => itemFU.toLowerCase().includes(field.toLowerCase()))
-    || /TD\s*:|BMI\s*:|HbA1c|HbsAg|VDRL|TPHA|HIV|CXR|Lumbosacral|ECG|Treadmill|Spirometry|Audiometry/i.test(itemFU);
+    || /TD\s*:|BMI\s*:|HbA1c|HbsAg|VDRL|TPHA|HIV|UL\s*:|CXR|Lumbosacral|ECG|Treadmill|Spirometry|Audiometry/i.test(itemFU);
 
   addIf(hasOrodental || /Orodental/i.test(itemFU), 'Dokter Gigi');
   addIf(/menolak rt|belum dilakukan/i.test(hemoroid) || /Pemeriksaan Hemoroid Belum Dilakukan/i.test(itemFU), 'Dokter Umum');
@@ -151,7 +168,27 @@ export function buildAutomaticFollowUpRecommendations(values: MCUValues): string
   addIf(hasEyeFinding || /Visus|Defisiensi Persepsi Warna|Mata\s*:/i.test(itemFU), 'Dokter Sp. M');
   addIf(hasPositiveOrthoTest, 'Dokter Sp. OT');
   addIf(hasMedicalFinding, 'Dokter Sp. PD');
-  addIf(bmi !== null && bmi >= 25 || /BMI\s*:|Chol\s*:|TG\s*:|LDL\s*:/i.test(itemFU),
+  const nonResultFields = new Set([
+    'nationalId', 'nikKaryawan', 'nama', 'usia', 'jenisKelamin', 'jabatan', 'site',
+    'statusMCU', 'tglMCU', 'tempatMCU', 'kesVendor', 'rekQSHE', 'diagnosaMedis', 'catatan',
+    'ringkasanKuesioner', 'perluFU', 'rekFU', 'itemFU', 'linkMCU', 'tglExpired',
+    'mchc', 'fvcPct', 'fev1Pct', 'fev1FvcAct', 'fev1FvcPct', 'pta', 'diabetes',
+    'egfr', 'hasilKebugaran', 'framScore', 'framProb', 'framKat', 'zonasi', 'triggerZona', 'pengendalian',
+    'frekuensiEvaluasi', 'catatanSOP',
+  ]);
+  const hasExamResult = Object.entries(values).some(([key, value]) =>
+    !nonResultFields.has(key) && value !== null && value !== undefined
+      && String(value).trim() !== '' && !/^n\/a$/i.test(String(value).trim()),
+  );
+  const hasAbnormalFinding = Boolean(itemFU)
+    || buildDiagnosisList(values).length > 0
+    || hasOrodental
+    || hasEyeFinding
+    || hasPositiveOrthoTest
+    || hasMedicalFinding
+    || abnormalUrinalysis(values.ul)
+    || (bmi !== null && bmi >= 25);
+  addIf(hasExamResult && !hasAbnormalFinding,
     'Pertahankan Kondisi Tubuh Bugar Dengan Diet Sehat & Rutin Olahraga');
 
   if (itemFU && recommendations.size === 0) recommendations.add('Dokter Umum');
@@ -175,6 +212,7 @@ function compactFollowUpRecommendation(value: unknown): string {
  */
 export function applyMCUCalculations(values: MCUValues): MCUValues {
   const result = { ...values };
+  if (text(result.ecgHasil)) result.ecgHasil = normalizeMCUEcgOption(text(result.ecgHasil));
   const bb = numberValue(result.bb);
   const tb = numberValue(result.tb);
   const hb = numberValue(result.hb);

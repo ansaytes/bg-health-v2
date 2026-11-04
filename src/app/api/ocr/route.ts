@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 import { GoogleGenAI } from '@google/genai';
-import { MCU_FIELDS } from '@/lib/mcu-fields';
+import { MCU_FIELDS, normalizeMCUEcgOption } from '@/lib/mcu-fields';
 import { decryptIntegrationSecret, integrationAdminClient, readIntegration } from '@/lib/integration-settings';
 import { getServerCaller, requireServerRole, STAFF_ROLES } from '@/lib/server-auth';
 
 // Create a schema mapping dynamically from MCU_FIELDS
 function generatePromptSchema() {
   const fieldsInfo = MCU_FIELDS.map(f => {
-    return `- ${f.id} (${f.label}): Type ${f.type}, Section ${f.section}`;
+    const options = f.options?.length ? `; options: ${f.options.join(' | ')}` : '';
+    return `- ${f.id} (${f.label}): Type ${f.type}, Section ${f.section}${options}`;
   }).join('\n');
 
   return `
@@ -57,6 +58,10 @@ DETAIL WAJIB:
 27. Bila eGFR tidak tercantum, biarkan field egfr kosong. Aplikasi boleh menghitung estimasi CKD-EPI 2021 dari kreatinin serum, usia, dan jenis kelamin; jangan memperkirakan eGFR dari ureum.
 28. Untuk hbsag, antiHbs, vdrl, tpha, dan hiv: "Negatif"/"Negative" menjadi "Non - Reaktif"; "Positif"/"Positive" menjadi "Reaktif".
 29. Untuk defWarna dan semua field Neurologi (balance, romberg, phalen, thinel, patrick, kontraPatrick, laseque, kernig), "DBN" menjadi "Normal". Hasil positif/negatif Neurologi ditulis "Positif"/"Negatif".
+30. Semua field tipe select wajib memakai salah satu teks opsi form secara persis. Untuk field yang tidak diperiksa, kembalikan string kosong, bukan "N/A".
+31. Visus jauh dan dekat harus menyertakan kedua mata bila ada: format "VOD: 20/200 | VOS: 20/400". Jangan gabungkan dua rasio tanpa label mata.
+32. UL/urinalisis harus berupa parameter yang memang tercetak, satu per baris dengan format "Protein: ...", "Darah: ...", "Leukosit: ...". Pertahankan tanda abnormal seperti +, H, L, trace, atau Positif bila tertulis; jangan membuat nilai parameter yang tidak tertulis.
+33. ECG harus memakai salah satu opsi ECG yang tercantum. Bacaan normal/sinus rhythm yang tidak memiliki kelainan dipetakan ke "Normal Sinus Rhythm"; jangan gunakan "Normal" atau menambahkan teks bebas.
 `;
 }
 
@@ -365,6 +370,24 @@ export async function POST(req: NextRequest) {
       const group = blood.match(/\b(A B|AB|A|B|O)\b/)?.[1]?.replace('A B', 'AB');
       const rhesus = /NEGATIF|NEGATIVE|\(-\)|\bRH-\b/.test(blood) ? '-' : /POSITIF|POSITIVE|\(\+\)|\+|\bRH\+?\b/.test(blood) ? '+' : '';
       if (group && rhesus) validData.golDarah = `${group}${rhesus}`;
+    }
+    if (validData.ecgHasil) {
+      validData.ecgHasil = normalizeMCUEcgOption(validData.ecgHasil);
+    }
+
+    const normalizeOption = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
+    for (const field of MCU_FIELDS) {
+      const value = validData[field.id];
+      if (!value || field.type !== 'select' || !field.options?.length) continue;
+      const values = field.multiple ? value.split(' | ').map((part) => part.trim()) : [value.trim()];
+      const matchedValues = values.map((part) => field.options!.find(
+        (option) => normalizeOption(option) === normalizeOption(part),
+      ));
+      if (matchedValues.some((option) => !option)) {
+        delete validData[field.id];
+      } else {
+        validData[field.id] = [...new Set(matchedValues.filter((option): option is string => Boolean(option)))].join(' | ');
+      }
     }
 
     return NextResponse.json({ success: true, data: validData });

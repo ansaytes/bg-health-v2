@@ -25,7 +25,7 @@ export const dynamic = 'force-dynamic';
 
 type Row = Record<string, any>;
 
-export const INDIKATOR = [
+const INDIKATOR = [
   { id: 'ketaksaan-peran', title: 'Ketaksaan Peran', items: [1, 7, 13, 19, 25] },
   { id: 'konflik-peran', title: 'Konflik Peran', items: [2, 8, 14, 20, 26] },
   { id: 'beban-kuantitatif', title: 'Beban Kerja Kuantitatif', items: [3, 9, 15, 21, 27] },
@@ -34,7 +34,7 @@ export const INDIKATOR = [
   { id: 'tanggung-jawab', title: 'Tanggung Jawab Orang Lain', items: [6, 12, 18, 24, 30] },
 ];
 
-export const MIN_RESPONDEN_DEFAULT = 20;
+const MIN_RESPONDEN_DEFAULT = 20;
 
 function tingkat(rataRata: number): 'RINGAN' | 'SEDANG' | 'BERAT' {
   if (rataRata > 24) return 'BERAT';

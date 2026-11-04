@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
-import { MCU_FIELDS, TOTAL_COLS, TEXT_NA_INDICES } from './mcu-fields';
+import { MCU_FIELDS, TOTAL_COLS } from './mcu-fields';
 import { getMissingZonasiInputs } from './zonasi-engine';
 import { applyMCUCalculations, buildAutomaticFollowUpRecommendations } from './mcu-calculations';
 
@@ -242,11 +242,7 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
 
     MCU_FIELDS.forEach(field => {
       if (field.colIndex >= TOTAL_COLS) return;
-      let val = fd[field.id] || '';
-      // Text-NA: if empty, set to 'N/A'
-      if (field.textNA && (val === '' || val === undefined)) {
-        val = 'N/A';
-      }
+      const val = fd[field.id] || '';
       row[field.colIndex] = val;
     });
 

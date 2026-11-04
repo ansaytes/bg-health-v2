@@ -66,6 +66,13 @@ export default function IntegrationSettings({ canEdit }: { canEdit: boolean }) {
         connection_failed: 'Koneksi Google Drive gagal saat menyimpan pengaturan. Periksa konfigurasi server dan coba kembali.',
       };
       setMessage(driveMessages[driveStatus] || `Koneksi Google Drive belum berhasil (${driveStatus}).`);
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.delete('drive');
+      window.history.replaceState(
+        window.history.state,
+        '',
+        `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`,
+      );
     }
     return () => { active = false; };
   }, []);

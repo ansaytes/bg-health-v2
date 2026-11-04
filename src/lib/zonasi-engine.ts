@@ -602,7 +602,8 @@ export function calcPTA(frequencies: (number | null)[]): number | null {
   return Number(average.toFixed(1));
 }
 
-export function calcDiabetes(gdp: number | null, gdpSeSATA: number | null, hba1c: number | null): string {
+export function calcDiabetes(gdp: number | null, gdpSeSATA: number | null, hba1c: number | null): string | null {
+  if (gdp === null && gdpSeSATA === null && hba1c === null) return null;
   if ((gdp !== null && gdp >= 126) || (gdpSeSATA !== null && gdpSeSATA >= 200) || (hba1c !== null && hba1c >= 6.5)) {
     return 'Ya';
   }

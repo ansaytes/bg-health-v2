@@ -3,6 +3,7 @@ import {
   applyMCUCalculations,
   buildAutomaticFollowUpRecommendations,
 } from '@/lib/mcu-calculations';
+import { MCU_FIELDS } from '@/lib/mcu-fields';
 
 const maleBase = {
   jenisKelamin: 'Laki - Laki',
@@ -28,6 +29,7 @@ describe('buildFormulaFollowUp (via applyMCUCalculations.itemFU)', () => {
       tesKebugaran: 'Baik', ul: 'Normal',
     });
     expect(result.itemFU).toBe('');
+    expect(result.ecgHasil).toBe('Normal Sinus Rhythm');
   });
 
   it('flags blood pressure above threshold', () => {
@@ -76,11 +78,11 @@ describe('buildFormulaFollowUp (via applyMCUCalculations.itemFU)', () => {
     expect(female.itemFU).toContain('AU : 6.5 mg/dL');
   });
 
-  it('flags BMI >= 30 but not below', () => {
+  it('flags overweight and obesity separately', () => {
     const obese = applyMCUCalculations({ ...maleBase, bmi: 30 });
     expect(obese.itemFU).toContain('BMI : 30');
     const overweight = applyMCUCalculations({ ...maleBase, bmi: 29.9 });
-    expect(overweight.itemFU).not.toContain('BMI :');
+    expect(overweight.itemFU).toContain('BMI : 29.9 (Overweight)');
   });
 
   it('excludes N/A and DBN values from follow-up', () => {
@@ -99,6 +101,28 @@ describe('buildFormulaFollowUp (via applyMCUCalculations.itemFU)', () => {
   it('excludes treadmill Negative Ischemic Response', () => {
     const result = applyMCUCalculations({ ...maleBase, tmHasil: 'Negative Ischemic Response' });
     expect(result.itemFU).not.toContain('Treadmill :');
+  });
+
+  it('keeps right and left eye vision distinct when calculating follow-up', () => {
+    const result = applyMCUCalculations({
+      ...maleBase,
+      visusJauh: 'VOD: 20/20 | VOS: 20/400',
+    });
+    expect(result.itemFU).toContain('Visus Jauh');
+  });
+
+  it('flags explicit abnormal urinalysis parameters without treating normal lines as abnormal', () => {
+    const normal = applyMCUCalculations({
+      ...maleBase,
+      ul: 'Warna: Kuning\nKejernihan: Jernih\nProtein: Negatif\nDarah: Negatif',
+    });
+    expect(normal.itemFU).not.toContain('UL :');
+
+    const abnormal = applyMCUCalculations({
+      ...maleBase,
+      ul: 'Warna: Kuning\nProtein: Negatif\nDarah: 1+',
+    });
+    expect(abnormal.itemFU).toContain('UL :');
   });
 
   it('flags lipids, glucose and liver enzymes at thresholds', () => {
@@ -145,7 +169,7 @@ describe('applyMCUCalculations derived fields', () => {
     expect(applyMCUCalculations({ ...maleBase, gd2pp: 200 }).diabetes).toBe('Ya');
     expect(applyMCUCalculations({ ...maleBase, hba1c: 6.5 }).diabetes).toBe('Ya');
     expect(applyMCUCalculations({ ...maleBase, gdp: 100 }).diabetes).toBe('Tidak');
-    expect(applyMCUCalculations({ ...maleBase }).diabetes).toBe('Tidak');
+    expect(applyMCUCalculations({ ...maleBase }).diabetes).toBeNull();
   });
 
   it('computes PTA from available audiometry frequencies only', () => {
@@ -209,9 +233,9 @@ describe('buildAutomaticFollowUpRecommendations', () => {
     expect(recs).toContain('Dokter Sp. PD');
   });
 
-  it('recommends lifestyle advice for BMI >= 25 or lipid findings', () => {
+  it('does not recommend the healthy lifestyle option for abnormal results', () => {
     const recs = buildAutomaticFollowUpRecommendations({ bmi: 27 });
-    expect(recs).toContain('Pertahankan Kondisi Tubuh Bugar Dengan Diet Sehat & Rutin Olahraga');
+    expect(recs).not.toContain('Pertahankan Kondisi Tubuh Bugar Dengan Diet Sehat & Rutin Olahraga');
   });
 
   it('falls back to Dokter Umum when itemFU has unrecognised content', () => {
@@ -219,8 +243,17 @@ describe('buildAutomaticFollowUpRecommendations', () => {
     expect(recs).toContain('Dokter Umum');
   });
 
-  it('returns empty for clean record without itemFU', () => {
+  it('recommends healthy lifestyle for a normal assessed result, not for an empty form', () => {
     const recs = buildAutomaticFollowUpRecommendations({ bmi: 22 });
-    expect(recs).toHaveLength(0);
+    expect(recs).toContain('Pertahankan Kondisi Tubuh Bugar Dengan Diet Sehat & Rutin Olahraga');
+    expect(buildAutomaticFollowUpRecommendations({})).toHaveLength(0);
+  });
+
+  it('uses the canonical ECG normal value and omits N/A dropdown values', () => {
+    const ecg = MCU_FIELDS.find((field) => field.id === 'ecgHasil');
+    expect(ecg?.options).toContain('Normal Sinus Rhythm');
+    expect(ecg?.options).not.toContain('Normal');
+    expect(MCU_FIELDS.filter((field) => field.type === 'select')
+      .some((field) => field.options?.includes('N/A'))).toBe(false);
   });
 });

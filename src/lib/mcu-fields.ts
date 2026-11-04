@@ -11,6 +11,8 @@
 // ============================================================
 
 import {
+  ECG_OPTIONS as STANDARD_ECG_OPTIONS,
+  TMT_OPTIONS as STANDARD_TMT_OPTIONS,
   ARTRITIS_URAT_OPTIONS,
   ASTHMA_OPTIONS,
   CARDIAC_OPTIONS,
@@ -47,7 +49,6 @@ export interface MCUFieldDef {
   allowCustom?: boolean;
   autoCalc?: boolean;
   autoCalcFrom?: string[];
-  textNA?: boolean;
   normalMale?: string;
   normalFemale?: string;
   lowMale?: number;
@@ -103,7 +104,6 @@ const f = (
   section,
   sectionOrder: 0,
   type,
-  ...(type === 'text' || type === 'textarea' ? { textNA: true } : {}),
   ...options,
 });
 
@@ -127,76 +127,16 @@ function assignColumns(fields: MCUFieldDef[]): MCUFieldDef[] {
 }
 
 const normal = (normalRange: string, unit?: string): FieldOptions => ({ normalRange, unit });
-const select = (options: string[]): FieldOptions => ({ options, textNA: true });
-const neurologicalSelect = (options: string[]): FieldOptions => ({ options, textNA: false });
+const select = (options: string[]): FieldOptions => ({ options });
+const neurologicalSelect = (options: string[]): FieldOptions => ({ options });
 const kesimpulanOptions = ['Fit To Work', 'Fit With Note', 'Fit With Restriction', 'Currently Unfit', 'Unfit', 'Temporary Unfit'];
 
-/**
- * Opsi hasil bacaan EKG.
- *
- * Urutan mengikuti tingkat keparahan: normal dulu, lalu kuning, lalu
- * merah, supaya operator yang memilih dari atas melihat temuan ringan
- * lebih dulu dan tidak salah pilih.
- *
- * Istilah diagnosis memakai bahasa Inggris dan penulisan yang sama
- * dengan label di clinical-classification.ts, supaya diagnosis otomatis
- * dan pilihan operator tidak berbeda.
- */
-const ECG_OPTIONS = [
-  // Normal
-  'Normal Sinus Rhythm',
-  'Normal Variant of Resting ECG',
-  // Kuning
-  'Sinus Bradycardia',
-  'Sinus Tachycardia',
-  'Sinus Arrhythmia',
-  'Low Atrial Rhythm',
-  'Right Axis Deviation',
-  'Left Axis Deviation',
-  'Incomplete Right Bundle Branch Block',
-  'Right Bundle Branch Block',
-  'Left Bundle Branch Block',
-  // Derajat satu hanya perpanjangan PR dan tidak gawat, jadi tidak
-  // digabung dengan AV block lengkap yang merah di bawah.
-  'First-Degree Atrioventricular Block',
-  // AV block lengkap / derajat tiga: jantung tidak bisa conduct dari
-  // atrium ke ventrikel. Paling gawat di antara FINDINGS AV block.
-  'Complete Atrioventricular Block',
-  'Left Ventricular Hypertrophy',
-  'Right Ventricular Hypertrophy',
-  'Premature Ventricular Contraction',
-  // Puncak T menjunjai hiperkalemia. Tidak ada kategori khusus untuk ini
-// pada STD-006 Rev001, jadi hanya ditandai "kuning" (perlu konfirmasi),
-// bukan "merah". Sumber data memuat satu bacaan seperti ini dan tidak
-// ada opsi lain yang tepat untuk memetanya.
-  'Peaked T Waves',
-  // Merah
-  'Atrioventricular Block',
-  'Atrial Fibrillation',
-  'ST Segment Abnormal',
-  'Acute Myocardial Infarction',
-  'Not Performed',
-];
 
-/**
- * Opsi hasil Exercise Treadmill Test.
- *
- * "Non-Diagnostic Test" sengaja berdiri sendiri dan bukan dianggap
- * normal: tesnya tidak selesai sehingga wajib diulang.
- */
-const TREADMILL_OPTIONS = [
-  'Negative Ischemic Response',
-  'Positive Ischemic Response',
-  'Non-Diagnostic Test (Target Heart Rate Not Achieved)',
-  'Ventricular Ectopy during Exercise',
-  'Abnormal Blood Pressure Response',
-  'Not Performed',
-];
 
 export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   // B–J Identitas
-  f('nationalId', 'NIK KTP', 'identity', 'text', { textNA: false }),
-  f('nikKaryawan', 'NIK Karyawan', 'identity', 'text', { textNA: false }),
+  f('nationalId', 'NIK KTP', 'identity', 'text'),
+  f('nikKaryawan', 'NIK Karyawan', 'identity', 'text'),
   f('nama', 'Nama', 'identity'),
   f('usia', 'Usia', 'identity', 'number', { unit: 'tahun', autoCalc: true }),
   f('jenisKelamin', 'Jenis Kelamin', 'identity', 'select', { options: ['Laki - Laki', 'Perempuan'] }),
@@ -205,24 +145,24 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('statusMCU', 'Status MCU', 'identity', 'select', {
     options: ['Pre Employee', 'Annual', 'Specific', 'Retirement', 'Follow Up - Pre Employee', 'Follow Up - Annual'],
   }),
-  f('tglMCU', 'Tanggal MCU', 'identity', 'date', { textNA: false }),
+  f('tglMCU', 'Tanggal MCU', 'identity', 'date'),
   f('tempatMCU', 'Tempat MCU', 'identity'),
 
   // K–N Fisik
-  f('golDarah', 'Golongan Darah & Rhesus', 'physical', 'select', select(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'N/A'])),
+  f('golDarah', 'Golongan Darah & Rhesus', 'physical', 'select', select(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'])),
   f('gigiMulut', 'Gigi & Mulut', 'physical', 'textarea'),
   f('fisikHeadToToe', 'Fisik Head To Toe', 'physical', 'textarea'),
-  f('hemoroid', 'Hemoroid', 'physical', 'select', select(['Negatif', 'Positif', 'Menolak RT', 'N/A'])),
+  f('hemoroid', 'Hemoroid', 'physical', 'select', select(['Negatif', 'Positif', 'Menolak RT'])),
 
   // O–S Mata
   f('visusJauh', 'Visus Jauh', 'vision'),
   f('visusDekat', 'Visus Dekat', 'vision'),
-  f('defWarna', 'Defisiensi Persepsi Warna', 'vision', 'select', select(['Normal', 'Protan', 'Deutan', 'Tritan', 'Total', 'N/A'])),
+  f('defWarna', 'Defisiensi Persepsi Warna', 'vision', 'select', select(['Normal', 'Protan', 'Deutan', 'Tritan', 'Total'])),
   f('lapangPandang', 'Lapang Pandang', 'vision'),
   f('fisikMata', 'Fisik Mata', 'vision', 'textarea'),
 
   // T–AA Tanda vital
-  f('merokok', 'Merokok', 'vital', 'select', select(['Ya', 'Tidak', 'Sudah Berhenti', 'N/A'])),
+  f('merokok', 'Merokok', 'vital', 'select', select(['Ya', 'Tidak', 'Sudah Berhenti'])),
   f('tdS', 'Tekanan Darah Sistole (90-119)', 'vital', 'number', normal('90-119', 'mmHg')),
   f('tdD', 'Tekanan Darah Diastole (60-79)', 'vital', 'number', normal('60-79', 'mmHg')),
   f('nadi', 'Nadi < 100 bpm', 'vital', 'number', { unit: 'bpm', high: 100 }),
@@ -262,13 +202,15 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('ggt', 'GGT 8-61 U/L', 'chemistry', 'number', normal('8-61', 'U/L')),
   f('alp', 'ALP 44-147 IU/L', 'chemistry', 'number', normal('44-147', 'IU/L')),
   f('billirubin', 'Bilirubin 0,2-1,2 mg/dL', 'chemistry', 'number', normal('0,2-1,2', 'mg/dL')),
-  f('ul', 'UL', 'chemistry', 'textarea'),
+  f('ul', 'Urinalisis (satu parameter per baris)', 'chemistry', 'textarea', {
+    placeholder: 'Warna: ...\nKejernihan: ...\nBerat jenis: ...\npH: ...\nProtein: ...\nGlukosa: ...\nKeton: ...\nDarah: ...\nLeukosit: ...\nNitrit: ...\nSedimen: ...',
+  }),
 
   // BC–BG Serologi
   ...([
     ['hbsag', 'HbsAg'], ['antiHbs', 'Anti Hbs'], ['vdrl', 'VDRL'],
     ['tpha', 'TPHA'], ['hiv', 'HIV'],
-  ] as const).map(([id, label]) => f(id, label, 'serology', 'select', select(['Non - Reaktif', 'Reaktif', 'N/A']))),
+  ] as const).map(([id, label]) => f(id, label, 'serology', 'select', select(['Non - Reaktif', 'Reaktif']))),
 
   // BH–BP NAPZA
   ...([
@@ -276,7 +218,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
     ['drugMorph', 'Drug Test Morphine'], ['drugCanna', 'Drug Test Cannabinoid'],
     ['drugCoc', 'Drug Test Coccain'], ['drugBenz', 'Drug Test Benzodiazepine'],
     ['drugCaris', 'Drug Test Carisoprodol'], ['alkohol', 'Alkohol Test'],
-  ] as const).map(([id, label]) => f(id, label, 'drug', 'select', select(['Negatif', 'Positif', 'N/A']))),
+  ] as const).map(([id, label]) => f(id, label, 'drug', 'select', select(['Negatif', 'Positif']))),
   f('psa', 'PSA', 'drug', 'number', { unit: 'ng/mL', normalRange: '<4' }),
 
   // BQ–BU Imaging
@@ -292,8 +234,8 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   // tetap ditampilkan sebagai opsi "(nilai lama)" oleh ReviewMCU, sehingga
   // operator tidak mengira field kosong lalu menimpanya. Lihat
   // opsiDenganNilaiLama di ReviewMCU.tsx.
-  f('ecgHasil', 'ECG', 'imaging', 'select', { ...select(ECG_OPTIONS), allowCustom: true }),
-  f('tmHasil', 'Treadmill', 'imaging', 'select', { ...select(TREADMILL_OPTIONS), allowCustom: true }),
+  f('ecgHasil', 'ECG', 'imaging', 'select', select([...STANDARD_ECG_OPTIONS])),
+  f('tmHasil', 'Treadmill', 'imaging', 'select', select([...STANDARD_TMT_OPTIONS])),
   f('chestXR', 'Chest X-Ray', 'imaging', 'textarea'),
   f('lumboXR', 'Lumbosacral X-Ray', 'imaging', 'textarea'),
   f('usg', 'USG', 'imaging', 'textarea'),
@@ -309,31 +251,25 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('riwayatEpilepsi', 'Riwayat Epilepsi / Gangguan Kejang', 'anamnesis', 'select', {
     options: [...EPILEPSY_OPTIONS],
     multiple: true,
-    textNA: false,
   }),
   f('riwayatJantung', 'Riwayat Penyakit Jantung', 'anamnesis', 'select', {
     options: [...CARDIAC_OPTIONS],
     multiple: true,
-    textNA: false,
   }),
   f('riwayatStroke', 'Riwayat Stroke', 'anamnesis', 'select', {
     options: [...STROKE_OPTIONS],
     multiple: true,
-    textNA: false,
   }),
   f('riwayatAsma', 'Riwayat Asma / Gangguan Napas', 'anamnesis', 'select', {
     options: [...ASTHMA_OPTIONS],
     multiple: true,
-    textNA: false,
   }),
   f('riwayatSleepApnea', 'Riwayat Sleep Apnea', 'anamnesis', 'select', {
     options: [...SLEEP_APNEA_OPTIONS],
     multiple: true,
-    textNA: false,
   }),
   f('lbp', 'Nyeri Punggung Bawah (Low Back Pain)', 'anamnesis', 'select', {
     options: [...LBP_OPTIONS],
-    textNA: false,
   }),
   f('essScore', 'Skor ESS (Excessive Daytime Sleepiness)', 'anamnesis', 'number', {
     unit: 'skor',
@@ -369,37 +305,29 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   // totalnya. Dibuat field tersendiri agar tidak bergantung pada input skor.
   f('srq17Bahaya', 'Tanda Bahaya Kesehatan Jiwa (SRQ-20 butir 17 = Ya)', 'anamnesis', 'select', {
     options: ['Tidak', 'Ya'],
-    textNA: false,
   }),
 
   // Kualifikasi Klinis Tambahan — STD-006 Rev.002
   f('dmKomplikasi', 'Komplikasi Diabetes Melitus (Neuropati/Retinopati/Nefropati/Ulkus)', 'anamnesis', 'select', {
     options: [...DM_KOMPLIKASI_OPTIONS],
-    textNA: false,
   }),
   f('mentalKonfirmasi', 'Status Konfirmasi Diagnosa Gangguan Jiwa', 'anamnesis', 'select', {
     options: [...MENTAL_KONFIRMASI_OPTIONS],
-    textNA: false,
   }),
   f('artritisUrat', 'Riwayat Artritis Gout / Nyeri Sendi Asam Urat Berulang', 'anamnesis', 'select', {
     options: [...ARTRITIS_URAT_OPTIONS],
-    textNA: false,
   }),
   f('diagnosisHati', 'Diagnosis Klinis Penyakit Hati', 'anamnesis', 'select', {
     options: [...DIAGNOSIS_HATI_OPTIONS],
-    textNA: false,
   }),
   f('obesitasFungsional', 'Keterbatasan Fungsional Obesitas (IMT ≥35)', 'anamnesis', 'select', {
     options: [...OBESITAS_FUNGSIONAL_OPTIONS],
-    textNA: false,
   }),
   f('statusTerapiEss', 'Status Terapi Gangguan Tidur / Kantuk Berlebih (ESS >15)', 'anamnesis', 'select', {
     options: [...STATUS_TERAPI_ESS_OPTIONS],
-    textNA: false,
   }),
   f('epilepsiKepatuhan', 'Kepatuhan Terapi Antiepilepsi / Bebas Bangkitan', 'anamnesis', 'select', {
     options: [...EPILEPSI_KEPATUHAN_OPTIONS],
-    textNA: false,
   }),
 
   // BV–CE Spirometry
@@ -486,7 +414,7 @@ f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoC
   }),
   f('itemFU', 'Item Follow Up', 'assessment', 'textarea', { autoCalc: true }),
   f('linkMCU', 'Link File MCU', 'assessment'),
-  f('tglExpired', 'Tanggal Expired MCU', 'calculated', 'date', { autoCalc: true, autoCalcFrom: ['tglMCU'], textNA: false }),
+  f('tglExpired', 'Tanggal Expired MCU', 'calculated', 'date', { autoCalc: true, autoCalcFrom: ['tglMCU'] }),
   f('framScore', 'Framingham Score Lipid Based – Score', 'calculated', 'number', { autoCalc: true }),
   f('framProb', 'Framingham Score Lipid Based – Probabilitas', 'calculated', 'text', { autoCalc: true }),
   f('framKat', 'Framingham Score Lipid Based – Kategori', 'calculated', 'text', { autoCalc: true }),
@@ -501,14 +429,27 @@ f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoC
   f('catatanSOP', 'Catatan di Luar Rentang Tabel SOP', 'calculated', 'textarea', { autoCalc: true }),
 
   // Catatan & Rekomendasi MCU
-  f('catatan', 'Catatan & Rekomendasi', 'assessment', 'textarea', { textNA: false }),
+  f('catatan', 'Catatan & Rekomendasi', 'assessment', 'textarea'),
 ];
 
 /** MCU_FIELDS dengan huruf dan indeks kolom yang sudah ditempel. */
 export const MCU_FIELDS: MCUFieldDef[] = assignColumns(MCU_FIELD_DEFINITION);
-
-export const TEXT_NA_INDICES = MCU_FIELDS.filter(field => field.textNA).map(field => field.colIndex);
 export const TOTAL_COLS = MCU_FIELDS.length + 1; // + kolom A untuk nomor urut
+
+export function normalizeMCUEcgOption(value: string): string {
+  const token = value.toLowerCase().replace(/[^a-z]/g, '');
+  const aliases: Record<string, string> = {
+    normal: 'Normal Sinus Rhythm',
+    normalsinusrythm: 'Normal Sinus Rhythm',
+    sinusrythm: 'Normal Sinus Rhythm',
+    normalvariantofrestingecg: 'Normal Variations of Resting ECG',
+  };
+  const candidate = aliases[token] || value.trim();
+  const candidateToken = candidate.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return MCU_FIELDS.find((field) => field.id === 'ecgHasil')?.options
+    ?.find((option) => option.toLowerCase().replace(/[^a-z0-9]/g, '') === candidateToken)
+    || candidate;
+}
 
 export function getFieldsBySection(sectionId: string): MCUFieldDef[] {
   return MCU_FIELDS.filter(field => field.section === sectionId);
