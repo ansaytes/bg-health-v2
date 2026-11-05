@@ -1,4 +1,4 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
@@ -31,9 +31,9 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    Light Mode
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 :root {
   --radius: 0.75rem;
   --background: #F5F5F5;
@@ -60,9 +60,9 @@
   --chart-tick: #666666;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    Dark Mode
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 .dark {
   --background: #111111;
   --foreground: #F0F0F0;
@@ -100,17 +100,17 @@
   }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    Scrollbar
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 * { scrollbar-width: thin; scrollbar-color: rgba(255,77,0,0.25) transparent; }
 *::-webkit-scrollbar { width: 5px; height: 5px; }
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb { background: rgba(255,77,0,0.25); border-radius: 3px; }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    App Shell
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 .app-shell {
   display: flex;
   width: 100%;
@@ -119,9 +119,9 @@
   overflow: hidden;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Sidebar â€” 240px, page-specific
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   Sidebar — 240px, page-specific
+   ═══════════════════════════════════ */
 .sidebar {
   width: 240px;
   flex-shrink: 0;
@@ -189,7 +189,7 @@
   color: var(--muted-foreground);
   line-height: 1.3;
 }
-/* Stethoscope icon â€” white inverted for sidebar */
+/* Stethoscope icon — white inverted for sidebar */
 .stethoscope-sidebar-icon {
   width: 16px;
   height: 16px;
@@ -210,7 +210,7 @@
   z-index: 10;
   pointer-events: none;
 }
-/* Legacy loading-spinner â€” sekarang juga menggunakan desain BM logo berputar halus yang seragam */
+/* Legacy loading-spinner — sekarang juga menggunakan desain BM logo berputar halus yang seragam */
 .loading-spinner {
   position: relative;
   width: 60px;
@@ -334,9 +334,9 @@
   color: var(--foreground);
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    Main Area
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 .main {
   flex: 1;
   margin-left: 240px;
@@ -347,9 +347,9 @@
   overflow: hidden;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Header â€” nav center, BGBEST logo right
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   Header — nav center, BGBEST logo right
+   ═══════════════════════════════════ */
 .header {
   height: 52px;
   background: var(--card);
@@ -395,7 +395,7 @@
     drop-shadow(0 0 3px rgba(255, 255, 255, 0.6));
 }
 
-/* Header Nav â€” pill buttons */
+/* Header Nav — pill buttons */
 .header-nav {
   display: flex;
   align-items: center;
@@ -444,9 +444,9 @@
 }
 .theme-btn svg { width: 14px; height: 14px; }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Page Content â€” centers default, .has-content stretches
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   Page Content — centers default, .has-content stretches
+   ═══════════════════════════════════ */
 .page-content {
   flex: 1;
   display: flex;
@@ -461,9 +461,9 @@
   overflow: hidden;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    Dashboard Container
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 .dashboard {
   padding: 16px;
   overflow-x: hidden;
@@ -477,9 +477,9 @@
   overflow-y: auto;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    Card System
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 .card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -518,19 +518,19 @@
 }
 .card-icon svg { width: 11px; height: 11px; }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    Chart Box
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 /*
- * TINGGI MINIMUM CHART â€” penyebab label sumbu "selang-seling".
+ * TINGGI MINIMUM CHART — penyebab label sumbu "selang-seling".
  *
  * `.chart-box` memakai `flex: 1; min-height: 0`, sehingga tinggi chart
  * menyusut mengikuti sisa ruang grid. Pada grid 3 kolom, tiap chart hanya
- * mendapat ~110â€“130px. Dengan 10 kategori, Chart.js MENYEMBUNYIKAN label
+ * mendapat ~110–130px. Dengan 10 kategori, Chart.js MENYEMBUNYIKAN label
  * yang tidak muat (mis. tiap label genap) walau `autoSkip: false` sudah diatur
- * â€” inilah gejala "ada, tidak, ada, tidak" di diagram Top 10 Diagnosa.
+ * — inilah gejala "ada, tidak, ada, tidak" di diagram Top 10 Diagnosa.
  *
- * 180px memberi ruang ~18px per label â€” cukup untuk 10 kategori.
+ * 180px memberi ruang ~18px per label — cukup untuk 10 kategori.
  */
 .chart-box {
   position: relative;
@@ -539,18 +539,18 @@
   overflow: visible;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    Glow Variants (dark mode only)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 .dark .glow-orange { box-shadow: 0 0 25px rgba(255,77,0,0.10); }
 .dark .glow-amber  { box-shadow: 0 0 25px rgba(255,140,66,0.10); }
 .dark .glow-coral  { box-shadow: 0 0 25px rgba(255,99,71,0.10); }
 .dark .glow-teal   { box-shadow: 0 0 25px rgba(0,184,148,0.10); }
 .dark .glow-steel  { box-shadow: 0 0 25px rgba(119,136,153,0.10); }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Stats Grid â€” 2-col, stat-wide spans full width
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   Stats Grid — 2-col, stat-wide spans full width
+   ═══════════════════════════════════ */
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -611,9 +611,9 @@
   flex-shrink: 0;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    Health Main Grid (62fr 38fr)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 .health-main-grid {
   display: grid;
   grid-template-columns: 62fr 38fr;
@@ -667,9 +667,9 @@
   min-width: 0;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    Filter Bar
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 .header-filter {
   display: flex;
   align-items: center;
@@ -708,9 +708,9 @@ select {
 select:hover { border-color: rgba(255,77,0,0.3); }
 select:focus { border-color: #ff4d00; }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    MCU Total Bar
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 .mcu-total-bar {
   display: flex;
   align-items: center;
@@ -724,9 +724,9 @@ select:focus { border-color: #ff4d00; }
 .mcu-total-label { font-weight: 700; }
 .mcu-total-num { font-size: 14px; font-weight: 800; color: #ff4d00; }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   MCU Grid â€” 3-col, viewport-fit cards
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   MCU Grid — 3-col, viewport-fit cards
+   ═══════════════════════════════════ */
 .mcu-grid-3 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -749,9 +749,9 @@ select:focus { border-color: #ff4d00; }
   height: auto;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   MCU Row1 / Row2 (Hasil Tindak Lanjut) â€” viewport-fit
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   MCU Row1 / Row2 (Hasil Tindak Lanjut) — viewport-fit
+   ═══════════════════════════════════ */
 .mcu-row1 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -775,14 +775,14 @@ select:focus { border-color: #ff4d00; }
 .mcu-row1 .card-head, .mcu-row2 .card-head { flex-shrink: 0; }
 .mcu-row1 .chart-box, .mcu-row2 .chart-box {
   flex: 1;
-  /* Minimal 170px â€” alasan sama seperti .mcu-grid-3 di atas. */
+  /* Minimal 170px — alasan sama seperti .mcu-grid-3 di atas. */
   min-height: 170px;
   height: auto;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    Kunjungan Berobat
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 .kunjungan-top-bar {
   display: flex;
   align-items: center;
@@ -828,14 +828,14 @@ select:focus { border-color: #ff4d00; }
 
 
 
-/* Rujuk RS Section â€” scroll-up to show */
+/* Rujuk RS Section — scroll-up to show */
 
 
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    Home Feed
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 .home-feed {
   padding: 12px;
   overflow-y: auto;
@@ -1010,9 +1010,9 @@ select:focus { border-color: #ff4d00; }
   opacity: 0.7;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Sidebar Footer â€” Account / Login
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   Sidebar Footer — Account / Login
+   ═══════════════════════════════════ */
 .sidebar-footer {
   margin-top: auto;
   padding: 10px 16px 12px;
@@ -1098,7 +1098,7 @@ select:focus { border-color: #ff4d00; }
   box-shadow: 0 0 0 0 rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
   transform: translateY(1px);
 }
-/* Sidebar logout button â€” attractive gradient + icon */
+/* Sidebar logout button — attractive gradient + icon */
 .sidebar-logout-btn {
   display: inline-flex;
   align-items: center;
@@ -1134,9 +1134,9 @@ select:focus { border-color: #ff4d00; }
   height: 14px;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    Login Popup (Apple-style)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 .login-overlay {
   position: fixed;
   inset: 0;
@@ -1210,7 +1210,7 @@ select:focus { border-color: #ff4d00; }
     0 32px 80px rgba(0,0,0,0.4);
 }
 
-/* Rotating BM logo on login popup â€” smooth clockwise rotation */
+/* Rotating BM logo on login popup — smooth clockwise rotation */
 .login-logo-rotating {
   width: 48px;
   height: 48px;
@@ -1392,9 +1392,9 @@ select:focus { border-color: #ff4d00; }
   opacity: 0.8;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Lagging Indicator â€” Tab & Section Headers (original style)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   Lagging Indicator — Tab & Section Headers (original style)
+   ═══════════════════════════════════ */
 .admin-tab-row {
   display: flex;
   gap: 0;
@@ -1473,9 +1473,9 @@ select.admin-input.compact-input {
   margin-bottom: 4px;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Sick list â€” scrollable table (matches original raw-table style)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   Sick list — scrollable table (matches original raw-table style)
+   ═══════════════════════════════════ */
 .sick-list-card {
   display: flex;
   flex-direction: column;
@@ -1551,7 +1551,7 @@ select.admin-input.compact-input {
   line-height: 1.6;
 }
 
-/* Diagram "Peringkat Karyawan Sakit" â€” mengisi seluruh area scroll kartu */
+/* Diagram "Peringkat Karyawan Sakit" — mengisi seluruh area scroll kartu */
 .sick-chart-wrap {
   position: relative;
   width: 100%;
@@ -1566,9 +1566,9 @@ select.admin-input.compact-input {
   min-height: 0;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    Admin Form System
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 .admin-form-container {
   flex: 1;
   display: flex;
@@ -1769,32 +1769,27 @@ select.admin-input.compact-input {
   min-height: 0;
   width: calc(100% - 40px);
   margin: 0 auto;
-  overflow-x: auto;
+  /* Tabel Input Jadwal MCU tampil penuh dalam satu frame tanpa scroll
+     horizontal — semua kolom berukuran fixed, tombol aksi selalu tampil. */
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior-y: auto;
   border: 1px solid rgba(20,20,24,.08);
   border-radius: 16px;
   background: rgba(255,255,255,.92);
   box-shadow: 0 10px 30px rgba(24,24,28,.055);
-  /* Tabel tampil penuh dalam satu frame tanpa scroll horizontal:
-     semua kolom berukuran fixed kecil, tombol aksi selalu tampil. */
   scrollbar-width: thin;
 }
-/* Semua kolom tabel Input Jadwal MCU tampil dalam satu frame tanpa
-   scroll horizontal â€” ukuran kolom dipaksa muat di viewport. */
 .mcu-entry-page .mcu-entry-table table {
-  width: 100%;
-  table-layout: fixed;
-}
-.mcu-entry-page .mcu-entry-table {
-  overflow-x: hidden;
+  width: 100% !important;
+  table-layout: fixed !important;
+  min-width: 0 !important;
 }
 .dark .mcu-entry-page .mcu-entry-table {
   border-color: rgba(255,255,255,.09);
   background: rgba(31,31,35,.95);
   box-shadow: 0 10px 30px rgba(0,0,0,.18);
 }
-/* (table rules consolidated above) */
 .mcu-entry-page .mcu-entry-table th {
   position: sticky;
   top: 0;
@@ -2203,13 +2198,13 @@ select.admin-input.compact-input {
   min-width: 0;
   /* Minimal 150px agar label sumbu kategori tidak terpotong walau kartu
      sedang dalam grid sempit. Chart.js MENYEMBUNYIKAN label yang tidak
-     muat walau autoSkip: false â€” inilah gejala "ada, tidak, ada, tidak". */
+     muat walau autoSkip: false — inilah gejala "ada, tidak, ada, tidak". */
   min-height: 150px;
   width: 100%;
-  /* Ruang bantalan di sisi kanan & bawah: label sumbu kategori pada bar
-     horizontal, dan label nilai pada bar vertikal, digambar DI LUAR area
-     chart. Tanpa padding ini, canvas menutupi seluruh kotak kartu sehingga
-     label terakhir terpotong oleh `overflow: hidden` milik card. */
+  /* Ruang bantalan: label sumbu kategori (bar horizontal) dan label nilai
+     (bar vertikal) digambar DI LUAR area chart. Tanpa padding ini, canvas
+     menutupi seluruh kotak kartu sehingga label terakhir terpotong oleh
+     `overflow: hidden` milik card. */
   padding: 2px 4px 2px 0;
   box-sizing: border-box;
   overflow: visible;
@@ -2720,7 +2715,11 @@ select.admin-input.compact-input {
   .mcu-entry-page .mcu-entry-filter { width: 100%; }
   .mcu-entry-page .mcu-entry-count { align-self: flex-end; }
 }
-@media\ \(min-width:\ 701px\)\ and\ \(max-width:\ 1200px\)\ \{\n\ \ \.mcu-entry-page\ \.mcu-entry-table\ \{\n\ \ \ \ overflow-x:\ hidden;\n\ \ }\n}
+@media (min-width: 701px) and (max-width: 1200px) {
+  .mcu-entry-page .mcu-entry-table {
+    overflow-x: hidden;
+  }
+}
 .admin-form-btn-primary {
   flex: 1;
   height: 34px;
@@ -2752,9 +2751,9 @@ select.admin-input.compact-input {
   background: var(--hover);
   border-color: rgba(255,77,0,0.3);
 }
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Admin Toggle Arrow â€” fixed right, rotating
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   Admin Toggle Arrow — fixed right, rotating
+   ═══════════════════════════════════ */
 .admin-toggle-arrow {
   position: fixed;
   right: 12px;
@@ -2782,9 +2781,9 @@ select.admin-input.compact-input {
   transform: scale(0.85);
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Sidebar Tuwuh Lan Ngrembaka â€” above footer
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   Sidebar Tuwuh Lan Ngrembaka — above footer
+   ═══════════════════════════════════ */
 .sidebar-tuwuh-wrap {
   display: flex;
   justify-content: center;
@@ -2802,9 +2801,9 @@ select.admin-input.compact-input {
   border-radius: 6px;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Raw Data Table â€” fill body height, bottom notes area
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   Raw Data Table — fill body height, bottom notes area
+   ═══════════════════════════════════ */
 .raw-table-container {
   flex: 1;
   display: flex;
@@ -2898,9 +2897,9 @@ select.admin-input.compact-input {
   margin-top: 1px;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Responsive â€” Tablet <=1023px
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   Responsive — Tablet <=1023px
+   ═══════════════════════════════════ */
 @media (max-width: 1023px) {
   .sidebar { transform: translateX(-100%); }
   .sidebar.open { transform: translateX(0); }
@@ -2918,9 +2917,9 @@ select.admin-input.compact-input {
   }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Responsive â€” Phone <=900px
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   Responsive — Phone <=900px
+   ═══════════════════════════════════ */
 @media (max-width: 900px) {
   .mcu-live-dashboard {
     overflow-y: auto !important;
@@ -2945,9 +2944,9 @@ select.admin-input.compact-input {
   }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Responsive â€” Small Phone <=640px
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   Responsive — Small Phone <=640px
+   ═══════════════════════════════════ */
 @media (max-width: 640px) {
   body { height: auto; min-height: 100vh; overflow-y: auto; overflow-x: hidden; }
   .main { height: auto; min-height: 100vh; overflow: visible; margin-left: 0 !important; }
@@ -3020,17 +3019,17 @@ select.admin-input.compact-input {
   .user-register-grid { grid-template-columns: 1fr; }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    Employee Lookup Spinner
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 @keyframes emp-lookup-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   User Management â€” Register Form Grid
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   User Management — Register Form Grid
+   ═══════════════════════════════════ */
 .user-register-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -3042,9 +3041,9 @@ select.admin-input.compact-input {
 }
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Dark mode dropdown fix â€” kontras option
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   Dark mode dropdown fix — kontras option
+   ═══════════════════════════════════ */
 .dark select option {
   background: #1a1a1a;
   color: #f0f0f0;
@@ -3058,9 +3057,9 @@ select.admin-input.compact-input {
   color: #ff8c42;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Theme button â€” glow effect di dark mode
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   Theme button — glow effect di dark mode
+   ═══════════════════════════════════ */
 .dark .theme-btn {
   border: 1px solid rgba(255, 140, 66, 0.30);
   box-shadow: 0 0 8px rgba(255, 140, 66, 0.15), inset 0 0 4px rgba(255, 140, 66, 0.05);
@@ -3070,9 +3069,9 @@ select.admin-input.compact-input {
   box-shadow: 0 0 12px rgba(255, 140, 66, 0.25), inset 0 0 6px rgba(255, 140, 66, 0.10);
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Notification Dropdown â€” solid, tidak transparan
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   Notification Dropdown — solid, tidak transparan
+   ═══════════════════════════════════ */
 .notification-dropdown {
   background-color: #ffffff !important;
   border: 1px solid #E0E0E0 !important;
@@ -3082,9 +3081,9 @@ select.admin-input.compact-input {
   border: 1px solid #2a2a2a !important;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Dark mode â€” solid background untuk semua tabel header
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   Dark mode — solid background untuk semua tabel header
+   ═══════════════════════════════════ */
 .dark .sick-table thead tr,
 
 .dark .sick-table th,
@@ -3109,9 +3108,9 @@ select.admin-input.compact-input {
 }
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Content Modal â€” zoom popup for video/image feed items
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════
+   Content Modal — zoom popup for video/image feed items
+   ═══════════════════════════════════════════════════════════ */
 .content-modal-overlay {
   position: fixed;
   inset: 0;
@@ -3217,15 +3216,15 @@ select.admin-input.compact-input {
   
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════════════════════════════
    Uniform card aspect-ratio for feed cards
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════════════════════════════ */
 /* Campaign cards use auto aspect-ratio to show full image, others use 4/3 */
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Dashboard Total info â€” right-aligned, inline with filters
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════
+   Dashboard Total info — right-aligned, inline with filters
+   ═══════════════════════════════════════════════════════════ */
 .dashboard-totals-right {
   margin-left: auto;
   display: flex;
@@ -3252,9 +3251,9 @@ select.admin-input.compact-input {
 }
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Download Button â€” attractive dropdown + animated progress
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════
+   Download Button — attractive dropdown + animated progress
+   ═══════════════════════════════════════════════════════════ */
 .download-btn-wrapper {
   position: relative;
   display: inline-block;
@@ -3454,9 +3453,9 @@ select.admin-input.compact-input {
   margin-bottom: 8px;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Attractive button system â€” universal hover animations
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════
+   Attractive button system — universal hover animations
+   ═══════════════════════════════════════════════════════════ */
 .admin-form-btn-primary,
 .admin-form-btn-secondary,
 .login-btn,
@@ -3484,7 +3483,7 @@ select.admin-input.compact-input {
   transform: translateY(0) scale(0.98);
 }
 
-/* Header nav items â€” subtle bounce on hover */
+/* Header nav items — subtle bounce on hover */
 .header-nav-item {
   transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
 }
@@ -3492,7 +3491,7 @@ select.admin-input.compact-input {
   transform: translateY(-1px);
 }
 
-/* Theme button â€” spin animation on hover */
+/* Theme button — spin animation on hover */
 .theme-btn {
   transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), background 0.18s, border-color 0.18s;
 }
@@ -3500,7 +3499,7 @@ select.admin-input.compact-input {
   transform: rotate(180deg);
 }
 
-/* Sidebar nav buttons â€” slide-in effect */
+/* Sidebar nav buttons — slide-in effect */
 .nav-btn {
   transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease, padding 0.18s ease;
   position: relative;
@@ -3525,9 +3524,9 @@ select.admin-input.compact-input {
   transform: scaleY(1);
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Mobile optimization â€” global improvements
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════
+   Mobile optimization — global improvements
+   ═══════════════════════════════════════════════════════════ */
 @media (max-width: 640px) {
   /* Login card mobile */
   .login-card {
@@ -3610,7 +3609,7 @@ select.admin-input.compact-input {
     min-width: 160px;
   }
 
-  /* Content modal mobile â€” already added above */
+  /* Content modal mobile — already added above */
 
   /* Sidebar mobile */
   .sidebar {
@@ -3643,13 +3642,13 @@ select.admin-input.compact-input {
 }
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Content Modal â€” fix image full display + no caption overlap
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════
+   Content Modal — fix image full display + no caption overlap
+   ═══════════════════════════════════════════════════════════ */
 
 
 .content-modal-media img {
-  /* Image displayed FULL â€” fit contain, not cover, so nothing is cut */
+  /* Image displayed FULL — fit contain, not cover, so nothing is cut */
   width: 100%;
   height: 100%;
   object-fit: contain !important;
@@ -3665,9 +3664,9 @@ select.admin-input.compact-input {
   background: #000;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   GLOBAL UNIFORM LOADING â€” BM logo berputar halus (seragam)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════
+   GLOBAL UNIFORM LOADING — BM logo berputar halus (seragam)
+   ═══════════════════════════════════════════════════════════ */
 
 .bm-loading {
   display: flex;
@@ -3720,7 +3719,7 @@ select.admin-input.compact-input {
   height: 40px;
 }
 
-/* Ukuran spinner halaman dikurangi 75% dari 88px â†’ 66px, sesuai permintaan.
+/* Ukuran spinner halaman dikurangi 75% dari 88px → 66px, sesuai permintaan.
    Tetap proporsional karena ring & logo memakai persentase container. */
 .bm-loading.is-card .bm-loading-spinner {
   width: 66px;
@@ -3828,9 +3827,9 @@ select.admin-input.compact-input {
 }
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Employee Lookup Suggestions Dropdown â€” Modern Design
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═════════════════════════════════════════════════════════════
+   Employee Lookup Suggestions Dropdown — Modern Design
+   ═══════════════════════════════════════════════════════════════ */
 .emp-suggestions {
   font-family: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   animation: empSuggestionIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
@@ -3884,7 +3883,7 @@ select.admin-input.compact-input {
   background: rgba(255, 77, 0, 0.4);
 }
 
-/* Dark mode â€” solid dark background */
+/* Dark mode — solid dark background */
 .dark .emp-suggestions {
   background: #1f2329 !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
@@ -3909,11 +3908,11 @@ select.admin-input.compact-input {
 }
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Content Modal â€” IG-style for campaigns + full video player
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════════
+   Content Modal — IG-style for campaigns + full video player
+   ═══════════════════════════════════════════════════════════════ */
 
-/* IG-style modal (for Health Campaign) â€” image full, caption scrollable */
+/* IG-style modal (for Health Campaign) — image full, caption scrollable */
 .content-modal.ig-style {
   max-width: 1000px;
   max-height: 92vh;
@@ -4010,7 +4009,7 @@ select.admin-input.compact-input {
   word-break: break-word;
 }
 
-/* Video-style modal â€” full video player */
+/* Video-style modal — full video player */
 .content-modal.video-style {
   max-width: 1200px;
   max-height: 92vh;
@@ -4072,9 +4071,9 @@ select.admin-input.compact-input {
 }
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Dashboard Top Bar â€” filter kiri + total kanan, satu baris
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════════
+   Dashboard Top Bar — filter kiri + total kanan, satu baris
+   ═══════════════════════════════════════════════════════════════ */
 .dashboard-top-bar {
   display: flex;
   align-items: center;
@@ -4116,9 +4115,9 @@ select.admin-input.compact-input {
 }
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Share Button â€” Apple-style SVG icons
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════════
+   Share Button — Apple-style SVG icons
+   ═══════════════════════════════════════════════════════════════ */
 .share-btn-wrapper {
   position: relative;
   display: inline-flex;
@@ -4227,7 +4226,7 @@ select.admin-input.compact-input {
 }
 
 
-/* IG Modal Image Section â€” scrollable for long images (IG post style) */
+/* IG Modal Image Section — scrollable for long images (IG post style) */
 .ig-modal-image-section {
   flex: 2;
   background: #000;
@@ -4261,9 +4260,9 @@ select.admin-input.compact-input {
 }
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Raw Table â€” Sticky First 3 Columns (freeze saat scroll horizontal)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════════
+   Raw Table — Sticky First 3 Columns (freeze saat scroll horizontal)
+   ═══════════════════════════════════════════════════════════════ */
 .raw-table-scroll table {
   border-collapse: collapse;
 }
@@ -4277,7 +4276,7 @@ select.admin-input.compact-input {
 
 
 
-/* Header corner cell â€” kolom 1-3 + header row */
+/* Header corner cell — kolom 1-3 + header row */
 
 
 
@@ -4287,10 +4286,10 @@ select.admin-input.compact-input {
 /* Border pemisah untuk kolom freeze */
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Raw Table â€” Freeze Header Row + First 4 Columns
+/* ═══════════════════════════════════════════════════════════════
+   Raw Table — Freeze Header Row + First 4 Columns
    SOLID background (no transparency)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════════════════════════════════ */
 .raw-table-scroll thead th {
   position: sticky;
   top: 0;
@@ -4301,9 +4300,9 @@ select.admin-input.compact-input {
 
 .dark
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Raw Table â€” Header sticky (NO column freeze)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════════
+   Raw Table — Header sticky (NO column freeze)
+   ═══════════════════════════════════════════════════════════════ */
 .raw-table-scroll thead th {
   position: sticky;
   top: 0;
@@ -4314,7 +4313,7 @@ select.admin-input.compact-input {
   background: #1f2329;
 }
 
-/* Raw Table â€” Header sticky only */
+/* Raw Table — Header sticky only */
 .raw-table-scroll thead th {
   position: sticky;
   top: 0;
@@ -4326,19 +4325,19 @@ select.admin-input.compact-input {
 }
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Kunjungan Berobat â€” Grid (same pattern as mcu-grid-3)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════════
+   Kunjungan Berobat — Grid (same pattern as mcu-grid-3)
+   ═══════════════════════════════════════════════════════════════ */
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Kunjungan Berobat â€” Layout (dari referensi GAS)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════════
+   Kunjungan Berobat — Layout (dari referensi GAS)
+   ═══════════════════════════════════════════════════════════════ */
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Kunjungan Berobat â€” Layout (dari referensi GAS)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════════
+   Kunjungan Berobat — Layout (dari referensi GAS)
+   ═══════════════════════════════════════════════════════════════ */
 .kunjungan-scroll-content {
   display: flex;
   flex-direction: column;
@@ -4987,12 +4986,12 @@ select.admin-input.compact-input {
 }
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    Transisi pindah halaman (tanpa kedip)
    Konten lama langsung diganti konten baru; konten baru hanya
    slide-up tipis + fade dari opasitas tinggi (bukan dari 0),
    sehingga tidak pernah ada frame kosong/berkedip.
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 @keyframes page-transition-in {
   from { opacity: 0.55; transform: translate3d(0, 6px, 0); }
   to   { opacity: 1;    transform: translate3d(0, 0, 0); }
@@ -5005,7 +5004,7 @@ select.admin-input.compact-input {
 }
 
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Tabel MCU: baris ringkas, aksi, paginasi â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ───────── Tabel MCU: baris ringkas, aksi, paginasi ───────── */
 .mcu-records-toolbar { margin-bottom: 8px; min-height: 36px; padding: 5px 10px; }
 .mcu-records-table .mcu-records-action { padding: 0 4px; }
 .mcu-records-action-inner { display: flex; align-items: center; justify-content: center; gap: 2px; }
@@ -5023,7 +5022,7 @@ select.admin-input.compact-input {
 .mcu-records-progress { margin-top: 6px; color: var(--muted-foreground); font-size: 11px; }
 .mcu-dashboard-card-sub { margin: 2px 0 0; color: var(--muted-foreground); font-size: 10.5px; font-weight: 600; }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Filter kolom ala spreadsheet â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ───────── Filter kolom ala spreadsheet ───────── */
 .col-filter-btn {
   display: inline-flex; align-items: center; justify-content: center;
   width: 18px; height: 18px; padding: 0; border-radius: 4px;
@@ -5068,10 +5067,10 @@ select.admin-input.compact-input {
 }
 .col-filter-footer .is-primary:hover { text-decoration: none; filter: brightness(1.08); }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Centered Tabs â€” tab menu selalu di TENGAH halaman (simetris)
+/* ═══════════════════════════════════════════════════════════════
+   Centered Tabs — tab menu selalu di TENGAH halaman (simetris)
    (Nama class dipertahankan agar tidak perlu ubah semua pemakai.)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════════════════════════════════ */
 .centered-tabs {
   display: flex;
   align-items: flex-end;
@@ -5131,5 +5130,3 @@ select.admin-input.compact-input {
   background: rgba(255, 77, 0, 0.12);
   color: #ff4d00;
 }
-
-
