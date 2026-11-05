@@ -174,15 +174,41 @@ export default function ErgonomiDashboard() {
       } as ChartOptions,
     }));
 
-    // 4. Status rekomendasi
+    // 4. Status rekomendasi — donut komposisi (bukan bar), menyamakan
+    //    pola visual dengan "Capaian Pelaksanaan MCU" di Monitoring MCU.
     const rk = d.rekomendasi || {};
     draw('rekom', rekomRef.current, () => new ChartJS(rekomRef.current!, {
-      type: 'bar',
+      type: 'doughnut',
       data: {
         labels: ['Open', 'Progress', 'Closed', 'Lewat tempo'],
-        datasets: [{ data: [rk.open || 0, rk.progress || 0, rk.closed || 0, rk.lewatJatuhTempo || 0], backgroundColor: ['#E63946', '#F5A623', '#00B894', '#B91C1C'], borderRadius: 4, ...BAR_LAYOUT }],
+        datasets: [{ data: [rk.open || 0, rk.progress || 0, rk.closed || 0, rk.lewatJatuhTempo || 0], backgroundColor: ['#E63946', '#F5A623', '#00B894', '#B91C1C'], borderWidth: 2, borderColor: cardBg, hoverOffset: 6 }],
       },
-      options: barOpts(false),
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: STANDAR_ANIMASI_DONUT, cutout: '58%', rotation: 0, circumference: 360,
+        plugins: {
+          legend,
+          tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed}` } },
+          datalabels: { display: false },
+        },
+      } as ChartOptions<'doughnut'>,
+      plugins: [{
+        id: 'ergo-rekom-total',
+        afterDraw: (chart) => {
+          const { left, right, top, bottom } = chart.chartArea;
+          const ctx = chart.ctx;
+          const total = [rk.open || 0, rk.progress || 0, rk.closed || 0, rk.lewatJatuhTempo || 0].reduce((s, v) => s + v, 0);
+          ctx.save();
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = text;
+          ctx.font = `bold 20px ${FONT}`;
+          ctx.fillText(String(total), (left + right) / 2, (top + bottom) / 2 - 6);
+          ctx.globalAlpha = 0.6;
+          ctx.font = `600 9px ${FONT}`;
+          ctx.fillText('TOTAL REKOMENDASI', (left + right) / 2, (top + bottom) / 2 + 12);
+          ctx.restore();
+        },
+      }],
     }));
 
     // 5. Kepatuhan frekuensi survei per site (internal & pihak ketiga)

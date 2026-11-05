@@ -139,12 +139,42 @@ export default function HearingConservationDashboard() {
       }],
     }));
 
-    // 2. Karyawan terpajan per kategori
+    // 2. Karyawan terpajan per kategori — donut dengan total di tengah,
+    //    sama seperti diagram "Status MCU" di Monitoring MCU (seimbang
+    //    dengan donut Zona di atasnya, bukan semua bar).
     const katVals = [d.kategori.A || 0, d.kategori.B || 0, d.kategori.C || 0];
+    const katTot = katVals.reduce((s, v) => s + v, 0);
     draw('kategori', kategoriRef.current, () => new ChartJS(kategoriRef.current!, {
-      type: 'bar',
-      data: { labels: ['A · rutin', 'B · insidental', 'C · tidak terpajan'], datasets: [{ data: katVals, backgroundColor: ['#E63946', '#F5A623', '#00B894'], borderRadius: 4, ...BAR_LAYOUT }] },
-      options: barOpts(false),
+      type: 'doughnut',
+      data: {
+        labels: ['A · rutin', 'B · insidental', 'C · tidak terpajan'],
+        datasets: [{ data: katVals, backgroundColor: ['#E63946', '#F5A623', '#00B894'], borderWidth: 2, borderColor: cardBg, hoverOffset: 6 }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: STANDAR_ANIMASI_DONUT, cutout: '58%', rotation: 0, circumference: 360,
+        plugins: {
+          legend,
+          tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed}${katTot ? ` (${(c.parsed / katTot * 100).toFixed(1)}%)` : ''}` } },
+          datalabels: { display: false },
+        },
+      } as ChartOptions<'doughnut'>,
+      plugins: [{
+        id: 'hc-kat-total',
+        afterDraw: (chart) => {
+          const { left, right, top, bottom } = chart.chartArea;
+          const ctx = chart.ctx;
+          ctx.save();
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = text;
+          ctx.font = `bold 22px ${FONT}`;
+          ctx.fillText(String(katTot), (left + right) / 2, (top + bottom) / 2 - 6);
+          ctx.globalAlpha = 0.6;
+          ctx.font = `600 9px ${FONT}`;
+          ctx.fillText('TOTAL KARYAWAN', (left + right) / 2, (top + bottom) / 2 + 12);
+          ctx.restore();
+        },
+      }],
     }));
 
     // 3. Cakupan audiometri tahun ini (per kategori, stacked)
