@@ -211,17 +211,44 @@ export default function LingkunganDashboard({ site }: { site?: string }) {
 }
 
 /** Pesan di dalam kartu bila belum ada data.
- *  Memakai spinner logo yang sama dengan dashboard lain (Ergonomi, Hearing)
- *  agar tampilan "belum ada data" seragam — bukan teks telanjang. */
+ *  Bukan spinner: kartu kosong menampilkan placeholder statis (ikon + teks)
+ *  agar tidak memberi kesan "sedang memuat" padahal memang belum ada data. */
 function Kosong() {
   return (
-    <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Belum ada data pengukuran">
-      <div className="bm-loading-spinner">
-        <div className="bm-loading-ring" aria-hidden="true" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
-      </div>
-      <p className="bm-loading-label">Belum ada data pengukuran</p>
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label="Belum ada data pengukuran"
+      style={{
+        flex: 1,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        padding: 12,
+        color: 'var(--muted-foreground)',
+        textAlign: 'center',
+      }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: '50%',
+          border: '2px dashed rgba(255, 77, 0, 0.4)',
+          display: 'grid',
+          placeItems: 'center',
+          fontSize: 16,
+          fontWeight: 800,
+          color: 'rgba(255, 77, 0, 0.6)',
+        }}
+      >
+        –
+      </span>
+      <span style={{ fontSize: 11.5, fontWeight: 600 }}>Belum ada data pengukuran</span>
     </div>
   );
 }

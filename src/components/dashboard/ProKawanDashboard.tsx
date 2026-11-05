@@ -239,7 +239,6 @@ export default function ProKawanDashboard() {
               values={ringkas.byFrekuensi.map(([, v]) => v)}
               colors={ringkas.byFrekuensi.map(([k]) =>
                 k.startsWith('1') ? '#FF2D2D' : k.startsWith('3') ? '#FFD400' : k.startsWith('6') ? '#3498DB' : '#778899')}
-              horizontal
               legendLabel="Peserta"
             />
           </div>

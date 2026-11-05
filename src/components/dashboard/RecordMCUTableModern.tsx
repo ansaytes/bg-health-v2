@@ -190,13 +190,16 @@ export default function RecordMCUTableModern() {
   const [recordLoaded, setRecordLoaded] = useState(false);
   const [pageSize, setPageSize] = useState(100);
   const [error, setError] = useState('');
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [frozenColumns, setFrozenColumns] = useState<string[]>(['nik_karyawan', 'nama']);
   const [frozenColumnsMonitor, setFrozenColumnsMonitor] = useState<string[]>(['nik_karyawan', 'nama']);
   const [showFrozenPicker, setShowFrozenPicker] = useState(false);
   const [editingRow, setEditingRow] = useState<RecordRow | null>(null);
   const [followUpTargetRow, setFollowUpTargetRow] = useState<RecordRow | null>(null);
   const [saving, setSaving] = useState(false);
+  // Action dropdown per baris
+  const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
+  const [viewingRow, setViewingRow] = useState<RecordRow | null>(null);
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
 
   const [activeTab, setActiveTab] = useState<'record' | 'monitor'>('monitor');
   const [monitorRows, setMonitorRows] = useState<RecordRow[]>([]);
@@ -207,6 +210,18 @@ export default function RecordMCUTableModern() {
   // Filter per kolom ala spreadsheet: daftar nilai terpilih (undefined = semua nilai)
   const [monitorFilters, setMonitorFilters] = useState<Record<string, string[] | undefined>>({});
   const [recordFilters, setRecordFilters] = useState<Record<string, string[] | undefined>>({});
+
+  // Tutup action dropdown saat klik di luar
+  useEffect(() => {
+    if (!actionMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuBtnRef.current && !menuBtnRef.current.contains(e.target as Node)) {
+        setActionMenuOpen(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [actionMenuOpen]);
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Apakah Anda yakin ingin menghapus data MCU untuk ${name}?`)) return;
@@ -627,7 +642,6 @@ export default function RecordMCUTableModern() {
                 <tr><td colSpan={columns.length + 2} style={{ padding: 36, textAlign: 'center' }}>{error || (activeFilterCount > 0 || (activeTab === 'record' ? search : monitorSearch) ? 'Tidak ada data yang cocok dengan filter.' : 'Belum ada data.')}</td></tr>
               ) : displayRows.map((row, idx) => {
                 const id = String(row.id ?? row.nik_karyawan ?? `${currentPage}-${idx}`);
-                const isExp = !!expanded[id];
                 const zoneKey = activeTab === 'record' ? row.zonasi : row.zona_status_kesehatan;
                 return (
                   <Fragment key={id}>
@@ -649,27 +663,64 @@ export default function RecordMCUTableModern() {
                         );
                       })}
                       <td className="mcu-records-action">
-                        <div className="mcu-records-action-inner">
-                        <Button size="sm" variant="ghost" onClick={() => setExpanded(s => ({ ...s, [id]: !s[id] }))} title={isExp ? 'Tutup detail' : 'Lihat detail'}><Eye size={14} /></Button>
-                        <Button size="sm" variant="ghost" className="text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300" onClick={() => setFollowUpTargetRow(row)} title="Tindak Lanjut / Follow-Up MCU"><Activity size={14} /></Button>
-                        {activeTab === 'record' && (isSuperuser || isAdmin) && (
-                          <>
-                            <Button size="sm" variant="ghost" onClick={() => handleEdit(row)} title="Edit data"><Edit size={14} /></Button>
-                            <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => handleDelete(String(row.id), row.nama)} title="Hapus data"><Trash2 size={14} /></Button>
-                          </>
-                        )}
+                        {/* Satu tombol dropdown: View, Edit, Follow-Up, Delete */}
+                        <div className="relative inline-block">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            ref={menuBtnRef}
+                            onClick={() => setActionMenuOpen(actionMenuOpen === id ? null : id)}
+                            title="Aksi"
+                            className="h-7 w-7 p-0"
+                          >
+                            ···
+                          </Button>
+                          {actionMenuOpen === id && createPortal(
+                            <div
+                              className="z-50 fixed mt-1 w-44 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg"
+                              style={{ top: (menuBtnRef.current?.getBoundingClientRect().bottom ?? 0) + 4, left: Math.min((menuBtnRef.current?.getBoundingClientRect().left ?? 0), window.innerWidth - 180) }}
+                              role="menu"
+                            >
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
+                                onClick={() => { setViewingRow(row); setActionMenuOpen(null); }}
+                              >
+                                <Eye size={14} /> Lihat Detail
+                              </button>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
+                                onClick={() => { handleEdit(row); setActionMenuOpen(null); }}
+                              >
+                                <Edit size={14} /> Edit
+                              </button>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
+                                onClick={() => { setFollowUpTargetRow(row); setActionMenuOpen(null); }}
+                              >
+                                <Activity size={14} /> Follow Up
+                              </button>
+                              {activeTab === 'record' && (isSuperuser || isAdmin) && (
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10"
+                                  onClick={() => { handleDelete(String(row.id), row.nama); setActionMenuOpen(null); }}
+                                >
+                                  <Trash2 size={14} /> Hapus
+                                </button>
+                              )}
+                            </div>,
+                            document.body,
+                          )}
                         </div>
                       </td>
                     </tr>
-                    {isExp && (
-                      <tr>
-                        <td colSpan={columns.length + 2} className="mcu-records-detail-cell">
-                          <div className="mcu-records-detail">
-                            <pre>{JSON.stringify(Object.fromEntries(Object.entries(row).filter(([k]) => !EXCLUDED_COLUMNS.has(k))), null, 2)}</pre>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
                   </Fragment>
                 );
               })}
@@ -693,6 +744,48 @@ export default function RecordMCUTableModern() {
             Berikutnya <ChevronRight size={14} />
           </Button>
         </div>
+
+        {/* View dialog — detail record + menu Edit / Follow Up / Hapus */}
+        <Dialog open={!!viewingRow} onOpenChange={open => !open && setViewingRow(null)}>
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Detail MCU — {viewingRow?.nama || '-'}</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+              {MCU_FIELDS.filter(f => {
+                const key = f.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase();
+                const val = viewingRow?.[key];
+                return val != null && String(val).trim() !== '' && !CIPHERTEXT_PATTERN.test(String(val));
+              }).map(f => {
+                const key = f.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase();
+                return (
+                  <div key={f.id} className="flex flex-col gap-0.5 rounded-md border border-border/60 p-1.5">
+                    <span className="text-[10px] font-medium text-muted-foreground">{f.label}</span>
+                    <span className="break-words">{String(viewingRow?.[key] ?? '')}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <Button variant="outline" onClick={() => setViewingRow(null)}>Tutup</Button>
+              <Button variant="outline" onClick={() => { handleEdit(viewingRow!); setViewingRow(null); }}>
+                <Edit size={14} className="mr-1" /> Edit
+              </Button>
+              <Button variant="outline" className="text-cyan-600" onClick={() => { setFollowUpTargetRow(viewingRow!); setViewingRow(null); }}>
+                <Activity size={14} className="mr-1" /> Follow Up
+              </Button>
+              {activeTab === 'record' && (isSuperuser || isAdmin) && (
+                <Button
+                  variant="outline"
+                  className="text-destructive"
+                  onClick={() => { handleDelete(String(viewingRow!.id), viewingRow!.nama); setViewingRow(null); }}
+                >
+                  <Trash2 size={14} className="mr-1" /> Hapus
+                </Button>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Edit dialog */}
         <Dialog open={!!editingRow} onOpenChange={open => !open && setEditingRow(null)}>

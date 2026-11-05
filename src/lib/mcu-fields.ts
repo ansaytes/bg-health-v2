@@ -1,9 +1,9 @@
-// ============================================================
+﻿// ============================================================
 // MCU Field Definitions
 // ============================================================
 // Kolom A adalah nomor urut yang dibuat otomatis, jadi field pertama
 // (NIK KTP) berada di kolom B. Huruf dan indeks kolom DITURUNKAN dari
-// urutan deklarasi di bawah — lihat assignColumns().
+// urutan deklarasi di bawah â€” lihat assignColumns().
 //
 // The order here is the Excel/Supabase contract for Record MCU.
 // Menyisipkan field baru cukup menaruhnya pada posisi yang tepat;
@@ -49,7 +49,7 @@ export interface MCUFieldDef {
   allowCustom?: boolean;
   /**
    * Saran otomatis yang dihitung oleh engine dari temuan klinis.
-   * Nilai tetap dapat diubah manual oleh operator — saran hanya ditulis
+   * Nilai tetap dapat diubah manual oleh operator â€” saran hanya ditulis
    * saat field kosong atau masih berisi nilai saran sebelumnya.
    */
   autoSuggest?: boolean;
@@ -140,7 +140,7 @@ const kesimpulanOptions = ['Fit To Work', 'Fit With Note', 'Fit With Restriction
 
 
 export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
-  // B–J Identitas
+  // Bâ€“J Identitas
   f('nationalId', 'NIK KTP', 'identity', 'text'),
   f('nikKaryawan', 'NIK Karyawan', 'identity', 'text'),
   f('nama', 'Nama', 'identity'),
@@ -154,7 +154,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('tglMCU', 'Tanggal MCU', 'identity', 'date'),
   f('tempatMCU', 'Tempat MCU', 'identity'),
 
-  // K–N Fisik
+  // Kâ€“N Fisik
   f('golDarah', 'Golongan Darah & Rhesus', 'physical', 'select', select(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'])),
   f('gigiMulut', 'Gigi & Mulut', 'physical', 'select', {
     options: ['Normal', 'Karies', 'Ginggivitis', 'Periodontitis', 'Edentul', 'Protodonsia'],
@@ -166,7 +166,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   }),
   f('hemoroid', 'Hemoroid', 'physical', 'select', select(['Negatif', 'Positif', 'Menolak RT'])),
 
-  // O–S Mata
+  // Oâ€“S Mata
   f('visusJauh', 'Visus Jauh', 'vision'),
   f('visusDekat', 'Visus Dekat', 'vision'),
   f('defWarna', 'Defisiensi Persepsi Warna', 'vision', 'select', select(['Normal', 'Protan', 'Deutan', 'Tritan', 'Total'])),
@@ -179,31 +179,31 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
     allowCustom: true,
   }),
 
-  // T–AA Tanda vital
+  // Tâ€“AA Tanda vital
   f('merokok', 'Merokok', 'vital', 'select', select(['Ya', 'Tidak', 'Sudah Berhenti'])),
   f('tdS', 'Tekanan Darah Sistolik', 'vital', 'number', normal('90-119', 'mmHg')),
   f('tdD', 'Tekanan Darah Diastolik', 'vital', 'number', normal('60-79', 'mmHg')),
   f('nadi', 'Nadi', 'vital', 'number', { unit: 'bpm', high: 100 }),
   f('bb', 'Berat Badan', 'vital', 'number', { unit: 'kg' }),
   f('tb', 'Tinggi Badan', 'vital', 'number', { unit: 'cm' }),
-  f('bmi', 'BMI', 'vital', 'number', { unit: 'kg/m²', high: 30, autoCalc: true, autoCalcFrom: ['bb', 'tb'] }),
+  f('bmi', 'BMI', 'vital', 'number', { unit: 'kg/mÂ²', high: 30, autoCalc: true, autoCalcFrom: ['bb', 'tb'] }),
   f('lp', 'Lingkar Pinggang', 'vital', 'number', { unit: 'cm', normalMale: '<90', normalFemale: '<80' }),
 
-  // AB–AJ Hematologi
+  // ABâ€“AJ Hematologi
   f('hb', 'Hemoglobin', 'hematology', 'number', { unit: 'g/dL', normalMale: '13-16,5', normalFemale: '12-15', lowMale: 13, highMale: 16.5, lowFemale: 12, highFemale: 15 }),
-  f('leukosit', 'Leukosit', 'hematology', 'number', normal('4-11', '10³/µL')),
-  f('eritrosit', 'Eritrosit', 'hematology', 'number', normal('4,5-6,2', '10⁶/µL')),
+  f('leukosit', 'Leukosit', 'hematology', 'number', normal('4-11', '10Â³/ÂµL')),
+  f('eritrosit', 'Eritrosit', 'hematology', 'number', normal('4,5-6,2', '10â¶/ÂµL')),
   f('hematokrit', 'Hematokrit', 'hematology', 'number', normal('40-54', '%')),
-  f('trombosit', 'Trombosit', 'hematology', 'number', normal('150-400', '10³/µL')),
+  f('trombosit', 'Trombosit', 'hematology', 'number', normal('150-400', '10Â³/ÂµL')),
   f('mcv', 'MCV', 'hematology', 'number', normal('80-100', 'fL')),
   f('mch', 'MCH', 'hematology', 'number', normal('26-34', 'pg')),
   f('mchc', 'MCHC', 'hematology', 'number', { ...normal('31-37', 'g/dL'), autoCalc: true, autoCalcFrom: ['hb', 'hematokrit'] }),
   f('led', 'LED (Laju Endap Darah)', 'hematology', 'number', { unit: 'mm/j', normalMale: '0-15', normalFemale: '0-20' }),
 
-  // AK–BB Kimia darah
+  // AKâ€“BB Kimia darah
   f('chol', 'Kolesterol Total', 'chemistry', 'number', normal('<200', 'mg/dL')),
   f('tg', 'Trigliserida', 'chemistry', 'number', normal('<150', 'mg/dL')),
-  f('hdl', 'HDL', 'chemistry', 'number', normal('≥50', 'mg/dL')),
+  f('hdl', 'HDL', 'chemistry', 'number', normal('â‰¥50', 'mg/dL')),
   f('ldl', 'LDL', 'chemistry', 'number', normal('<100', 'mg/dL')),
   f('gdp', 'Gula Darah Puasa', 'chemistry', 'number', normal('70-100', 'mg/dL')),
   f('gd2pp', 'Gula Darah 2 Jam PP', 'chemistry', 'number', normal('<140', 'mg/dL')),
@@ -214,85 +214,122 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('kreatinin', 'Kreatinin', 'chemistry', 'number', normal('0.6-1.2', 'mg/dL')),
   // eGFR boleh diisi manual dari hasil laboratorium. Bila kosong, engine
   // menghitungnya otomatis dengan CKD-EPI 2021 dari kreatinin + usia + jenis kelamin.
-  f('egfr', 'Glomerular Filtration Rate', 'chemistry', 'number', { ...normal('≥90', 'mL/menit/1,73 m²'), autoCalc: true, autoCalcFrom: ['kreatinin', 'usia', 'jenisKelamin'] }),
+  f('egfr', 'Glomerular Filtration Rate', 'chemistry', 'number', { ...normal('â‰¥90', 'mL/menit/1,73 mÂ²'), autoCalc: true, autoCalcFrom: ['kreatinin', 'usia', 'jenisKelamin'] }),
   f('sgot', 'SGOT', 'chemistry', 'number', normal('<40', 'U/L')),
   f('sgpt', 'SGPT', 'chemistry', 'number', normal('<41', 'U/L')),
   f('ggt', 'GGT', 'chemistry', 'number', normal('8-61', 'U/L')),
   f('alp', 'ALP', 'chemistry', 'number', normal('44-147', 'IU/L')),
   f('billirubin', 'Bilirubin', 'chemistry', 'number', normal('0,2-1,2', 'mg/dL')),
 
-  // Urinalisis — 19 parameter disimpan di kolom terpisah (ul_*) agar bisa
+  // Urinalisis â€” 19 parameter disimpan di kolom terpisah (ul_*) agar bisa
   // di-query per parameter. Kolom `ul` lama tetap dipertahankan sebagai
   // ringkasan komposit autoCalc untuk engine zonasi, diagnosis, dan Eksel.
   f('ulWarna', 'Warna Urine', 'chemistry', 'select', {
-    options: ['Kuning Muda', 'Kuning Gelap', 'Amber', 'Keruh Kemerahan', 'Tidak Diperiksa'],
+    options: ['Pale Yellow', 'Dark Yellow', 'Amber', 'Cloudy Reddish', 'Not Examined'],
+    allowCustom: true,
+    normalRange: 'Pale Yellow',
+  }),
+  f('ulKejernihan', 'Turbidity Urine', 'chemistry', 'select', {
+    options: ['Clear', 'Cloudy Moderate', 'Cloudy', 'Very Cloudy'],
+    normalRange: 'Clear',
     allowCustom: true,
   }),
-  f('ulKejernihan', 'Kejernihan Urine', 'chemistry', 'select', {
-    options: ['Jernih', 'Keruh Sedang', 'Keruh', 'Sangat Keruh'],
+  f('ulBau', 'Odor Urine', 'chemistry', 'select', {
+    options: ['Aromatic', 'Sweet', 'Ammoniacal', 'Foul'],
+    normalRange: 'Aromatic',
+    allowCustom: true,
   }),
-  f('ulBau', 'Bau Urine', 'chemistry', 'select', {
-    options: ['Aromatik', 'Manis', 'Amoniakal', 'Busuk'],
-  }),
-  f('ulBeratJenis', 'Berat Jenis (SG)', 'chemistry', 'select', {
+  f('ulBeratJenis', 'Specific Gravity (SG)', 'chemistry', 'select', {
     options: ['1.005', '1.010', '1.015', '1.020', '1.025', '1.030', '1.035', '1.040'],
+    normalRange: '1.005-1.030',
+    allowCustom: true,
   }),
   f('ulPh', 'pH Urine', 'chemistry', 'select', {
     options: ['4.5', '5.0', '5.5', '6.0', '6.5', '7.0', '7.5', '8.0'],
+    normalRange: '4.6-8.0',
+    allowCustom: true,
   }),
   f('ulProtein', 'Protein / Albumin', 'chemistry', 'select', {
-    options: ['Negatif', 'Trace', '+1', '+2', '+3', '+4'],
+    options: ['Negative', 'Trace', '+1', '+2', '+3', '+4'],
+    normalRange: 'Negative',
+    allowCustom: true,
   }),
-  f('ulGlukosa', 'Glukosa / Reduksi', 'chemistry', 'select', {
-    options: ['Negatif', '+1', '+2', '+3', '+4'],
+  f('ulGlukosa', 'Glucose / Reduction', 'chemistry', 'select', {
+    options: ['Negative', '+1', '+2', '+3', '+4'],
+    normalRange: 'Negative',
+    allowCustom: true,
   }),
-  f('ulKeton', 'Keton', 'chemistry', 'select', {
-    options: ['Negatif', '+1', '+2', '+3', '+4'],
+  f('ulKeton', 'Ketone', 'chemistry', 'select', {
+    options: ['Negative', '+1', '+2', '+3', '+4'],
+    normalRange: 'Negative',
+    allowCustom: true,
   }),
-  f('ulDarah', 'Darah / Darah Samar', 'chemistry', 'select', {
-    options: ['Negatif', '+1', '+2', '+3', '+4'],
+  f('ulDarah', 'Blood / Occult Blood', 'chemistry', 'select', {
+    options: ['Negative', '+1', '+2', '+3', '+4'],
+    normalRange: 'Negative',
+    allowCustom: true,
   }),
-  f('ulLeukositEsterase', 'Leukosit Esterase', 'chemistry', 'select', {
-    options: ['Negatif', '+1', '+2', '+3', '+4'],
+  f('ulLeukositEsterase', 'Leukocyte Esterase', 'chemistry', 'select', {
+    options: ['Negative', '+1', '+2', '+3', '+4'],
+    normalRange: 'Negative',
+    allowCustom: true,
   }),
-  f('ulNitrit', 'Nitrit', 'chemistry', 'select', {
-    options: ['Negatif', 'Positif'],
+  f('ulNitrit', 'Nitrite', 'chemistry', 'select', {
+    options: ['Negative', 'Positive'],
+    normalRange: 'Negative',
+    allowCustom: true,
   }),
   f('ulBilirubin', 'Bilirubin Urine', 'chemistry', 'select', {
-    options: ['Negatif', '+1', '+2', '+3', '+4'],
+    options: ['Negative', '+1', '+2', '+3', '+4'],
+    normalRange: 'Negative',
+    allowCustom: true,
   }),
   f('ulUrobilinogen', 'Urobilinogen', 'chemistry', 'select', {
-    options: ['Normal', '+1', '+2', 'Tinggi'],
+    options: ['Normal', '+1', '+2', 'High'],
+    normalRange: 'Normal',
+    allowCustom: true,
   }),
-  f('ulEritrosit', 'Eritrosit Urine', 'chemistry', 'select', {
-    options: ['0 /LPB', '1-2 /LPB', '3-5 /LPB', '6-10 /LPB', '>10 /LPB', 'RCBC'],
+  f('ulEritrosit', 'RBC Urine', 'chemistry', 'select', {
+    options: ['0 /HPF', '1-2 /HPF', '3-5 /HPF', '6-10 /HPF', '>10 /HPF', 'RCBC'],
+    normalRange: '0-2 /HPF',
+    allowCustom: true,
   }),
-  f('ulLeukosit', 'Leukosit Urine', 'chemistry', 'select', {
-    options: ['0 /LPB', '1-2 /LPB', '3-5 /LPB', '6-10 /LPB', '>10 /LPB', 'RCBC'],
+  f('ulLeukosit', 'WBC Urine', 'chemistry', 'select', {
+    options: ['0 /HPF', '1-2 /HPF', '3-5 /HPF', '6-10 /HPF', '>10 /HPF', 'RCBC'],
+    normalRange: '0-5 /HPF',
+    allowCustom: true,
   }),
-  f('ulSelEpitel', 'Sel Epitel', 'chemistry', 'select', {
-    options: ['Sedikit', 'Moderat', 'Banyak', 'Tidak Diperiksa'],
+  f('ulSelEpitel', 'Epithelial Cells', 'chemistry', 'select', {
+    options: ['Few', 'Moderate', 'Many', 'Not Examined'],
+    normalRange: 'Few',
+    allowCustom: true,
   }),
-  f('ulSilinder', 'Silinder (Casts)', 'chemistry', 'select', {
-    options: ['Negatif', '+1', '+2', '+3'],
+  f('ulSilinder', 'Casts', 'chemistry', 'select', {
+    options: ['Negative', '+1', '+2', '+3'],
+    normalRange: 'Negative',
+    allowCustom: true,
   }),
-  f('ulKristal', 'Kristal Urine', 'chemistry', 'select', {
-    options: ['Negatif', '+1', '+2', '+3'],
+  f('ulKristal', 'Crystals Urine', 'chemistry', 'select', {
+    options: ['Negative', '+1', '+2', '+3'],
+    normalRange: 'Negative',
+    allowCustom: true,
   }),
-  f('ulBakteri', 'Bakteri / Mikroorganisme', 'chemistry', 'select', {
-    options: ['Negatif', '+1', '+2', '+3'],
+  f('ulBakteri', 'Bacteria / Microorganisms', 'chemistry', 'select', {
+    options: ['Negative', '+1', '+2', '+3'],
+    normalRange: 'Negative',
+    allowCustom: true,
   }),
   // `ul` = ringkasan komposit dari 19 parameter di atas, dibangun otomatis
   // oleh engine supaya engine zonasi/diagnosis & Eksel lama tetap berfungsi.
   f('ul', 'Urinalisis (Ringkasan)', 'chemistry', 'textarea', { autoCalc: true }),
 
-  // BC–BG Serologi
+  // BCâ€“BG Serologi
   ...([
     ['hbsag', 'HbsAg'], ['antiHbs', 'Anti Hbs'], ['vdrl', 'VDRL'],
     ['tpha', 'TPHA'], ['hiv', 'HIV'],
   ] as const).map(([id, label]) => f(id, label, 'serology', 'select', select(['Non - Reaktif', 'Reaktif']))),
 
-  // BH–BP NAPZA
+  // BHâ€“BP NAPZA
   ...([
     ['drugAmp', 'Drug Test Amphetamine'], ['drugMeth', 'Drug Test Methamphetamine'],
     ['drugMorph', 'Drug Test Morphine'], ['drugCanna', 'Drug Test Cannabinoid'],
@@ -301,7 +338,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   ] as const).map(([id, label]) => f(id, label, 'drug', 'select', select(['Negatif', 'Positif']))),
   f('psa', 'PSA', 'drug', 'number', { unit: 'ng/mL', normalRange: '<4' }),
 
-  // BQ–BU Imaging
+  // BQâ€“BU Imaging
   //
   // EKG dan treadmill memakai dropdown, bukan teks bebas. Tujuannya
   // menyeragamkan penulisan: data lama filled bebas penuh dengan salah eja
@@ -317,7 +354,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('ecgHasil', 'ECG', 'imaging', 'select', select([...STANDARD_ECG_OPTIONS])),
   f('tmHasil', 'Treadmill', 'imaging', 'select', select([...STANDARD_TMT_OPTIONS])),
   f('chestXR', 'Chest X-Ray', 'imaging', 'select', {
-    options: ['Normal', 'ILO 1/0', 'ILO 1/1', 'ILO ≥2/1', 'Pulmonary Fibrosis', 'Abnormal Lainnya'],
+    options: ['Normal', 'ILO 1/0', 'ILO 1/1', 'ILO â‰¥2/1', 'Pulmonary Fibrosis', 'Abnormal Lainnya'],
     allowCustom: true,
   }),
   f('lumboXR', 'Lumbosacral X-Ray', 'imaging', 'select', {
@@ -329,7 +366,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
     allowCustom: true,
   }),
 
-  // Riwayat penyakit & skor kuesioner — parameter zonasi menurut
+  // Riwayat penyakit & skor kuesioner â€” parameter zonasi menurut
   // STD-006 Rev001 Bab 7. Ditaruh tepat setelah imaging karena urutan
   // ini yang dipakai pada formulir MCU fisik.
   //
@@ -388,7 +425,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('sdsScore', 'Total Skor SDS-30 (Survei Diagnosis Stres)', 'anamnesis', 'number', {
     unit: 'skor', normalRange: '30-210', min: 30, max: 210,
   }),
-  // STD/006 Rev.002 poin 6.1.8 — Tanda Bahaya Kesehatan Jiwa.
+  // STD/006 Rev.002 poin 6.1.8 â€” Tanda Bahaya Kesehatan Jiwa.
   // "Ya" pada butir 17 SRQ-20 (pikiran untuk mengakhiri hidup) memaksa Zona
   // Merah + status Currently Unfit sampai dinilai dokter, BERAPA PUN skor
   // totalnya. Dibuat field tersendiri agar tidak bergantung pada input skor.
@@ -396,7 +433,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
     options: ['Tidak', 'Ya'],
   }),
 
-  // Kualifikasi Klinis Tambahan — STD-006 Rev.002
+  // Kualifikasi Klinis Tambahan â€” STD-006 Rev.002
   f('dmKomplikasi', 'Komplikasi Diabetes Melitus (Neuropati/Retinopati/Nefropati/Ulkus)', 'anamnesis', 'select', {
     options: [...DM_KOMPLIKASI_OPTIONS],
   }),
@@ -409,7 +446,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('diagnosisHati', 'Diagnosis Klinis Penyakit Hati', 'anamnesis', 'select', {
     options: [...DIAGNOSIS_HATI_OPTIONS],
   }),
-  f('obesitasFungsional', 'Keterbatasan Fungsional Obesitas (IMT ≥35)', 'anamnesis', 'select', {
+  f('obesitasFungsional', 'Keterbatasan Fungsional Obesitas (IMT â‰¥35)', 'anamnesis', 'select', {
     options: [...OBESITAS_FUNGSIONAL_OPTIONS],
   }),
   f('statusTerapiEss', 'Status Terapi Gangguan Tidur / Kantuk Berlebih (ESS >15)', 'anamnesis', 'select', {
@@ -419,7 +456,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
     options: [...EPILEPSI_KEPATUHAN_OPTIONS],
   }),
 
-  // BV–CE Spirometry
+  // BVâ€“CE Spirometry
   f('fvcPred', 'Spirometry FVC PRED', 'spirometry', 'number', { unit: 'L' }),
   f('fvcAct', 'Spirometry FVC ACT', 'spirometry', 'number', { unit: 'L' }),
   f('fvcPct', 'Spirometry FVC %', 'spirometry', 'number', { unit: '%', autoCalc: true, autoCalcFrom: ['fvcAct', 'fvcPred'] }),
@@ -435,7 +472,7 @@ f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoC
   f('fev1FvcPct', 'Spirometry FEV1%G %', 'spirometry', 'number', { unit: '%', autoCalc: true, autoCalcFrom: ['fev1FvcAct', 'fev1FvcPred'] }),
   f('spiInterp', 'Spirometry Interpretasi', 'spirometry'),
 
-  // CF–CT Audiometry (ACR first, as specified)
+  // CFâ€“CT Audiometry (ACR first, as specified)
   ...([
     ['acr_500', 'Audiometry ACR 500'], ['acr_1k', 'Audiometry ACR 1K'],
     ['acr_2k', 'Audiometry ACR 2K'], ['acr_3k', 'Audiometry ACR 3K'],
@@ -447,17 +484,17 @@ f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoC
   ] as const).map(([id, label]) => f(id, label, 'audiometry', 'number', { unit: 'dB' })),
   // Pure Tone Average = rata-rata ambang dengar pada 500, 1000, 2000, dan
   // 4000 Hz (rumus WHO). Angka inilah yang dipakai klasifikasi NIHL
-  // pada STD-006 (Hijau ≤25 dB, Kuning 26–40, Merah 41–90 / >90 dB),
+  // pada STD-006 (Hijau â‰¤25 dB, Kuning 26â€“40, Merah 41â€“90 / >90 dB),
   // sehingga tidak lagi bergantung pada teks interpretasi.
   f('pta', 'Audiometry PTA (Pure Tone Average)', 'audiometry', 'number', {
     unit: 'dB',
-    normalRange: '≤25',
+    normalRange: 'â‰¤25',
     autoCalc: true,
     autoCalcFrom: ['acr_500', 'acr_1k', 'acr_2k', 'acr_4k'],
   }),
   f('audInterp', 'Audiometry Interpretasi', 'audiometry'),
 
-  // CU–DB Neurologi
+  // CUâ€“DB Neurologi
   f('balance', 'Balance Test', 'neuro', 'select', neurologicalSelect(['Normal', 'Abnormal'])),
   f('romberg', 'Romberg Test', 'neuro', 'select', neurologicalSelect(['Normal', 'Negatif', 'Positif'])),
   f('phalen', 'Phalen Test', 'neuro', 'select', neurologicalSelect(['Normal', 'Negatif', 'Positif'])),
@@ -475,7 +512,7 @@ f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoC
   f('hasilKebugaran', 'Hasil Uji Kebugaran (Otomatis)', 'fitness', 'text', { autoCalc: true }),
   f('dugaanPAK', 'Dugaan PAK', 'assessment', 'select', { options: ['Ya', 'Tidak'] }),
 
-  // DF–DS Penilaian dan kalkulasi
+  // DFâ€“DS Penilaian dan kalkulasi
   f('kesVendor', 'Kesimpulan Vendor', 'assessment', 'select', { options: kesimpulanOptions }),
   f('rekQSHE', 'Rekomendasi QSHE Medic', 'assessment', 'select', {
     options: kesimpulanOptions,
@@ -508,9 +545,9 @@ f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoC
   f('itemFU', 'Item Follow Up', 'assessment', 'textarea', { autoCalc: true }),
   f('linkMCU', 'Link File MCU', 'assessment'),
   f('tglExpired', 'Tanggal Expired MCU', 'calculated', 'date', { autoCalc: true, autoCalcFrom: ['tglMCU'] }),
-  f('framScore', 'Framingham Score Lipid Based – Score', 'calculated', 'number', { autoCalc: true }),
-  f('framProb', 'Framingham Score Lipid Based – Probabilitas', 'calculated', 'text', { autoCalc: true }),
-  f('framKat', 'Framingham Score Lipid Based – Kategori', 'calculated', 'text', { autoCalc: true }),
+  f('framScore', 'Framingham Score Lipid Based â€“ Score', 'calculated', 'number', { autoCalc: true }),
+  f('framProb', 'Framingham Score Lipid Based â€“ Probabilitas', 'calculated', 'text', { autoCalc: true }),
+  f('framKat', 'Framingham Score Lipid Based â€“ Kategori', 'calculated', 'text', { autoCalc: true }),
   f('zonasi', 'Zonasi', 'calculated', 'text', { autoCalc: true }),
   f('triggerZona', 'Trigger Zona Resiko Kesehatan', 'calculated', 'textarea', { autoCalc: true }),
   f('pengendalian', 'Pengendalian', 'calculated', 'textarea', { autoCalc: true }),
@@ -553,7 +590,7 @@ export function getFieldById(id: string): MCUFieldDef | undefined {
 }
 
 // ============================================================
-// Urinalisis — 19 parameter per kolom (ul_*) + ringkasan komposit `ul`
+// Urinalisis â€” 19 parameter per kolom (ul_*) + ringkasan komposit `ul`
 // ============================================================
 // Setiap parameter disimpan di kolom database sendiri (ul_warna, ul_protein,
 // dst.) supaya bisa di-query per parameter. Kolom `ul` lama tetap diisi
@@ -561,18 +598,18 @@ export function getFieldById(id: string): MCUFieldDef | undefined {
 // diagnosis, dan kompatibilitas Eksel lama.
 //
 // Map antar field id (di MCU_FIELDS) dengan label teks ringkasan `ul`:
-//   ulWarna            → "Warna: Kuning Muda"
-//   ulKejernihan       → "Kejernihan: Jernih"
-//   ulBau              → "Bau: Aromatik"
-//   ulBeratJenis       → "Berat Jenis (SG): 1.015"
-//   ulPh               → "pH: 6.0"
-//   ulProtein          → "Protein / Albumin: +1"
+//   ulWarna            â†’ "Warna: Kuning Muda"
+//   ulKejernihan       â†’ "Kejernihan: Jernih"
+//   ulBau              â†’ "Bau: Aromatik"
+//   ulBeratJenis       â†’ "Berat Jenis (SG): 1.015"
+//   ulPh               â†’ "pH: 6.0"
+//   ulProtein          â†’ "Protein / Albumin: +1"
 //   ... dst sesuai URINALYSIS_PARAMS.
 //
 // Fungsi:
-//   buildUlComposite(params)    → "Label: nilai\n..." untuk disimpan di `ul`
-//   parseUlToParams(composite)  → { ulWarna: 'Kuning Muda', ... }
-//                                   untuk load data lama `ul` → 19 kolom.
+//   buildUlComposite(params)    â†’ "Label: nilai\n..." untuk disimpan di `ul`
+//   parseUlToParams(composite)  â†’ { ulWarna: 'Kuning Muda', ... }
+//                                   untuk load data lama `ul` â†’ 19 kolom.
 
 export const URINALYSIS_FIELD_LABELS: Record<string, string> = {
   ulWarna: 'Warna',
@@ -613,7 +650,7 @@ export function buildUlComposite(values: Record<string, string | undefined | nul
 /**
  * Pecah ringkasan komposit `ul` ("Label: nilai\n...") menjadi 19 field.
  * Dipakai untuk load record lama di mana kolom `ul_*` masih kosong.
- * Return map `{ ulWarna: 'Kuning Muda', ... }` — hanya field yang terisi.
+ * Return map `{ ulWarna: 'Kuning Muda', ... }` â€” hanya field yang terisi.
  */
 export function parseUlToParams(raw: string | null | undefined): Record<string, string> {
   const out: Record<string, string> = {};
@@ -633,3 +670,5 @@ export function parseUlToParams(raw: string | null | undefined): Record<string, 
   }
   return out;
 }
+
+
