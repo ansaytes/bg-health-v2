@@ -265,13 +265,14 @@ describe('urinalisis per parameter', () => {
     'ulWarna', 'ulKejernihan', 'ulBau', 'ulProtein', 'ulGlukosa', 'ulKeton',
     'ulDarah', 'ulLeukositEsterase', 'ulNitrit', 'ulBilirubin',
     'ulUrobilinogen', 'ulSelEpitel', 'ulSilinder', 'ulKristal', 'ulBakteri',
+    'ulJamur',
   ];
   const TEXT_IDS = ['ulBeratJenis', 'ulPh', 'ulEritrosit', 'ulLeukosit'];
 
-  it('exposes 19 individual urinalysis fields', () => {
-    expect(SELECT_IDS).toHaveLength(15);
+  it('exposes 20 individual urinalysis fields', () => {
+    expect(SELECT_IDS).toHaveLength(16);
     expect(TEXT_IDS).toHaveLength(4);
-    expect([...SELECT_IDS, ...TEXT_IDS]).toHaveLength(19);
+    expect([...SELECT_IDS, ...TEXT_IDS]).toHaveLength(20);
     for (const id of SELECT_IDS) {
       const field = MCU_FIELDS.find((entry) => entry.id === id);
       expect(field, `field ${id} harus ada`).toBeDefined();
@@ -286,9 +287,14 @@ describe('urinalisis per parameter', () => {
     }
   });
 
-  it('builds the composite ul summary from per-parameter values', () => {
+  it('builds the ul conclusion from ABNORMAL parameters only', () => {
+    // Warna normal tidak ikut ditulis; hanya temuan yang masuk kesimpulan.
     expect(buildUlComposite({ ulWarna: 'Kuning Muda', ulProtein: '+1' }))
-      .toBe('Warna: Kuning Muda\nProtein / Albumin: +1');
+      .toBe('Protein: +1');
+    // Semua normal tetapi diperiksa -> dinyatakan dalam batas normal.
+    expect(buildUlComposite({ ulWarna: 'Kuning Muda', ulProtein: 'Negatif' }))
+      .toBe('Dalam batas normal');
+    // Tidak ada yang diperiksa -> kosong (NULL).
     expect(buildUlComposite({})).toBe('');
   });
 
@@ -314,7 +320,7 @@ describe('urinalisis per parameter', () => {
 
     const abnormal = applyMCUCalculations({ ...maleBase, ulProtein: '+2' });
     expect(abnormal.itemFU).toContain('UL :');
-    expect(abnormal.ul).toContain('Protein / Albumin: +2');
+    expect(abnormal.ul).toContain('Protein: +2');
   });
 
   it('accepts sediment values with or without unit, using the highest number in a range', () => {

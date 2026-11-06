@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, Fragment } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EmployeeLookupInput, { type EmployeeData as LookupEmployeeData } from '@/components/administrator/EmployeeLookupInput';
 import {
@@ -9,6 +9,7 @@ import {
   Shield, Pill, ScanLine, Wind, Ear, Brain, Dumbbell,
   ClipboardCheck, Calculator, Save, RotateCcw,
   ChevronRight, Loader2, AlertCircle, CheckCircle2, FileText, Lightbulb, RefreshCw,
+  Cigarette, TestTube, Biohazard, ClipboardList,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +26,7 @@ import { getEmployeeLookupAccessToken } from '@/lib/employee-lookup-client';
 import {
   MCU_FIELDS,
   MCU_SECTIONS,
+  MCU_GROUPS,
   getFieldsBySection,
   normalizeMCUEcgOption,
   type MCUFieldDef,
@@ -160,6 +162,10 @@ const SECTION_ICONS: Record<string, React.ReactNode> = {
   Dumbbell: <Dumbbell className="size-4" />,
   ClipboardCheck: <ClipboardCheck className="size-4" />,
   Calculator: <Calculator className="size-4" />,
+  ClipboardList: <ClipboardList className="size-4" />,
+  Cigarette: <Cigarette className="size-4" />,
+  TestTube: <TestTube className="size-4" />,
+  Biohazard: <Biohazard className="size-4" />,
 };
 
 // Slide variants for step transitions
@@ -804,7 +810,7 @@ export default function ReviewMCU() {
             </motion.div>
 
             {/* Form sections as accordion */}
-            <Accordion type="multiple" defaultValue={['identity', 'vital', 'hematology', 'chemistry']} className="space-y-3">
+            <Accordion type="multiple" defaultValue={['identity', 'anamnesis', 'habits']} className="space-y-3">
               {MCU_SECTIONS.map((section, sIdx) => {
                 const fields = getFieldsBySection(section.id);
                 const abnormalCount = sectionAbnormalCounts[section.id] || 0;
@@ -841,18 +847,34 @@ export default function ReviewMCU() {
                       </AccordionTrigger>
                       <AccordionContent className="px-4 pb-4 pt-0">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {fields.map((field) => (
-                            <FieldRenderer
-                              key={field.id}
-                              field={field}
-                              value={store.formData[field.id] || ''}
-                              gender={store.formData.jenisKelamin}
-                              age={store.formData.usia}
-                              creatinine={store.formData.kreatinin}
-                              onChange={(val) => store.setFieldValue(field.id, val)}
-                              isSingleCol={field.type === 'textarea' || field.id === 'rekFU'}
-                            />
-                          ))}
+                          {fields.map((field, index) => {
+                            // Judul sub-kelompok (mis. "Darah Lengkap", "Fungsi Hati")
+                            // muncul saat kelompok berubah, supaya parameter sejenis
+                            // tidak tercampur dalam satu daftar panjang.
+                            const group = MCU_GROUPS[field.id];
+                            const previousGroup = index > 0 ? MCU_GROUPS[fields[index - 1].id] : undefined;
+                            const showGroup = Boolean(group) && group !== previousGroup;
+                            return (
+                              <Fragment key={field.id}>
+                                {showGroup && (
+                                  <div className="sm:col-span-2 mt-1 first:mt-0 border-b border-border/60 pb-1">
+                                    <span className="text-[11px] font-semibold uppercase tracking-wide text-primary">
+                                      {group}
+                                    </span>
+                                  </div>
+                                )}
+                                <FieldRenderer
+                                  field={field}
+                                  value={store.formData[field.id] || ''}
+                                  gender={store.formData.jenisKelamin}
+                                  age={store.formData.usia}
+                                  creatinine={store.formData.kreatinin}
+                                  onChange={(val) => store.setFieldValue(field.id, val)}
+                                  isSingleCol={field.type === 'textarea' || field.id === 'rekFU'}
+                                />
+                              </Fragment>
+                            );
+                          })}
                         </div>
                       </AccordionContent>
                     </AccordionItem>

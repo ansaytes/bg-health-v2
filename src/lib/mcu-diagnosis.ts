@@ -59,7 +59,7 @@ import {
 } from '@/lib/clinical-classification';
 import { classifyEcg, classifyTreadmill, DRUG_TEST_LABEL } from '@/lib/clinical-classification';
 import { dassBandLabel, dassCategory, essBandLabel, sdsBandLabel, type DassDomain } from '@/lib/questionnaire-scores';
-import { URINALYSIS_FIELD_IDS } from '@/lib/mcu-fields';
+import { URINALYSIS_FIELD_IDS, URINALYSIS_FIELD_LABELS } from '@/lib/mcu-fields';
 
 export type MCURaw = Record<string, string | number | null | undefined>;
 
@@ -89,6 +89,18 @@ function isNormalText(value: string | number | null | undefined): boolean {
 /** Pemeriksaan fisik bertulis bebas yang tidak boleh dipaksa jadi diagnosis. */
 function isAbnormalFreeText(value: string | number | null | undefined): boolean {
   return !isNormalText(value);
+}
+
+/**
+ * Sama seperti isAbnormalFreeText(), tetapi untuk field MULTI-PILIH yang
+ * nilainya dipisah " | ". Satu pilihan abnormal sudah cukup menjadi temuan.
+ */
+function isAbnormalMulti(value: string | number | null | undefined): boolean {
+  const current = txt(value);
+  if (!current) return false;
+  const parts = current.split('|').map((part) => part.trim()).filter(Boolean);
+  if (parts.length === 0) return false;
+  return parts.some((part) => !isNormalText(part));
 }
 
 // ────────────────────────────────────────────────────────────
@@ -163,13 +175,16 @@ function buildPhysicalEntries(values: MCURaw): DiagnosisEntry[] {
   add(classifyHematokrit(toNumber(values.hematokrit), detectGender(values.jenisKelamin)), 'Hematologi');
   add(classifyTrombosit(toNumber(values.trombosit)), 'Hematologi');
 
-  if (isAbnormalFreeText(values.gigiMulut)) {
+  // Gigi & Mulut dan Fisik Mata kini multi-pilih ("Karies | Ginggivitis").
+  // isNormalText() hanya mengenali nilai tunggal, sehingga "Normal | Karies"
+  // akan terbaca normal. isAbnormalMulti() memeriksa tiap pilihan.
+  if (isAbnormalMulti(values.gigiMulut)) {
     entries.push({ diagnosis: 'Orodental Finding', evidence: txt(values.gigiMulut), severity: 'normal', system: 'Gigi & Mulut' });
   }
   if (isAbnormalFreeText(values.fisikHeadToToe)) {
     entries.push({ diagnosis: 'Physical Examination Finding', evidence: txt(values.fisikHeadToToe), severity: 'normal', system: 'Fisik' });
   }
-  if (isAbnormalFreeText(values.fisikMata)) {
+  if (isAbnormalMulti(values.fisikMata)) {
     entries.push({ diagnosis: 'Ophthalmic Examination Finding', evidence: txt(values.fisikMata), severity: 'normal', system: 'Mata' });
   }
   if (txt(values.defWarna) && !/^(normal|n\/a)$/i.test(txt(values.defWarna))) {
@@ -221,12 +236,16 @@ function buildLaboratoryEntries(values: MCURaw): DiagnosisEntry[] {
     }
   }
 
-  if (isAbnormalFreeText(values.ul)) {
-    entries.push({ diagnosis: 'Urine Routine (Urinalysis) Abnormal', evidence: txt(values.ul), severity: 'normal', system: 'Urine Routine' });
-  } else if (URINALYSIS_FIELD_IDS.some((fieldId) => !isNormalText(values[fieldId]))) {
+  // `ul` kini berisi KESIMPULAN (hanya parameter abnormal), jadi cukup
+  // dibaca langsung. "Dalam batas normal" bukan temuan.
+  const ulConclusion = txt(values.ul);
+  if (ulConclusion && !/^dalam batas normal$/i.test(ulConclusion)) {
+    entries.push({ diagnosis: 'Urine Routine (Urinalysis) Abnormal', evidence: ulConclusion, severity: 'normal', system: 'Urine Routine' });
+  } else if (!ulConclusion && URINALYSIS_FIELD_IDS.some((fieldId) => !isNormalText(values[fieldId]))) {
+    // Record lama yang belum punya kesimpulan: susun dari parameter abnormal.
     const abnormalParams = URINALYSIS_FIELD_IDS
       .filter((fieldId) => !isNormalText(values[fieldId]))
-      .map((fieldId) => `${fieldId}: ${txt(values[fieldId])}`)
+      .map((fieldId) => `${URINALYSIS_FIELD_LABELS[fieldId] ?? fieldId}: ${txt(values[fieldId])}`)
       .join(', ');
     entries.push({ diagnosis: 'Urine Routine (Urinalysis) Abnormal', evidence: abnormalParams, severity: 'normal', system: 'Urine Routine' });
   }
@@ -278,7 +297,10 @@ function buildImagingEntries(values: MCURaw): DiagnosisEntry[] {
     entries.push({ diagnosis: 'Ultrasonography Abnormal', evidence: txt(values.usg), severity: 'normal', system: 'Radiologi' });
   }
 
-  const lung = classifyLung(toNumber(values.fev1Pct), toNumber(values.fev1FvcAct), toNumber(values.fvcPct), txt(values.spiInterp));
+  const lung = classifyLung(
+    toNumber(values.fev1Pct), toNumber(values.fev1FvcAct), toNumber(values.fvcPct),
+    txt(values.spiInterp), txt(values.spiMetode),
+  );
   if (lung && lung.severity !== 'hijau') {
     entries.push({ diagnosis: lung.label, evidence: lung.detail, severity: lung.severity, system: 'Pernapasan' });
   }

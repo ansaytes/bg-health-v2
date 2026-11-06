@@ -79,8 +79,11 @@ const SECTION_LABEL: Record<string, string> = {
   vital: 'Tanda Vital & Antropometri',
   hematology: 'Hematologi',
   chemistry: 'Kimia Darah',
-  serology: 'Serologi',
-  drug: 'NAPZA',
+  urinalysis: 'Urine Lengkap',
+  serology: 'Serologi / Imunologi',
+  drug: 'Tes NAPZA (Urine)',
+  toxicology: 'Logam Berat / Toksikologi',
+  habits: 'Riwayat Kebiasaan',
   imaging: 'Radiologi & USG',
   anamnesis: 'Riwayat & Skrining',
   spirometry: 'Spirometri',
@@ -113,14 +116,19 @@ const BUKAN_PARAMETER = new Set([
   'frekuensiEvaluasi', 'catatanSOP', 'diagnosaMedis', 'kesVendor', 'itemFU',
   'perluFU', 'rekFU', 'linkMCU', 'catatan', 'ringkasanKuesioner', 'diabetes',
   // Faktor risiko / kebiasaan — dicatat sekali, bukan diukur ulang
-  'merokok', 'alkohol', 'olahraga',
+  'merokok', 'alkohol', 'olahraga', 'jumlahRokok', 'lamaMerokok',
+  'jenisOlahraga', 'kebiasaanLain',
+  // Metode penilaian spirometri — pilihan cara hitung, bukan hasil ukur
+  'spiMetode',
+  // Ringkasan tes kebugaran (turunan dari field tes per jenis)
+  'tesKebugaran', 'hasilKebugaran',
   // Bacaan yang bukan angka per-parameter
   'ecgHasil', 'tmtHasil', 'tmHasil', 'tmtHasil', 'usg', 'visusDekat',
   'audInterp', 'spiInterp', 'chestXR', 'lumboXr', 'defWarna', 'lapangPandang',
   'ul', 'ulWarna', 'ulKejernihan', 'ulBau', 'ulBeratJenis', 'ulPh',
   'ulProtein', 'ulGlukosa', 'ulKeton', 'ulDarah', 'ulLeukositEsterase',
   'ulNitrit', 'ulBilirubin', 'ulUrobilinogen', 'ulEritrosit', 'ulLeukosit',
-  'ulSelEpitel', 'ulSilinder', 'ulKristal', 'ulBakteri',
+  'ulSelEpitel', 'ulSilinder', 'ulKristal', 'ulBakteri', 'ulJamur',
   'catatanFisik',
   // Status administratif & hasil turunan — bukan parameter klinis
   // `statusMCU` (huruf besar) adalah id sebenarnya di MCU_FIELDS — jangan
@@ -206,7 +214,7 @@ function klasifikasiEngine(id: string, d: Record<string, unknown>, gender: strin
     case 'fev1FvcAct':
     case 'fvcPct': return classifyLung(
       toNumber(d.fev1Pct as string), toNumber(d.fev1FvcAct as string), toNumber(d.fvcPct as string),
-      d.spiInterp as string,
+      d.spiInterp as string, d.spiMetode as string,
     );
     case 'visusJauh': return classifyVision(d.visusJauh as string);
     case 'pta':

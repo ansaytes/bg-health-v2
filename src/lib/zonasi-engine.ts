@@ -301,7 +301,10 @@ function assessObjectiveZonasi(ctx: AssessCtx) {
   collect(classifyHemoglobin(toNumber(d.hb), detectGender(ctx.genderKey)));
 
   // -- 8. Fungsi paru
-  collect(classifyLung(toNumber(d.fev1Pct), toNumber(d.fev1FvcAct), toNumber(d.fvcPct), String(d.spiInterp ?? '')));
+  collect(classifyLung(
+    toNumber(d.fev1Pct), toNumber(d.fev1FvcAct), toNumber(d.fvcPct),
+    String(d.spiInterp ?? ''), String(d.spiMetode ?? ''),
+  ));
 
   // -- 9. Penglihatan
   collect(classifyVision(d.visusJauh));
@@ -640,7 +643,10 @@ export function calcFramingham(d: MCUDraft): { score: number; prob: string; kat:
   const chol = toNumber(d.chol);
   const hdl = toNumber(d.hdl);
   const sbp = toNumber(d.tdS);
-  const smoking = d.merokok === 'Ya';
+  // Merokok pindah ke Riwayat Kebiasaan dengan opsi yang lebih rinci.
+  // "Ya" tetap diterima supaya record lama (dan data impor Excel) tidak
+  // kehilangan poin FRS-nya.
+  const smoking = /^(ya|perokok aktif)$/i.test(String(d.merokok ?? '').trim());
   const dm = d.diabetes === 'Ya';
   const isMale = detectGender(d.jenisKelamin) === 'male';
 

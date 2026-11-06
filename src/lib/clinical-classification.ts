@@ -336,14 +336,58 @@ export function classifyLiver(
 //    Merah FEV1 <50% prediksi
 // ============================================================
 
+/**
+ * Metode penilaian spirometri yang tersedia pada form.
+ *
+ * Referensi yang beredar memakai ambang berbeda, sehingga hasil interpretasi
+ * bisa berubah hanya karena metode yang dipilih berbeda. Operator memilih
+ * metode di form; engine memakai ambang metode tersebut.
+ *
+ *   PDPI 2016        — FEV1/FVC <70% = obstruktif; derajat dari FEV1 %pred
+ *   GOLD 2024        — sama untuk diagnosis, derajat memakai batas 80/50/30
+ *   ATS/ERS 2022     — memakai LLN (batas bawah normal), didekati dengan
+ *                      FEV1/FVC <70% + FVC <80% untuk restriksi
+ *   NHANES III       — memakai persentil ke-5; didekati dengan ambang 70%
+ *   Manual           — interpretasi ditulis pemeriksa, engine tidak menilai
+ */
+export type SpirometryMethod =
+  | 'PDPI 2016 (Indonesia)'
+  | 'GOLD 2024'
+  | 'ATS/ERS 2022 (GLI-2012)'
+  | 'NHANES III'
+  | 'Manual (tulis sendiri)';
+
+/** Ambang derajat obstruksi per metode, dari ringan ke berat. */
+const SPIROMETRY_THRESHOLDS: Record<string, { mild: number; moderate: number; severe: number }> = {
+  // PDPI: ringan FEV1 ≥80%, sedang 50–79%, berat 30–49%, sangat berat <30%.
+  'PDPI 2016 (Indonesia)': { mild: 80, moderate: 50, severe: 30 },
+  // GOLD 2024: GOLD 1 ≥80%, GOLD 2 50–79%, GOLD 3 30–49%, GOLD 4 <30%.
+  'GOLD 2024': { mild: 80, moderate: 50, severe: 30 },
+  // ATS/ERS 2022 memakai z-score/LLN; ambang persen dipakai sebagai pendekatan.
+  'ATS/ERS 2022 (GLI-2012)': { mild: 80, moderate: 50, severe: 30 },
+  'NHANES III': { mild: 80, moderate: 50, severe: 30 },
+};
+
 export function classifyLung(
   fev1Pct: number | null,
   fev1Fvc: number | null,
   fvcPct: number | null,
   spiInterpretasi: string | number | null | undefined,
+  metode?: string | null,
 ): Classification | null {
   const interp = String(spiInterpretasi ?? '').toLowerCase();
   if (fev1Pct === null && fev1Fvc === null && fvcPct === null && !interp) return null;
+
+  // Metode "Manual" berarti pemeriksa menulis interpretasinya sendiri;
+  // engine tidak boleh menimpanya dengan klasifikasi otomatis.
+  if (/^manual/i.test(String(metode ?? '').trim())) {
+    if (!interp) return null;
+    if (/berat|severe/.test(interp)) return { severity: 'merah', label: 'Severe Obstructive Lung Disease', detail: interp };
+    if (/ringan|sedang|moderate|mild|obstruksi/.test(interp)) return { severity: 'kuning', label: 'Mild to Moderate Obstructive Lung Disease', detail: interp };
+    return { severity: 'hijau', label: 'Normal Lung Function', detail: interp };
+  }
+
+  const ambang = SPIROMETRY_THRESHOLDS[String(metode ?? '').trim()] ?? SPIROMETRY_THRESHOLDS['PDPI 2016 (Indonesia)'];
 
   // FEV1/FVC tersimpan sebagai DESIMAL (hasil bagi FEV1 aktual / FVC aktual,
   // lihat mcu-calculations.ts), tetapi ambang PDPI ditulis dalam PERSEN.
@@ -356,12 +400,12 @@ export function classifyLung(
   const rasio = fev1Fvc === null ? null : fev1Fvc <= 1.5 ? fev1Fvc * 100 : fev1Fvc;
 
   if (fev1Pct !== null) {
-    if (fev1Pct < 50) {
+    if (fev1Pct < ambang.severe) {
       return { severity: 'merah', label: 'Severe Obstructive Lung Disease', detail: `FEV1 ${fmt(fev1Pct)}% of predicted` };
     }
-// FEV1/FVC di bawah ambang PDPI menunjukkan obstruction, dan itu
-  // menurunkan ke kuning walaupun FEV1 % prediksi masih di atas 80.
-    if (fev1Pct < 80 || (rasio !== null && rasio < 70)) {
+// FEV1/FVC di bawah ambang metode yang dipilih menunjukkan obstruksi, dan
+  // itu menurunkan ke kuning walaupun FEV1 % prediksi masih di atas 80.
+    if (fev1Pct < ambang.mild || (rasio !== null && rasio < 70)) {
       return {
         severity: 'kuning',
         label: 'Mild to Moderate Obstructive Lung Disease',

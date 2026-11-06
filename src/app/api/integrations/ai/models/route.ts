@@ -7,6 +7,36 @@ interface AvailableModel {
   name: string;
 }
 
+/**
+ * Apakah model bisa MEMBACA GAMBAR.
+ *
+ * Halaman Review MCU mengirim gambar halaman MCU ke model, jadi hanya model
+ * multimodal yang berguna di sana. Daftar model provider berisi puluhan
+ * model teks-saja (embedding, TTS, image-generation, model lama) yang akan
+ * gagal atau menghasilkan data kosong bila dipilih. Menyaring di server
+ * membuat dropdown hanya berisi pilihan yang benar-benar bisa dipakai.
+ *
+ * Penyaringan memakai metadata provider bila tersedia, lalu jatuh ke pola
+ * nama model untuk provider yang tidak melaporkan kemampuan input.
+ */
+const NON_VISION_PATTERNS = [
+  /embedding/i, /^text-embedding/i, /aqa/i, /imagen/i, /image-generation/i,
+  /tts/i, /audio/i, /speech/i, /whisper/i, /veo/i, /video/i, /learnlm/i,
+  /gemma/i, /^text-bison/i, /^chat-bison/i, /^code-/i, /codex/i,
+  /dall-e/i, /moderation/i, /rerank/i, /guard/i,
+];
+
+function isVisionModel(id: string, name: string, declaredInputs?: string[]): boolean {
+  // 1. Metadata provider paling dapat dipercaya.
+  if (declaredInputs && declaredInputs.length > 0) {
+    return declaredInputs.some((input) => /image|vision|multimodal/i.test(input));
+  }
+  // 2. Pola nama model.
+  const label = `${id} ${name}`;
+  if (NON_VISION_PATTERNS.some((pattern) => pattern.test(label))) return false;
+  return /gemini|gpt-4o|gpt-4\.1|gpt-4-turbo|gpt-4-vision|claude-3|claude-4|claude-sonnet|claude-opus|claude-haiku|llava|pixtral|qwen.*vl|internvl|minicpm|vision|multimodal|omni/i.test(label);
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -74,7 +104,13 @@ export async function GET(request: NextRequest) {
             || !Array.isArray(model.supportedGenerationMethods)
             || !model.supportedGenerationMethods.includes('generateContent')) continue;
           const id = model.name.replace(/^models\//, '');
-          results.push({ id, name: typeof model.displayName === 'string' ? model.displayName : id });
+          const displayName = typeof model.displayName === 'string' ? model.displayName : id;
+          // Gemini melaporkan input yang didukung pada `inputModalities`.
+          const declaredInputs = Array.isArray(model.inputModalities)
+            ? model.inputModalities.filter((entry): entry is string => typeof entry === 'string')
+            : undefined;
+          if (!isVisionModel(id, displayName, declaredInputs)) continue;
+          results.push({ id, name: displayName });
         }
         pageToken = typeof payload.nextPageToken === 'string' ? payload.nextPageToken : '';
         if (!pageToken) break;
@@ -107,14 +143,24 @@ export async function GET(request: NextRequest) {
       }
       models = payload.data.flatMap((model): AvailableModel[] => {
         if (!isRecord(model) || typeof model.id !== 'string' || !model.id.trim()) return [];
-        return [{ id: model.id, name: typeof model.name === 'string' ? model.name : model.id }];
+        const name = typeof model.name === 'string' ? model.name : model.id;
+        // Sebagian endpoint OpenAI-compatible melaporkan `architecture.input_modalities`.
+        const architecture = isRecord(model.architecture) ? model.architecture : null;
+        const declaredInputs = architecture && Array.isArray(architecture.input_modalities)
+          ? architecture.input_modalities.filter((entry): entry is string => typeof entry === 'string')
+          : undefined;
+        if (!isVisionModel(model.id, name, declaredInputs)) return [];
+        return [{ id: model.id, name }];
       });
     }
 
     const uniqueModels = Array.from(new Map(models.map((model) => [model.id, model])).values())
       .sort((a, b) => a.name.localeCompare(b.name));
     if (!uniqueModels.length) {
-      return NextResponse.json({ success: false, error: 'Provider tidak melaporkan model yang tersedia.' }, { status: 404 });
+      return NextResponse.json({
+        success: false,
+        error: 'Provider tidak melaporkan model yang dapat membaca gambar. Ekstraksi MCU membutuhkan model multimodal (mis. Gemini atau GPT-4o).',
+      }, { status: 404 });
     }
     return NextResponse.json({ success: true, provider, configuredModel, models: uniqueModels });
   } catch (error) {

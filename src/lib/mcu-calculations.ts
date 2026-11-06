@@ -42,6 +42,20 @@ function abnormal(value: MCUValues[string], excluded = ['N/A', 'DBN', 'Normal'])
 }
 
 /**
+ * Sama seperti abnormal(), tetapi untuk field MULTI-PILIH yang nilainya
+ * dipisah " | ". Field dianggap abnormal bila ADA satu pilihan yang bukan
+ * kata normal — "Normal | Karies" tetap temuan, bukan dianggap normal hanya
+ * karena kata "Normal" muncul di dalamnya.
+ */
+function abnormalMulti(value: MCUValues[string], excluded = ['N/A', 'DBN', 'Normal']) {
+  const current = text(value);
+  if (!current) return false;
+  const parts = current.split('|').map((part) => part.trim()).filter(Boolean);
+  if (parts.length === 0) return false;
+  return parts.some((part) => abnormal(part, excluded));
+}
+
+/**
  * Deteksi abnormalitas urinalisis.
  *
  * Sejak kolom dipecah per parameter, fungsi ini memeriksa 19 field `ul*`
@@ -102,6 +116,34 @@ function abnormalUrinalysis(values: MCUValues): boolean {
   return structuredValues.some((result) => isAbnormalValue(result));
 }
 
+/**
+ * Ringkasan tes kebugaran dari field per-jenis-tes.
+ *
+ * Setiap tes punya satuan berbeda, jadi digabung sebagai "Nama: nilai satuan".
+ * Hanya tes yang terisi yang ikut — parameter yang tidak diperiksa tetap
+ * kosong (NULL), bukan ditulis "Tidak Dilakukan".
+ */
+const FITNESS_FIELDS: Array<[string, string, string]> = [
+  ['tes6mwt', '6MWT', 'meter'],
+  ['tesHarvard', 'Harvard Step Test', 'skor'],
+  ['tesYMCAStep', 'YMCA Step Test', 'bpm'],
+  ['tesQueensCollege', "Queen's College Step Test", 'mL/kg/menit'],
+  ['tesErgocycle', 'Ergocycle', 'mL/kg/menit'],
+  ['tesSitUp', 'Sit-Up 30 detik', 'kali'],
+  ['tesPushUp', 'Push-Up', 'kali'],
+  ['tesSitAndReach', 'Sit and Reach', 'cm'],
+];
+
+function buildFitnessSummary(values: MCUValues): string {
+  const parts: string[] = [];
+  for (const [fieldId, label, unit] of FITNESS_FIELDS) {
+    const value = text(values[fieldId]);
+    if (!value) continue;
+    parts.push(`${label}: ${value} ${unit}`.trim());
+  }
+  return parts.join(' | ');
+}
+
 function buildFormulaFollowUp(values: MCUValues) {
   if (text(values.rekQSHE) === 'Fit To Work') return '';
   const items: string[] = [];
@@ -131,11 +173,13 @@ function buildFormulaFollowUp(values: MCUValues) {
   const gender = text(values.jenisKelamin);
   const visus = parseVisusPerMata(text(values.visusJauh));
 
-  add(abnormal(values.gigiMulut), `Orodental : ${text(values.gigiMulut)}`);
+  // Gigi & Mulut dan Fisik Mata kini multi-pilih ("Karies | Ginggivitis").
+  // Nilai dianggap normal hanya bila seluruh pilihannya normal.
+  add(abnormalMulti(values.gigiMulut), `Orodental : ${text(values.gigiMulut)}`);
   add(abnormal(values.fisikHeadToToe), `Fisik : ${text(values.fisikHeadToToe)}`);
   add(abnormal(values.hemoroid), /Menolak RT|N\/A/.test(text(values.hemoroid))
     ? 'RT : Pemeriksaan Hemoroid Belum Dilakukan' : `RT : ${text(values.hemoroid)}`);
-  add(abnormal(values.fisikMata), `Mata : ${text(values.fisikMata)}`);
+  add(abnormalMulti(values.fisikMata), `Mata : ${text(values.fisikMata)}`);
   const visusJauhAbnormal = [visus.od, visus.os].some((eye) => eye.desimal !== null && eye.desimal < 1);
   add(visusJauhAbnormal, `Visus Jauh : ${visus.label}`);
   add(abnormal(values.visusDekat, ['N/A']) && !/6\/6|5\/5|20\/20|J1|Koreksi/i.test(text(values.visusDekat)), `Visus Dekat : ${text(values.visusDekat)}`);
@@ -391,10 +435,18 @@ export function applyMCUCalculations(values: MCUValues): MCUValues {
   });
   if (questionnaire) result.ringkasanKuesioner = questionnaire;
 
-  // Uji kebugaran fisik (6MWT / Harvard Step Test) BUKAN parameter zonasi
-  // menurut SOP, tapi tetap perlu tercatat pada diagnosis.
-  const fitness = classifyFitnessTest(text(result.tesKebugaran));
-  if (fitness) result.hasilKebugaran = `${fitness.label} (${fitness.detail})`;
+  // Uji kebugaran fisik BUKAN parameter zonasi menurut SOP, tapi tetap perlu
+  // tercatat pada diagnosis.
+  //
+  // Sejak tiap jenis tes punya field sendiri, ringkasan dibangun dari nilai
+  // yang benar-benar terisi. Kolom `tesKebugaran` lama tetap diisi sebagai
+  // ringkasan teks supaya laporan & data lama tidak berubah bentuk.
+  const fitnessSummary = buildFitnessSummary(result);
+  if (fitnessSummary) {
+    result.tesKebugaran = fitnessSummary;
+    const fitness = classifyFitnessTest(fitnessSummary);
+    if (fitness) result.hasilKebugaran = `${fitness.label} (${fitness.detail})`;
+  }
 
   return result;
 }
