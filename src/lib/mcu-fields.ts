@@ -239,15 +239,16 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
     normalRange: 'Aromatic',
     allowCustom: true,
   }),
-  f('ulBeratJenis', 'Specific Gravity (SG)', 'chemistry', 'select', {
-    options: ['1.005', '1.010', '1.015', '1.020', '1.025', '1.030', '1.035', '1.040'],
+  // Parameter ber-nilai ANGKA diisi teks bebas (bukan dropdown): pilihan
+  // dropdown terbatas tidak mampu menampung hasil di luar rentang alat ukur,
+  // dan daftar nilai yang panjang justru menyulitkan operator.
+  f('ulBeratJenis', 'Specific Gravity (SG)', 'chemistry', 'text', {
     normalRange: '1.005-1.030',
-    allowCustom: true,
+    placeholder: '1.015',
   }),
-  f('ulPh', 'pH Urine', 'chemistry', 'select', {
-    options: ['4.5', '5.0', '5.5', '6.0', '6.5', '7.0', '7.5', '8.0'],
+  f('ulPh', 'pH Urine', 'chemistry', 'text', {
     normalRange: '4.6-8.0',
-    allowCustom: true,
+    placeholder: '6.0',
   }),
   f('ulProtein', 'Protein / Albumin', 'chemistry', 'select', {
     options: ['Negative', 'Trace', '+1', '+2', '+3', '+4'],
@@ -289,15 +290,17 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
     normalRange: 'Normal',
     allowCustom: true,
   }),
-  f('ulEritrosit', 'RBC Urine', 'chemistry', 'select', {
-    options: ['0 /HPF', '1-2 /HPF', '3-5 /HPF', '6-10 /HPF', '>10 /HPF', 'RCBC'],
-    normalRange: '0-2 /HPF',
-    allowCustom: true,
+  // Satuan ditaruh di label field (mis. "RBC Urine (/HPF)") supaya operator
+  // cukup mengetik angka/rentang saja — tidak perlu menulis satuannya lagi.
+  f('ulEritrosit', 'RBC Urine', 'chemistry', 'text', {
+    unit: '/HPF',
+    normalRange: '0-2',
+    placeholder: '0-1',
   }),
-  f('ulLeukosit', 'WBC Urine', 'chemistry', 'select', {
-    options: ['0 /HPF', '1-2 /HPF', '3-5 /HPF', '6-10 /HPF', '>10 /HPF', 'RCBC'],
-    normalRange: '0-5 /HPF',
-    allowCustom: true,
+  f('ulLeukosit', 'WBC Urine', 'chemistry', 'text', {
+    unit: '/HPF',
+    normalRange: '0-5',
+    placeholder: '1-2',
   }),
   f('ulSelEpitel', 'Epithelial Cells', 'chemistry', 'select', {
     options: ['Few', 'Moderate', 'Many', 'Not Examined'],

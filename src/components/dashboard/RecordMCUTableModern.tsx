@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -161,7 +161,7 @@ function ColFilterDropdown({ label, selected, getOptions, onChange }: ColFilterD
             ))}
             {visible.length === 0 && <div className="col-filter-empty">Tidak ditemukan</div>}
             {visible.length > MAX_RENDERED_OPTIONS && (
-              <div className="col-filter-empty">Menampilkan {MAX_RENDERED_OPTIONS} dari {visible.length} nilai — persempit dengan pencarian.</div>
+              <div className="col-filter-empty">Menampilkan {MAX_RENDERED_OPTIONS} dari {visible.length} nilai â€” persempit dengan pencarian.</div>
             )}
           </div>
           <div className="col-filter-footer">
@@ -196,10 +196,8 @@ export default function RecordMCUTableModern() {
   const [editingRow, setEditingRow] = useState<RecordRow | null>(null);
   const [followUpTargetRow, setFollowUpTargetRow] = useState<RecordRow | null>(null);
   const [saving, setSaving] = useState(false);
-  // Action dropdown per baris
-  const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
+  // Popup detail record (berisi field + menu Edit / Follow Up / Hapus)
   const [viewingRow, setViewingRow] = useState<RecordRow | null>(null);
-  const menuBtnRef = useRef<HTMLButtonElement>(null);
 
   const [activeTab, setActiveTab] = useState<'record' | 'monitor'>('monitor');
   const [monitorRows, setMonitorRows] = useState<RecordRow[]>([]);
@@ -210,18 +208,6 @@ export default function RecordMCUTableModern() {
   // Filter per kolom ala spreadsheet: daftar nilai terpilih (undefined = semua nilai)
   const [monitorFilters, setMonitorFilters] = useState<Record<string, string[] | undefined>>({});
   const [recordFilters, setRecordFilters] = useState<Record<string, string[] | undefined>>({});
-
-  // Tutup action dropdown saat klik di luar
-  useEffect(() => {
-    if (!actionMenuOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (menuBtnRef.current && !menuBtnRef.current.contains(e.target as Node)) {
-        setActionMenuOpen(null);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [actionMenuOpen]);
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Apakah Anda yakin ingin menghapus data MCU untuk ${name}?`)) return;
@@ -495,7 +481,7 @@ export default function RecordMCUTableModern() {
   return (
     <div className="mcu-records-modern">
       <div className="mcu-records-card">
-        {/* Tab nav — Monitor MCU / Record MCU, di kiri halaman */}
+        {/* Tab nav â€” Monitor MCU / Record MCU, di kiri halaman */}
         <div className="flex border-b border-gray-200 dark:border-gray-800 mb-4" role="tablist">
           <button
             type="button"
@@ -551,7 +537,7 @@ export default function RecordMCUTableModern() {
                   title="Hapus semua filter"
                   style={{ marginLeft: 6, fontSize: 10, color: 'var(--primary,#0ea5e9)', background: 'none', border: '1px solid var(--primary,#0ea5e9)', cursor: 'pointer', padding: '1px 4px', borderRadius: 3 }}
                 >
-                  {activeFilterCount} filter ✕
+                  {activeFilterCount} filter âœ•
                 </button>
               )}
             </div>
@@ -620,7 +606,7 @@ export default function RecordMCUTableModern() {
                     </th>
                   );
                 })}
-                <th className="mcu-records-action-head">Aksi</th>
+                {activeTab === 'record' && <th className="mcu-records-action-head">Aksi</th>}
               </tr>
             </thead>
             <tbody>
@@ -634,7 +620,7 @@ export default function RecordMCUTableModern() {
                       </div>
                     </div>
                     {activeTab === 'record' && loadProgress && (
-                      <div className="mcu-records-progress">Memuat data {loadProgress.loaded} / {loadProgress.total}…</div>
+                      <div className="mcu-records-progress">Memuat data {loadProgress.loaded} / {loadProgress.total}â€¦</div>
                     )}
                   </td>
                 </tr>
@@ -662,64 +648,22 @@ export default function RecordMCUTableModern() {
                           </td>
                         );
                       })}
-                      <td className="mcu-records-action">
-                        {/* Satu tombol dropdown: View, Edit, Follow-Up, Delete */}
-                        <div className="relative inline-block">
+                      {activeTab === 'record' && (
+                        <td className="mcu-records-action">
+                          {/* Satu tombol: buka popup Detail (berisi semua field)
+                              yang di dalamnya ada menu Edit / Follow Up / Hapus. */}
                           <Button
                             size="sm"
                             variant="ghost"
-                            ref={menuBtnRef}
-                            onClick={() => setActionMenuOpen(actionMenuOpen === id ? null : id)}
-                            title="Aksi"
-                            className="h-7 w-7 p-0"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => setViewingRow(row)}
+                            title="Lihat detail & aksi"
                           >
-                            ···
+                            <Eye size={13} />
+                            <span className="ml-1">Detail</span>
                           </Button>
-                          {actionMenuOpen === id && createPortal(
-                            <div
-                              className="z-50 fixed mt-1 w-44 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg"
-                              style={{ top: (menuBtnRef.current?.getBoundingClientRect().bottom ?? 0) + 4, left: Math.min((menuBtnRef.current?.getBoundingClientRect().left ?? 0), window.innerWidth - 180) }}
-                              role="menu"
-                            >
-                              <button
-                                type="button"
-                                role="menuitem"
-                                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
-                                onClick={() => { setViewingRow(row); setActionMenuOpen(null); }}
-                              >
-                                <Eye size={14} /> Lihat Detail
-                              </button>
-                              <button
-                                type="button"
-                                role="menuitem"
-                                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
-                                onClick={() => { handleEdit(row); setActionMenuOpen(null); }}
-                              >
-                                <Edit size={14} /> Edit
-                              </button>
-                              <button
-                                type="button"
-                                role="menuitem"
-                                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
-                                onClick={() => { setFollowUpTargetRow(row); setActionMenuOpen(null); }}
-                              >
-                                <Activity size={14} /> Follow Up
-                              </button>
-                              {activeTab === 'record' && (isSuperuser || isAdmin) && (
-                                <button
-                                  type="button"
-                                  role="menuitem"
-                                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10"
-                                  onClick={() => { handleDelete(String(row.id), row.nama); setActionMenuOpen(null); }}
-                                >
-                                  <Trash2 size={14} /> Hapus
-                                </button>
-                              )}
-                            </div>,
-                            document.body,
-                          )}
-                        </div>
-                      </td>
+                        </td>
+                      )}
                     </tr>
                   </Fragment>
                 );
@@ -745,11 +689,11 @@ export default function RecordMCUTableModern() {
           </Button>
         </div>
 
-        {/* View dialog — detail record + menu Edit / Follow Up / Hapus */}
+        {/* View dialog â€” detail record + menu Edit / Follow Up / Hapus */}
         <Dialog open={!!viewingRow} onOpenChange={open => !open && setViewingRow(null)}>
           <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Detail MCU — {viewingRow?.nama || '-'}</DialogTitle>
+              <DialogTitle>Detail MCU â€” {viewingRow?.nama || '-'}</DialogTitle>
             </DialogHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
               {MCU_FIELDS.filter(f => {
@@ -808,7 +752,7 @@ export default function RecordMCUTableModern() {
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setEditingRow(null)}>Batal</Button>
-              <Button onClick={saveEdit} disabled={saving}>{saving ? 'Menyimpan…' : 'Simpan'}</Button>
+              <Button onClick={saveEdit} disabled={saving}>{saving ? 'Menyimpanâ€¦' : 'Simpan'}</Button>
             </div>
           </DialogContent>
         </Dialog>

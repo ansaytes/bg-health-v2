@@ -1,4 +1,4 @@
-import {
+﻿import {
   assessZonasi,
   calcBMI,
   calcDiabetes,
@@ -73,7 +73,16 @@ function abnormalUrinalysis(values: MCUValues): boolean {
       }
     }
     if (fieldId === 'ulEritrosit' || fieldId === 'ulLeukosit') {
-      if (/^0\s*\/LPB$/i.test(v) || /^1-2\s*\/LPB$/i.test(v)) continue;
+      // Nilai sedimen boleh ditulis dengan atau tanpa satuan:
+      //   "0-2", "0-2 /HPF", "2", "2 /HPF", "<1", ">10", "RCBC"
+      // Ambil SEMUA angka, lalu pakai yang TERBESAR (batas atas rentang).
+      // Contoh: "0-5" -> 5 (melebihi normal RBC 2) => abnormal.
+      const batas = fieldId === 'ulEritrosit' ? 2 : 5;
+      const semuaAngka = v.match(/\d+/g);
+      if (semuaAngka && semuaAngka.length > 0) {
+        const tertinggi = Math.max(...semuaAngka.map(Number));
+        if (tertinggi <= batas) continue;
+      }
     }
     if (isAbnormalValue(v)) return true;
     // Nilai kualitatif lain yang tidak normal pun dianggap temuan.
@@ -136,10 +145,10 @@ function buildFormulaFollowUp(values: MCUValues) {
   add(bmi !== null && bmi >= 25 && bmi < 30, `BMI : ${bmi} (Overweight)`);
   add(bmi !== null && bmi >= 30, `BMI : ${bmi} (Obesitas)`);
   add(hb !== null && ((gender === 'Laki - Laki' && (hb < 13 || hb > 16.5)) || (gender === 'Perempuan' && (hb < 12 || hb > 15))), `Hb : ${text(values.hb)} g/dL`);
-  add(leukosit !== null && (leukosit > 11 || leukosit < 4), `Leukosit : ${text(values.leukosit)} 10³/µL`);
-  add(eritrosit !== null && (eritrosit > 6.2 || eritrosit < 4.5), `Eritrosit : ${text(values.eritrosit)} 10⁶/µL`);
+  add(leukosit !== null && (leukosit > 11 || leukosit < 4), `Leukosit : ${text(values.leukosit)} 10Â³/ÂµL`);
+  add(eritrosit !== null && (eritrosit > 6.2 || eritrosit < 4.5), `Eritrosit : ${text(values.eritrosit)} 10â¶/ÂµL`);
   add(hematokrit !== null && (hematokrit > 54 || hematokrit < 40), `Hematokrit : ${text(values.hematokrit)} %`);
-  add(trombosit !== null && (trombosit > 400 || trombosit < 150), `Trombosit : ${text(values.trombosit)} 10³/µL`);
+  add(trombosit !== null && (trombosit > 400 || trombosit < 150), `Trombosit : ${text(values.trombosit)} 10Â³/ÂµL`);
   add(chol !== null && chol >= 200, `Chol : ${text(values.chol)} mg/dL`);
   add(tg !== null && tg >= 150, `TG : ${text(values.tg)} mg/dL`);
   add(hdl !== null && ((gender === 'Laki - Laki' && hdl < 40) || (gender === 'Perempuan' && hdl < 50)), `HDL : ${text(values.hdl)} mg/dL`);
@@ -245,7 +254,7 @@ function compactFollowUpRecommendation(value: unknown): string {
 
 /**
  * Rekomendasi QSHE Medic otomatis berdasarkan zonasi dan temuan.
- * Nilai masih bisa ditimpa manual oleh operator — saran hanya ditulis
+ * Nilai masih bisa ditimpa manual oleh operator â€” saran hanya ditulis
  * saat rekQSHE kosong atau masih berisi nilai saran sebelumnya.
  */
 export function suggestRekQSHE(values: MCUValues): string {
@@ -321,7 +330,7 @@ export function applyMCUCalculations(values: MCUValues): MCUValues {
     ?? calcEgfrCkdEpi2021(result.kreatinin ?? undefined, result.usia ?? undefined, String(result.jenisKelamin || ''));
   if (egfr !== null) result.egfr = egfr;
 
-  // Ringkasan komposit `ul` dari 19 parameter — WAJIB dibangun sebelum
+  // Ringkasan komposit `ul` dari 19 parameter â€” WAJIB dibangun sebelum
   // buildDiagnosisList & zonasi karena keduanya membaca `ul`.
   // Selalu dibangun ulang bila ada parameter per-param yang terisi, supaya
   // suntingan operator langsung tercermin (bukan memakai `ul` lama).

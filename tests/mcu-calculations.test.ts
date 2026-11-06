@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+﻿import { describe, it, expect } from 'vitest';
 import {
   applyMCUCalculations,
   buildAutomaticFollowUpRecommendations,
@@ -44,18 +44,18 @@ describe('buildFormulaFollowUp (via applyMCUCalculations.itemFU)', () => {
     expect(result.itemFU).not.toContain('TD :');
   });
 
-  it('applies male Hb thresholds (13–16.5)', () => {
+  it('applies male Hb thresholds (13â€“16.5)', () => {
     const lowMale = applyMCUCalculations({ ...maleBase, hb: 12.9 });
     expect(lowMale.itemFU).toContain('Hb : 12.9 g/dL');
     const okMale = applyMCUCalculations({ ...maleBase, hb: 13 });
     expect(okMale.itemFU).not.toContain('Hb :');
   });
 
-  it('applies female Hb thresholds (12–15)', () => {
+  it('applies female Hb thresholds (12â€“15)', () => {
     const femaleBase = { jenisKelamin: 'Perempuan', usia: 40 };
     const lowFemale = applyMCUCalculations({ ...femaleBase, hb: 11.9 });
     expect(lowFemale.itemFU).toContain('Hb : 11.9 g/dL');
-    // A value valid for males (13–16.5) is abnormal for females above 15
+    // A value valid for males (13â€“16.5) is abnormal for females above 15
     const highFemale = applyMCUCalculations({ ...femaleBase, hb: 15.5 });
     expect(highFemale.itemFU).toContain('Hb : 15.5 g/dL');
     const okFemale = applyMCUCalculations({ ...femaleBase, hb: 14.5 });
@@ -259,19 +259,30 @@ describe('buildAutomaticFollowUpRecommendations', () => {
 });
 
 describe('urinalisis per parameter', () => {
-  it('exposes 19 individual urinalysis dropdown fields', () => {
-    const ids = [
-      'ulWarna', 'ulKejernihan', 'ulBau', 'ulBeratJenis', 'ulPh', 'ulProtein',
-      'ulGlukosa', 'ulKeton', 'ulDarah', 'ulLeukositEsterase', 'ulNitrit',
-      'ulBilirubin', 'ulUrobilinogen', 'ulEritrosit', 'ulLeukosit',
-      'ulSelEpitel', 'ulSilinder', 'ulKristal', 'ulBakteri',
-    ];
-    expect(ids).toHaveLength(19);
-    for (const id of ids) {
+  // 15 parameter kualitatif memakai dropdown; 4 parameter ber-nilai ANGKA
+  // memakai teks bebas supaya hasil di luar rentang alat ukur tetap tercatat.
+  const SELECT_IDS = [
+    'ulWarna', 'ulKejernihan', 'ulBau', 'ulProtein', 'ulGlukosa', 'ulKeton',
+    'ulDarah', 'ulLeukositEsterase', 'ulNitrit', 'ulBilirubin',
+    'ulUrobilinogen', 'ulSelEpitel', 'ulSilinder', 'ulKristal', 'ulBakteri',
+  ];
+  const TEXT_IDS = ['ulBeratJenis', 'ulPh', 'ulEritrosit', 'ulLeukosit'];
+
+  it('exposes 19 individual urinalysis fields', () => {
+    expect(SELECT_IDS).toHaveLength(15);
+    expect(TEXT_IDS).toHaveLength(4);
+    expect([...SELECT_IDS, ...TEXT_IDS]).toHaveLength(19);
+    for (const id of SELECT_IDS) {
       const field = MCU_FIELDS.find((entry) => entry.id === id);
       expect(field, `field ${id} harus ada`).toBeDefined();
       expect(field!.type).toBe('select');
       expect(field!.options?.length).toBeGreaterThan(0);
+    }
+    for (const id of TEXT_IDS) {
+      const field = MCU_FIELDS.find((entry) => entry.id === id);
+      expect(field, `field ${id} harus ada`).toBeDefined();
+      expect(field!.type).toBe('text');
+      expect(field!.normalRange).toBeTruthy();
     }
   });
 
@@ -296,7 +307,7 @@ describe('urinalisis per parameter', () => {
       ulGlukosa: 'Negatif', ulKeton: 'Negatif', ulDarah: 'Negatif',
       ulLeukositEsterase: 'Negatif', ulNitrit: 'Negatif',
       ulBilirubin: 'Negatif', ulUrobilinogen: 'Normal',
-      ulEritrosit: '0 /LPB', ulLeukosit: '1-2 /LPB', ulSelEpitel: 'Sedikit',
+      ulEritrosit: '0-1', ulLeukosit: '1-2', ulSelEpitel: 'Sedikit',
       ulSilinder: 'Negatif', ulKristal: 'Negatif', ulBakteri: 'Negatif',
     });
     expect(normal.itemFU).not.toContain('UL :');
@@ -304,6 +315,21 @@ describe('urinalisis per parameter', () => {
     const abnormal = applyMCUCalculations({ ...maleBase, ulProtein: '+2' });
     expect(abnormal.itemFU).toContain('UL :');
     expect(abnormal.ul).toContain('Protein / Albumin: +2');
+  });
+
+  it('accepts sediment values with or without unit, using the highest number in a range', () => {
+    // Tanpa satuan, dalam batas normal.
+    expect(applyMCUCalculations({ ...maleBase, ulEritrosit: '0-2' }).itemFU).not.toContain('UL :');
+    // Dengan satuan, dalam batas normal.
+    expect(applyMCUCalculations({ ...maleBase, ulEritrosit: '0-2 /HPF' }).itemFU).not.toContain('UL :');
+    // Angka tunggal.
+    expect(applyMCUCalculations({ ...maleBase, ulEritrosit: '1' }).itemFU).not.toContain('UL :');
+    // Rentang melebihi normal (batas atas 2) -> abnormal.
+    expect(applyMCUCalculations({ ...maleBase, ulEritrosit: '3-5' }).itemFU).toContain('UL :');
+    expect(applyMCUCalculations({ ...maleBase, ulEritrosit: '0-5 /HPF' }).itemFU).toContain('UL :');
+    // WBC batas atas 5.
+    expect(applyMCUCalculations({ ...maleBase, ulLeukosit: '0-5' }).itemFU).not.toContain('UL :');
+    expect(applyMCUCalculations({ ...maleBase, ulLeukosit: '6-10' }).itemFU).toContain('UL :');
   });
 
   it('keeps a manual composite ul when no per-parameter value is present', () => {

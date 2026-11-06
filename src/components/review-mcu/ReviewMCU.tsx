@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -60,7 +60,7 @@ function normalizeGender(value?: string | null) {
  * Opsi select ditambah nilai lama yang tidak ada di daftar.
  *
  * Field EKG dan treadmill tadinya tulis bebas, jadi database sudah
- * berisi nilai yang tidak akan pernah muncul di daftar kanonis —
+ * berisi nilai yang tidak akan pernah muncul di daftar kanonis â€”
  * termasuk yang salah eja seperti "Sinus Bradicardia" dan "Synus Rythm".
  *
  * Tanpa ini, <select> akan menampilkan "Pilih..." untuk nilai yang
@@ -94,8 +94,8 @@ const OPSI_MANUAL = '__custom__';
 /**
  * Menentukan apa yang harus ditampilkan di select.
  *
- * Kalau nilai saat ini bukan pilihan dropdown — termasuk ketika operator
- * sedang mengisi manual — select diarahkan ke opsi "Lainnya" supaya
+ * Kalau nilai saat ini bukan pilihan dropdown â€” termasuk ketika operator
+ * sedang mengisi manual â€” select diarahkan ke opsi "Lainnya" supaya
  * input teksnya terlihat. Tanpa ini, mengisi teks manual tidak akan
  * menampilkan apa pun di select dan operator mengira tidak tersimpan.
  */
@@ -484,7 +484,7 @@ export default function ReviewMCU() {
   return (
     <div className="relative review-mcu-page" style={{ overflowY: "auto", maxHeight: "100%" }}>
       <AnimatePresence mode="wait" custom={direction}>
-        {/* ─── STEP 1: SEARCH ─── */}
+        {/* â”€â”€â”€ STEP 1: SEARCH â”€â”€â”€ */}
         {store.reviewStep === 'search' && (
           <motion.div
             key="search"
@@ -566,7 +566,7 @@ export default function ReviewMCU() {
               </div>
             )}
 
-            {/* Identity Card — always visible */}
+            {/* Identity Card â€” always visible */}
             {!store.searchingEmployee && (
               <div style={{
                 background: 'var(--card)',
@@ -643,7 +643,7 @@ export default function ReviewMCU() {
                   )}
                 </div>
 
-                {/* Saklar lampu untuk form scan OCR — default padam, tanpa teks. */}
+                {/* Saklar lampu untuk form scan OCR â€” default padam, tanpa teks. */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
                   <button
                     type="button"
@@ -670,7 +670,7 @@ export default function ReviewMCU() {
           </motion.div>
         )}
 
-        {/* ─── STEP 2: OCR (hanya ada bila saklar lampu menyala) ─── */}
+        {/* â”€â”€â”€ STEP 2: OCR (hanya ada bila saklar lampu menyala) â”€â”€â”€ */}
         {store.reviewStep === 'ocr' && store.ocrEnabled && (
           <motion.div
             key="ocr"
@@ -777,7 +777,7 @@ export default function ReviewMCU() {
           </motion.div>
         )}
 
-        {/* ─── STEP 3: FORM ─── */}
+        {/* â”€â”€â”€ STEP 3: FORM â”€â”€â”€ */}
         {store.reviewStep === 'form' && (
           <motion.div
             key="form"
@@ -789,7 +789,7 @@ export default function ReviewMCU() {
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             className="space-y-4 pb-4"
           >
-            {/* Back button — kembali ke langkah sebelumnya yang BENAR-BENAR ada.
+            {/* Back button â€” kembali ke langkah sebelumnya yang BENAR-BENAR ada.
                 Bila saklar OCR padam, langkah OCR tidak di-render; menuju ke sana
                 akan menampilkan halaman kosong tanpa jalan keluar. */}
             <motion.div {...buttonTap}>
@@ -894,7 +894,7 @@ export default function ReviewMCU() {
   );
 }
 
-// ─── Field Renderer Component ───
+// â”€â”€â”€ Field Renderer Component â”€â”€â”€
 function FieldRenderer({
   field,
   value,
@@ -1074,21 +1074,23 @@ function FieldRenderer({
         />
       )}
 
-      {normalRange && field.type === 'number' && (
+      {/* Label nilai normal tampil untuk SEMUA field yang punya normalRange
+          (number, text, maupun select) supaya operator selalu melihat acuan. */}
+      {normalRange && (
         <p className={`text-[10px] mt-1 ${abnormal ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
           Normal: {normalRange} {field.unit || ''}
         </p>
       )}
       {egfrEstimate !== null && (
         <p className="mt-1 text-[10px] text-amber-700 dark:text-amber-400">
-          Estimasi CKD-EPI 2021: {egfrEstimate} mL/menit/1,73 m². Nilai lab tetap kosong; estimasi ini digunakan untuk zonasi.
+          Estimasi CKD-EPI 2021: {egfrEstimate} mL/menit/1,73 mÂ². Nilai lab tetap kosong; estimasi ini digunakan untuk zonasi.
         </p>
       )}
     </div>
   );
 }
 
-// ─── Zonasi Card Component ───
+// â”€â”€â”€ Zonasi Card Component â”€â”€â”€
 function ZonasiCard({
   zona,
   triggers,
@@ -1155,7 +1157,7 @@ function ZonasiCard({
           <div className="max-h-24 overflow-y-auto space-y-0.5">
             {triggers.map((t, i) => (
               <p key={i} className={`text-[11px] ${textColor} opacity-90 leading-tight`}>
-                • {t.replace(/ \(Merah\)| \(Kuning\)/, '')}
+                â€¢ {t.replace(/ \(Merah\)| \(Kuning\)/, '')}
               </p>
             ))}
           </div>
@@ -1175,7 +1177,7 @@ function ZonasiCard({
 
       {egfrEstimate !== null && missingInputs.length === 0 && (
         <p className={`mb-2 text-[11px] ${textColor}`}>
-          Zonasi menggunakan eGFR estimasi CKD-EPI 2021: {egfrEstimate} mL/menit/1,73 m²
+          Zonasi menggunakan eGFR estimasi CKD-EPI 2021: {egfrEstimate} mL/menit/1,73 mÂ²
           {' '}(hasil lab eGFR tidak tersedia).
         </p>
       )}
