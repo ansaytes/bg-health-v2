@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { decryptIntegrationSecret, readIntegration } from '@/lib/integration-settings';
 import { getServerCaller, requireServerRole, STAFF_ROLES } from '@/lib/server-auth';
+import { resolveAccounts, accountsForClient } from '@/lib/ai-accounts';
 
 interface AvailableModel {
   id: string;
@@ -67,7 +68,10 @@ export async function GET(request: NextRequest) {
     const integration = await readIntegration('ai');
     const secret = decryptIntegrationSecret(integration?.secret_ciphertext ?? null);
     const apiKey = typeof secret.apiKey === 'string' ? secret.apiKey : '';
-    if (!apiKey) {
+    // Multi-akun: kumpulkan akun aktif. Bila hanya format lama yang ada,
+    // resolveAccounts sudah mengembalikan satu "Akun Utama" dari apiKey.
+    const activeAccounts = accountsForClient(resolveAccounts(integration?.config, secret).filter((a) => a.enabled));
+    if (!apiKey && activeAccounts.length === 0) {
       return NextResponse.json({ success: false, error: 'Simpan API key AI di Pengaturan > Integrasi terlebih dahulu.' }, { status: 503 });
     }
 
@@ -162,7 +166,9 @@ export async function GET(request: NextRequest) {
         error: 'Provider tidak melaporkan model yang dapat membaca gambar. Ekstraksi MCU membutuhkan model multimodal (mis. Gemini atau GPT-4o).',
       }, { status: 404 });
     }
-    return NextResponse.json({ success: true, provider, configuredModel, models: uniqueModels });
+    // Keluarkan daftar akun untuk dipakai ReviewMCU, dan tandai tiap model dengan akun pemiliknya
+    const enrichedModels = uniqueModels.map((m) => ({ ...m, accountId: activeAccounts[0]?.id ?? '' }));
+    return NextResponse.json({ success: true, provider, configuredModel, accounts: activeAccounts, models: enrichedModels });
   } catch (error) {
     console.error('[AI models] Failed to list available models:', error instanceof Error ? error.name : 'unknown error');
     return NextResponse.json({ success: false, error: 'Gagal mengambil daftar model AI.' }, { status: 502 });

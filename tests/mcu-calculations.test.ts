@@ -44,18 +44,18 @@ describe('buildFormulaFollowUp (via applyMCUCalculations.itemFU)', () => {
     expect(result.itemFU).not.toContain('TD :');
   });
 
-  it('applies male Hb thresholds (13â€“16.5)', () => {
+  it('applies male Hb thresholds (13–16.5)', () => {
     const lowMale = applyMCUCalculations({ ...maleBase, hb: 12.9 });
     expect(lowMale.itemFU).toContain('Hb : 12.9 g/dL');
     const okMale = applyMCUCalculations({ ...maleBase, hb: 13 });
     expect(okMale.itemFU).not.toContain('Hb :');
   });
 
-  it('applies female Hb thresholds (12â€“15)', () => {
+  it('applies female Hb thresholds (12–15)', () => {
     const femaleBase = { jenisKelamin: 'Perempuan', usia: 40 };
     const lowFemale = applyMCUCalculations({ ...femaleBase, hb: 11.9 });
     expect(lowFemale.itemFU).toContain('Hb : 11.9 g/dL');
-    // A value valid for males (13â€“16.5) is abnormal for females above 15
+    // A value valid for males (13–16.5) is abnormal for females above 15
     const highFemale = applyMCUCalculations({ ...femaleBase, hb: 15.5 });
     expect(highFemale.itemFU).toContain('Hb : 15.5 g/dL');
     const okFemale = applyMCUCalculations({ ...femaleBase, hb: 14.5 });

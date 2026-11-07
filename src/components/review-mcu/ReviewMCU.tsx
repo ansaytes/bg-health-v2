@@ -20,6 +20,7 @@ import { Progress } from '@/components/ui/progress';
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from '@/components/ui/accordion';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useMCUStore, type EmployeeData as MCUEmployeeData } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { getEmployeeLookupAccessToken } from '@/lib/employee-lookup-client';
@@ -37,7 +38,8 @@ import { calcEgfrCkdEpi2021, getMissingZonasiInputs } from '@/lib/zonasi-engine'
 import { parseVisusPerMata } from '@/lib/visus-parser';
 
 type SearchBy = 'nik' | 'national_id' | 'nama';
-type AvailableAIModel = { id: string; name: string };
+type AvailableAIModel = { id: string; name: string; accountId?: string };
+type AiAccountSummary = { id: string; label: string; provider: string; model: string; enabled: boolean; hasApiKey: boolean };
 
 function calculateAge(birthDate?: string | null) {
   if (!birthDate) return '';
@@ -62,7 +64,7 @@ function normalizeGender(value?: string | null) {
  * Opsi select ditambah nilai lama yang tidak ada di daftar.
  *
  * Field EKG dan treadmill tadinya tulis bebas, jadi database sudah
- * berisi nilai yang tidak akan pernah muncul di daftar kanonis â€”
+ * berisi nilai yang tidak akan pernah muncul di daftar kanonis —
  * termasuk yang salah eja seperti "Sinus Bradicardia" dan "Synus Rythm".
  *
  * Tanpa ini, <select> akan menampilkan "Pilih..." untuk nilai yang
@@ -96,8 +98,8 @@ const OPSI_MANUAL = '__custom__';
 /**
  * Menentukan apa yang harus ditampilkan di select.
  *
- * Kalau nilai saat ini bukan pilihan dropdown â€” termasuk ketika operator
- * sedang mengisi manual â€” select diarahkan ke opsi "Lainnya" supaya
+ * Kalau nilai saat ini bukan pilihan dropdown — termasuk ketika operator
+ * sedang mengisi manual — select diarahkan ke opsi "Lainnya" supaya
  * input teksnya terlihat. Tanpa ini, mengisi teks manual tidak akan
  * menampilkan apa pun di select dan operator mengira tidak tersimpan.
  */
@@ -241,13 +243,16 @@ export default function ReviewMCU() {
   const [extractionCooldown, setExtractionCooldown] = useState(0);
   const [ocrModelId, setOcrModelId] = useState('');
   const [ocrModels, setOcrModels] = useState<AvailableAIModel[]>([]);
+  const [ocrAccounts, setOcrAccounts] = useState<AiAccountSummary[]>([]);
   const [loadingOcrModels, setLoadingOcrModels] = useState(true);
   const [ocrModelError, setOcrModelError] = useState('');
   const loadOcrModels = useCallback(async () => {
     setLoadingOcrModels(true);
     setOcrModelError('');
     try {
-      const result = await authFetch<{ configuredModel: string; models: AvailableAIModel[] }>('/api/integrations/ai/models');
+      const result = await authFetch<{ configuredModel: string; models: AvailableAIModel[]; accounts?: AiAccountSummary[] }>('/api/integrations/ai/models');
+      // Simpan daftar akun untuk ditampilkan di UI.
+      if (result.accounts) setOcrAccounts(result.accounts);
       setOcrModels(result.models);
       setOcrModelId((current) => result.models.some((model) => model.id === current)
         ? current
@@ -405,8 +410,12 @@ export default function ReviewMCU() {
       } else {
         const retrySeconds = Number(json.retryAfterSeconds || res.headers.get('Retry-After') || 0);
         if (retrySeconds > 0) setExtractionCooldown(retrySeconds);
+        // Jika daftar attempts tersedia, tampilkan ringkasan akun yang sudah dicoba.
+        const attemptsInfo = Array.isArray(json.attempts) && json.attempts.length > 0
+          ? json.attempts.map((a: { label?: string; message?: string }) => `${a.label || '?'}: ${a.message || 'gagal'}`).join(' | ')
+          : '';
         const message = retrySeconds > 0
-          ? `${json.error || 'Batas penggunaan sementara tercapai.'} Jangan menekan tombol selama penghitung berjalan. Setelah selesai, coba satu kali. Jika masih ditolak, quota proyek masih penuh dan perlu menunggu window berikutnya.`
+          ? `${json.error || 'Kuota habis.'}${attemptsInfo ? ` (Percobaan: ${attemptsInfo})` : ''} Jangan menekan tombol selama penghitung berjalan. Jika masih ditolak, tambahkan akun AI cadangan di Pengaturan > Integrasi.`
           : (json.error || 'Gagal mengekstrak data');
         store.showToast(message, 'error');
         return false;
@@ -490,7 +499,7 @@ export default function ReviewMCU() {
   return (
     <div className="relative review-mcu-page" style={{ overflowY: "auto", maxHeight: "100%" }}>
       <AnimatePresence mode="wait" custom={direction}>
-        {/* â”€â”€â”€ STEP 1: SEARCH â”€â”€â”€ */}
+        {/* ─── STEP 1: SEARCH ─── */}
         {store.reviewStep === 'search' && (
           <motion.div
             key="search"
@@ -572,7 +581,7 @@ export default function ReviewMCU() {
               </div>
             )}
 
-            {/* Identity Card â€” always visible */}
+            {/* Identity Card — always visible */}
             {!store.searchingEmployee && (
               <div style={{
                 background: 'var(--card)',
@@ -649,7 +658,7 @@ export default function ReviewMCU() {
                   )}
                 </div>
 
-                {/* Saklar lampu untuk form scan OCR â€” default padam, tanpa teks. */}
+                {/* Saklar lampu untuk form scan OCR — default padam, tanpa teks. */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
                   <button
                     type="button"
@@ -676,7 +685,7 @@ export default function ReviewMCU() {
           </motion.div>
         )}
 
-        {/* â”€â”€â”€ STEP 2: OCR (hanya ada bila saklar lampu menyala) â”€â”€â”€ */}
+        {/* ─── STEP 2: OCR (hanya ada bila saklar lampu menyala) ─── */}
         {store.reviewStep === 'ocr' && store.ocrEnabled && (
           <motion.div
             key="ocr"
@@ -783,7 +792,7 @@ export default function ReviewMCU() {
           </motion.div>
         )}
 
-        {/* â”€â”€â”€ STEP 3: FORM â”€â”€â”€ */}
+        {/* ─── STEP 3: FORM ─── */}
         {store.reviewStep === 'form' && (
           <motion.div
             key="form"
@@ -795,7 +804,7 @@ export default function ReviewMCU() {
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             className="space-y-4 pb-4"
           >
-            {/* Back button â€” kembali ke langkah sebelumnya yang BENAR-BENAR ada.
+            {/* Back button — kembali ke langkah sebelumnya yang BENAR-BENAR ada.
                 Bila saklar OCR padam, langkah OCR tidak di-render; menuju ke sana
                 akan menampilkan halaman kosong tanpa jalan keluar. */}
             <motion.div {...buttonTap}>
@@ -916,7 +925,7 @@ export default function ReviewMCU() {
   );
 }
 
-// â”€â”€â”€ Field Renderer Component â”€â”€â”€
+// ─── Field Renderer Component ───
 function FieldRenderer({
   field,
   value,
@@ -979,7 +988,7 @@ function FieldRenderer({
 
       {field.type === 'textarea' ? (
         <Textarea
-          placeholder={field.placeholder || ''}
+          placeholder={field.placeholder || normalRange || ''}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="min-h-[60px] text-sm rounded-xl bg-background"
@@ -1012,30 +1021,48 @@ function FieldRenderer({
         </div>
       ) : field.type === 'select' ? (
         field.multiple ? (
-          <details className="relative text-sm">
-            <summary className={`flex min-h-9 cursor-pointer list-none flex-wrap items-center gap-1.5 rounded-lg border border-input bg-background px-3 py-1.5 text-xs text-foreground ${abnormal ? 'border-red-500/60 dark:border-red-500/50' : ''}`}>
-              {selectedValues.length
-                ? selectedValues.map((selected) => (
-                    <span key={selected} className="rounded-md bg-primary/10 px-2 py-1 text-primary">{selected}</span>
-                  ))
-                : 'Pilih satu atau lebih...'}
-            </summary>
-            <div className="absolute left-0 right-0 z-20 mt-1 max-h-52 space-y-1 overflow-y-auto rounded-lg border border-input bg-background p-2 shadow-lg">
-              {field.options?.map((opt) => (
-                <label key={opt} className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
-                  <input
-                    type="checkbox"
-                    checked={selectedValues.includes(opt)}
-                    onChange={(event) => onChange(event.target.checked
-                      ? [...selectedValues, opt].join(' | ')
-                      : selectedValues.filter((selected) => selected !== opt).join(' | '))}
-                    className="mt-0.5 accent-primary"
-                  />
-                  <span>{opt}</span>
-                </label>
-              ))}
-            </div>
-          </details>
+          // Multi-pilih memakai Popover yang di-render lewat Portal, BUKAN
+          // <details> dengan dropdown absolute. AccordionContent memakai
+          // overflow-hidden untuk animasi buka-tutup, sehingga dropdown
+          // absolute di dalamnya terpotong dan pilihan di bagian bawah tidak
+          // bisa diklik. Popover keluar dari aliran dokumen sehingga bebas
+          // dari kliping tersebut.
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className={`flex min-h-9 w-full cursor-pointer flex-wrap items-center gap-1.5 rounded-lg border border-input bg-background px-3 py-1.5 text-left text-xs text-foreground ${abnormal ? 'border-red-500/60 dark:border-red-500/50' : ''}`}
+              >
+                {selectedValues.length
+                  ? selectedValues.map((selected) => (
+                      <span key={selected} className="rounded-md bg-primary/10 px-2 py-1 text-primary">{selected}</span>
+                    ))
+                  : <span className="text-muted-foreground">Pilih satu atau lebih...</span>}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="start"
+              side="bottom"
+              className="w-[var(--radix-popover-trigger-width)] max-h-64 overflow-y-auto p-2"
+              collisionPadding={12}
+            >
+              <div className="space-y-1">
+                {field.options?.map((opt) => (
+                  <label key={opt} className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
+                    <input
+                      type="checkbox"
+                      checked={selectedValues.includes(opt)}
+                      onChange={(event) => onChange(event.target.checked
+                        ? [...selectedValues, opt].join(' | ')
+                        : selectedValues.filter((selected) => selected !== opt).join(' | '))}
+                      className="mt-0.5 accent-primary"
+                    />
+                    <span className="text-xs">{opt}</span>
+                  </label>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
         ) : (
           <>
           <select
@@ -1086,7 +1113,7 @@ function FieldRenderer({
         <Input
           type={field.type === 'number' ? 'number' : 'text'}
           step={field.type === 'number' ? 'any' : undefined}
-          placeholder={field.placeholder || ''}
+          placeholder={field.placeholder || normalRange || ''}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className={
@@ -1105,14 +1132,14 @@ function FieldRenderer({
       )}
       {egfrEstimate !== null && (
         <p className="mt-1 text-[10px] text-amber-700 dark:text-amber-400">
-          Estimasi CKD-EPI 2021: {egfrEstimate} mL/menit/1,73 mÂ². Nilai lab tetap kosong; estimasi ini digunakan untuk zonasi.
+          Estimasi CKD-EPI 2021: {egfrEstimate} mL/menit/1,73 m². Nilai lab tetap kosong; estimasi ini digunakan untuk zonasi.
         </p>
       )}
     </div>
   );
 }
 
-// â”€â”€â”€ Zonasi Card Component â”€â”€â”€
+// ─── Zonasi Card Component ───
 function ZonasiCard({
   zona,
   triggers,
@@ -1179,7 +1206,7 @@ function ZonasiCard({
           <div className="max-h-24 overflow-y-auto space-y-0.5">
             {triggers.map((t, i) => (
               <p key={i} className={`text-[11px] ${textColor} opacity-90 leading-tight`}>
-                â€¢ {t.replace(/ \(Merah\)| \(Kuning\)/, '')}
+                • {t.replace(/ \(Merah\)| \(Kuning\)/, '')}
               </p>
             ))}
           </div>
@@ -1199,7 +1226,7 @@ function ZonasiCard({
 
       {egfrEstimate !== null && missingInputs.length === 0 && (
         <p className={`mb-2 text-[11px] ${textColor}`}>
-          Zonasi menggunakan eGFR estimasi CKD-EPI 2021: {egfrEstimate} mL/menit/1,73 mÂ²
+          Zonasi menggunakan eGFR estimasi CKD-EPI 2021: {egfrEstimate} mL/menit/1,73 m²
           {' '}(hasil lab eGFR tidak tersedia).
         </p>
       )}

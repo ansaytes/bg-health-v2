@@ -161,7 +161,7 @@ function ColFilterDropdown({ label, selected, getOptions, onChange }: ColFilterD
             ))}
             {visible.length === 0 && <div className="col-filter-empty">Tidak ditemukan</div>}
             {visible.length > MAX_RENDERED_OPTIONS && (
-              <div className="col-filter-empty">Menampilkan {MAX_RENDERED_OPTIONS} dari {visible.length} nilai â€” persempit dengan pencarian.</div>
+              <div className="col-filter-empty">Menampilkan {MAX_RENDERED_OPTIONS} dari {visible.length} nilai — persempit dengan pencarian.</div>
             )}
           </div>
           <div className="col-filter-footer">
@@ -481,7 +481,7 @@ export default function RecordMCUTableModern() {
   return (
     <div className="mcu-records-modern">
       <div className="mcu-records-card">
-        {/* Tab nav â€” Monitor MCU / Record MCU, di kiri halaman */}
+        {/* Tab nav — Monitor MCU / Record MCU, di kiri halaman */}
         <div className="flex border-b border-gray-200 dark:border-gray-800 mb-4" role="tablist">
           <button
             type="button"
@@ -537,7 +537,7 @@ export default function RecordMCUTableModern() {
                   title="Hapus semua filter"
                   style={{ marginLeft: 6, fontSize: 10, color: 'var(--primary,#0ea5e9)', background: 'none', border: '1px solid var(--primary,#0ea5e9)', cursor: 'pointer', padding: '1px 4px', borderRadius: 3 }}
                 >
-                  {activeFilterCount} filter âœ•
+                  {activeFilterCount} filter ✕
                 </button>
               )}
             </div>
@@ -620,7 +620,7 @@ export default function RecordMCUTableModern() {
                       </div>
                     </div>
                     {activeTab === 'record' && loadProgress && (
-                      <div className="mcu-records-progress">Memuat data {loadProgress.loaded} / {loadProgress.total}â€¦</div>
+                      <div className="mcu-records-progress">Memuat data {loadProgress.loaded} / {loadProgress.total}…</div>
                     )}
                   </td>
                 </tr>
@@ -689,11 +689,11 @@ export default function RecordMCUTableModern() {
           </Button>
         </div>
 
-        {/* View dialog â€” detail record + menu Edit / Follow Up / Hapus */}
+        {/* View dialog — detail record + menu Edit / Follow Up / Hapus */}
         <Dialog open={!!viewingRow} onOpenChange={open => !open && setViewingRow(null)}>
           <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Detail MCU â€” {viewingRow?.nama || '-'}</DialogTitle>
+              <DialogTitle>Detail MCU — {viewingRow?.nama || '-'}</DialogTitle>
             </DialogHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
               {MCU_FIELDS.filter(f => {
@@ -752,7 +752,7 @@ export default function RecordMCUTableModern() {
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setEditingRow(null)}>Batal</Button>
-              <Button onClick={saveEdit} disabled={saving}>{saving ? 'Menyimpanâ€¦' : 'Simpan'}</Button>
+              <Button onClick={saveEdit} disabled={saving}>{saving ? 'Menyimpan…' : 'Simpan'}</Button>
             </div>
           </DialogContent>
         </Dialog>

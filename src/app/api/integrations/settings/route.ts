@@ -6,6 +6,7 @@ import {
   writeIntegration,
 } from '@/lib/integration-settings';
 import { getServerCaller, requireServerRole, SYSTEM_ROLES } from '@/lib/server-auth';
+import { normalizeAccountInput, resolveAccounts, accountsForClient } from '@/lib/ai-accounts';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -36,6 +37,14 @@ export async function GET(request: NextRequest) {
     const driveSecrets = decryptIntegrationSecret(driveRecord?.secret_ciphertext ?? null);
     const aiProvider = aiRecord?.config.provider === 'openai-compatible' ? 'openai-compatible' : 'gemini';
     const databaseApiKey = typeof aiSecrets.apiKey === 'string' && aiSecrets.apiKey.length > 0;
+
+    // Multi-akun: baca daftar akun yang tersimpan. resolveAccounts juga
+    // mengembalikan "Akun Utama" bila hanya konfigurasi lama yang ada,
+    // jadi respons selalu punya `accounts` untuk dipakai UI.
+    const resolvedAccounts = resolveAccounts(aiRecord?.config, aiSecrets);
+    const rawAccounts = aiRecord?.config.aiAccounts;
+    const hasMultiAccounts = Array.isArray(rawAccounts) && rawAccounts.length > 0;
+
     return NextResponse.json({
       success: true,
       ai: {
@@ -43,6 +52,8 @@ export async function GET(request: NextRequest) {
         baseUrl: typeof aiRecord?.config.baseUrl === 'string' ? aiRecord.config.baseUrl : '',
         model: typeof aiRecord?.config.model === 'string' ? aiRecord.config.model : '',
         hasApiKey: databaseApiKey,
+        accounts: accountsForClient(resolvedAccounts),
+        multiAccounts: hasMultiAccounts,
       },
       drive: {
         folderId: typeof driveRecord?.config.folderId === 'string' ? driveRecord.config.folderId : '',
@@ -92,6 +103,94 @@ export async function PUT(request: NextRequest) {
   try {
     if (body.ai !== undefined) {
       if (!isRecord(body.ai)) return NextResponse.json({ success: false, error: 'Pengaturan AI tidak valid.' }, { status: 400 });
+
+      const existing = await readIntegration('ai');
+      const existingSecrets = decryptIntegrationSecret(existing?.secret_ciphertext ?? null);
+      const existingConfig = (existing?.config || {}) as Record<string, unknown>;
+
+      // ── Jalur A: daftar akun (fitur multi-akun / failover) ──────────
+      if (Array.isArray(body.ai.accounts)) {
+        const rawList = body.ai.accounts;
+        if (rawList.length > 20) {
+          return NextResponse.json({ success: false, error: 'Maksimal 20 akun AI.' }, { status: 400 });
+        }
+
+        const accounts: Array<Record<string, unknown>> = [];
+        const accountKeys: Record<string, string> = {};
+        const usedIds = new Set<string>();
+
+        for (let index = 0; index < rawList.length; index += 1) {
+          const raw = rawList[index];
+          if (!isRecord(raw)) {
+            return NextResponse.json({ success: false, error: `Akun #${index + 1} tidak valid.` }, { status: 400 });
+          }
+          const normalized = normalizeAccountInput(raw, index);
+          if (!normalized) {
+            return NextResponse.json({
+              success: false,
+              error: `Akun #${index + 1} tidak lengkap: base URL wajib untuk provider OpenAI-compatible.`,
+            }, { status: 400 });
+          }
+          if (usedIds.has(normalized.id)) {
+            return NextResponse.json({ success: false, error: `ID akun ganda: ${normalized.id}.` }, { status: 400 });
+          }
+          usedIds.add(normalized.id);
+
+          if (normalized.provider === 'openai-compatible') {
+            const safeUrl = normalizeBaseUrl(normalized.baseUrl);
+            if (!safeUrl) {
+              return NextResponse.json({
+                success: false,
+                error: `Akun "${normalized.label}": URL harus HTTP(S) tanpa kredensial, query, atau fragment.`,
+              }, { status: 400 });
+            }
+            normalized.baseUrl = safeUrl;
+          }
+
+          // API key: pakai yang baru bila diisi, kalau tidak pertahankan yang lama.
+          const incomingKey = typeof raw.apiKey === 'string' ? raw.apiKey.trim() : '';
+          if (incomingKey.length > 4096) {
+            return NextResponse.json({ success: false, error: `API key akun "${normalized.label}" terlalu panjang.` }, { status: 400 });
+          }
+          const previousKeys = (existingSecrets.accountKeys && typeof existingSecrets.accountKeys === 'object')
+            ? existingSecrets.accountKeys as Record<string, unknown>
+            : {};
+          const previousKey = typeof previousKeys[normalized.id] === 'string' ? previousKeys[normalized.id] as string : '';
+          const clearKey = raw.clearApiKey === true;
+          if (incomingKey) accountKeys[normalized.id] = incomingKey;
+          else if (!clearKey && previousKey) accountKeys[normalized.id] = previousKey;
+
+          accounts.push({
+            id: normalized.id,
+            label: normalized.label,
+            provider: normalized.provider,
+            baseUrl: normalized.baseUrl,
+            model: normalized.model,
+            enabled: normalized.enabled,
+          });
+        }
+
+        // Akun pertama yang aktif menjadi default agar field lama tetap bermakna.
+        const firstEnabled = accounts.find((account) => account.enabled !== false) || accounts[0];
+        const secrets: Record<string, unknown> = { ...existingSecrets, accountKeys };
+        // Bersihkan format lama supaya tidak ada dua sumber kebenaran.
+        delete secrets.apiKey;
+
+        await writeIntegration({
+          key: 'ai',
+          config: {
+            provider: firstEnabled?.provider ?? 'gemini',
+            baseUrl: firstEnabled?.baseUrl ?? '',
+            model: firstEnabled?.model ?? '',
+            aiAccounts: accounts,
+          },
+          secrets,
+          updatedBy: caller!.userId,
+        });
+        return NextResponse.json({ success: true, accounts: accounts.length });
+      }
+
+      // ── Jalur B: format lama (satu akun) — tetap didukung ───────────
       const { provider, baseUrl, model, apiKey, clearApiKey } = body.ai;
       if (provider !== 'gemini' && provider !== 'openai-compatible') {
         return NextResponse.json({ success: false, error: 'Provider AI tidak didukung.' }, { status: 400 });
@@ -109,13 +208,19 @@ export async function PUT(request: NextRequest) {
       if (clearApiKey !== undefined && typeof clearApiKey !== 'boolean') {
         return NextResponse.json({ success: false, error: 'Opsi penghapusan API key tidak valid.' }, { status: 400 });
       }
-      const existing = await readIntegration('ai');
-      const secrets = decryptIntegrationSecret(existing?.secret_ciphertext ?? null);
+      const secrets = { ...existingSecrets };
       if (clearApiKey === true) delete secrets.apiKey;
       else if (typeof apiKey === 'string' && apiKey.length > 0) secrets.apiKey = apiKey;
       await writeIntegration({
         key: 'ai',
-        config: { provider, baseUrl: normalizedBaseUrl, model: model.trim() },
+        // aiAccounts dipertahankan agar menyimpan provider/model dari form lama
+        // tidak menghapus daftar akun yang sudah dikonfigurasi.
+        config: {
+          ...existingConfig,
+          provider,
+          baseUrl: normalizedBaseUrl,
+          model: model.trim(),
+        },
         secrets,
         updatedBy: caller!.userId,
       });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { decryptEmployee, hashField } from '@/lib/encryption';
+import { sanitizeSearchTerm, safeHash } from '@/lib/query-safety';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
@@ -97,22 +98,23 @@ export async function POST(request: NextRequest) {
     const query = searchKey.trim();
     const filters: string[] = [];
     if (rawSearchBy === 'nik') {
-      const queryHash = hashField(query);
+      const queryHash = safeHash(hashField(query));
       if (!queryHash) throw new Error('Employee lookup hash could not be generated.');
       filters.push(`nik_hash.eq."${queryHash}"`);
     } else if (rawSearchBy === 'national_id') {
-      const queryHash = hashField(query);
+      const queryHash = safeHash(hashField(query));
       if (!queryHash) throw new Error('Employee lookup hash could not be generated.');
       filters.push(`national_id_hash.eq."${queryHash}"`);
     } else {
-      const nameQuery = query.replace(/[^\p{L}\p{N}\s'-]/gu, '').trim();
+      // sanitizeSearchTerm membuang koma, kurung, titik, kutip, dan wildcard
+      // LIKE — semuanya bermakna sintaks bagi parser filter PostgREST.
+      const nameQuery = sanitizeSearchTerm(query);
       if (nameQuery.length < 3) {
         return NextResponse.json({ success: false, error: 'Pencarian nama minimal 3 karakter.' }, { status: 400 });
       }
-      const escapedName = nameQuery.replace(/"/g, '');
-      filters.push(`nama.ilike."%${escapedName}%"`);
-      filters.push(`department.ilike."%${escapedName}%"`);
-      filters.push(`site_name.ilike."%${escapedName}%"`);
+      filters.push(`nama.ilike."%${nameQuery}%"`);
+      filters.push(`department.ilike."%${nameQuery}%"`);
+      filters.push(`site_name.ilike."%${nameQuery}%"`);
     }
 
     let employeeQuery = supabaseAdmin!

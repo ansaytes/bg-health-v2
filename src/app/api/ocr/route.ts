@@ -1,9 +1,10 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'node:crypto';
-import { GoogleGenAI } from '@google/genai';
 import { MCU_FIELDS, normalizeMCUEcgOption } from '@/lib/mcu-fields';
 import { decryptIntegrationSecret, integrationAdminClient, readIntegration } from '@/lib/integration-settings';
 import { getServerCaller, requireServerRole, STAFF_ROLES } from '@/lib/server-auth';
+import { resolveAccounts } from '@/lib/ai-accounts';
+import { callVisionWithFailover } from '@/lib/ai-executor';
 
 // Create a schema mapping dynamically from MCU_FIELDS
 function generatePromptSchema() {
@@ -136,112 +137,55 @@ export async function POST(req: NextRequest) {
 
     const aiIntegration = await readIntegration('ai');
     const aiSecrets = decryptIntegrationSecret(aiIntegration?.secret_ciphertext ?? null);
-    const provider = aiIntegration?.config.provider === 'openai-compatible' ? 'openai-compatible' : 'gemini';
-    const savedApiKey = typeof aiSecrets.apiKey === 'string' ? aiSecrets.apiKey : '';
-    const apiKey = savedApiKey;
+    const accounts = resolveAccounts(aiIntegration?.config, aiSecrets);
     const configuredModel = typeof aiIntegration?.config.model === 'string' ? aiIntegration.config.model : '';
-    const model = typeof modelId === 'string' && modelId.trim() ? modelId.trim() : configuredModel;
+    const requestedModel = typeof modelId === 'string' && modelId.trim() ? modelId.trim() : '';
     if (modelId !== undefined && (typeof modelId !== 'string' || !modelId.trim() || modelId.length > 200)) {
       return NextResponse.json({ success: false, error: 'Model AI tidak valid.' }, { status: 400 });
     }
-    if (!apiKey) {
+    if (accounts.filter((account) => account.enabled && account.apiKey).length === 0) {
       return NextResponse.json({ success: false, error: 'API key AI belum diatur pada menu Pengaturan > Integrasi.' }, { status: 503 });
     }
-    if (!model) {
-      return NextResponse.json({ success: false, error: 'Pilih dan simpan model AI yang tersedia di Pengaturan > Integrasi.' }, { status: 503 });
+
+    // FAILOVER: jalankan berurutan ke setiap akun. Bila akun pertama kehabisan
+    // kuota / limit / key ditolak, permintaan otomatis lanjut ke akun kedua,
+    // ketiga, dst. Hanya bila SEMUA akun gagal barulah error dikembalikan.
+    const vision = await callVisionWithFailover(accounts, {
+      images,
+      systemInstruction: generatePromptSchema(),
+      prompt: promptText,
+      model: requestedModel || configuredModel || undefined,
+      temperature: 0.1,
+      jsonMode: true,
+      timeoutMs: 60_000,
+    });
+
+    if (!vision.ok) {
+      const isQuota = vision.errorKind === 'quota';
+      const isAuth = vision.errorKind === 'auth';
+      return NextResponse.json(
+        {
+          success: false,
+          errorCode: isQuota ? 'QUOTA' : isAuth ? 'API_KEY' : 'PROVIDER',
+          error: isQuota
+            ? `${vision.errorMessage} Tambahkan akun AI cadangan atau tunggu kuota pulih.`
+            : vision.errorMessage || 'Layanan ekstraksi gagal memproses dokumen.',
+          attempts: vision.attempts,
+          ...(vision.retryAfterSeconds ? { retryAfterSeconds: vision.retryAfterSeconds } : {}),
+        },
+        {
+          status: isQuota ? 429 : 502,
+          ...(vision.retryAfterSeconds ? { headers: { 'Retry-After': String(vision.retryAfterSeconds) } } : {}),
+        },
+      );
     }
 
-    let outputText = '';
-    if (provider === 'gemini') {
-      const parts: Array<{ text: string } | { inlineData: { data: string; mimeType: string } }> = images.map((image) => ({
-        inlineData: image,
-      }));
-      parts.push({ text: promptText });
-      try {
-        const ai = new GoogleGenAI({ apiKey });
-        const response = await ai.models.generateContent({
-          model,
-          contents: [{ role: 'user', parts }],
-          config: {
-            systemInstruction: generatePromptSchema(),
-            responseMimeType: 'application/json',
-            temperature: 0.1,
-          },
-        });
-        outputText = response.text || '{}';
-      } catch (error: unknown) {
-        const apiError = error as { code?: number; status?: string; message?: string };
-        const message = apiError.message || '';
-        const isQuotaError = apiError.code === 429
-          || apiError.status === 'RESOURCE_EXHAUSTED'
-          || /quota exceeded|rate limit|resource_exhausted/i.test(message);
-        if (isQuotaError) {
-          return NextResponse.json(
-            { success: false, error: 'Batas penggunaan sementara tercapai. Tunggu sebelum mencoba kembali.', retryAfterSeconds: 60 },
-            { status: 429, headers: { 'Retry-After': '60' } },
-          );
-        }
-        console.error('[OCR] Gemini request failed.');
-        return NextResponse.json(
-          {
-            success: false,
-            errorCode: apiError.code === 401 || apiError.code === 403 ? 'API_KEY' : 'PROVIDER',
-            error: apiError.code === 401 || apiError.code === 403
-              ? 'API key AI ditolak. Periksa pengaturan integrasi.'
-              : 'Layanan ekstraksi gagal memproses dokumen.',
-          },
-          { status: 502 },
-        );
-      }
-    } else {
-      const baseUrl = typeof aiIntegration?.config.baseUrl === 'string' ? aiIntegration.config.baseUrl.replace(/\/+$/, '') : '';
-      if (!baseUrl) return NextResponse.json({ success: false, error: 'Base URL AI belum diatur.' }, { status: 503 });
-      const endpoint = baseUrl.endsWith('/chat/completions') ? baseUrl : `${baseUrl}/chat/completions`;
-      const userContent: Array<Record<string, unknown>> = [{ type: 'text', text: promptText }];
-      for (const image of images) {
-        userContent.push({ type: 'image_url', image_url: { url: `data:${image.mimeType};base64,${image.data}` } });
-      }
-      try {
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: 'system', content: generatePromptSchema() },
-              { role: 'user', content: userContent },
-            ],
-            temperature: 0.1,
-            response_format: { type: 'json_object' },
-          }),
-          signal: AbortSignal.timeout(60_000),
-          cache: 'no-store',
-        });
-        if (response.status === 429) {
-          return NextResponse.json(
-            { success: false, error: 'Batas penggunaan sementara tercapai. Tunggu sebelum mencoba kembali.', retryAfterSeconds: 60 },
-            { status: 429, headers: { 'Retry-After': '60' } },
-          );
-        }
-        if (!response.ok) {
-          console.error('[OCR] OpenAI-compatible provider rejected a request:', response.status);
-          return NextResponse.json({ success: false, error: 'Layanan AI menolak permintaan. Periksa endpoint, model, dan API key.' }, { status: 502 });
-        }
-        const result: unknown = await response.json();
-        if (!result || typeof result !== 'object' || !('choices' in result) || !Array.isArray(result.choices)) {
-          return NextResponse.json({ success: false, error: 'Respons layanan AI tidak valid.' }, { status: 502 });
-        }
-        const firstChoice = result.choices[0];
-        outputText = firstChoice && typeof firstChoice === 'object'
-          && 'message' in firstChoice && firstChoice.message && typeof firstChoice.message === 'object'
-          && 'content' in firstChoice.message && typeof firstChoice.message.content === 'string'
-          ? firstChoice.message.content : '';
-      } catch {
-        console.error('[OCR] OpenAI-compatible request failed.');
-        return NextResponse.json({ success: false, error: 'Endpoint layanan AI tidak dapat dijangkau atau waktu permintaan habis.' }, { status: 502 });
-      }
+    const outputText = vision.text;
+    const usedAccountLabel = vision.accountLabel;
+    if (!outputText.trim()) {
+      return NextResponse.json({ success: false, error: 'Layanan AI mengembalikan hasil kosong. Coba ulangi dokumen.' }, { status: 502 });
     }
-    
+
     let parsedData = {};
     try {
         parsedData = JSON.parse(outputText);
@@ -394,7 +338,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, data: validData });
+    console.log(`[OCR] Ekstraksi MCU berhasil via akun AI: ${usedAccountLabel}`);
+    return NextResponse.json({ success: true, data: validData, usedAccount: usedAccountLabel });
 
   } catch (err: unknown) {
     console.error('Error in OCR API:', err);

@@ -1,5 +1,7 @@
 // Shared auth helpers: legacy employee-profile lookup used by both the
 // login and register actions.
+import { hashField } from '@/lib/encryption';
+import { sanitizeFilterValue, sanitizeSearchTerm, safeHash, safeInt } from '@/lib/query-safety';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export interface EmployeeLoginProfile {
@@ -21,10 +23,13 @@ export async function findLegacyEmployeeProfile(
   supabaseAdmin: SupabaseClient,
   identityValues: string[],
 ): Promise<{ profile: EmployeeLoginProfile | null; error?: string; status?: number }> {
-  for (const legacyValue of identityValues) {
+  for (const rawValue of identityValues) {
+    const legacyValue = sanitizeFilterValue(rawValue);
+    if (!legacyValue) continue;
     const { data: match, error } = await supabaseAdmin
       .from('user_profiles')
       .select(LEGACY_PROFILE_COLUMNS)
+      .eq('username', legacyValue)
       .or(`username.eq."${legacyValue}",national_id.eq."${legacyValue}"`)
       .limit(2);
     if (error) {

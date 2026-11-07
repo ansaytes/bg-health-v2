@@ -205,6 +205,7 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
     const CALCULATED_KEYS = [
       'bmi', 'mchc', 'pta',
       'fvcPct', 'fev1Pct', 'fev1FvcAct', 'fev1FvcPct',
+      'spiInterp', 'audInterp',
       'diabetes', 'egfr', 'tglExpired',
       'diagnosaMedis', 'ringkasanKuesioner', 'hasilKebugaran',
       'itemFU', 'perluFU',

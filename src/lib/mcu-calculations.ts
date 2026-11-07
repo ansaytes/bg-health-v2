@@ -189,10 +189,10 @@ function buildFormulaFollowUp(values: MCUValues) {
   add(bmi !== null && bmi >= 25 && bmi < 30, `BMI : ${bmi} (Overweight)`);
   add(bmi !== null && bmi >= 30, `BMI : ${bmi} (Obesitas)`);
   add(hb !== null && ((gender === 'Laki - Laki' && (hb < 13 || hb > 16.5)) || (gender === 'Perempuan' && (hb < 12 || hb > 15))), `Hb : ${text(values.hb)} g/dL`);
-  add(leukosit !== null && (leukosit > 11 || leukosit < 4), `Leukosit : ${text(values.leukosit)} 10Â³/ÂµL`);
-  add(eritrosit !== null && (eritrosit > 6.2 || eritrosit < 4.5), `Eritrosit : ${text(values.eritrosit)} 10â¶/ÂµL`);
+  add(leukosit !== null && (leukosit > 11 || leukosit < 4), `Leukosit : ${text(values.leukosit)} 10³/µL`);
+  add(eritrosit !== null && (eritrosit > 6.2 || eritrosit < 4.5), `Eritrosit : ${text(values.eritrosit)} 10⁶/µL`);
   add(hematokrit !== null && (hematokrit > 54 || hematokrit < 40), `Hematokrit : ${text(values.hematokrit)} %`);
-  add(trombosit !== null && (trombosit > 400 || trombosit < 150), `Trombosit : ${text(values.trombosit)} 10Â³/ÂµL`);
+  add(trombosit !== null && (trombosit > 400 || trombosit < 150), `Trombosit : ${text(values.trombosit)} 10³/µL`);
   add(chol !== null && chol >= 200, `Chol : ${text(values.chol)} mg/dL`);
   add(tg !== null && tg >= 150, `TG : ${text(values.tg)} mg/dL`);
   add(hdl !== null && ((gender === 'Laki - Laki' && hdl < 40) || (gender === 'Perempuan' && hdl < 50)), `HDL : ${text(values.hdl)} mg/dL`);
@@ -298,7 +298,7 @@ function compactFollowUpRecommendation(value: unknown): string {
 
 /**
  * Rekomendasi QSHE Medic otomatis berdasarkan zonasi dan temuan.
- * Nilai masih bisa ditimpa manual oleh operator â€” saran hanya ditulis
+ * Nilai masih bisa ditimpa manual oleh operator — saran hanya ditulis
  * saat rekQSHE kosong atau masih berisi nilai saran sebelumnya.
  */
 export function suggestRekQSHE(values: MCUValues): string {
@@ -312,6 +312,99 @@ export function suggestRekQSHE(values: MCUValues): string {
   if (zonasi === 'Belum Lengkap') return 'Temporary Unfit';
   return 'Fit To Work';
 }
+
+/**
+ * Interpretasi spirometri otomatis dari angka hasil pengukuran.
+ *
+ * Sebelumnya kolom `spiInterp` hanya bisa diisi manual/OCR, sehingga
+ * interpretasi sering kosong padahal FVC/FEV1 sudah terukur. Fungsi ini
+ * membangun teks interpretasi standar dari rasio FEV1/FVC dan FEV1 %
+ * prediksi, memakai ambang yang sama dengan `classifyLung` agar form dan
+ * zonasi tidak pernah berbeda pendapat.
+ *
+ * ATURAN (PDPI/GOLD — sama untuk semua metode di SPIROMETRY_THRESHOLDS):
+ *   - FEV1/FVC < 70%  -> pola OBSTRUKTIF
+ *       FEV1 >=80% ringan, 50-79% sedang, 30-49% berat, <30% sangat berat
+ *   - FEV1/FVC >= 70% dan FVC < 80% -> pola RESTRIKTIF
+ *   - Selain itu -> NORMAL
+ *
+ * Nilai manual TIDAK ditimpa: hasil hanya dipakai bila `spiInterp` kosong.
+ */
+export function buildSpirometryInterpretation(values: MCUValues): string {
+  const fev1Pct = numberValue(values.fev1Pct);
+  const fvcPct = numberValue(values.fvcPct);
+  const rasioRaw = numberValue(values.fev1FvcAct);
+
+  // Rasio tersimpan sebagai desimal (0,83). Nilai >1,5 berarti sudah persen.
+  const rasio = rasioRaw === null ? null : rasioRaw <= 1.5 ? rasioRaw * 100 : rasioRaw;
+  if (fev1Pct === null && fvcPct === null && rasio === null) return '';
+
+  const fmt = (n: number) => String(Math.round(n * 10) / 10).replace('.', ',');
+
+  if (rasio !== null && rasio < 70) {
+    const derajat = fev1Pct === null ? '' : fev1Pct >= 80 ? 'Ringan'
+      : fev1Pct >= 50 ? 'Sedang'
+        : fev1Pct >= 30 ? 'Berat'
+          : 'Sangat Berat';
+    const detail = [
+      `FEV1/FVC ${fmt(rasio)}%`,
+      fev1Pct !== null ? `FEV1 ${fmt(fev1Pct)}% prediksi` : '',
+    ].filter(Boolean).join(', ');
+    return `Obstruktif${derajat ? ` ${derajat}` : ''} - ${detail}`;
+  }
+
+  if (fvcPct !== null && fvcPct < 80) {
+    return `Restriktif - FVC ${fmt(fvcPct)}% prediksi`;
+  }
+
+  const detail = [
+    rasio !== null ? `FEV1/FVC ${fmt(rasio)}%` : '',
+    fev1Pct !== null ? `FEV1 ${fmt(fev1Pct)}% prediksi` : '',
+    fvcPct !== null ? `FVC ${fmt(fvcPct)}% prediksi` : '',
+  ].filter(Boolean).join(', ');
+  return `Normal - ${detail}`;
+}
+
+/**
+ * Interpretasi audiometri otomatis dari PTA.
+ *
+ * Ambang mengikuti STD-006 / Kemenkes RI 2011 dan SAMA dengan
+ * `classifyHearing`, supaya teks di form konsisten dengan zona:
+ *   <=25 dB Normal | 26-40 Mild | 41-60 Moderate | 61-90 Severe | >90 Very Severe
+ *
+ * Nilai tetap kosong bila tidak ada satu pun ambang dengar yang terisi.
+ */
+export function buildAudiometryInterpretation(values: MCUValues): string {
+  const pta = numberValue(values.pta);
+  if (pta === null) return '';
+
+  // Telinga kanan (ACR) dan kiri (ACL) dilaporkan terpisah bila tersedia,
+  // karena NIHL sering asimetris (mis. notch 4 kHz hanya di satu telinga).
+  const ptaTelinga = (prefix: 'acr' | 'acl'): number | null => {
+    const freqs = ['500', '1k', '2k', '4k'];
+    const nilai = freqs.map((f) => numberValue(values[`${prefix}_${f}`]))
+      .filter((n): n is number => n !== null);
+    if (!nilai.length) return null;
+    return nilai.reduce((a, b) => a + b, 0) / nilai.length;
+  };
+  const ptaKanan = ptaTelinga('acr');
+  const ptaKiri = ptaTelinga('acl');
+
+  const fmt = (n: number) => String(Math.round(n * 10) / 10).replace('.', ',');
+  const derajat = (n: number) => n <= 25 ? 'Normal'
+    : n <= 40 ? 'Mild (Ringan)'
+      : n <= 60 ? 'Moderate (Sedang)'
+        : n <= 90 ? 'Severe (Berat)'
+          : 'Very Severe (Sangat Berat)';
+
+  const bagian: string[] = [`PTA ${fmt(pta)} dB - ${derajat(pta)}`];
+  if (ptaKanan !== null && ptaKiri !== null) {
+    bagian.push(`Kanan ${fmt(ptaKanan)} dB (${derajat(ptaKanan)})`);
+    bagian.push(`Kiri ${fmt(ptaKiri)} dB (${derajat(ptaKiri)})`);
+  }
+  return bagian.join(' | ');
+}
+
 
 /**
  * Applies the calculated columns before persistence. These are the
@@ -354,6 +447,19 @@ export function applyMCUCalculations(values: MCUValues): MCUValues {
   ]);
   if (pta !== null) result.pta = pta;
 
+  // Interpretasi spirometri & audiometri terisi OTOMATIS dari angka hasil
+  // pengukuran, sehingga operator tidak perlu mengetik ulang dan hasilnya
+  // konsisten dengan ambang yang dipakai engine zonasi. Nilai yang sudah
+  // ada (manual/OCR) dipertahankan apa adanya.
+  if (!text(result.spiInterp)) {
+    const spiAuto = buildSpirometryInterpretation(result);
+    if (spiAuto) result.spiInterp = spiAuto;
+  }
+  if (!text(result.audInterp)) {
+    const audAuto = buildAudiometryInterpretation(result);
+    if (audAuto) result.audInterp = audAuto;
+  }
+
   result.diabetes = calcDiabetes(
     numberValue(result.gdp),
     numberValue(result.gd2pp),
@@ -374,7 +480,7 @@ export function applyMCUCalculations(values: MCUValues): MCUValues {
     ?? calcEgfrCkdEpi2021(result.kreatinin ?? undefined, result.usia ?? undefined, String(result.jenisKelamin || ''));
   if (egfr !== null) result.egfr = egfr;
 
-  // Ringkasan komposit `ul` dari 19 parameter â€” WAJIB dibangun sebelum
+  // Ringkasan komposit `ul` dari 19 parameter — WAJIB dibangun sebelum
   // buildDiagnosisList & zonasi karena keduanya membaca `ul`.
   // Selalu dibangun ulang bila ada parameter per-param yang terisi, supaya
   // suntingan operator langsung tercermin (bukan memakai `ul` lama).

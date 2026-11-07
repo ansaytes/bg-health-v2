@@ -3,6 +3,7 @@ import { decryptEmployee, decryptMCURecord, hashField, isEncryptedValue } from '
 import { MCU_FIELDS } from '@/lib/mcu-fields';
 import { getServerCaller, requireServerRole, STAFF_ROLES } from '@/lib/server-auth';
 import { integrationAdminClient } from '@/lib/integration-settings';
+import { safeHash } from '@/lib/query-safety';
 
 const client = () => integrationAdminClient();
 
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
   const nik = params.get('nik')?.trim() || '';
   const nationalId = params.get('national_id')?.trim() || '';
   if (caller!.role === 'pic' && (nik || nationalId)) {
-    const digest = hashField(nik || nationalId);
+    const digest = safeHash(hashField(nik || nationalId));
     if (!digest) return NextResponse.json({ record: null });
     const { data: employee } = await client()
       .from('employees')
@@ -52,8 +53,14 @@ export async function GET(req: NextRequest) {
       .range(from, from + pageSize - 1);
     if (caller!.role === 'pic') listQuery = listQuery.eq('site', caller!.site);
     if (search) {
-      const hash = hashField(search);
-      listQuery = listQuery.or(`nik_karyawan_hash.eq.${hash},national_id_hash.eq.${hash}`);
+      const hash = safeHash(hashField(search));
+      if (hash) {
+        listQuery = listQuery.or(`nik_karyawan_hash.eq.${hash},national_id_hash.eq.${hash}`);
+      } else {
+        // Hash tidak terbentuk berarti input tidak bisa dipetakan ke karyawan
+        // mana pun. Kembalikan kosong, jangan menjalankan filter tanpa nilai.
+        return NextResponse.json({ records: [], count: 0, page, pageSize });
+      }
     }
     const { data: records, count, error: listError } = await listQuery;
     if (listError) {

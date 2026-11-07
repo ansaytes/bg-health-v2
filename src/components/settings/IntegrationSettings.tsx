@@ -7,12 +7,39 @@ import { Input } from '@/components/ui/input';
 import { authFetch } from '@/lib/api-client';
 
 type SettingsData = {
-  ai: { provider: 'gemini' | 'openai-compatible'; baseUrl: string; model: string; hasApiKey: boolean };
+  ai: {
+    provider: 'gemini' | 'openai-compatible';
+    baseUrl: string;
+    model: string;
+    hasApiKey: boolean;
+    accounts?: Array<{
+      id: string;
+      label: string;
+      provider: 'gemini' | 'openai-compatible';
+      baseUrl: string;
+      model: string;
+      enabled: boolean;
+      hasApiKey: boolean;
+    }>;
+  };
   drive: { folderId: string; connected: boolean; accountEmail: string };
   googleDriveOAuthConfigured: boolean;
   encryptionKeyConfigured: boolean;
 };
 type AvailableModel = { id: string; name: string };
+/** Satu akun AI dalam bentuk yang bisa diedit di form. */
+type AccountDraft = {
+  id: string;
+  label: string;
+  provider: 'gemini' | 'openai-compatible';
+  baseUrl: string;
+  model: string;
+  enabled: boolean;
+  hasApiKey: boolean;
+  /** Key baru; kosong = pertahankan yang tersimpan. */
+  apiKey: string;
+  clearApiKey: boolean;
+};
 
 const initial: SettingsData = {
   ai: { provider: 'gemini', baseUrl: '', model: '', hasApiKey: false },
@@ -34,6 +61,105 @@ export default function IntegrationSettings({ canEdit }: { canEdit: boolean }) {
   const [loadingModels, setLoadingModels] = useState(false);
   const [modelError, setModelError] = useState('');
   const [savedModel, setSavedModel] = useState('');
+  // Daftar akun AI yang sedang diedit secara lokal sebelum disimpan.
+  // `apiKey` kosong berarti "pertahankan key lama" (sama seperti perilaku
+  // form satu-akun sebelumnya), sehingga operator tidak perlu mengetik
+  // ulang key yang sudah tersimpan.
+  const [accountsDraft, setAccountsDraft] = useState<AccountDraft[]>([]);
+
+  useEffect(() => {
+    if (!loading && !settingsLoadError && settings.ai.accounts?.length) {
+      setAccountsDraft(settings.ai.accounts.map((account) => ({
+        id: account.id,
+        label: account.label,
+        provider: account.provider,
+        baseUrl: account.baseUrl,
+        model: account.model,
+        enabled: account.enabled,
+        hasApiKey: account.hasApiKey,
+        apiKey: '',
+        clearApiKey: false,
+      })));
+    }
+  }, [loading, settingsLoadError, settings.ai.accounts]);
+
+  async function saveAccounts() {
+    if (!settings.encryptionKeyConfigured) return;
+    setSaving(true);
+    setMessage('');
+    try {
+      const result = await authFetch<{ success: boolean; accounts?: number }>(
+        '/api/integrations/settings',
+        {
+          method: 'PUT',
+          body: JSON.stringify({
+            ai: {
+              accounts: accountsDraft.map((account) => ({
+                id: account.id,
+                label: account.label,
+                provider: account.provider,
+                baseUrl: account.provider === 'openai-compatible' ? account.baseUrl : '',
+                model: account.model,
+                enabled: account.enabled,
+                apiKey: account.clearApiKey ? '' : account.apiKey,
+                clearApiKey: account.clearApiKey,
+              })),
+            },
+          }),
+        },
+      );
+      if (result.success) {
+        setMessage(`Berhasil menyimpan ${result.accounts ?? accountsDraft.length} akun AI. Urutan akun menentukan urutan failover.`);
+        setSettings({
+          ...settings,
+          ai: {
+            ...settings.ai,
+            provider: accountsDraft[0]?.provider ?? settings.ai.provider,
+            baseUrl: accountsDraft[0]?.baseUrl ?? settings.ai.baseUrl,
+            model: accountsDraft[0]?.model ?? settings.ai.model,
+          },
+        });
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Gagal menyimpan akun AI.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function addAccount() {
+    const nextIndex = accountsDraft.length + 1;
+    setAccountsDraft([...accountsDraft, {
+      id: `acc-${nextIndex}-${Math.random().toString(36).slice(2, 8)}`,
+      label: `Akun ${nextIndex}`,
+      provider: 'gemini',
+      baseUrl: '',
+      model: '',
+      enabled: true,
+      hasApiKey: false,
+      apiKey: '',
+      clearApiKey: false,
+    }]);
+  }
+
+  function removeAccount(id: string) {
+    setAccountsDraft(accountsDraft.filter((account) => account.id !== id));
+  }
+
+  function updateAccount(id: string, patch: Partial<AccountDraft>) {
+    setAccountsDraft(accountsDraft.map((account) =>
+      account.id === id ? { ...account, ...patch } : account,
+    ));
+  }
+
+  function moveAccount(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= accountsDraft.length) return;
+    const next = [...accountsDraft];
+    [next[index], next[target]] = [next[target], next[index]];
+    setAccountsDraft(next);
+  }
+
 
   useEffect(() => {
     let active = true;
@@ -285,6 +411,180 @@ export default function IntegrationSettings({ canEdit }: { canEdit: boolean }) {
               </Button>
             )}
           </div>
+        </div>
+      </section>
+
+      {/* ── AKUN AI GANDA (FAILOVER OTOMATIS) ────────────────────────── */}
+      <section className="rounded-xl border border-border bg-card p-4">
+        <h3 className="mb-1 text-sm font-bold">Akun AI Ganda (Failover Otomatis)</h3>
+        <p className="mb-4 text-xs text-muted-foreground">
+          Tambahkan beberapa akun AI vision. Saat akun pertama kehabisan kuota/limit atau API key ditolak,
+          ekstraksi MCU otomatis dilanjutkan ke akun berikutnya sesuai urutan. Hanya bila SEMUA akun gagal
+          barulah proses dinyatakan gagal.
+        </p>
+
+        <div className="flex flex-col gap-3">
+          {accountsDraft.length === 0 && (
+            <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">
+              Belum ada akun. Klik &quot;Tambah akun AI&quot; untuk membuat akun pertama.
+            </p>
+          )}
+
+          {accountsDraft.map((account, index) => (
+            <div key={account.id} className="rounded-lg border border-border bg-background/40 p-3">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary">
+                  {index + 1}
+                </span>
+                <span className="text-xs font-semibold">
+                  {index === 0 ? 'Akun Utama' : `Cadangan ${index}`}
+                </span>
+                {!account.enabled && (
+                  <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">nonaktif</span>
+                )}
+                {account.hasApiKey && !account.clearApiKey && (
+                  <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-700 dark:text-emerald-400">
+                    key tersimpan
+                  </span>
+                )}
+                <div className="ml-auto flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => moveAccount(index, -1)}
+                    disabled={index === 0 || !canEdit}
+                    className="rounded border border-border px-1.5 py-0.5 text-[10px] disabled:opacity-40"
+                    aria-label="Naikkan prioritas akun"
+                    title="Naikkan prioritas"
+                  >↑</button>
+                  <button
+                    type="button"
+                    onClick={() => moveAccount(index, 1)}
+                    disabled={index === accountsDraft.length - 1 || !canEdit}
+                    className="rounded border border-border px-1.5 py-0.5 text-[10px] disabled:opacity-40"
+                    aria-label="Turunkan prioritas akun"
+                    title="Turunkan prioritas"
+                  >↓</button>
+                  <button
+                    type="button"
+                    onClick={() => removeAccount(account.id)}
+                    disabled={!canEdit}
+                    className="rounded border border-destructive/50 px-1.5 py-0.5 text-[10px] text-destructive disabled:opacity-40"
+                    aria-label={`Hapus ${account.label}`}
+                    title="Hapus akun"
+                  >Hapus</button>
+                </div>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="flex flex-col gap-1 text-[11px] font-semibold">
+                  Nama akun
+                  <Input
+                    className="h-8 rounded-lg text-xs"
+                    value={account.label}
+                    maxLength={80}
+                    disabled={!canEdit}
+                    onChange={(event) => updateAccount(account.id, { label: event.target.value })}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-[11px] font-semibold">
+                  Provider
+                  <select
+                    className="h-8 rounded-lg border border-input bg-background px-2 text-xs"
+                    value={account.provider}
+                    disabled={!canEdit}
+                    onChange={(event) => updateAccount(account.id, {
+                      provider: event.target.value as AccountDraft['provider'],
+                    })}
+                  >
+                    <option value="gemini">Google Gemini</option>
+                    <option value="openai-compatible">OpenAI-compatible</option>
+                  </select>
+                </label>
+
+                {account.provider === 'openai-compatible' && (
+                  <label className="flex flex-col gap-1 text-[11px] font-semibold sm:col-span-2">
+                    Base URL
+                    <Input
+                      className="h-8 rounded-lg text-xs"
+                      value={account.baseUrl}
+                      maxLength={500}
+                      placeholder="https://api.provider.com/v1"
+                      disabled={!canEdit}
+                      onChange={(event) => updateAccount(account.id, { baseUrl: event.target.value })}
+                    />
+                  </label>
+                )}
+
+                <label className="flex flex-col gap-1 text-[11px] font-semibold sm:col-span-2">
+                  API Key {account.hasApiKey ? '(sudah tersimpan — kosongkan untuk mempertahankan)' : ''}
+                  <Input
+                    className="h-8 rounded-lg text-xs"
+                    type="password"
+                    autoComplete="new-password"
+                    maxLength={4096}
+                    value={account.apiKey}
+                    disabled={!canEdit || account.clearApiKey}
+                    onChange={(event) => updateAccount(account.id, { apiKey: event.target.value })}
+                  />
+                </label>
+
+                <label className="flex flex-col gap-1 text-[11px] font-semibold">
+                  Model (opsional — diisi otomatis saat ekstraksi)
+                  <Input
+                    className="h-8 rounded-lg text-xs"
+                    value={account.model}
+                    maxLength={200}
+                    placeholder="mis. gemini-2.0-flash"
+                    disabled={!canEdit}
+                    onChange={(event) => updateAccount(account.id, { model: event.target.value })}
+                  />
+                </label>
+
+                <div className="flex flex-col justify-end gap-1">
+                  <label className="flex items-center gap-2 text-[11px]">
+                    <input
+                      type="checkbox"
+                      checked={account.enabled}
+                      disabled={!canEdit}
+                      onChange={(event) => updateAccount(account.id, { enabled: event.target.checked })}
+                    />
+                    Aktifkan akun ini
+                  </label>
+                  {account.hasApiKey && (
+                    <label className="flex items-center gap-2 text-[11px]">
+                      <input
+                        type="checkbox"
+                        checked={account.clearApiKey}
+                        disabled={!canEdit}
+                        onChange={(event) => updateAccount(account.id, {
+                          clearApiKey: event.target.checked,
+                          apiKey: event.target.checked ? '' : account.apiKey,
+                        })}
+                      />
+                      Hapus API key akun ini
+                    </label>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" disabled={!canEdit || accountsDraft.length >= 20} onClick={addAccount}>
+              + Tambah akun AI
+            </Button>
+            <Button
+              type="button"
+              disabled={!canEdit || saving || !settings.encryptionKeyConfigured || accountsDraft.length === 0}
+              onClick={() => void saveAccounts()}
+            >
+              {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+              Simpan daftar akun
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Gunakan tombol panah untuk mengatur urutan failover. Akun nomor 1 dicoba lebih dulu.
+          </p>
         </div>
       </section>
 

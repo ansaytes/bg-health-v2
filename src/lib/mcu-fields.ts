@@ -3,7 +3,7 @@
 // ============================================================
 // Kolom A adalah nomor urut yang dibuat otomatis, jadi field pertama
 // (NIK KTP) berada di kolom B. Huruf dan indeks kolom DITURUNKAN dari
-// urutan deklarasi di bawah â€” lihat assignColumns().
+// urutan deklarasi di bawah — lihat assignColumns().
 //
 // The order here is the Excel/Supabase contract for Record MCU.
 // Menyisipkan field baru cukup menaruhnya pada posisi yang tepat;
@@ -49,7 +49,7 @@ export interface MCUFieldDef {
   allowCustom?: boolean;
   /**
    * Saran otomatis yang dihitung oleh engine dari temuan klinis.
-   * Nilai tetap dapat diubah manual oleh operator â€” saran hanya ditulis
+   * Nilai tetap dapat diubah manual oleh operator — saran hanya ditulis
    * saat field kosong atau masih berisi nilai saran sebelumnya.
    */
   autoSuggest?: boolean;
@@ -82,13 +82,17 @@ export const MCU_SECTIONS = [
   { id: 'serology', label: 'Serologi / Imunologi', icon: 'Shield', order: 9 },
   { id: 'drug', label: 'Tes NAPZA (Urine)', icon: 'Pill', order: 10 },
   { id: 'toxicology', label: 'Logam Berat / Toksikologi', icon: 'Biohazard', order: 11 },
-  { id: 'imaging', label: 'Radiologi & USG', icon: 'Scan', order: 12 },
-  { id: 'spirometry', label: 'Spirometri', icon: 'Wind', order: 13 },
-  { id: 'audiometry', label: 'Audiometri', icon: 'Ear', order: 14 },
-  { id: 'neuro', label: 'Neurologi', icon: 'Brain', order: 15 },
-  { id: 'fitness', label: 'Kebugaran', icon: 'Dumbbell', order: 16 },
-  { id: 'assessment', label: 'Penilaian', icon: 'ClipboardCheck', order: 17 },
-  { id: 'calculated', label: 'Hasil Kalkulasi', icon: 'Calculator', order: 18 },
+  // EKG & Treadmill bukan radiologi/USG, jadi judul diperlebar agar
+  // operator tidak bingung mengapa ada pemeriksaan kardiak di sini.
+  { id: 'imaging', label: 'Pemeriksaan Penunjang & Radiologi', icon: 'Scan', order: 12 },
+  // PSA adalah biomarker onkologis (prostat), bukan NAPZA.
+  { id: 'pemeriksaanLain', label: 'Pemeriksaan Lain', icon: 'FlaskConical', order: 13 },
+  { id: 'spirometry', label: 'Spirometri', icon: 'Wind', order: 14 },
+  { id: 'audiometry', label: 'Audiometri', icon: 'Ear', order: 15 },
+  { id: 'neuro', label: 'Neurologi', icon: 'Brain', order: 16 },
+  { id: 'fitness', label: 'Kebugaran', icon: 'Dumbbell', order: 17 },
+  { id: 'assessment', label: 'Penilaian', icon: 'ClipboardCheck', order: 18 },
+  { id: 'calculated', label: 'Hasil Kalkulasi', icon: 'Calculator', order: 19 },
 ] as const;
 
 /**
@@ -142,7 +146,7 @@ export const MCU_GROUPS: Record<string, string> = {
   drugAmp: 'Tes NAPZA (Urine)', drugMeth: 'Tes NAPZA (Urine)',
   drugMorph: 'Tes NAPZA (Urine)', drugCanna: 'Tes NAPZA (Urine)',
   drugBenz: 'Tes NAPZA (Urine)', drugCoc: 'Tes NAPZA (Urine)',
-  drugCaris: 'Tes NAPZA (Urine)', alkohol: 'Tes NAPZA (Urine)',
+  drugCaris: 'Tes NAPZA (Urine)',
 
   // Toksikologi
   pb: 'Logam Berat', hg: 'Logam Berat', as: 'Logam Berat', cd: 'Logam Berat',
@@ -206,11 +210,11 @@ const kesimpulanOptions = ['Fit To Work', 'Fit With Note', 'Fit With Restriction
 
 
 export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
-  // Bâ€“J Identitas
+  // B–J Identitas
   f('nationalId', 'NIK KTP', 'identity', 'text'),
   f('nikKaryawan', 'NIK Karyawan', 'identity', 'text'),
   f('nama', 'Nama', 'identity'),
-  f('usia', 'Usia', 'identity', 'number', { unit: 'tahun', autoCalc: true }),
+  f('usia', 'Usia', 'identity', 'number', { unit: 'tahun', placeholder: '35', autoCalc: true }),
   f('jenisKelamin', 'Jenis Kelamin', 'identity', 'select', { options: ['Laki - Laki', 'Perempuan'] }),
   f('jabatan', 'Jabatan', 'identity'),
   f('site', 'Site', 'identity'),
@@ -220,7 +224,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('tglMCU', 'Tanggal MCU', 'identity', 'date'),
   f('tempatMCU', 'Tempat MCU', 'identity'),
 
-  // Riwayat penyakit & skor kuesioner â€” parameter zonasi menurut
+  // Riwayat penyakit & skor kuesioner — parameter zonasi menurut
   // STD-006 Rev001 Bab 7. Diletakkan tepat setelah identitas karena
   // pemeriksa membacanya sebelum memeriksa fisik.
   //
@@ -279,7 +283,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('sdsScore', 'Total Skor SDS-30 (Survei Diagnosis Stres)', 'anamnesis', 'number', {
     unit: 'skor', normalRange: '30-210', min: 30, max: 210,
   }),
-  // STD/006 Rev.002 poin 6.1.8 â€” Tanda Bahaya Kesehatan Jiwa.
+  // STD/006 Rev.002 poin 6.1.8 — Tanda Bahaya Kesehatan Jiwa.
   // "Ya" pada butir 17 SRQ-20 (pikiran untuk mengakhiri hidup) memaksa Zona
   // Merah + status Currently Unfit sampai dinilai dokter, BERAPA PUN skor
   // totalnya. Dibuat field tersendiri agar tidak bergantung pada input skor.
@@ -287,7 +291,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
     options: ['Tidak', 'Ya'],
   }),
 
-  // Kualifikasi Klinis Tambahan â€” STD-006 Rev.002
+  // Kualifikasi Klinis Tambahan — STD-006 Rev.002
   f('dmKomplikasi', 'Komplikasi Diabetes Melitus (Neuropati/Retinopati/Nefropati/Ulkus)', 'anamnesis', 'select', {
     options: [...DM_KOMPLIKASI_OPTIONS],
   }),
@@ -300,7 +304,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('diagnosisHati', 'Diagnosis Klinis Penyakit Hati', 'anamnesis', 'select', {
     options: [...DIAGNOSIS_HATI_OPTIONS],
   }),
-  f('obesitasFungsional', 'Keterbatasan Fungsional Obesitas (IMT â‰¥35)', 'anamnesis', 'select', {
+  f('obesitasFungsional', 'Keterbatasan Fungsional Obesitas (IMT ≥35)', 'anamnesis', 'select', {
     options: [...OBESITAS_FUNGSIONAL_OPTIONS],
   }),
   f('statusTerapiEss', 'Status Terapi Gangguan Tidur / Kantuk Berlebih (ESS >15)', 'anamnesis', 'select', {
@@ -310,13 +314,13 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
     options: [...EPILEPSI_KEPATUHAN_OPTIONS],
   }),
 
-  // Riwayat Kebiasaan â€” faktor risiko yang dicatat sekali per MCU.
+  // Riwayat Kebiasaan — faktor risiko yang dicatat sekali per MCU.
   // Merokok dipindah dari Tanda Vital ke sini karena bukan hasil pengukuran.
   f('merokok', 'Kebiasaan Merokok', 'habits', 'select', {
     options: ['Tidak Merokok', 'Perokok Aktif', 'Mantan Perokok'],
   }),
-  f('jumlahRokok', 'Jumlah Rokok per Hari (batang)', 'habits', 'number', { unit: 'batang' }),
-  f('lamaMerokok', 'Lama Merokok (tahun)', 'habits', 'number', { unit: 'tahun' }),
+  f('jumlahRokok', 'Jumlah Rokok per Hari (batang)', 'habits', 'number', { unit: 'batang', placeholder: '0' }),
+  f('lamaMerokok', 'Lama Merokok (tahun)', 'habits', 'number', { unit: 'tahun', placeholder: '0' }),
   f('olahraga', 'Kebiasaan Olahraga', 'habits', 'select', {
     options: ['Rutin (≥3x/minggu)', 'Kadang-kadang (<3x/minggu)', 'Tidak Berolahraga'],
   }),
@@ -328,10 +332,19 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
 
   // Fisik
   f('golDarah', 'Golongan Darah & Rhesus', 'physical', 'select', select(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'])),
-  // Gigi & Mulut bisa berisi lebih dari satu temuan (mis. Karies + Ginggivitis),
+  // Gigi & Mulut bisa berisi lebih dari satu temuan (mis. Karies + Kalkulus),
   // jadi memakai multi-pilih, bukan dropdown tunggal.
+  //
+  // Daftar ini mengikuti temuan odontogram yang lazim pada MCU perusahaan:
+  // kalkulus (karang gigi), gigi hilang (missing), sisa akar (radix),
+  // gangren radix (akar membusuk), impaksi, dan karies. Tanpa opsi ini
+  // operator terpaksa memakai "Lainnya" sehingga laporan tidak bisa direkap.
   f('gigiMulut', 'Gigi & Mulut', 'physical', 'select', {
-    options: ['Normal', 'Karies', 'Ginggivitis', 'Periodontitis', 'Edentul', 'Protodonsia', 'Karang Gigi', 'Gigi Tiruan'],
+    options: [
+      'Normal', 'Karies', 'Kalkulus (Karang Gigi)', 'Ginggivitis', 'Periodontitis',
+      'Missing (Gigi Hilang)', 'Radix (Sisa Akar)', 'Gangren Radix',
+      'Impaksi', 'Edentul', 'Protodonsia', 'Gigi Tiruan', 'Stomatitis',
+    ],
     multiple: true,
     allowCustom: true,
   }),
@@ -365,17 +378,17 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('tdS', 'Tekanan Darah Sistolik', 'vital', 'number', normal('90-119', 'mmHg')),
   f('tdD', 'Tekanan Darah Diastolik', 'vital', 'number', normal('60-79', 'mmHg')),
   f('nadi', 'Nadi', 'vital', 'number', { unit: 'bpm', high: 100 }),
-  f('bb', 'Berat Badan', 'vital', 'number', { unit: 'kg' }),
-  f('tb', 'Tinggi Badan', 'vital', 'number', { unit: 'cm' }),
-  f('bmi', 'BMI', 'vital', 'number', { unit: 'kg/mÂ²', high: 30, autoCalc: true, autoCalcFrom: ['bb', 'tb'] }),
+  f('bb', 'Berat Badan', 'vital', 'number', { unit: 'kg', placeholder: '65' }),
+  f('tb', 'Tinggi Badan', 'vital', 'number', { unit: 'cm', placeholder: '170' }),
+  f('bmi', 'BMI', 'vital', 'number', { unit: 'kg/m²', high: 30, autoCalc: true, autoCalcFrom: ['bb', 'tb'] }),
   f('lp', 'Lingkar Pinggang', 'vital', 'number', { unit: 'cm', normalMale: '<90', normalFemale: '<80' }),
 
-  // ABâ€“AJ Hematologi
+  // AB–AJ Hematologi
   f('hb', 'Hemoglobin', 'hematology', 'number', { unit: 'g/dL', normalMale: '13-16,5', normalFemale: '12-15', lowMale: 13, highMale: 16.5, lowFemale: 12, highFemale: 15 }),
-  f('leukosit', 'Leukosit', 'hematology', 'number', normal('4-11', '10Â³/ÂµL')),
-  f('eritrosit', 'Eritrosit', 'hematology', 'number', normal('4,5-6,2', '10â¶/ÂµL')),
+  f('leukosit', 'Leukosit', 'hematology', 'number', normal('4-11', '10³/µL')),
+  f('eritrosit', 'Eritrosit', 'hematology', 'number', normal('4,5-6,2', '10⁶/µL')),
   f('hematokrit', 'Hematokrit', 'hematology', 'number', normal('40-54', '%')),
-  f('trombosit', 'Trombosit', 'hematology', 'number', normal('150-400', '10Â³/ÂµL')),
+  f('trombosit', 'Trombosit', 'hematology', 'number', normal('150-400', '10³/µL')),
   f('mcv', 'MCV', 'hematology', 'number', normal('80-100', 'fL')),
   f('mch', 'MCH', 'hematology', 'number', normal('26-34', 'pg')),
   f('mchc', 'MCHC', 'hematology', 'number', { ...normal('31-37', 'g/dL'), autoCalc: true, autoCalcFrom: ['hb', 'hematokrit'] }),
@@ -396,10 +409,10 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('masaPerdarahan', 'Masa Perdarahan (BT)', 'hematology', 'number', normal('1-3', 'menit')),
   f('masaPembekuan', 'Masa Pembekuan (CT)', 'hematology', 'number', normal('4-10', 'menit')),
 
-  // AKâ€“BB Kimia darah
+  // AK–BB Kimia darah
   // Lemak Darah
   f('chol', 'Kolesterol Total', 'chemistry', 'number', normal('<200', 'mg/dL')),
-  f('hdl', 'HDL', 'chemistry', 'number', normal('â‰¥50', 'mg/dL')),
+  f('hdl', 'HDL', 'chemistry', 'number', normal('≥50', 'mg/dL')),
   f('ldl', 'LDL', 'chemistry', 'number', normal('<100', 'mg/dL')),
   f('tg', 'Trigliserida', 'chemistry', 'number', normal('<150', 'mg/dL')),
 
@@ -408,7 +421,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('kreatinin', 'Kreatinin', 'chemistry', 'number', normal('0.6-1.2', 'mg/dL')),
   // eGFR boleh diisi manual dari hasil laboratorium. Bila kosong, engine
   // menghitungnya otomatis dengan CKD-EPI 2021 dari kreatinin + usia + jenis kelamin.
-  f('egfr', 'eGFR (Glomerular Filtration Rate)', 'chemistry', 'number', { ...normal('â‰¥90', 'mL/menit/1,73 mÂ²'), autoCalc: true, autoCalcFrom: ['kreatinin', 'usia', 'jenisKelamin'] }),
+  f('egfr', 'eGFR (Glomerular Filtration Rate)', 'chemistry', 'number', { ...normal('≥90', 'mL/menit/1,73 m²'), autoCalc: true, autoCalcFrom: ['kreatinin', 'usia', 'jenisKelamin'] }),
   f('au', 'Asam Urat', 'chemistry', 'number', { unit: 'mg/dL', normalMale: '3,4-7,0', normalFemale: '2,4-6,0' }),
 
   // Fungsi Hati
@@ -441,8 +454,8 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('troponin', 'Troponin', 'chemistry', 'number', normal('<0,04', 'ng/mL')),
 
   // Status Besi
-  f('besiFe', 'Besi (Fe)', 'chemistry', 'number', normal('65-175', 'Âµg/dL')),
-  f('tibc', 'TIBC', 'chemistry', 'number', normal('250-450', 'Âµg/dL')),
+  f('besiFe', 'Besi (Fe)', 'chemistry', 'number', normal('65-175', 'µg/dL')),
+  f('tibc', 'TIBC', 'chemistry', 'number', normal('250-450', 'µg/dL')),
   f('ferritin', 'Ferritin', 'chemistry', 'number', { unit: 'ng/mL', normalMale: '30-400', normalFemale: '13-150' }),
 
   // ── URINE LENGKAP ─────────────────────────────────────────────
@@ -584,13 +597,24 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   }),
 
   // ── TES NAPZA (URINE) ─────────────────────────────────────────
+  // Hanya zat yang benar-benar diskrining lewat urin. Alkohol dipindah ke
+  // Riwayat Kebiasaan karena yang dicatat di sana adalah kebiasaan minum,
+  // bukan hasil skrining urin; PSA juga dikeluarkan karena itu biomarker
+  // prostat, bukan NAPZA.
   ...([
     ['drugAmp', 'Amfetamin'], ['drugMeth', 'Metamfetamin'],
     ['drugMorph', 'Morfin'], ['drugCanna', 'THC (Marijuana)'],
     ['drugBenz', 'Benzodiazepin'], ['drugCoc', 'Kokain'],
-    ['drugCaris', 'Carisoprodol'], ['alkohol', 'Alkohol'],
+    ['drugCaris', 'Carisoprodol'],
   ] as const).map(([id, label]) => f(id, label, 'drug', 'select', select(['Negatif', 'Positif']))),
-  f('psa', 'PSA', 'drug', 'number', { unit: 'ng/mL', normalRange: '<4' }),
+
+  // ── PEMERIKSAAN LAIN ──────────────────────────────────────────
+  // Pemeriksaan penunjang yang tidak masuk kelompok mana pun di atas.
+  // PSA (Prostate-Specific Antigen) adalah penanda tumor prostat — sama
+  // sekali bukan NAPZA, sehingga sebelumnya salah kategori.
+  f('psa', 'PSA (Prostate-Specific Antigen)', 'pemeriksaanLain', 'number', {
+    unit: 'ng/mL', normalRange: '<4',
+  }),
 
   // ── LOGAM BERAT / TOKSIKOLOGI ─────────────────────────────────
   ...([
@@ -598,11 +622,11 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
     ['cd', 'Kadmium (Cd)'], ['cr', 'Kromium (Cr)'], ['mn', 'Mangan (Mn)'],
     ['ni', 'Nikel (Ni)'], ['cu', 'Tembaga (Cu)'], ['zn', 'Seng (Zn)'],
     ['co', 'Kobalt (Co)'],
-  ] as const).map(([id, label]) => f(id, label, 'toxicology', 'number', { unit: 'Âµg/dL' })),
-  f('kolinesterase', 'Kolinesterase (paparan pestisida)', 'toxicology', 'number', { unit: 'U/L' }),
-  f('karboksihemoglobin', 'Karboksihemoglobin (CO)', 'toxicology', 'number', { unit: '%' }),
+  ] as const).map(([id, label]) => f(id, label, 'toxicology', 'number', { unit: 'µg/dL' })),
+  f('kolinesterase', 'Kolinesterase (paparan pestisida)', 'toxicology', 'number', { unit: 'U/L', normalRange: '>3930', placeholder: '5000' }),
+  f('karboksihemoglobin', 'Karboksihemoglobin (CO)', 'toxicology', 'number', { unit: '%', normalRange: '<5', placeholder: '1,5' }),
 
-  // BQâ€“BU Imaging
+  // BQ–BU Imaging
   //
   // EKG dan treadmill memakai dropdown, bukan teks bebas. Tujuannya
   // menyeragamkan penulisan: data lama filled bebas penuh dengan salah eja
@@ -618,7 +642,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('ecgHasil', 'ECG', 'imaging', 'select', select([...STANDARD_ECG_OPTIONS])),
   f('tmHasil', 'Treadmill', 'imaging', 'select', select([...STANDARD_TMT_OPTIONS])),
   f('chestXR', 'Chest X-Ray', 'imaging', 'select', {
-    options: ['Normal', 'ILO 1/0', 'ILO 1/1', 'ILO â‰¥2/1', 'Pulmonary Fibrosis', 'Abnormal Lainnya'],
+    options: ['Normal', 'ILO 1/0', 'ILO 1/1', 'ILO ≥2/1', 'Pulmonary Fibrosis', 'Abnormal Lainnya'],
     allowCustom: true,
   }),
   f('lumboXR', 'Lumbosacral X-Ray', 'imaging', 'select', {
@@ -646,22 +670,22 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
       'Manual (tulis sendiri)',
     ],
   }),
-  f('fvcPred', 'Spirometry FVC PRED', 'spirometry', 'number', { unit: 'L' }),
-  f('fvcAct', 'Spirometry FVC ACT', 'spirometry', 'number', { unit: 'L' }),
-  f('fvcPct', 'Spirometry FVC %', 'spirometry', 'number', { unit: '%', autoCalc: true, autoCalcFrom: ['fvcAct', 'fvcPred'] }),
-  f('fev1Pred', 'Spirometry FEV1 PRED', 'spirometry', 'number', { unit: 'L' }),
-  f('fev1Act', 'Spirometry FEV1 ACT', 'spirometry', 'number', { unit: 'L' }),
-  f('fev1Pct', 'Spirometry FEV1 %', 'spirometry', 'number', { unit: '%', autoCalc: true, autoCalcFrom: ['fev1Act', 'fev1Pred'] }),
-  f('fev1FvcPred', 'Spirometry FEV1%G PRED', 'spirometry', 'number', { unit: '%' }),
+  f('fvcPred', 'Spirometry FVC PRED', 'spirometry', 'number', { unit: 'L', placeholder: '4,0' }),
+  f('fvcAct', 'Spirometry FVC ACT', 'spirometry', 'number', { unit: 'L', placeholder: '3,8' }),
+  f('fvcPct', 'Spirometry FVC %', 'spirometry', 'number', { unit: '%', normalRange: '≥80', autoCalc: true, autoCalcFrom: ['fvcAct', 'fvcPred'] }),
+  f('fev1Pred', 'Spirometry FEV1 PRED', 'spirometry', 'number', { unit: 'L', placeholder: '3,2' }),
+  f('fev1Act', 'Spirometry FEV1 ACT', 'spirometry', 'number', { unit: 'L', placeholder: '3,0' }),
+  f('fev1Pct', 'Spirometry FEV1 %', 'spirometry', 'number', { unit: '%', normalRange: '≥80', autoCalc: true, autoCalcFrom: ['fev1Act', 'fev1Pred'] }),
+  f('fev1FvcPred', 'Spirometry FEV1%G PRED', 'spirometry', 'number', { unit: '%', normalRange: '≥70', placeholder: '80' }),
   // fev1FvcAct disimpan sebagai RASIO desimal (0,83), bukan persen, karena
 // engine mcu-calculations menghitungnya sebagai FEV1 aktual / FVC aktual.
 // Label sengaja tidak memakai satuan '%' supaya tidak dibaca 0,83 persen;
 // ambang 70% sudah dinormalisasi di dalam classifyLung.
 f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoCalc: true, autoCalcFrom: ['fev1Act', 'fvcAct'] }),
-  f('fev1FvcPct', 'Spirometry FEV1%G %', 'spirometry', 'number', { unit: '%', autoCalc: true, autoCalcFrom: ['fev1FvcAct', 'fev1FvcPred'] }),
-  f('spiInterp', 'Spirometry Interpretasi', 'spirometry'),
+  f('fev1FvcPct', 'Spirometry FEV1%G %', 'spirometry', 'number', { unit: '%', normalRange: '≥70', autoCalc: true, autoCalcFrom: ['fev1FvcAct', 'fev1FvcPred'] }),
+  f('spiInterp', 'Spirometry Interpretasi', 'spirometry', 'text', { autoCalc: true }),
 
-  // CFâ€“CT Audiometry (ACR first, as specified)
+  // CF–CT Audiometry (ACR first, as specified)
   ...([
     ['acr_500', 'Audiometry ACR 500'], ['acr_1k', 'Audiometry ACR 1K'],
     ['acr_2k', 'Audiometry ACR 2K'], ['acr_3k', 'Audiometry ACR 3K'],
@@ -673,17 +697,17 @@ f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoC
   ] as const).map(([id, label]) => f(id, label, 'audiometry', 'number', { unit: 'dB' })),
   // Pure Tone Average = rata-rata ambang dengar pada 500, 1000, 2000, dan
   // 4000 Hz (rumus WHO). Angka inilah yang dipakai klasifikasi NIHL
-  // pada STD-006 (Hijau â‰¤25 dB, Kuning 26â€“40, Merah 41â€“90 / >90 dB),
+  // pada STD-006 (Hijau ≤25 dB, Kuning 26–40, Merah 41–90 / >90 dB),
   // sehingga tidak lagi bergantung pada teks interpretasi.
   f('pta', 'Audiometry PTA (Pure Tone Average)', 'audiometry', 'number', {
     unit: 'dB',
-    normalRange: 'â‰¤25',
+    normalRange: '≤25',
     autoCalc: true,
     autoCalcFrom: ['acr_500', 'acr_1k', 'acr_2k', 'acr_4k'],
   }),
-  f('audInterp', 'Audiometry Interpretasi', 'audiometry'),
+  f('audInterp', 'Audiometry Interpretasi', 'audiometry', 'text', { autoCalc: true }),
 
-  // CUâ€“DB Neurologi
+  // CU–DB Neurologi
   f('balance', 'Balance Test', 'neuro', 'select', neurologicalSelect(['Normal', 'Abnormal'])),
   f('romberg', 'Romberg Test', 'neuro', 'select', neurologicalSelect(['Normal', 'Negatif', 'Positif'])),
   f('phalen', 'Phalen Test', 'neuro', 'select', neurologicalSelect(['Normal', 'Negatif', 'Positif'])),
@@ -710,21 +734,21 @@ f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoC
   // `tmHasil` di Radiologi & USG, dan engine sudah mengklasifikasikannya
   // (classifyTreadmill). Menambah field kedua untuk pemeriksaan yang sama
   // hanya membuat data terbelah di dua kolom.
-  f('tes6mwt', '6 Minutes Walk Test — Jarak Tempuh', 'fitness', 'number', { unit: 'meter' }),
-  f('tesHarvard', 'Harvard Step Test — Indeks Kebugaran', 'fitness', 'number', { unit: 'skor' }),
-  f('tesYMCAStep', 'YMCA Step Test — Nadi Pemulihan', 'fitness', 'number', { unit: 'bpm' }),
+  f('tes6mwt', '6 Minutes Walk Test — Jarak Tempuh', 'fitness', 'number', { unit: 'meter', normalRange: '≥550', placeholder: '600' }),
+  f('tesHarvard', 'Harvard Step Test — Indeks Kebugaran', 'fitness', 'number', { unit: 'skor', normalRange: '≥80', placeholder: '85' }),
+  f('tesYMCAStep', 'YMCA Step Test — Nadi Pemulihan', 'fitness', 'number', { unit: 'bpm', normalRange: '<110', placeholder: '95' }),
   f('tesQueensCollege', 'Queen\'s College Step Test — VO2max', 'fitness', 'number', { unit: 'mL/kg/menit' }),
-  f('tesErgocycle', 'Ergocycle / Astrand-Ryhming — VO2max', 'fitness', 'number', { unit: 'mL/kg/menit' }),
-  f('tesSitUp', 'Sit-Up 30 Detik', 'fitness', 'number', { unit: 'kali' }),
-  f('tesPushUp', 'Push-Up', 'fitness', 'number', { unit: 'kali' }),
-  f('tesSitAndReach', 'Fleksi (Sit and Reach)', 'fitness', 'number', { unit: 'cm' }),
+  f('tesErgocycle', 'Ergocycle / Astrand-Ryhming — VO2max', 'fitness', 'number', { unit: 'mL/kg/menit', normalRange: '≥35', placeholder: '40' }),
+  f('tesSitUp', 'Sit-Up 30 Detik', 'fitness', 'number', { unit: 'kali', placeholder: '20' }),
+  f('tesPushUp', 'Push-Up', 'fitness', 'number', { unit: 'kali', placeholder: '25' }),
+  f('tesSitAndReach', 'Fleksi (Sit and Reach)', 'fitness', 'number', { unit: 'cm', placeholder: '20' }),
   // Ringkasan otomatis dari seluruh tes di atas. Tes ini BUKAN parameter
   // zonasi menurut SOP, tetapi hasilnya tetap dicatat sebagai temuan.
   f('tesKebugaran', 'Ringkasan Tes Kebugaran (Otomatis)', 'fitness', 'text', { autoCalc: true }),
   f('hasilKebugaran', 'Hasil Uji Kebugaran (Otomatis)', 'fitness', 'text', { autoCalc: true }),
   f('dugaanPAK', 'Dugaan PAK', 'assessment', 'select', { options: ['Ya', 'Tidak'] }),
 
-  // DFâ€“DS Penilaian dan kalkulasi
+  // DF–DS Penilaian dan kalkulasi
   f('kesVendor', 'Kesimpulan Vendor', 'assessment', 'select', { options: kesimpulanOptions }),
   f('rekQSHE', 'Rekomendasi QSHE Medic', 'assessment', 'select', {
     options: kesimpulanOptions,
@@ -757,9 +781,9 @@ f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoC
   f('itemFU', 'Item Follow Up', 'assessment', 'textarea', { autoCalc: true }),
   f('linkMCU', 'Link File MCU', 'assessment'),
   f('tglExpired', 'Tanggal Expired MCU', 'calculated', 'date', { autoCalc: true, autoCalcFrom: ['tglMCU'] }),
-  f('framScore', 'Framingham Score Lipid Based â€“ Score', 'calculated', 'number', { autoCalc: true }),
-  f('framProb', 'Framingham Score Lipid Based â€“ Probabilitas', 'calculated', 'text', { autoCalc: true }),
-  f('framKat', 'Framingham Score Lipid Based â€“ Kategori', 'calculated', 'text', { autoCalc: true }),
+  f('framScore', 'Framingham Score Lipid Based – Score', 'calculated', 'number', { normalRange: '<10', autoCalc: true }),
+  f('framProb', 'Framingham Score Lipid Based – Probabilitas', 'calculated', 'text', { autoCalc: true }),
+  f('framKat', 'Framingham Score Lipid Based – Kategori', 'calculated', 'text', { autoCalc: true }),
   f('zonasi', 'Zonasi', 'calculated', 'text', { autoCalc: true }),
   f('triggerZona', 'Trigger Zona Resiko Kesehatan', 'calculated', 'textarea', { autoCalc: true }),
   f('pengendalian', 'Pengendalian', 'calculated', 'textarea', { autoCalc: true }),
@@ -802,7 +826,7 @@ export function getFieldById(id: string): MCUFieldDef | undefined {
 }
 
 // ============================================================
-// Urinalisis â€” 19 parameter per kolom (ul_*) + ringkasan komposit `ul`
+// Urinalisis — 19 parameter per kolom (ul_*) + ringkasan komposit `ul`
 // ============================================================
 // Setiap parameter disimpan di kolom database sendiri (ul_warna, ul_protein,
 // dst.) supaya bisa di-query per parameter. Kolom `ul` lama tetap diisi
@@ -810,18 +834,18 @@ export function getFieldById(id: string): MCUFieldDef | undefined {
 // diagnosis, dan kompatibilitas Eksel lama.
 //
 // Map antar field id (di MCU_FIELDS) dengan label teks ringkasan `ul`:
-//   ulWarna            â†’ "Warna: Kuning Muda"
-//   ulKejernihan       â†’ "Kejernihan: Jernih"
-//   ulBau              â†’ "Bau: Aromatik"
-//   ulBeratJenis       â†’ "Berat Jenis (SG): 1.015"
-//   ulPh               â†’ "pH: 6.0"
-//   ulProtein          â†’ "Protein / Albumin: +1"
+//   ulWarna            → "Warna: Kuning Muda"
+//   ulKejernihan       → "Kejernihan: Jernih"
+//   ulBau              → "Bau: Aromatik"
+//   ulBeratJenis       → "Berat Jenis (SG): 1.015"
+//   ulPh               → "pH: 6.0"
+//   ulProtein          → "Protein / Albumin: +1"
 //   ... dst sesuai URINALYSIS_PARAMS.
 //
 // Fungsi:
-//   buildUlComposite(params)    â†’ "Label: nilai\n..." untuk disimpan di `ul`
-//   parseUlToParams(composite)  â†’ { ulWarna: 'Kuning Muda', ... }
-//                                   untuk load data lama `ul` â†’ 19 kolom.
+//   buildUlComposite(params)    → "Label: nilai\n..." untuk disimpan di `ul`
+//   parseUlToParams(composite)  → { ulWarna: 'Kuning Muda', ... }
+//                                   untuk load data lama `ul` → 19 kolom.
 
 export const URINALYSIS_FIELD_LABELS: Record<string, string> = {
   ulWarna: 'Warna',
@@ -911,7 +935,7 @@ export function buildUlComposite(values: Record<string, string | undefined | nul
 /**
  * Pecah ringkasan komposit `ul` ("Label: nilai\n...") menjadi 19 field.
  * Dipakai untuk load record lama di mana kolom `ul_*` masih kosong.
- * Return map `{ ulWarna: 'Kuning Muda', ... }` â€” hanya field yang terisi.
+ * Return map `{ ulWarna: 'Kuning Muda', ... }` — hanya field yang terisi.
  */
 export function parseUlToParams(raw: string | null | undefined): Record<string, string> {
   const out: Record<string, string> = {};
@@ -944,5 +968,6 @@ export function parseUlToParams(raw: string | null | undefined): Record<string, 
   }
   return out;
 }
+
 
 

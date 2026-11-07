@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { decrypt, decryptEmployee, decryptMCURecord, encrypt, hashField } from '@/lib/encryption';
 import { getServerCaller } from '@/lib/server-auth';
 import { integrationAdminClient } from '@/lib/integration-settings';
+import { sanitizeSearchTerm } from '@/lib/query-safety';
 
 const client = () => integrationAdminClient();
 
@@ -55,8 +56,12 @@ export async function GET(req: NextRequest) {
   }
   if (departmentFilter) employeeQuery = employeeQuery.eq('department', departmentFilter);
   if (searchFilter) {
-    const safeSearch = searchFilter.replace(/[(),]/g, '');
-    if (safeSearch) employeeQuery = employeeQuery.or(`nama.ilike.%${safeSearch}%,department.ilike.%${safeSearch}%,site_name.ilike.%${safeSearch}%`);
+    const safeSearch = sanitizeSearchTerm(searchFilter);
+    if (safeSearch) {
+      employeeQuery = employeeQuery.or(
+        `nama.ilike.%${safeSearch}%,department.ilike.%${safeSearch}%,site_name.ilike.%${safeSearch}%`
+      );
+    }
   }
   // ── OPTIMASI (perbaikan "canceling statement due to statement timeout") ──
   //
