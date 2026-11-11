@@ -3,12 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { decryptEmployee, hashField } from '@/lib/encryption';
 import { createRegistrationLookupToken } from '@/lib/registration-lookup-token';
+import { sanitizeSearchTerm, containsPattern } from '@/lib/sql-safety';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const supabaseAdmin = serviceKey ? createClient(supabaseUrl, serviceKey) : null;
 
-type SearchBy = 'national_id' | 'nik' | 'nama';
 type RegistrationEmployeeRow = {
   nik: string | null;
   national_id: string | null;
@@ -83,11 +83,12 @@ export async function POST(request: NextRequest) {
       if (!nikHash) throw new Error('Employee NIK lookup hash could not be generated.');
       employeeQuery = employeeQuery.eq('nik_hash', nikHash);
     } else {
-      const nameQuery = query.replace(/[^\p{L}\p{N}\s'-]/gu, '').trim();
-      if (nameQuery.length < 3) {
+      const nameQuery = sanitizeSearchTerm(query);
+      const namePattern = nameQuery.length >= 3 ? containsPattern(nameQuery) : null;
+      if (!namePattern) {
         return response({ success: false, error: 'Pencarian nama minimal 3 karakter.' }, 400);
       }
-      employeeQuery = employeeQuery.ilike('nama', `%${nameQuery}%`).order('nama').limit(20);
+      employeeQuery = employeeQuery.ilike('nama', namePattern).order('nama').limit(20);
     }
 
     const { data, error } = await employeeQuery.limit(searchBy === 'nama' ? 20 : 1);

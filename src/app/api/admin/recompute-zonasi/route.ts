@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminClient, getCaller } from '@/lib/questionnaire-store';
 import { decryptMCURecord } from '@/lib/encryption';
 import { applyMCUCalculations } from '@/lib/mcu-calculations';
-import { MCU_FIELDS } from '@/lib/mcu-fields';
+import { barisKeDraft } from '@/lib/prokawan-evaluasi-server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,7 +16,7 @@ export const maxDuration = 300;
  * tabel/ambang batas pada `ptm-pengendalian.ts` disesuaikan dengan
  * BG/QSHE/STD/006 Rev.002 Bab 7:
  *
- *   zonasi · trigger_zona · pengendalian · frekuensi_evaluasi · catatan_sop
+ *   zonasi · trigger_zona · pengendalian · frekuensi_evaluasi · catatan_sop · perlu_fu
  *
  * MENGAPA ENDPOINT, BUKAN SATU SKRIP SQL BESAR
  * --------------------------------------------------
@@ -43,7 +43,7 @@ export const maxDuration = 300;
  */
 
 const KOLOM_TURUNAN = [
-  'zonasi', 'trigger_zona', 'pengendalian', 'frekuensi_evaluasi', 'catatan_sop',
+  'zonasi', 'trigger_zona', 'pengendalian', 'frekuensi_evaluasi', 'catatan_sop', 'perlu_fu',
 ] as const;
 
 type KolomTurunan = typeof KOLOM_TURUNAN[number];
@@ -55,36 +55,11 @@ const PETA_KOLOM: Record<KolomTurunan, keyof ReturnType<typeof applyMCUCalculati
   pengendalian: 'pengendalian',
   frekuensi_evaluasi: 'frekuensiEvaluasi',
   catatan_sop: 'catatanSOP',
+  perlu_fu: 'perluFU',
 };
 
 function teks(v: unknown): string {
   return v == null ? '' : String(v).trim();
-}
-
-/**
- * mcu_records menyimpan kolom snake_case, sedangkan engine membaca camelCase
- * (`tdS`, `visusJauh`, `hba1c`, …). Tanpa konversi ini SELURUH record terbaca
- * "Belum Lengkap" karena semua parameter dianggap kosong — persis kegagalan
- * yang membuat rekalkulasi tidak berguna.
- */
-const SNAKE_TO_CAMEL: Record<string, string> = (() => {
-  const map: Record<string, string> = {};
-  for (const field of MCU_FIELDS) {
-    map[field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase()] = field.id;
-  }
-  return map;
-})();
-
-function keDraft(record: Record<string, unknown>): Record<string, string | number | undefined> {
-  const draft: Record<string, string | number | undefined> = {};
-  for (const [key, value] of Object.entries(record)) {
-    if (['created_at', 'updated_at'].includes(key) || value == null) continue;
-    const camel = SNAKE_TO_CAMEL[key]
-      ?? key.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
-    // Angka dibiarkan sebagai angka; sisanya string agar parser engine konsisten.
-    draft[camel] = typeof value === 'number' ? value : String(value);
-  }
-  return draft;
 }
 
 export async function POST(req: NextRequest) {
@@ -125,13 +100,22 @@ export async function POST(req: NextRequest) {
   const ringkasZona: Record<string, number> = {};
   const belumTercakup: { nama: string; catatan: string }[] = [];
 
+  // Record yang sudah punya follow up selesai TIDAK dihitung ulang dari baseline:
+  // zona, trigger, dan perlu_fu-nya sudah ditulis dari dataset efektif
+  // (baseline + hasil follow up) dan akan kembali ke nilai baseline bila ditimpa.
+  const idDenganFollowUp = new Set<string>();
+  const { data: fuRows } = await client.from('followups_prokawan').select('mcu_record_id').eq('selesai', true).not('mcu_record_id', 'is', null);
+  for (const fu of fuRows ?? []) idDenganFollowUp.add(String(fu.mcu_record_id));
+  let dilewati = 0;
+
   for (const raw of rows as Record<string, unknown>[]) {
+    if (idDenganFollowUp.has(String(raw.id))) { dilewati++; continue; }
     // Engine butuh NIK/nama terbaca; kolom itu tersimpan terenkripsi.
     const record = decryptMCURecord(raw) as Record<string, unknown>;
 
     let hasil: ReturnType<typeof applyMCUCalculations>;
     try {
-      hasil = applyMCUCalculations(keDraft(record) as never);
+      hasil = applyMCUCalculations(barisKeDraft(raw) as never);
     } catch {
       continue; // satu baris rusak tidak boleh menggagalkan seluruh batch
     }
@@ -185,7 +169,12 @@ export async function POST(req: NextRequest) {
     offset,
     limit,
     processed: rows.length,
+    dilewatiKarenaSudahFollowUp: dilewati,
     changed: perubahan.length,
+    perubahanPerKolom: perubahan.reduce<Record<string, number>>((acc, item) => {
+      for (const kolom of Object.keys(item.ke)) acc[kolom] = (acc[kolom] ?? 0) + 1;
+      return acc;
+    }, {}),
     tertulis,
     selesai: rows.length < limit,
     offsetBerikutnya: offset + rows.length,

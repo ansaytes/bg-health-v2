@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { adminClient, getCaller } from '@/lib/questionnaire-store';
-import { decryptMCURecord, encrypt, hashField } from '@/lib/encryption';
-import { applyMCUCalculations } from '@/lib/mcu-calculations';
+import { encrypt, hashField } from '@/lib/encryption';
 import { tentukanFieldTindakLanjut, type KelompokField } from '@/lib/followup-fields';
-import { formatSuratKontrolAbnormal } from '@/lib/surat-kontrol-format';
 import { selectFieldsForTable } from '@/lib/mcu-table-select';
 import { cariMcuByNik } from '@/lib/mcu-nik-resolver';
 import { barisKeDraft } from '@/lib/prokawan-evaluasi-server';
+import { buildDatasetEfektifDanZona } from '@/lib/followup-apply';
+import { tindakLanjutDitutup } from '@/lib/mcu-monitor';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -83,12 +83,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'PIC hanya dapat melihat tindak lanjut di site sendiri.' }, { status: 403 });
   }
 
-  // decryptMCURecord hanya mendekripsi field identitas. Kolom DB masih
-  // snake_case (`td_s`, `visus_jauh`) sedangkan engine membaca camelCase
-  // (`tdS`, `visusJauh`). Tanpa konversi ini, field seperti tekanan darah dan
-  // visus HILANG dari form — itulah sebabnya peserta Merah bisa tampil 0
-  // trigger padahal trigger_zonannya jelas berisi "Hypertension Grade II".
-  const baseline = barisKeDraft(decryptMCURecord(mcu) as Record<string, unknown>);
+  // Kolom DB snake_case (`td_s`, `visus_jauh`) harus dikonversi ke nama field
+  // engine (`tdS`, `visusJauh`); barisKeDraft juga mendekripsi identitas. Tanpa
+  // konversi ini tekanan darah dan visus HILANG dari form.
+  const baseline = barisKeDraft(mcu);
 
   // ── 2. Riwayat tindak lanjut ──────────────────────────────────────
   const { data: riwayat, error: riwayatError } = await client
@@ -104,56 +102,23 @@ export async function GET(req: NextRequest) {
 
   const rows = (riwayat ?? []) as Record<string, unknown>[];
 
-  // Nilai terbaru per parameter = kandidat overlay.
-  const nilaiTerbaru: Record<string, string | number | null> = {};
-  const selesai = rows
-    .filter((r) => r.selesai === true && r.nilai)
-    .sort((a, b) => String(a.aktual_tanggal ?? '').localeCompare(String(b.aktual_tanggal ?? '')));
-  for (const r of selesai) {
-    Object.assign(nilaiTerbaru, (r.nilai ?? {}) as Record<string, string | number>);
-  }
+  // ── 3. Dataset efektif (baseline + follow up sesudah MCU ini) ─────
+  // Satu-satunya tempat perhitungan: followup-apply.ts, dipakai juga oleh POST.
+  const hasil = await buildDatasetEfektifDanZona({ client, nikHash, mcu, nilaiBaru: {} });
+  const nilaiTerbaru = hasil.nilaiTerbaru;
+  const zonaEfektif = {
+    zona: hasil.zonaBaru,
+    trigger: hasil.trigger,
+    pengendalian: hasil.pengendalian,
+    frekuensi: hasil.frekuensi,
+  };
 
-  // ── 3. Field tindak lanjut — tiga sumber ──────────────────────────
+  // ── 4. Field tindak lanjut — dua acuan: trigger STD/006 & rujukan nasional ─
   const kelompok: KelompokField[] = tentukanFieldTindakLanjut(
     baseline,
     String(mcu.trigger_zona ?? ''),
     nilaiTerbaru,
   );
-
-  // ── 4. Zona efektif = baseline ditimpa nilai terbaru ──────────────
-  const efektif: Record<string, string | number | undefined> = {};
-  for (const [k, v] of Object.entries(baseline)) {
-    if (v !== null && v !== undefined && String(v) !== '') efektif[k] = v as string | number;
-  }
-  for (const [k, v] of Object.entries(nilaiTerbaru)) {
-    if (v !== null && v !== undefined && String(v) !== '') efektif[k] = v;
-  }
-  // IMT dihitung ulang dari BB/TB terbaru bila tersedia.
-  const bb = Number(String(efektif.bb ?? '').replace(',', '.'));
-  const tb = Number(String(efektif.tb ?? '').replace(',', '.'));
-  if (bb > 0 && tb > 0) efektif.bmi = Number((bb / ((tb / 100) ** 2)).toFixed(1));
-
-  let zonaEfektif: Record<string, unknown> | null = null;
-  try {
-    const hitung = applyMCUCalculations(efektif as never);
-    zonaEfektif = {
-      zona: hitung.zonasi,
-      trigger: hitung.triggerZona,
-      pengendalian: hitung.pengendalian,
-      frekuensi: hitung.frekuensiEvaluasi,
-    };
-  } catch {
-    zonaEfektif = null;
-  }
-
-  // ── 5. Teks surat kontrol dari field abnormal ─────────────────────
-  const fieldAbnormal = kelompok.flatMap((k) => k.fields.map((f) => f.id));
-  const nilaiUntukSurat: Record<string, string | number | null> = {};
-  for (const id of fieldAbnormal) {
-    nilaiUntukSurat[id] = (nilaiTerbaru[id] ?? baseline[id] ?? null) as string | number | null;
-    if (id === 'tdS') nilaiUntukSurat.tdD = (nilaiTerbaru.tdD ?? baseline.tdD ?? null) as string | number | null;
-  }
-  const surat = formatSuratKontrolAbnormal(nilaiUntukSurat, fieldAbnormal);
 
   return NextResponse.json({
     success: true,
@@ -175,7 +140,8 @@ export async function GET(req: NextRequest) {
     kelompok,
     totalField: kelompok.reduce((s, k) => s + k.fields.length, 0),
     riwayat: rows,
-    ringkasanSurat: surat.teks,
+    ringkasanSurat: hasil.ringkasanSurat,
+    sisaAbnormal: hasil.sisaAbnormal,
     tabelSiap: !riwayatError,
   });
 }
@@ -185,7 +151,12 @@ export async function GET(req: NextRequest) {
  *
  * Body:
  *   { nik, id?, jadwal_tanggal, aktual_tanggal, nilai: {...},
- *     evidence_url?, catatan?, jenis?: 'mcu'|'prokawan', terapkanZona?: boolean }
+ *     evidence_url?, catatan?, jenis?: 'mcu'|'prokawan', terapkanZona?: boolean,
+ *     tutupParamedis?: boolean }
+ *
+ * Penutupan follow up: OTOMATIS bila zona Hijau dan tidak ada parameter abnormal
+ * tersisa; `tutupParamedis` menutupnya secara manual (wajib disertai catatan),
+ * mis. temuan kronis yang sudah stabil atau dirujuk. Aturan: tindakLanjutDitutup().
  *
  * Setelah tersimpan:
  *   1. ringkasan_teks dibentuk dari nilai (untuk surat kontrol)
@@ -215,8 +186,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Hasil tindak lanjut tidak valid.' }, { status: 400 });
   }
   const nilai = body.nilai as Record<string, unknown>;
-  if (!Object.keys(nilai).length) {
-    return NextResponse.json({ error: 'Isi minimal satu hasil tindak lanjut' }, { status: 400 });
+  const tutupParamedis = body.tutupParamedis === true;
+  const catatanBody = typeof body.catatan === 'string' ? body.catatan.trim() : '';
+  if (tutupParamedis && !catatanBody) {
+    return NextResponse.json({ error: 'Konfirmasi paramedis wajib disertai catatan alasan penutupan.' }, { status: 400 });
+  }
+  // Tanpa hasil ukur, follow up hanya boleh dicatat bila paramedis menutupnya
+  // secara eksplisit dan menuliskan alasannya.
+  if (!Object.keys(nilai).length && !(tutupParamedis && catatanBody)) {
+    return NextResponse.json({ error: 'Isi minimal satu hasil tindak lanjut, atau tutup FU dengan catatan paramedis.' }, { status: 400 });
   }
   if (Object.keys(nilai).length > 40 || Object.values(nilai).some((value) =>
     (typeof value !== 'string' && typeof value !== 'number')
@@ -231,23 +209,28 @@ export async function POST(req: NextRequest) {
   const client = adminClient();
 
   // Baseline MCU — sumber hitungan sekaligus untuk kolom mcu_record_id.
-  const { data: mcuRows } = await client
-    .from('mcu_records')
-    .select('id,trigger_zona,zonasi,site,nama,jabatan,department')
-    .eq('nik_karyawan_hash', nikHash)
-    .order('tgl_mcu', { ascending: false, nullsFirst: false })
-    .limit(1);
-  const mcu = mcuRows?.[0] as unknown as Record<string, unknown> | undefined;
+  // Memakai resolver yang sama dengan GET: hash NIK pada sebagian record
+  // dihitung dari ciphertext sehingga `.eq('nik_karyawan_hash', hash)` gagal.
+  const resolusi = await cariMcuByNik(client, nik, '*');
+  const mcu = resolusi.record ?? undefined;
   if (!mcu) return NextResponse.json({ error: 'Data MCU karyawan tidak ditemukan.' }, { status: 404 });
   if (caller.role === 'pic' && (!caller.site
     || String(mcu.site ?? '').trim().toLowerCase() !== caller.site.trim().toLowerCase())) {
     return NextResponse.json({ error: 'PIC hanya dapat mencatat tindak lanjut di site sendiri.' }, { status: 403 });
   }
 
-  const { buildDatasetEfektifDanZona } = await import('@/lib/followup-apply');
-  const baselineResult = await buildDatasetEfektifDanZona({ client, nikHash, nilaiBaru: {} });
+  // Departemen ada di tabel employees, bukan mcu_records.
+  const { data: emp } = await client
+    .from('employees')
+    .select('department')
+    .eq('nik_hash', nikHash)
+    .maybeSingle();
+
+  // Parameter yang boleh ditindaklanjuti ditentukan dari BASELINE LENGKAP
+  // (nama field engine), bukan dari ringkasan overlay.
+  const baselinePenuh = barisKeDraft(mcu);
   const allowedFields = new Set(tentukanFieldTindakLanjut(
-    baselineResult.baseline,
+    baselinePenuh,
     String(mcu.trigger_zona ?? ''),
   ).flatMap((group) => group.fields.map((field) => field.id)));
   if (Object.keys(nilai).some((field) => !allowedFields.has(field))) {
@@ -264,7 +247,7 @@ export async function POST(req: NextRequest) {
 
   // Teks surat dari field abnormal + nilai baru.
   const hasil = await buildDatasetEfektifDanZona({
-    client, nikHash, nilaiBaru: typedNilai,
+    client, nikHash, mcu, nilaiBaru: typedNilai,
   });
 
   const evidenceUrl = body.evidence_url ? String(body.evidence_url).trim() : '';
@@ -283,11 +266,12 @@ export async function POST(req: NextRequest) {
   const payload = {
     nik_hash: nikHash,
     nik_enc: encrypt(nik),
-    nama_enc: baselineResult.baseline.nama ? encrypt(String(baselineResult.baseline.nama)) : null,
+    nama_enc: baselinePenuh.nama ? encrypt(String(baselinePenuh.nama)) : null,
     site: mcu.site ?? null,
-    department: mcu.department ?? null,
+    department: emp?.department ?? null,
     jabatan: mcu.jabatan ?? null,
-    zona_risiko: hasil.zonaSebelum,
+    // CHECK pada kolom ini hanya menerima Kuning/Merah; zona lain disimpan di zona_sebelum.
+    zona_risiko: hasil.zonaSebelum === 'Kuning' || hasil.zonaSebelum === 'Merah' ? hasil.zonaSebelum : null,
     jadwal_tanggal: jadwal,
     aktual_tanggal: aktual,
     evidence_url: evidenceUrl || null,
@@ -302,6 +286,10 @@ export async function POST(req: NextRequest) {
     dievaluasi_pada: new Date().toISOString(),
     dievaluasi_oleh: caller.userId,
     selesai: true,
+    sisa_abnormal: hasil.sisaAbnormal,
+    ditutup_paramedis: tutupParamedis,
+    ditutup_oleh: tutupParamedis ? caller.userId : null,
+    ditutup_pada: tutupParamedis ? new Date().toISOString() : null,
     jenis: body.jenis === 'mcu' ? 'mcu' : 'prokawan',
     mcu_record_id: mcu?.id ?? null,
     kunjungan_ke: (count ?? 0) + 1,
@@ -331,7 +319,7 @@ export async function POST(req: NextRequest) {
   if (error) {
     if (/does not exist|PGRST205|42P01/i.test(error.message)) {
       return NextResponse.json({
-        error: 'Tabel followups_prokawan belum ada. Jalankan migration 20261029_followups_prokawan.sql.',
+        error: 'Tabel followups_prokawan belum ada di database.',
       }, { status: 500 });
     }
     console.error('[Follow-up] Failed to save follow-up:', error.code);
@@ -346,8 +334,29 @@ export async function POST(req: NextRequest) {
       trigger_zona: hasil.trigger,
       pengendalian: hasil.pengendalian,
       frekuensi_evaluasi: hasil.frekuensi,
+      perlu_fu: hasil.perluFollowUp,
     }).eq('id', mcu.id);
     zonaDiterapkan = !upErr;
+
+    // Riwayat peralihan zona (append-only) untuk kartu Riwayat Zona.
+    // Best-effort: kegagalan di sini tidak membatalkan follow up yang sudah tersimpan.
+    if (zonaDiterapkan && hasil.zonaSebelum !== hasil.zonaBaru) {
+      const { error: histErr } = await client.from('zona_histori').insert({
+        nik_hash: nikHash,
+        mcu_record_id: mcu.id,
+        sumber: 'kontrol',
+        zona_lama: hasil.zonaSebelum,
+        zona_baru: hasil.zonaBaru,
+        trigger_lama: mcu.trigger_zona ?? null,
+        trigger_baru: hasil.trigger,
+        tanggal_acuan: aktual,
+        nilai: typedNilai,
+        evaluasi: hasil.evaluasi,
+        catatan: payload.catatan,
+        diubah_oleh: caller.userId,
+      });
+      if (histErr) console.error('[Follow-up] Gagal mencatat zona_histori:', histErr.code);
+    }
   }
 
   return NextResponse.json({
@@ -357,6 +366,8 @@ export async function POST(req: NextRequest) {
     arah: hasil.arah,
     ringkasanSurat: hasil.ringkasanSurat,
     zonaDiterapkan,
+    sisaAbnormal: hasil.sisaAbnormal,
+    ditutup: tindakLanjutDitutup({ paramedis: tutupParamedis, zona: hasil.zonaBaru, sisa: hasil.sisaAbnormal }),
   });
 }
 

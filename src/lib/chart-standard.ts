@@ -67,12 +67,6 @@ export const BAR_LAYOUT = {
   maxBarThickness: 18,
 } as const;
 
-/** Opsi elemen batang: sudut lembut + hover tanpa border tambahan. */
-export const BAR_ELEMENT = {
-  borderRadius: 4,
-  borderSkipped: false as const,
-};
-
 /**
  * Palet batang aplikasi: SATU warna per batang, cerah dan mudah dibedakan.
  * Warna sengaja penuh warna (bukan satu keluarga hangat) supaya tiap batang
@@ -93,11 +87,6 @@ export const PALET_BAR = [
 /** Warna bar ke-i (satu warna per batang, nada berdekatan). */
 export function warnaBar(index: number): string {
   return PALET_BAR[index % PALET_BAR.length];
-}
-
-/** Versi koma: satu warna berbeda untuk setiap batang dalam satu diagram. */
-export function banyakWarnaBar(count: number): string[] {
-  return Array.from({ length: count }, (_, index) => warnaBar(index));
 }
 
 /**
@@ -197,45 +186,6 @@ function pecahWarna(color: string): { r: number; g: number; b: number; a: number
 }
 
 /**
- * Gaya sumbu batang horizontal.
- *
- * CATATAN: fungsi ini TIDAK lagi dipakai — semua diagram sekarang memakai
- * `skalaBar()` yang lebih lengkap (judul sumbu, callback label, autoSkip).
- * Tetap diekspor hanya untuk kompatibilitas.
- */
-export function opsiBarHorizontal(H: string, V: string): Record<string, unknown> {
-  return {
-    x: { beginAtZero: true, grace: '12%', grid: { color: V }, border: { display: false }, ticks: { precision: 0 } },
-    y: { grid: { display: false }, border: { display: false }, ticks: { autoSkip: false, padding: 6, maxRotation: 0 } },
-  };
-}
-
-/** Palet lembut untuk batang berkategori. */
-export const PALET_SOFT = [
-  'rgba(52, 152, 219, 0.78)',   // biru
-  'rgba(0, 184, 148, 0.74)',    // hijau tosca
-  'rgba(243, 156, 18, 0.76)',   // amber
-  'rgba(155, 89, 182, 0.72)',   // ungu
-  'rgba(26, 188, 156, 0.72)',   // teal
-  'rgba(230, 126, 34, 0.74)',   // oranye tua
-  'rgba(41, 128, 185, 0.72)',   // biru tua
-  'rgba(142, 68, 173, 0.70)',   // violet
-  'rgba(22, 160, 133, 0.70)',   // hijau tua
-  'rgba(192, 57, 43, 0.70)',    // merah bata
-];
-
-export const PALET_SOFT_BORDER = PALET_SOFT.map((c) => c.replace(/[\d.]+\)$/, '1)'));
-
-/** Warna tegas untuk status (dipakai badge / bar status). */
-export const WARNA_STATUS = {
-  merah: 'rgba(231, 76, 60, 0.90)',
-  merahCerah: 'rgba(255, 62, 48, 0.92)',
-  kuningCerah: 'rgba(255, 196, 0, 0.92)',
-  oranyeGelap: 'rgba(214, 108, 0, 0.90)',
-  hijau: 'rgba(0, 184, 148, 0.85)',
-} as const;
-
-/**
  * Opsi dasar sumbu untuk bar horizontal/vertikal.
  * `autoSkip: false` wajib agar SEMUA label sumbu tampil (penyebab banyak
  * batang tanpa nama sebelumnya).
@@ -324,13 +274,6 @@ export function skalaBar(opts: OpsiSkalaBar): ChartOptions<'bar'>['scales'] {
     : { x: categoryAxis, y: valueAxis }) as ChartOptions<'bar'>['scales'];
 }
 
-/** Diagram donut berputar searah jarum jam. */
-export const OPSI_DONUT = {
-  cutout: '62%',
-  radius: '82%',
-  rotation: 0,
-  circumference: 360,
-} as const;
 
 /**
  * Hook "siap digambar": true setelah ada canvas berukuran nyata + satu jeda.

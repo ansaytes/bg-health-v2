@@ -25,6 +25,14 @@
   --color-muted: var(--muted);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive: var(--destructive);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -40,6 +48,18 @@
   --foreground: #1A1A1A;
   --card: #FFFFFF;
   --card-foreground: #1A1A1A;
+  /* Latar dropdown/popover/menu WAJIB solid. Token ini dulu tidak ada, sehingga
+     bg-popover (Select, Dropdown, Popover, Command) tidak menghasilkan warna. */
+  --popover: #FFFFFF;
+  --popover-foreground: #1A1A1A;
+  /* Latar <select>: solid. Browser memakai warna ini untuk panel daftar pilihan. */
+  --field-bg: #FFF4EE;
+  --primary: #FF4D00;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F0F0F0;
+  --secondary-foreground: #1A1A1A;
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
   --muted: #F0F0F0;
   --muted-foreground: #666666;
   --accent: rgba(255,77,0,0.07);
@@ -68,6 +88,15 @@
   --foreground: #F0F0F0;
   --card: rgba(255,255,255,0.05);
   --card-foreground: #F0F0F0;
+  --popover: #1A1A1A;
+  --popover-foreground: #F0F0F0;
+  --field-bg: #231A15;
+  --primary: #FF4D00;
+  --primary-foreground: #FFFFFF;
+  --secondary: #262626;
+  --secondary-foreground: #F0F0F0;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
   --muted: rgba(255,255,255,0.05);
   --muted-foreground: #AAAAAA;
   --accent: rgba(255,77,0,0.12);
@@ -172,44 +201,8 @@
     drop-shadow(0 0 2px rgba(255, 255, 255, 0.85))
     drop-shadow(0 0 3px rgba(255, 255, 255, 0.6));
 }
-.sidebar-head-text {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  flex: 1;
-}
-.sidebar-head-dept {
-  font-size: 13px;
-  font-weight: 800;
-  color: #ff4d00;
-  line-height: 1.2;
-}
-.sidebar-head-company {
-  font-size: 9px;
-  color: var(--muted-foreground);
-  line-height: 1.3;
-}
 /* Stethoscope icon — white inverted for sidebar */
-.stethoscope-sidebar-icon {
-  width: 16px;
-  height: 16px;
-  filter: brightness(0) invert(1);
-  opacity: 0.9;
-}
-.nav-btn.active .stethoscope-sidebar-icon {
-  filter: brightness(0) invert(1);
-  opacity: 1;
-}
 /* Loading overlay */
-.loading-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-  pointer-events: none;
-}
 /* Legacy loading-spinner — sekarang juga menggunakan desain BM logo berputar halus yang seragam */
 .loading-spinner {
   position: relative;
@@ -808,13 +801,6 @@ select:focus { border-color: #ff4d00; }
   flex-shrink: 0;
   margin-left: auto;
 }
-.kunjungan-main-area {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  gap: 8px;
-}
 .kunjungan-filter-bar select {
   height: 26px;
   font-size: 9px;
@@ -822,15 +808,7 @@ select:focus { border-color: #ff4d00; }
 }
 
 
-
-
-
-
-
-
 /* Rujuk RS Section — scroll-up to show */
-
-
 
 
 /* ═══════════════════════════════════
@@ -1248,17 +1226,6 @@ select:focus { border-color: #ff4d00; }
   color: var(--brand-primary, #ff4d00);
   background: rgba(255, 77, 0, 0.08);
 }
-.login-card-icon {
-  width: 40px;
-  height: 52px;
-  border-radius: 16px;
-  background: linear-gradient(145deg, #ff4d00, #ff6b2b);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto;
-  box-shadow: 0 4px 16px rgba(255,77,0,0.3);
-}
 .login-card-body {
   padding: 24px 28px 28px;
 }
@@ -1492,57 +1459,6 @@ select.admin-input.compact-input {
   -webkit-overflow-scrolling: touch;
   border-top: 1px solid var(--border);
 }
-.sick-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 11px;
-}
-.sick-table thead tr {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--muted);
-}
-.sick-table th {
-  padding: 7px 10px;
-  text-align: left;
-  font-weight: 600;
-  color: var(--muted-foreground);
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-.sick-table th {
-  padding: 5px 8px;
-  text-align: left;
-  font-weight: 600;
-  color: var(--muted-foreground);
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-.sick-table th.num-col { text-align: center; }
-.sick-table td {
-  padding: 4px 8px;
-  color: var(--foreground);
-  white-space: nowrap;
-  border-bottom: 1px solid var(--border);
-  font-size: 10px;
-}
-.sick-table td.num-col { text-align: center; }
-.sick-table td.nik-cell {
-  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
-  font-size: 9.5px;
-  color: var(--muted-foreground);
-}
-.sick-table td.nama-cell { font-weight: 600; }
-.sick-table td.spell-cell { font-weight: 700; color: #ff4d00; }
-.sick-table tbody tr { transition: background 0.15s; }
-.sick-table tbody tr:hover { background: var(--hover); }
 .sick-empty-state {
   text-align: center;
   padding: 24px 16px;
@@ -1939,64 +1855,6 @@ select.admin-input.compact-input {
   font: inherit;
   font-size: 12px;
 }
-.mcu-records-scroll {
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--card);
-}
-.mcu-records-scroll table {
-  min-width: 2600px;
-}
-.mcu-records-scroll th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--card);
-}
-.mcu-records-scroll thead th:first-child,
-.mcu-records-scroll tbody td:first-child {
-  position: sticky;
-  left: 0;
-  width: 48px;
-  min-width: 48px;
-  background: var(--card);
-  text-align: center;
-}
-.mcu-records-scroll thead th:first-child {
-  z-index: 6;
-}
-.mcu-records-scroll tbody td:first-child {
-  z-index: 1;
-  box-shadow: 1px 0 0 var(--border);
-}
-.mcu-records-scroll tbody tr:hover td:first-child {
-  background: var(--card);
-}
-.dark .mcu-records-page .mcu-records-scroll th {
-  background: #292929;
-  color: #f0f0f0;
-}
-.dark .mcu-records-page .mcu-records-scroll tbody td {
-  background: #18181b;
-  color: #f0f0f0;
-}
-.dark .mcu-records-page .mcu-records-scroll tbody td:first-child {
-  background: #242428;
-}
-.dark .mcu-records-page .mcu-records-scroll tbody tr:hover td,
-.dark .mcu-records-page .mcu-records-scroll tbody tr:hover td:first-child {
-  background: #303036;
-  color: #ffffff;
-}
-.mcu-records-scroll td {
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 12px !important;
-}
-.mcu-records-scroll th {
-  font-size: 11px !important;
-}
 .mcu-records-pagination {
   display: flex;
   align-items: center;
@@ -2273,7 +2131,6 @@ select.admin-input.compact-input {
   font-size: 13px;
 }
 .mcu-dashboard-message.is-error { color: #dc2626; }
-.mcu-records-subtitle,
 .mcu-records-hint {
   color: var(--muted-foreground);
   font-size: 11px;
@@ -2353,7 +2210,7 @@ select.admin-input.compact-input {
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: 13px;
-  background: var(--card);
+  background: var(--popover);
   box-shadow: 0 14px 32px rgba(0,0,0,.14);
 }
 .mcu-frozen-picker label {
@@ -2553,25 +2410,6 @@ select.admin-input.compact-input {
 .dark .mcu-records-table tbody tr:hover td.is-frozen,
 .dark .mcu-records-table tbody tr:hover .mcu-records-index { background: #352a27; }
 .dark .mcu-record-link { color: #ff9a67; }
-.mcu-records-detail-cell {
-  padding: 12px !important;
-  background: var(--muted);
-}
-.mcu-records-detail {
-  max-height: 320px;
-  overflow: auto;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--background);
-}
-.mcu-records-detail pre {
-  margin: 0;
-  color: var(--foreground);
-  font: 11px/1.6 var(--font-geist-mono), monospace;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
 .mcu-entry-modern-shell {
   /* Jangan `overflow: auto`: ancestor yang scroll mematikan `position: sticky`
      pada thead tabel jadwal, sehingga header ikut tergulung. */
@@ -3042,22 +2880,6 @@ select.admin-input.compact-input {
 
 
 /* ═══════════════════════════════════
-   Dark mode dropdown fix — kontras option
-   ═══════════════════════════════════ */
-.dark select option {
-  background: #1a1a1a;
-  color: #f0f0f0;
-}
-.dark select option:checked {
-  background: #ff4d00;
-  color: #fff;
-}
-.dark select option:hover {
-  background: #2a2a2a;
-  color: #ff8c42;
-}
-
-/* ═══════════════════════════════════
    Theme button — glow effect di dark mode
    ═══════════════════════════════════ */
 .dark .theme-btn {
@@ -3084,27 +2906,19 @@ select.admin-input.compact-input {
 /* ═══════════════════════════════════
    Dark mode — solid background untuk semua tabel header
    ═══════════════════════════════════ */
-.dark .sick-table thead tr,
 
-.dark .sick-table th,
-
-.dark .sick-table tbody tr:hover,
-
-
-/* Solid background untuk dropdown select di dark mode */
-.dark select option,
-.dark select option:checked,
-.dark select option:hover {
-  background: #1a1a1a !important;
-  color: #f0f0f0 !important;
+/* Daftar pilihan <select> bawaan browser: selalu solid, light maupun dark. */
+select option,
+select optgroup {
+  background-color: var(--popover);
+  color: var(--popover-foreground);
 }
-.dark select option:checked {
-  background: #ff4d00 !important;
-  color: #ffffff !important;
+select option:checked {
+  background-color: #ff4d00;
+  color: #ffffff;
 }
-.dark select option:hover {
-  background: #2a2a2a !important;
-  color: #ff8c42 !important;
+select option:hover {
+  background-color: var(--secondary);
 }
 
 
@@ -3140,18 +2954,6 @@ select.admin-input.compact-input {
   animation: contentModalIn 0.32s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.content-modal-media {
-  width: 100%;
-  background: #000;
-  flex-shrink: 0;
-  max-height: 65vh;
-  min-height: 220px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
 @keyframes contentModalIn {
   from { opacity: 0; transform: scale(0.85) translateY(20px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
@@ -3178,12 +2980,6 @@ select.admin-input.compact-input {
 .content-modal-close:hover {
   background: rgba(0, 0, 0, 0.9);
   transform: rotate(90deg);
-}
-
-.content-modal-body {
-  padding: 18px 22px 20px;
-  overflow-y: auto;
-  flex: 1;
 }
 .content-modal-title {
   font-size: 16px;
@@ -3225,29 +3021,7 @@ select.admin-input.compact-input {
 /* ═══════════════════════════════════════════════════════════
    Dashboard Total info — right-aligned, inline with filters
    ═══════════════════════════════════════════════════════════ */
-.dashboard-totals-right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  font-size: 12px;
-  font-weight: 600;
-  flex-shrink: 0;
-  padding: 0 4px;
-}
-.dashboard-totals-right > span {
-  white-space: nowrap;
-}
-.dashboard-totals-right .mcu-total-label {
-  color: var(--foreground);
-}
 @media (max-width: 768px) {
-  .dashboard-totals-right {
-    gap: 8px;
-    font-size: 11px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
 }
 
 
@@ -3447,11 +3221,6 @@ select.admin-input.compact-input {
 }
 
 /* Container row when injected before filter bar */
-.raw-table-download-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 8px;
-}
 
 /* ═══════════════════════════════════════════════════════════
    Attractive button system — universal hover animations
@@ -3646,24 +3415,6 @@ select.admin-input.compact-input {
    Content Modal — fix image full display + no caption overlap
    ═══════════════════════════════════════════════════════════ */
 
-
-.content-modal-media img {
-  /* Image displayed FULL — fit contain, not cover, so nothing is cut */
-  width: 100%;
-  height: 100%;
-  object-fit: contain !important;
-  display: block;
-  background: #000;
-}
-.content-modal-media iframe,
-.content-modal-media video {
-  width: 100%;
-  height: 100%;
-  border: none;
-  display: block;
-  background: #000;
-}
-
 /* ═══════════════════════════════════════════════════════════
    GLOBAL UNIFORM LOADING — BM logo berputar halus (seragam)
    ═══════════════════════════════════════════════════════════ */
@@ -3813,9 +3564,6 @@ select.admin-input.compact-input {
 }
 
 
-
-
-
 /* Mobile responsive content modal */
 @media (max-width: 640px) {
   
@@ -3932,11 +3680,6 @@ select.admin-input.compact-input {
   overflow: hidden;
   flex-shrink: 0;
 }
-
-
-
-
-
 
 
 .ig-modal-caption-section {
@@ -4122,27 +3865,6 @@ select.admin-input.compact-input {
   position: relative;
   display: inline-flex;
 }
-.share-btn-trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--muted-foreground);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, transform 0.15s;
-}
-.share-btn-trigger:hover {
-  background: rgba(255, 77, 0, 0.1);
-  color: var(--brand-primary, #ff4d00);
-  transform: scale(1.1);
-}
-.share-btn-trigger:active {
-  transform: scale(0.95);
-}
 .share-btn-menu {
   position: absolute;
   bottom: calc(100% + 6px);
@@ -4184,46 +3906,6 @@ select.admin-input.compact-input {
   pointer-events: none;
 }
 .share-btn-menu > * { position: relative; z-index: 2; }
-.share-btn-option {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #1a1a1a;
-  font-size: 12px;
-  text-align: left;
-  transition: background 0.12s;
-}
-.dark .share-btn-option {
-  color: #f0f0f0;
-}
-.share-btn-option:hover {
-  background: rgba(255, 77, 0, 0.08);
-}
-.share-btn-option strong {
-  display: block;
-  font-weight: 600;
-  font-size: 12px;
-}
-.share-btn-option small {
-  display: block;
-  font-size: 10px;
-  color: #888;
-  margin-top: 1px;
-}
-.dark .share-btn-option small {
-  color: #999;
-}
-.share-btn-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 99;
-}
 
 
 /* IG Modal Image Section — scrollable for long images (IG post style) */
@@ -4275,9 +3957,7 @@ select.admin-input.compact-input {
 /* Kolom 1, 2, 3 freeze horizontal */
 
 
-
 /* Header corner cell — kolom 1-3 + header row */
-
 
 
 /* Background agar tidak tembus saat scroll */
@@ -4504,8 +4184,7 @@ select.admin-input.compact-input {
   font-size: 12px;
   font-weight: 600;
 }
-.qh-input,
-.qh-textarea {
+.qh-input {
   width: 100%;
   padding: 8px 10px;
   font-size: 13px;
@@ -4515,8 +4194,7 @@ select.admin-input.compact-input {
   border: 1px solid var(--border);
   border-radius: 6px;
 }
-.qh-input:focus,
-.qh-textarea:focus {
+.qh-input:focus {
   outline: 2px solid rgba(255, 77, 0, 0.35);
   outline-offset: 1px;
 }
@@ -4568,12 +4246,6 @@ select.admin-input.compact-input {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
   margin-top: 4px;
-}
-.qh-two-col {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 16px;
-  align-items: start;
 }
 
 .qh-identity {
@@ -4750,32 +4422,6 @@ select.admin-input.compact-input {
 .qh-tone-warn { color: #b34700; }
 .qh-tone-bad { color: #c62828; }
 .qh-tone-neutral { color: var(--fg-dim); }
-
-.qh-history { max-height: 320px; overflow-y: auto; }
-.qh-history .qh-result-table th {
-  position: sticky;
-  top: 0;
-  background: var(--card);
-  padding: 6px 0;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--fg-dim);
-  text-align: left;
-}
-.qh-history .qh-result-table td { text-align: left; vertical-align: top; }
-.qh-history-active td { background: rgba(255, 77, 0, 0.07); }
-.qh-history-detail { font-size: 11px; color: var(--fg-dim); margin-top: 2px; }
-.qh-tag {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 1px 6px;
-  font-size: 10px;
-  border-radius: 999px;
-  color: #fff;
-  background: #ff4d00;
-}
 
 .qh-submitbar {
   display: flex;
@@ -5007,8 +4653,6 @@ select.admin-input.compact-input {
 /* ───────── Tabel MCU: baris ringkas, aksi, paginasi ───────── */
 .mcu-records-toolbar { margin-bottom: 8px; min-height: 36px; padding: 5px 10px; }
 .mcu-records-table .mcu-records-action { padding: 0 4px; }
-.mcu-records-action-inner { display: flex; align-items: center; justify-content: center; gap: 2px; }
-.mcu-records-action-inner button { height: 22px; min-width: 24px; padding: 0 4px; }
 .mcu-th-inner { display: inline-flex; align-items: center; gap: 3px; max-width: 100%; }
 .mcu-th-label { overflow: hidden; text-overflow: ellipsis; }
 .mcu-th-label.is-filtered { color: #ff4d00; font-weight: 800; }
@@ -5037,7 +4681,7 @@ select.admin-input.compact-input {
   position: fixed; z-index: 9999; width: 290px;
   display: flex; flex-direction: column;
   border: 1px solid var(--border); border-radius: 10px;
-  background: var(--card, #fff); color: var(--foreground);
+  background: var(--popover); color: var(--foreground);
   box-shadow: 0 12px 32px rgba(0,0,0,.2);
   font-size: 12px; text-transform: none; letter-spacing: 0; font-weight: 400;
 }
@@ -5130,3 +4774,14 @@ select.admin-input.compact-input {
   background: rgba(255, 77, 0, 0.12);
   color: #ff4d00;
 }
+
+/* Latar semua <select> WAJIB solid (ditaruh paling akhir agar menang atas aturan
+   per-halaman yang memakai --accent/--card/--muted yang tembus pandang). */
+select:not([multiple]) {
+  background-color: var(--field-bg);
+}
+
+/* Panel daftar pilihan bawaan browser mengikuti tema aplikasi, supaya latarnya
+   solid dan teksnya terbaca di mode gelap maupun terang. */
+select { color-scheme: light; }
+.dark select { color-scheme: dark; }

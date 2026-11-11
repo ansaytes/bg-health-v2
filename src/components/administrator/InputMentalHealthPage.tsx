@@ -114,7 +114,7 @@ function barisHasil(body: any): ScoreLine[] {
 }
 
 export default function InputMentalHealthPage() {
-  const { query, setQuery, identity, searching, error, search, canSeeResult } = useEmployeeLookup('/api/mental-health');
+  const { query, setQuery, identity, searching, error, search } = useEmployeeLookup('/api/mental-health');
   const submit = useSubmitStatus();
 
   const [values, setValues] = useState<Record<string, string>>({});

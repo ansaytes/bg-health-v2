@@ -156,21 +156,9 @@ export default function InputLaggingIndicator() {
     return spells.length;
   };
 
-  /* Man Power state */
-  const [mpForm, setMpForm] = useState<Record<string, string>>({});
-  const [mpSaving, setMpSaving] = useState(false);
-  const [mpSaved, setMpSaved] = useState(false);
-  /** Nama jobsite ketik-manual pada form Man Power (bila pilih "Lainnya"). */
-  const [customMpSite, setCustomMpSite] = useState('');
-
   const handleChange = (id: string, value: string) => {
     setForm(prev => ({ ...prev, [id]: value }));
     setSaved(false);
-  };
-
-  const handleMpChange = (id: string, value: string) => {
-    setMpForm(prev => ({ ...prev, [id]: value }));
-    setMpSaved(false);
   };
 
   const handleEmployeeFound = useCallback((data: EmployeeData) => {
@@ -199,10 +187,6 @@ export default function InputLaggingIndicator() {
     setSaving(true);
     try {
       const siteVal = form.jobsite === '__custom__' ? customSite : form.jobsite;
-      const monthMap: Record<string, string> = {
-        'Januari':'1','Februari':'2','Maret':'3','April':'4','Mei':'5','Juni':'6',
-        'Juli':'7','Agustus':'8','September':'9','Oktober':'10','November':'11','Desember':'12',
-      };
       const bulanVal = form.bulan || '';
       const res = await fetch('/api/sick-employees', {
         method: 'POST',
@@ -229,34 +213,6 @@ export default function InputLaggingIndicator() {
       setErrorMsg(err instanceof Error ? err.message : 'Gagal menyimpan data');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleMpSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setMpSaving(true);
-    setErrorMsg('');
-    try {
-      const siteVal = mpForm.mpSite === '__custom__' ? customMpSite : mpForm.mpSite;
-      const monthNum = MONTHS.indexOf(mpForm.mpBulan || '') + 1;
-      const res = await fetch('/api/manpower', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobsite: siteVal, bulan: String(monthNum), tahun: mpForm.mpTahun || '2026',
-          man_power: mpForm.mpManPower, kunjungan_klinik: mpForm.mpKunjungan || '0',
-          hari_kerja: mpForm.mpHariKerja || '0',
-        }),
-      });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error || 'Gagal menyimpan');
-      setMpSaved(true);
-      setMpForm({});
-      setTimeout(() => setMpSaved(false), 3000);
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Gagal menyimpan data');
-    } finally {
-      setMpSaving(false);
     }
   };
 

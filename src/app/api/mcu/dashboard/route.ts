@@ -1,38 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { decryptMCURecord } from '@/lib/encryption';
+import { normalizeArea } from '@/lib/mcu-monitor';
 import { siteDihitung } from '@/lib/site-filter';
 import { getServerCaller, requireServerRole, STAFF_ROLES } from '@/lib/server-auth';
 import { integrationAdminClient } from '@/lib/integration-settings';
 
 const client = () => integrationAdminClient();
-
-const SITE_AREAS: Record<string, string> = Object.fromEntries(
-  Object.entries({
-    'Area 1': [
-      'Satui', 'Angsana', 'Tanjung Tabalong', 'Rantau', 'Binuang', 'Senakin', 'Kota Baru',
-      'Batu Kajang', 'Ketapang', 'Kapuas Tengah', 'Murung Raya', 'Muara Teweh', 'Tuhup',
-      'Gunung Mas', 'Banjar Baru',
-    ],
-    'Area 2': [
-      'Bontang', 'Samarinda', 'Tenggarong', 'Tabang', 'Gunung Sari', 'Bukit Pinang',
-      'Sangatta', 'Bengalon', 'Kaliorang', 'Kaubun', 'Balikpapan', 'Melak',
-    ],
-    'Area 3': [
-      'Muara Enim', 'Lahat', 'Muara Bungo', 'Banyuwangi', 'Wetar', 'Kotamobagu', 'Konawe',
-      'Halmahera Timur', 'Gorontalo', 'Aceh', 'Palu', 'Malinau', 'Kelubir', 'Tanjung Redeb',
-      'Labanan', 'Binungan', 'Bunyu', 'Sebakis', 'Morowali', 'Luwu', 'Soroako', 'Kayong Utara',
-    ],
-  }).flatMap(([area, sites]) => sites.map(site => [site.toLowerCase(), area])),
-);
-
-function normalizeArea(rawArea: unknown, site: unknown): string {
-  const area = String(rawArea || '').trim().toLowerCase();
-  if (area === '1' || area === 'area 1') return 'Area 1';
-  if (area === '2' || area === 'area 2') return 'Area 2';
-  if (area === '3' || area === 'area 3') return 'Area 3';
-  if (area === 'head office' || area === 'ho') return 'HO';
-  return SITE_AREAS[String(site || '').trim().toLowerCase()] || '';
-}
 
 function normalizeMcuStatus(value: unknown, exempt: boolean, masaBerlaku?: unknown) {
   const status = String(value || '').trim().toLowerCase();

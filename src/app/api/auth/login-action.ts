@@ -1,5 +1,5 @@
 // Login action extracted from src/app/api/auth/route.ts.
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { decryptEmployee, hashField } from '@/lib/encryption';
 import {
@@ -7,6 +7,7 @@ import {
   legacyIdentityValues,
   type EmployeeLoginProfile,
 } from '@/lib/auth-employee-profile';
+import { orEq } from '@/lib/sql-safety';
 
 export function isNumericIdentifier(username: string): boolean {
   return /^\d+$/.test(username);
@@ -35,7 +36,7 @@ export async function resolveEmployeeLogin(
   const { data: employees, error: employeeError } = await supabaseAdmin
     .from('employees')
     .select('nik,nik_hash,national_id,national_id_hash,nama,site_name,employment_status')
-    .or(`nik_hash.eq.${identifierHash},national_id_hash.eq.${identifierHash}`)
+    .or(`${orEq('nik_hash', identifierHash)},${orEq('national_id_hash', identifierHash)}`)
     .ilike('employment_status', 'Aktif')
     .limit(2);
   if (employeeError) {
@@ -95,7 +96,6 @@ export async function resolveEmployeeLogin(
 }
 
 export async function handleLogin(
-  req: NextRequest,
   body: Record<string, unknown>,
   ctx: { supabase: SupabaseClient; supabaseAdmin: SupabaseClient; supabaseServiceKey: string },
 ): Promise<NextResponse> {

@@ -260,30 +260,89 @@ export const NO_DATA_TEXT = 'No Data';
 const clean = (v: unknown) => (v == null ? '' : String(v).trim());
 
 /**
- * Tahap follow up dari paling kanan (terbaru) ke kiri. Pasangan
- * kesimpulan -> rekomendasi yang mengikutinya:
- *   kesimpulan_fu3 -> rek_fu4,  kesimpulan_fu2 -> rek_fu3,
- *   kesimpulan_fu1 -> rek_fu2,  kes_vendor     -> rek_fu
+ * Aturan penutupan follow up (SATU-SATUNYA definisi; view `monitor_mcu` meniru
+ * persis aturan ini di SQL):
+ *   - otomatis: zona Hijau DAN tidak ada parameter abnormal tersisa
+ *     (trigger STD/006 maupun rujukan nasional), atau
+ *   - dikonfirmasi paramedis (tombol "Konfirmasi paramedis").
+ * `sisa` null = tidak diketahui (data migrasi lama): dianggap tidak ada sisa.
  */
-const FU_STAGES: Array<{ kesimpulan: string; rekomendasi: string }> = [
-  { kesimpulan: 'kesimpulan_fu3', rekomendasi: 'rek_fu4' },
-  { kesimpulan: 'kesimpulan_fu2', rekomendasi: 'rek_fu3' },
-  { kesimpulan: 'kesimpulan_fu1', rekomendasi: 'rek_fu2' },
-  { kesimpulan: 'kes_vendor', rekomendasi: 'rek_fu' },
-];
+export function tindakLanjutDitutup(fu: { paramedis: boolean; zona: string | null; sisa: number | null }): boolean {
+  if (fu.paramedis) return true;
+  return clean(fu.zona).toLowerCase() === 'hijau' && (fu.sisa ?? 0) === 0;
+}
 
-export function getFollowUp(rec: RecordLike | null): { status: string; kesimpulan: string } {
+/** Satu follow up yang sudah selesai (baris `followups_prokawan`, selesai = true). */
+export interface FollowUpRingkas {
+  /** Tanggal aktual follow up (YYYY-MM-DD). */
+  aktual: string;
+  /** Kunjungan ke-N (urutan kronologis seluruh follow up peserta). */
+  ke: number | null;
+  /** Zona hasil hitung ulang setelah follow up. */
+  zona: string | null;
+  /** 'membaik' | 'tetap' | 'memburuk' | 'tidak-dapat-dinilai'. */
+  arah: string | null;
+  /** Jumlah parameter yang masih abnormal setelah follow up ini. */
+  sisa: number | null;
+  /** Ditutup manual lewat konfirmasi paramedis. */
+  paramedis: boolean;
+}
+
+export interface StatusFollowUp { status: string; kesimpulan: string }
+
+/**
+ * Status dari follow up terbaru yang dilakukan SESUDAH MCU terakhir.
+ * Follow up yang lebih tua dari MCU terakhir milik baseline sebelumnya,
+ * jadi diabaikan. Null bila belum ada follow up pada MCU terakhir.
+ *
+ * Sumber alur baru: `followups_prokawan`. Ditutup = `tindakLanjutDitutup`.
+ */
+export function ringkasFollowUp(tglMcu: Date | null, daftar: FollowUpRingkas[]): StatusFollowUp | null {
+  const berlaku = daftar
+    .map(fu => ({ fu, tgl: parseDate(fu.aktual) }))
+    .filter((x): x is { fu: FollowUpRingkas; tgl: Date } => !!x.tgl && (!tglMcu || x.tgl >= tglMcu))
+    .sort((a, b) => a.tgl.getTime() - b.tgl.getTime() || (a.fu.ke ?? 0) - (b.fu.ke ?? 0));
+  const terakhir = berlaku[berlaku.length - 1];
+  if (!terakhir) return null;
+
+  const { fu, tgl } = terakhir;
+  const zona = clean(fu.zona);
+  const ke = fu.ke ? `ke-${fu.ke}` : 'terakhir';
+  const arah = ['membaik', 'tetap', 'memburuk'].includes(clean(fu.arah)) ? `, ${clean(fu.arah)}` : '';
+  const sisa = fu.sisa && fu.sisa > 0 ? `, ${fu.sisa} parameter masih abnormal` : '';
+  const ditutup = tindakLanjutDitutup(fu);
+  const penutup = fu.paramedis ? ' [dikonfirmasi paramedis]' : '';
+  const kesimpulan = `FU ${ke} (${formatDate(tgl)}): ${zona ? `Zona ${zona}` : 'zona belum dihitung'}${arah}${sisa}${penutup}`;
+
+  if (ditutup) return { status: 'Close: FTW', kesimpulan };
+  return { status: zona ? `Open: FU ${ke} - Zona ${zona}` : `Open: FU ${ke}`, kesimpulan };
+}
+
+/**
+ * Status follow up peserta pada MCU terakhirnya.
+ *   1. Ada follow up sesudah MCU terakhir → ikuti follow up terbaru.
+ *   2. Belum ada → baseline MCU itu sendiri: kesimpulan vendor Unfit = Close: UNFIT;
+ *      selain itu `perlu_fu` (otomatis dari temuan abnormal): Tidak = Close: FTW,
+ *      Ya = Open + rekomendasi.
+ */
+export function getFollowUp(
+  rec: RecordLike | null,
+  tglMcu: Date | null = null,
+  daftar: FollowUpRingkas[] = [],
+): StatusFollowUp {
   if (!rec) return { status: '', kesimpulan: '' };
-  for (const stage of FU_STAGES) {
-    const value = clean(rec[stage.kesimpulan]);
-    if (!value) continue;
-    const lower = value.toLowerCase();
-    if (lower === 'fit to work' || lower === 'fit') return { status: 'Close: FTW', kesimpulan: value };
-    if (lower === 'unfit') return { status: 'Close: UNFIT', kesimpulan: value };
-    const rek = clean(rec[stage.rekomendasi]);
+  const dariFollowUp = ringkasFollowUp(tglMcu, daftar);
+  if (dariFollowUp) return dariFollowUp;
+
+  const value = clean(rec.kes_vendor);
+  if (value.toLowerCase() === 'unfit') return { status: 'Close: UNFIT', kesimpulan: value };
+  const perlu = clean(rec.perlu_fu).toLowerCase();
+  if (perlu === 'tidak') return { status: 'Close: FTW', kesimpulan: value };
+  if (perlu === 'ya') {
+    const rek = clean(rec.rek_fu);
     return { status: rek ? `Open: FU - ${rek}` : 'Open: FU', kesimpulan: value };
   }
-  return { status: '', kesimpulan: '' };
+  return { status: '', kesimpulan: value };
 }
 
 // ------------------------------------------------------------ masa berlaku --

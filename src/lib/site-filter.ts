@@ -27,11 +27,3 @@ export function siteDihitung(site: unknown): boolean {
   return !siteBatch(s);
 }
 
-/**
- * Menyaring array baris berdasarkan kolom site.
- * Nama kolom bisa berbeda (`site`, `site_name`, `jobsite`) — pemanggil
- * menentukan sendiri lewat `pick`.
- */
-export function tanpaBatch<T>(rows: T[], pick: (row: T) => unknown): T[] {
-  return rows.filter((r) => siteDihitung(pick(r)));
-}

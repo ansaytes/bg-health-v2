@@ -4,6 +4,7 @@ import {
   buildAutomaticFollowUpRecommendations,
 } from '@/lib/mcu-calculations';
 import { MCU_FIELDS, buildUlComposite, parseUlToParams } from '@/lib/mcu-fields';
+import { interpretAudiometry, interpretSpirometry } from '@/lib/clinical-classification';
 
 const maleBase = {
   jenisKelamin: 'Laki - Laki',
@@ -172,11 +173,18 @@ describe('applyMCUCalculations derived fields', () => {
     expect(applyMCUCalculations({ ...maleBase }).diabetes).toBeNull();
   });
 
-  it('computes PTA from available audiometry frequencies only', () => {
-    const all = applyMCUCalculations({ ...maleBase, acr_500: 20, acr_1k: 30, acr_2k: 40, acr_4k: 50 });
-    expect(all.pta).toBe(35);
-    const partial = applyMCUCalculations({ ...maleBase, acr_500: 10 });
-    expect(partial.pta).toBe(10);
+  it('PTA = rata-rata 4 frekuensi telinga yang lebih baik (STD/033 6.4)', () => {
+    const both = applyMCUCalculations({
+      ...maleBase,
+      acr_500: 20, acr_1k: 30, acr_2k: 40, acr_4k: 50, // kanan 35
+      acl_500: 10, acl_1k: 10, acl_2k: 20, acl_4k: 30, // kiri 17,5 → dibulatkan 18
+    });
+    expect(both.pta).toBe(18);
+    const rightOnly = applyMCUCalculations({ ...maleBase, acr_500: 20, acr_1k: 30, acr_2k: 40, acr_4k: 50 });
+    expect(rightOnly.pta).toBe(35);
+    // Telinga yang frekuensinya belum lengkap tidak dihitung.
+    const incomplete = applyMCUCalculations({ ...maleBase, acr_500: 10 });
+    expect(incomplete.pta).toBeUndefined();
     const none = applyMCUCalculations({ ...maleBase });
     expect(none.pta).toBeUndefined();
   });
@@ -342,5 +350,71 @@ describe('urinalisis per parameter', () => {
     const legacy = applyMCUCalculations({ ...maleBase, ul: 'Warna: Kuning\nDarah: 1+' });
     expect(legacy.ul).toBe('Warna: Kuning\nDarah: 1+');
     expect(legacy.itemFU).toContain('UL :');
+  });
+});
+
+
+describe('interpretSpirometry', () => {
+  it('normal bila FVC & FEV1 ≥80% dan rasio ≥70%', () => {
+    const text = interpretSpirometry({ fvcPct: '95', fev1Pct: '92', fev1FvcAct: '0,85' });
+    expect(text).toMatch(/^Normal/);
+  });
+
+  it('obstruksi bila rasio <70%, dengan derajat dari FEV1', () => {
+    const text = interpretSpirometry({ fvcPct: '85', fev1Pct: '60', fev1FvcAct: '0.62' });
+    expect(text).toMatch(/^Obstruksi sedang/);
+    expect(text).not.toMatch(/normal/i); // kata "normal" akan membuat abnormal() menganggapnya normal
+  });
+
+  it('suspek restriksi bila FVC rendah dengan rasio baik', () => {
+    const text = interpretSpirometry({ fvcPct: '65', fev1Pct: '70', fev1FvcAct: '0,84' });
+    expect(text).toMatch(/restriksi/i);
+    expect(text).not.toMatch(/normal/i);
+  });
+
+  it('campuran bila rasio rendah dan FVC rendah', () => {
+    const text = interpretSpirometry({ fvcPct: '60', fev1Pct: '45', fev1FvcAct: '0,60' });
+    expect(text).toMatch(/obstruksi/i);
+    expect(text).toMatch(/restriksi/i);
+  });
+
+  it('kosong bila belum ada data, atau metode Manual', () => {
+    expect(interpretSpirometry({})).toBe('');
+    expect(interpretSpirometry({ spiMetode: 'Manual (tulis sendiri)', fvcPct: '60', fev1Pct: '50', fev1FvcAct: '0,6' })).toBe('');
+  });
+});
+
+describe('interpretAudiometry', () => {
+  const normalEar = (side: 'acr' | 'acl') => ({
+    [`${side}_500`]: '10', [`${side}_1k`]: '10', [`${side}_2k`]: '15', [`${side}_3k`]: '15',
+    [`${side}_4k`]: '15', [`${side}_6k`]: '10', [`${side}_8k`]: '10',
+  });
+
+  it('normal bila PTA ≤25 dB di kedua telinga', () => {
+    expect(interpretAudiometry({ ...normalEar('acr'), ...normalEar('acl') })).toMatch(/^Normal/);
+  });
+
+  it('mendeteksi gangguan dengar dan takik 4 kHz', () => {
+    const text = interpretAudiometry({
+      ...normalEar('acr'),
+      acl_500: '15', acl_1k: '15', acl_2k: '20', acl_3k: '40', acl_4k: '60', acl_6k: '45', acl_8k: '20',
+    });
+    expect(text).toMatch(/takik/i);
+    expect(text).toMatch(/kiri/i);
+    expect(text).not.toMatch(/normal/i);
+  });
+
+  it('kosong bila keempat frekuensi PTA belum lengkap', () => {
+    expect(interpretAudiometry({ acr_500: '10', acr_1k: '10', acr_2k: '10' })).toBe('');
+  });
+});
+
+describe('interpretasi terhubung ke engine kalkulasi', () => {
+  it('abnormal spirometri masuk diagnosis/follow up', () => {
+    const result = applyMCUCalculations({
+      jenisKelamin: 'Laki - Laki', usia: 45,
+      fvcAct: '3.0', fvcPred: '4.0', fev1Act: '1.5', fev1Pred: '3.2',
+    }) as Record<string, unknown>;
+    expect(String(result.spiInterp ?? '')).toMatch(/obstruksi/i);
   });
 });

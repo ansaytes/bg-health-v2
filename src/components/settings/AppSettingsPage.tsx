@@ -8,7 +8,7 @@
 // Pola UI mengikuti tema aplikasi (var(--card)/var(--border)).
 
 import { useEffect, useState } from 'react';
-import { Building2, Clock, Hospital, Save, Loader2, Users, Plug } from 'lucide-react';
+import { Building2, Clock, Hospital, Save, Loader2, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/lib/use-app-settings';
@@ -17,14 +17,16 @@ import { DEFAULT_SETTINGS, type AppSettings } from '@/lib/app-settings';
 import CenteredTabs from '@/components/ui/centered-tabs';
 import UserManagement from '@/components/administrator/UserManagement';
 import IntegrationSettings from '@/components/settings/IntegrationSettings';
+import HitungUlangData from '@/components/settings/HitungUlangData';
 
-type Tab = 'perusahaan' | 'pak' | 'faskes' | 'integrasi' | 'pengguna';
+type Tab = 'perusahaan' | 'pak' | 'faskes' | 'integrasi' | 'pemeliharaan' | 'pengguna';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'perusahaan', label: 'Perusahaan' },
   { key: 'pak', label: 'Batas Waktu PAK' },
   { key: 'faskes', label: 'Faskes & BPJS' },
   { key: 'integrasi', label: 'Integrasi' },
+  { key: 'pemeliharaan', label: 'Pemeliharaan Data' },
   { key: 'pengguna', label: 'Kelola Pengguna' },
 ];
 
@@ -79,7 +81,7 @@ export default function AppSettingsPage() {
             Identitas perusahaan dan konfigurasi operasional aplikasi.
           </p>
         </div>
-        {canEdit && tab !== 'integrasi' && (
+        {canEdit && tab !== 'integrasi' && tab !== 'pemeliharaan' && (
           <Button onClick={handleSave} disabled={saving || loading} className="h-10 rounded-xl">
             {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
             Simpan
@@ -119,6 +121,7 @@ export default function AppSettingsPage() {
 
       <div className="app-settings-content">
         {tab === 'integrasi' && <IntegrationSettings canEdit={canEdit} />}
+        {tab === 'pemeliharaan' && <HitungUlangData canEdit={canEdit} />}
         {tab === 'perusahaan' && (
           <section style={{ background: 'var(--card)', borderRadius: 12, padding: 16, border: '1px solid var(--border)' }}>
             <div className="flex items-center gap-2 mb-3">

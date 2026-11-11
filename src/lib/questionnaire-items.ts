@@ -114,9 +114,6 @@ export const DASS21_OPTIONS: ScaleOption[] = [
   { value: 3, label: 'Sangat sesuai dengan saya, atau sering sekali' },
 ];
 
-/** Label ringkas untuk header kolom. Teks lengkap ada di atas. */
-export const DASS21_OPTION_LABELS = ['Tidak pernah', 'Kadang-kadang', 'Lumayan sering', 'Sering sekali'];
-
 const D21 = (id: string, text: string): QuestionnaireItem => ({ id, text, options: DASS21_OPTIONS });
 
 export const DASS21_ITEMS: QuestionnaireItem[] = [
@@ -174,9 +171,6 @@ export const SDS_OPTIONS: ScaleOption[] = [
   { value: 6, label: 'Sangat sering / sangat sesuai' },
   { value: 7, label: 'Selalu / sangat sesuai sekali' },
 ];
-
-/** Label ringkas untuk header kolom. */
-export const SDS_OPTION_LABELS = ['1', '2', '3', '4', '5', '6', '7'];
 
 /**
  * Enam indikator SDS-30, masing-masing 5 nomor item — sesuai Lampiran

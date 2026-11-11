@@ -16,7 +16,7 @@
 // memaksanya hanya akan menghasilkan data palsu.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Check, Loader2, Plus, RefreshCw, Wrench, X } from 'lucide-react';
+import { AlertTriangle, Check, Loader2, Plus, RefreshCw, Wrench } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

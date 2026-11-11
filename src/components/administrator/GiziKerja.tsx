@@ -15,12 +15,9 @@
 // preskripsi diet. Kebutuhan individu dengan kondisi medis ditetapkan dokter.
 
 import { useCallback, useEffect, useState } from 'react';
-import { Calculator, Info, Loader2, RefreshCw, Search } from 'lucide-react';
+import { Calculator, Loader2, RefreshCw } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { authFetch } from '@/lib/api-client';
-import { useMCUStore } from '@/lib/store';
 import { FAKTOR_AKTIVITAS, type BebanKerja } from '@/lib/gizi-kerja';
 import EmployeeLookupInput from '@/components/administrator/EmployeeLookupInput';
 
@@ -32,7 +29,6 @@ interface Hasil {
 }
 
 export default function GiziKerja() {
-  const store = useMCUStore();
   const [nik, setNik] = useState('');
   const [beban, setBeban] = useState<BebanKerja | ''>('');
   const [hasil, setHasil] = useState<Hasil | null>(null);

@@ -41,8 +41,6 @@ export async function GET(request: NextRequest) {
     const jobsite = searchParams.get('jobsite') || '';
     const bulan = searchParams.get('bulan') || '';
     const tahun = searchParams.get('tahun') || '';
-    const periodStart = searchParams.get('period_start') || '';
-    const periodEnd = searchParams.get('period_end') || '';
 
     let query = supabaseData()
       .from('sick_employees')

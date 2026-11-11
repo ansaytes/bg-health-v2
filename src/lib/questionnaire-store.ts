@@ -23,6 +23,7 @@ import { decryptEmployee, decryptMCURecord, encryptMCURecord, hashField } from '
 import { MCU_FIELDS } from '@/lib/mcu-fields';
 import { applyMCUCalculations } from '@/lib/mcu-calculations';
 import { integrationAdminClient } from '@/lib/integration-settings';
+import { sanitizeSearchTerm, containsPattern } from '@/lib/sql-safety';
 
 export function adminClient() {
   return integrationAdminClient();
@@ -50,16 +51,6 @@ export async function getCaller(req: NextRequest): Promise<CallerProfile | null>
   const token = req.headers.get('authorization')?.replace('Bearer ', '')
     || req.cookies.get('sb-access-token')?.value;
   if (!token) return null;
-  if (process.env.NODE_ENV !== 'production'
-    && token === 'preview-access-token'
-    && process.env.NEXT_PUBLIC_PREVIEW_ROLE) {
-    return {
-      role: process.env.NEXT_PUBLIC_PREVIEW_ROLE,
-      userId: 'preview-0000-0000-0000-000000000001',
-      employeeNikHash: null,
-      mustChangePassword: false,
-    };
-  }
   const { data: { user } } = await client.auth.getUser(token);
   if (!user) return null;
   if (user.app_metadata?.approval_pending === true) return null;
@@ -122,17 +113,6 @@ export function denyUnlessOwnEmployee(
   if (canWriteQuestionnaires(caller)) return null;
   if (!caller.employeeNikHash || caller.employeeNikHash !== identity.nikKaryawanHash) {
     return NextResponse.json({ error: 'Akun ini hanya dapat mengakses kuesioner milik sendiri.' }, { status: 403 });
-  }
-  return null;
-}
-
-/** Dipakai endpoint lain yang tetap mewajibkan login. */
-export function denyUnlessWriter(caller: CallerProfile | null): NextResponse | null {
-  if (!caller) {
-    return NextResponse.json({ error: 'Sesi tidak ditemukan. Silakan masuk kembali.' }, { status: 401 });
-  }
-  if (!ALLOWED_ROLES.includes(caller.role)) {
-    return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
   }
   return null;
 }
@@ -200,12 +180,13 @@ export async function findEmployeeIdentity(query: string): Promise<EmployeeIdent
     }
     matches = nikResult.data?.length ? nikResult.data : nationalIdResult.data;
   } else {
-    const nameQuery = trimmed.replace(/[%_\\]/g, '').trim();
-    if (nameQuery.length < 3) return null;
+    const nameQuery = sanitizeSearchTerm(trimmed);
+    const namePattern = nameQuery.length >= 3 ? containsPattern(nameQuery) : null;
+    if (!namePattern) return null;
     const { data, error } = await client
       .from('employees')
       .select(columns)
-      .ilike('nama', `%${nameQuery}%`)
+      .ilike('nama', namePattern)
       .limit(5);
     if (error) {
       console.error('[Questionnaire] Employee name lookup failed:', error.code);
@@ -402,7 +383,7 @@ export async function recomputeMCU(recordId: string): Promise<string | null> {
  * tanggal. Bila baris untuk tanggal yang sama sudah ada, isinya diperbarui
  * (menimpa), bukan ditambahkan.
  */
-export async function upsertQuestionnaire<T>(
+export async function upsertQuestionnaire(
   table: string,
   nikKaryawanHash: string,
   date: string,

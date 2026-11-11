@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
-import { MCU_FIELDS, TOTAL_COLS, parseUlToParams } from './mcu-fields';
+import { MCU_FIELDS, parseUlToParams } from './mcu-fields';
 import { getMissingZonasiInputs } from './zonasi-engine';
 import { applyMCUCalculations, buildAutomaticFollowUpRecommendations, suggestRekQSHE } from './mcu-calculations';
+import { AUTO_INTERPRETATION_FIELDS } from './clinical-classification';
 
 export type PageTab = 'home' | 'dashboard' | 'data-entry' | 'administrator';
-export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan' | 'layanan-kuratif' | 'inventory-dashboard' | 'hearing-dashboard' | 'ergonomi-dashboard' | 'mental-health-dashboard' | 'pemetaan-psikologis' | 'higiene-industri' | 'persetujuan-ergonomi' | 'prokawan-dashboard' | 'laporan-mingguan' | 'spip';
+export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan' | 'layanan-kuratif' | 'inventory-dashboard' | 'hearing-dashboard' | 'ergonomi-dashboard' | 'mental-health-dashboard' | 'pemetaan-psikologis' | 'higiene-industri' | 'persetujuan-ergonomi' | 'prokawan-dashboard' | 'spip';
 export type AdminSidebar = 'lagging-indicator' | 'review-mcu' | 'input-jadwal-mcu' | 'kunjungan-admin' | 'health-campaign' | 'kelola-pengguna' | 'hearing-conservation' | 'ergonomi' | 'layanan-kuratif-admin' | 'higiene-industri-admin' | 'pak-register' | 'prokawan-admin' | 'karyawan-sakit' | 'sarana-klinik' | 'inspeksi-sanitasi' | 'pengaturan';
 export type DataEntrySidebar = 'gangguan-tidur' | 'kesehatan-mental' | 'psikologi-lingkungan' | 'input-jadwal-mcu' | 'persetujuan-ergonomi';
 export type HomeSidebar = 'semua-feed' | 'health-campaign' | 'health-talk' | 'podcast' | 'news';
@@ -21,16 +22,6 @@ export interface EmployeeData {
   usia: string;
   department?: string;
   division?: string;
-}
-
-export interface SheetConfig {
-  id: string;
-  name: string;
-  spreadsheetId: string;
-  sheetName: string;
-  dataStartRow: number;
-  totalCols: number;
-  isDefault: boolean;
 }
 
 interface MCUStore {
@@ -67,6 +58,13 @@ interface MCUStore {
   formData: Record<string, string>;
   autoRekFU: string;
   autoRekQSHE: string;
+  /**
+   * Teks interpretasi (spirometri/audiometri) yang terakhir ditulis OTOMATIS,
+   * per id field. Field hanya ditimpa ulang bila isinya masih sama dengan teks
+   * ini; begitu operator mengetik sendiri, pelacak dikosongkan dan tulisannya
+   * dipertahankan.
+   */
+  autoInterp: Record<string, string>;
   /** Zona hasil kalkulasi terakhir, untuk tampilan ringkasan. */
   zonasi: string;
   /**
@@ -86,22 +84,12 @@ interface MCUStore {
   saving: boolean;
   setSaving: (v: boolean) => void;
 
-  // Sheet config
-  sheetConfigs: SheetConfig[];
-  activeSheetId: string | null;
-  setSheetConfigs: (configs: SheetConfig[]) => void;
-  setActiveSheetId: (id: string | null) => void;
-
   // Toast
-  toast: { message: string; type: 'success' | 'error' | 'info' } | null;
   showToast: (message: string, type: 'success' | 'error' | 'info') => void;
-  clearToast: () => void;
 
   // Auto-calc
   runAutoCalcs: () => void;
 
-  // Build row data for sheet
-  buildRowData: () => string[];
 }
 
 function initialFormData(): Record<string, string> {
@@ -136,6 +124,7 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
   formData: initialFormData(),
   autoRekFU: '',
   autoRekQSHE: '',
+  autoInterp: {},
   zonasi: '',
   parameterBelumDinilai: [],
   setFieldValue: (id, value) => {
@@ -143,6 +132,8 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
       formData: { ...state.formData, [id]: value },
       ...(id === 'rekFU' ? { autoRekFU: '' } : {}),
       ...(id === 'rekQSHE' ? { autoRekQSHE: '' } : {}),
+      // Ketikan operator pada kolom interpretasi = tulisan manual.
+      ...(id in AUTO_INTERPRETATION_FIELDS ? { autoInterp: { ...state.autoInterp, [id]: '' } } : {}),
     }));
     // Trigger auto-calcs after a short delay
     setTimeout(() => get().runAutoCalcs(), 0);
@@ -160,14 +151,23 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
         }
       }
     }
-    set(state => ({
-      formData: { ...state.formData, ...normalized },
-      ...('rekFU' in data ? { autoRekFU: '' } : {}),
-      ...('rekQSHE' in data ? { autoRekQSHE: '' } : {}),
-    }));
+    set(state => {
+      // Interpretasi yang datang dari OCR / record tersimpan dianggap tulisan
+      // pemeriksa, bukan teks otomatis, jadi tidak ditimpa saat angka berubah.
+      const autoInterp = { ...state.autoInterp };
+      for (const key of Object.keys(AUTO_INTERPRETATION_FIELDS)) {
+        if (key in data && String(data[key] ?? '').trim() !== '') autoInterp[key] = '';
+      }
+      return {
+        formData: { ...state.formData, ...normalized },
+        autoInterp,
+        ...('rekFU' in data ? { autoRekFU: '' } : {}),
+        ...('rekQSHE' in data ? { autoRekQSHE: '' } : {}),
+      };
+    });
     setTimeout(() => get().runAutoCalcs(), 0);
   },
-  resetForm: () => set({ formData: initialFormData(), autoRekFU: '', autoRekQSHE: '', zonasi: '', parameterBelumDinilai: [], employee: null, reviewStep: 'search', ocrEnabled: false }),
+  resetForm: () => set({ formData: initialFormData(), autoRekFU: '', autoRekQSHE: '', autoInterp: {}, zonasi: '', parameterBelumDinilai: [], employee: null, reviewStep: 'search', ocrEnabled: false }),
 
   searchingEmployee: false,
   setSearchingEmployee: (v) => set({ searchingEmployee: v }),
@@ -176,20 +176,11 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
   saving: false,
   setSaving: (v) => set({ saving: v }),
 
-  sheetConfigs: [],
-  activeSheetId: null,
-  setSheetConfigs: (configs) => set({ sheetConfigs: configs }),
-  setActiveSheetId: (id) => set({ activeSheetId: id }),
-
-  toast: null,
   showToast: (message, type) => {
-    set({ toast: { message, type } });
     if (type === 'success') toast.success(message);
     else if (type === 'error') toast.error(message);
     else toast.info(message);
-    setTimeout(() => set({ toast: null }), 3000);
   },
-  clearToast: () => set({ toast: null }),
 
   runAutoCalcs: () => {
     const currentState = get();
@@ -199,13 +190,35 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
     // dipakai server saat menyimpan (applyMCUCalculations). Menyalin
     // rumusnya di sini pernah menyebabkan hasil form berbeda dengan
     // hasil tersimpan, jadi salinan itu dihapus.
-    const calculated = applyMCUCalculations({ ...fd }) as Record<string, unknown>;
+    //
+    // Interpretasi spirometri/audiometri ikut dihitung di sini karena diagnosis
+    // dan zonasi membaca teksnya. Teks hanya ditimpa bila kolom masih kosong
+    // atau masih berisi teks otomatis sebelumnya (lihat autoInterp); tulisan
+    // manual selalu dipertahankan.
+    //
+    // Kolom yang masih kosong / berisi teks otomatis dikosongkan dulu agar
+    // applyMCUCalculations membangunnya ulang dari angka TERBARU (FVC%/FEV1%
+    // yang dihitung di dalam engine yang sama), lalu hasilnya dilacak.
+    const input: Record<string, string> = { ...fd };
+    const autoKeys: string[] = [];
+    for (const key of Object.keys(AUTO_INTERPRETATION_FIELDS)) {
+      const current = (input[key] || '').trim();
+      const tracked = currentState.autoInterp[key] || '';
+      if (!current || /^n\/a$/i.test(current) || (tracked !== '' && current === tracked)) {
+        input[key] = '';
+        autoKeys.push(key);
+      }
+    }
+    const calculated = applyMCUCalculations(input) as Record<string, unknown>;
+    const nextAutoInterp: Record<string, string> = { ...currentState.autoInterp };
+    for (const key of autoKeys) {
+      nextAutoInterp[key] = String(calculated[key] ?? '');
+    }
 
     // Kolom yang boleh ditulis balik ke formstate.
     const CALCULATED_KEYS = [
       'bmi', 'mchc', 'pta',
       'fvcPct', 'fev1Pct', 'fev1FvcAct', 'fev1FvcPct',
-      'spiInterp', 'audInterp',
       'diabetes', 'egfr', 'tglExpired',
       'diagnosaMedis', 'ringkasanKuesioner', 'hasilKebugaran',
       'itemFU', 'perluFU',
@@ -221,6 +234,8 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
       if (value === null || value === undefined) continue;
       updates[key] = String(value);
     }
+    // Interpretasi otomatis (kosong bila data belum cukup).
+    for (const key of autoKeys) updates[key] = nextAutoInterp[key];
 
     // Rekomendasi follow up: pertahankan pilihan manual QSHE Medic.
     const automaticRecommendations = buildAutomaticFollowUpRecommendations(calculated as Record<string, string>).join(' | ');
@@ -253,31 +268,17 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
     if (changed
       || nextAutoRekFU !== currentState.autoRekFU
       || nextAutoRekQSHE !== currentState.autoRekQSHE
+      || autoKeys.some((key) => nextAutoInterp[key] !== (currentState.autoInterp[key] || ''))
       || zonasi !== currentState.zonasi
       || missingKey !== currentState.parameterBelumDinilai.join('|')) {
       set({
         formData: newFd,
         autoRekFU: nextAutoRekFU,
         autoRekQSHE: nextAutoRekQSHE,
+        autoInterp: nextAutoInterp,
         zonasi,
         parameterBelumDinilai: missing,
       });
     }
-  },
-
-  buildRowData: () => {
-    const fd = get().formData;
-    const row: string[] = new Array(TOTAL_COLS).fill('');
-
-    MCU_FIELDS.forEach(field => {
-      if (field.colIndex >= TOTAL_COLS) return;
-      const val = fd[field.id] || '';
-      row[field.colIndex] = val;
-    });
-
-    // Column A = auto number (will be set by sheet)
-    row[0] = '(auto)';
-
-    return row;
-  },
+  }
 }));

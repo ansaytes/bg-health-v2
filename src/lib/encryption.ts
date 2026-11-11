@@ -138,27 +138,6 @@ function looksEncrypted(value: string): boolean {
   return byteLength >= IV_LENGTH + TAG_LENGTH + 1 && (byteLength - IV_LENGTH - TAG_LENGTH) % 1 === 0;
 }
 
-/** Encrypt + compute hashes for employee fields */
-export function encryptEmployee(emp: Record<string, any>): Record<string, any> {
-  const result: Record<string, any> = { ...emp };
-
-  // Encrypt sensitive fields
-  for (const field of SENSITIVE_FIELDS) {
-    if (result[field] != null) {
-      result[field] = encrypt(String(result[field]));
-    }
-  }
-
-  // Compute deterministic hashes for lookup fields
-  for (const [field, hashCol] of Object.entries(LOOKUP_HASH_MAP)) {
-    if (emp[field] != null) {
-      result[hashCol] = hashField(String(emp[field]));
-    }
-  }
-
-  return result;
-}
-
 /** Decrypt sensitive fields, strip hash columns from response */
 export function decryptEmployee(emp: Record<string, any>): Record<string, any> {
   const result: Record<string, any> = { ...emp };

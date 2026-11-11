@@ -18,17 +18,6 @@ export async function getServerCaller(request: NextRequest): Promise<ServerCalle
   if (!token) return null;
   if (!supabaseUrl || !serviceKey) return null;
 
-  if (process.env.NODE_ENV !== 'production'
-    && token === 'preview-access-token'
-    && process.env.NEXT_PUBLIC_PREVIEW_ROLE) {
-    return {
-      userId: 'preview-0000-0000-0000-000000000001',
-      role: process.env.NEXT_PUBLIC_PREVIEW_ROLE,
-      site: null,
-      employeeNikHash: null,
-    };
-  }
-
   const client = createClient(supabaseUrl, serviceKey);
   const { data: { user }, error: authError } = await client.auth.getUser(token);
   if (authError || !user) return null;

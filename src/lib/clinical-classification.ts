@@ -25,6 +25,8 @@
 // revisi dokumen SOP, bukan lewat perubahan program.
 // ============================================================
 
+import { audiogramFromRecord, evaluateAudiogram, type Ear } from './hc-ergo';
+
 export type Gender = 'male' | 'female' | 'unknown';
 
 export type Severity = 'hijau' | 'kuning' | 'merah' | 'normal' | 'tidak-dinilai';
@@ -58,10 +60,6 @@ export function toNumber(value: string | number | null | undefined): number | nu
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export function isBlank(value: string | number | null | undefined): boolean {
-  return toNumber(value) === null && String(value ?? '').trim() === '';
-}
-
 /** Format angka gaya Indonesia: 1 decimal, koma sebagai pemisah desimal. */
 export function fmt(value: number, decimals = 1): string {
   return value.toFixed(decimals).replace('.', ',');
@@ -72,13 +70,6 @@ export function fmt(value: number, decimals = 1): string {
 //    SOP Hijau <140/90 · Kuning 140–159/90–99 · Merah ≥160/≥100
 //    Penamaan memakai "Grade" sesuai dokumen SOP (bukan "Stage").
 // ────────────────────────────────────────────────────────────
-
-export const BP_RULES = {
-  normalMax: { systolic: 140, diastolic: 90 },
-  grade1: { systolic: [140, 159], diastolic: [90, 99] },
-  grade2: { systolic: [160, 179], diastolic: [100, 109] },
-  grade3: { systolic: 180, diastolic: 110 },
-} as const;
 
 export function classifyBloodPressure(
   systolic: number | null,
@@ -273,7 +264,7 @@ export function classifyHdl(hdl: number | null, gender: Gender): Classification 
 //    SOP Kuning 7–9 mg/dL · Merah >9 mg/dL
 // ============================================================
 
-export function classifyUricAcid(au: number | null, gender: Gender): Classification | null {
+export function classifyUricAcid(au: number | null): Classification | null {
   if (au === null) return null;
   if (au > 9) return { severity: 'merah', label: 'Hyperuricemia', detail: `Uric Acid ${fmt(au)} mg/dL` };
   if (au >= 7) return { severity: 'kuning', label: 'Hyperuricemia', detail: `Uric Acid ${fmt(au)} mg/dL` };
@@ -335,27 +326,6 @@ export function classifyLiver(
 //    Kuning FEV1/FVC <70% dengan FEV1 50–79% prediksi
 //    Merah FEV1 <50% prediksi
 // ============================================================
-
-/**
- * Metode penilaian spirometri yang tersedia pada form.
- *
- * Referensi yang beredar memakai ambang berbeda, sehingga hasil interpretasi
- * bisa berubah hanya karena metode yang dipilih berbeda. Operator memilih
- * metode di form; engine memakai ambang metode tersebut.
- *
- *   PDPI 2016        — FEV1/FVC <70% = obstruktif; derajat dari FEV1 %pred
- *   GOLD 2024        — sama untuk diagnosis, derajat memakai batas 80/50/30
- *   ATS/ERS 2022     — memakai LLN (batas bawah normal), didekati dengan
- *                      FEV1/FVC <70% + FVC <80% untuk restriksi
- *   NHANES III       — memakai persentil ke-5; didekati dengan ambang 70%
- *   Manual           — interpretasi ditulis pemeriksa, engine tidak menilai
- */
-export type SpirometryMethod =
-  | 'PDPI 2016 (Indonesia)'
-  | 'GOLD 2024'
-  | 'ATS/ERS 2022 (GLI-2012)'
-  | 'NHANES III'
-  | 'Manual (tulis sendiri)';
 
 /** Ambang derajat obstruksi per metode, dari ringan ke berat. */
 const SPIROMETRY_THRESHOLDS: Record<string, { mild: number; moderate: number; severe: number }> = {
@@ -429,6 +399,66 @@ export function classifyLung(
 }
 
 // ────────────────────────────────────────────────────────────
+// Teks interpretasi spirometri (terisi otomatis di form MCU)
+//
+// Memakai ambang SPIROMETRY_THRESHOLDS yang sama dengan classifyLung, jadi
+// teks dan klasifikasi zona tidak bisa berbeda. Dua aturan penulisan:
+//  • temuan abnormal memuat kata "obstruksi"/"restriksi" (dibaca pemicu-pak.ts);
+//  • teks abnormal TIDAK boleh memuat kata "normal": abnormal() di
+//    mcu-calculations.ts menganggap teks berkata itu sebagai normal.
+// Spirometri saja tidak dapat memastikan restriksi (perlu TLC), maka "suspek".
+// ────────────────────────────────────────────────────────────
+type RawValues = Record<string, string | number | null | undefined>;
+
+function numberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const text = String(value).trim().replace(',', '.');
+  if (!text) return null;
+  const parsed = Number(text);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function interpretSpirometry(values: RawValues): string {
+  const metode = String(values.spiMetode ?? '').trim();
+  if (/^manual/i.test(metode)) return '';
+
+  const ambang = SPIROMETRY_THRESHOLDS[metode] ?? SPIROMETRY_THRESHOLDS['PDPI 2016 (Indonesia)'];
+  const fvcPct = numberOrNull(values.fvcPct);
+  const fev1Pct = numberOrNull(values.fev1Pct);
+  const ratio = numberOrNull(values.fev1FvcAct);
+  // Sama seperti classifyLung: rasio tersimpan desimal (0,83), >1,5 berarti persen.
+  const ratioPct = ratio === null ? null : ratio <= 1.5 ? ratio * 100 : ratio;
+  if (fvcPct === null && fev1Pct === null && ratioPct === null) return '';
+
+  const detail: string[] = [];
+  if (fvcPct !== null) detail.push(`FVC ${fmt(fvcPct, 0)}%`);
+  if (fev1Pct !== null) detail.push(`FEV1 ${fmt(fev1Pct, 0)}%`);
+  if (ratioPct !== null) detail.push(`FEV1/FVC ${fmt(ratioPct, 0)}%`);
+  const suffix = detail.length ? ` (${detail.join(', ')})` : '';
+
+  const obstruction = ratioPct !== null && ratioPct < 70;
+  const lowFvc = fvcPct !== null && fvcPct < ambang.mild;
+  const grade = fev1Pct === null ? ''
+    : fev1Pct >= ambang.mild ? ' ringan'
+    : fev1Pct >= ambang.moderate ? ' sedang'
+    : fev1Pct >= ambang.severe ? ' berat'
+    : ' sangat berat';
+
+  if (obstruction && lowFvc) return `Obstruksi${grade} dengan penurunan FVC, suspek gangguan campuran (obstruksi dan restriksi)${suffix}`;
+  if (obstruction) return `Obstruksi${grade}${suffix}`;
+  if (lowFvc && ratioPct !== null) {
+    const level = fvcPct! >= 70 ? ' ringan' : fvcPct! >= 50 ? ' sedang' : ' berat';
+    return `Suspek restriksi${level}, perlu konfirmasi pemeriksaan lanjutan${suffix}`;
+  }
+  if (ratioPct === null) {
+    if (fev1Pct !== null && fev1Pct < ambang.mild) return `Penurunan FEV1, pola belum dapat ditentukan karena rasio FEV1/FVC belum tersedia${suffix}`;
+    if (lowFvc) return `Penurunan FVC, pola belum dapat ditentukan karena rasio FEV1/FVC belum tersedia${suffix}`;
+  }
+  if (fev1Pct !== null && fev1Pct < ambang.mild) return `Penurunan FEV1 dengan rasio FEV1/FVC baik, perlu evaluasi lanjutan${suffix}`;
+  return `Normal${suffix}`;
+}
+
+// ────────────────────────────────────────────────────────────
 // 10. Pendengaran / NIHL — FKUI & Kemenkes RI 2011
 //     SOP Hijau ≤25 dB · Kuning 26–40 · Merah 41–90 atau >90
 // =============================================================
@@ -451,6 +481,74 @@ export function classifyHearing(pta: number | null, interpretasi: string | numbe
   if (/ringan|mild/.test(interp)) return { severity: 'kuning', label: 'Mild Noise-Induced Hearing Loss', detail: interp || undefined };
   return { severity: 'hijau', label: 'Normal Hearing', detail: interp || undefined };
 }
+
+// ────────────────────────────────────────────────────────────
+// Teks interpretasi audiometri (terisi otomatis di form MCU)
+//
+// Mengikuti STD/033 6.4 lewat hc-ergo.ts (modul Konservasi Pendengaran):
+// 4fPTA (500/1k/2k/4k) per telinga, dibulatkan, derajat Normal ≤25 | Ringan
+// 26–40 | Sedang 41–60 | Berat 61–80 | Sangat Berat ≥81; derajat menurut WHO
+// diambil dari telinga yang LEBIH BAIK. Aturan "jangan memuat kata normal
+// pada teks abnormal" sama seperti interpretSpirometry.
+// ────────────────────────────────────────────────────────────
+
+/** Takik (notch) khas bising: ambang 3/4/6 kHz ≥25 dB, ≥10 dB lebih buruk dari 1–2 kHz, pulih ≥10 dB di 8 kHz. */
+function findNoiseNotch(ear: Ear): string | null {
+  const eight = ear['8k'];
+  const low = [ear['1k'], ear['2k']].filter((v): v is number => v !== null);
+  if (eight === null || low.length === 0) return null;
+  let worst: { label: string; value: number } | null = null;
+  for (const [label, value] of [['3', ear['3k']], ['4', ear['4k']], ['6', ear['6k']]] as Array<[string, number | null]>) {
+    if (value !== null && (!worst || value > worst.value)) worst = { label, value };
+  }
+  if (!worst) return null;
+  return worst.value >= 25 && worst.value - Math.max(...low) >= 10 && worst.value - eight >= 10 ? `${worst.label} kHz` : null;
+}
+
+const HEARING_GRADE_TEXT = {
+  NORMAL: 'pendengaran baik',
+  RINGAN: 'gangguan dengar ringan',
+  SEDANG: 'gangguan dengar sedang',
+  BERAT: 'gangguan dengar berat',
+  SANGAT_BERAT: 'gangguan dengar sangat berat',
+} as const;
+
+export function interpretAudiometry(values: RawValues): string {
+  const audiogram = audiogramFromRecord(values);
+  if (!audiogram) return '';
+  const evaluation = evaluateAudiogram(audiogram);
+  const ears = [
+    { label: 'kanan', result: evaluation.kanan, ear: audiogram.r },
+    { label: 'kiri', result: evaluation.kiri, ear: audiogram.l },
+  ].filter((entry) => entry.result.avg4 !== null && entry.result.kelas !== null);
+  if (ears.length === 0) return '';
+
+  const notches = ears.map((entry) => findNoiseNotch(entry.ear));
+  const [first, second] = ears;
+  const asymmetric = !!second && Math.abs(first.result.avg4! - second.result.avg4!) >= 15;
+  const allGood = ears.every((entry, index) => entry.result.kelas === 'NORMAL' && !notches[index]);
+
+  if (allGood && !asymmetric) {
+    const pieces = ears.map((entry) => `${entry.label} ${fmt(Math.round(entry.result.avg4!), 0)} dB`);
+    return `Normal (PTA ${pieces.join(', ')})`;
+  }
+
+  const parts = ears.map((entry, index) => {
+    const notch = notches[index] ? `, tampak takik (notch) pada ${notches[index]} sugestif paparan bising` : '';
+    return `Telinga ${entry.label}: ${HEARING_GRADE_TEXT[entry.result.kelas!]} (PTA ${fmt(Math.round(entry.result.avg4!), 0)} dB)${notch}`;
+  });
+  if (asymmetric) parts.push('Asimetri antar telinga ≥15 dB, perlu evaluasi lanjutan');
+  if (evaluation.kelasTerbaik && evaluation.kelasTerbaik !== 'NORMAL') {
+    parts.push(`Derajat menurut WHO (telinga terbaik): ${HEARING_GRADE_TEXT[evaluation.kelasTerbaik].replace('gangguan dengar ', '')}`);
+  }
+  return parts.join('; ');
+}
+
+/** Kolom interpretasi yang diisi otomatis, beserta pembangun teksnya. */
+export const AUTO_INTERPRETATION_FIELDS: Record<string, (values: RawValues) => string> = {
+  spiInterp: interpretSpirometry,
+  audInterp: interpretAudiometry,
+};
 
 // ────────────────────────────────────────────────────────────
 // 11. Penglihatan
@@ -980,8 +1078,6 @@ export function hasChronicLbp(value: MultiValue): boolean {
 // 14. Laboratorium lain (di luar parameter zonasi, tetap didiagnosis)
 // =============================================================
 
-export const LEUKOSIT_RANGE = { min: 4, max: 11 } as const;
-
 export function classifyLeukosit(value: number | null): Classification | null {
   if (value === null) return null;
   const text = `Leukocyte ${fmt(value)} 10³/µL`;
@@ -1022,14 +1118,6 @@ export function classifyUreum(value: number | null): Classification | null {
     return { severity: 'normal', label: 'Elevated Blood Urea', detail: `Urea ${fmt(value)} mg/dL` };
   }
   return { severity: 'hijau', label: 'Blood Urea Normal', detail: `Urea ${fmt(value)} mg/dL` };
-}
-
-export function classifyBilirubin(value: number | null): Classification | null {
-  if (value === null) return null;
-  if (value > 1.2) {
-    return { severity: 'normal', label: 'Hyperbilirubinemia', detail: `Total Bilirubin ${fmt(value)} mg/dL` };
-  }
-  return { severity: 'hijau', label: 'Total Bilirubin Normal', detail: `Total Bilirubin ${fmt(value)} mg/dL` };
 }
 
 export function classifyPsa(value: number | null): Classification | null {
@@ -1169,10 +1257,6 @@ export function hasInactiveLiverCarrier(value: MultiValue): boolean {
 
 export function hasFunctionalObesityLimitation(value: MultiValue): boolean {
   return matchesAny(value, /keterbatasan/i) && !matchesAny(value, /tidak ada keterbatasan/i);
-}
-
-export function isEssUncontrolledOrUntreated(value: MultiValue): boolean {
-  return matchesAny(value, /belum ada terapi|tidak patuh/i);
 }
 
 export function isEssTreatedAndControlled(value: MultiValue): boolean {

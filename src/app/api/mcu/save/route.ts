@@ -18,39 +18,8 @@ const supabase = () => integrationAdminClient();
  * itu sendiri — bukan tanggal hari ini.
  *
  * Kegagalan di sini tidak menggagalkan penyimpanan MCU. MCU tetap tersimpan
- * tanpa skor kuesioner, danAssessments bisa mengisinya ulang.
+ * tanpa skor kuesioner, dan Assessment bisa mengisinya ulang.
  */
-/**
- * Daftar kolom yang BENAR-BENAR ada pada tabel mcu_records.
- *
- * Diambil dari satu baris contoh (limit 1) lalu dibaca dari kunci objeknya.
- * Hasilnya di-cache per proses karena skema tabel tidak berubah saat runtime.
- * Bila tabel kosong atau query gagal, fungsi mengembalikan null — pemanggil
- * lalu mengirim seluruh kolom seperti sebelumnya, sehingga perilakunya tidak
- * berubah saat daftar kolom tidak bisa dipastikan.
- */
-let cacheKolom: Set<string> | null = null;
-
-async function bacaKolomMcuRecords(): Promise<Set<string> | null> {
-  if (cacheKolom) return cacheKolom;
-  try {
-    const { data, error } = await supabase()
-      .from('mcu_records')
-      .select('*')
-      .limit(1);
-    if (error) {
-      console.error('[MCU save] Gagal membaca daftar kolom:', error.code);
-      return null;
-    }
-    if (!data || data.length === 0) return null;
-    cacheKolom = new Set(Object.keys(data[0]));
-    return cacheKolom;
-  } catch (err) {
-    console.error('[MCU save] Gagal membaca daftar kolom:', err);
-    return null;
-  }
-}
-
 async function syncQuestionnaireForMCU(recordId: string): Promise<void> {
   try {
     const { data: row } = await supabase()
@@ -103,26 +72,6 @@ export async function POST(req: NextRequest) {
     dbData.nik_karyawan = dbData.nik_karyawan || nikKaryawan;
     const encryptedData = encryptMCURecord(dbData);
 
-    // Buang kolom yang belum ada di tabel.
-    //
-    // Tanpa ini, satu field baru di MCU_FIELDS yang kolomnya belum dibuat
-    // membuat SELURUH penyimpanan gagal dengan PGRST204 ("Could not find the
-    // 'x' column"), sehingga operator tidak bisa menyimpan apa pun — persis
-    // kegagalan yang terjadi pada kolom srq17_bahaya. Kolom yang belum ada
-    // dilewati dan dicatat, bukan menggagalkan seluruh simpan.
-    const kolomTersedia = await bacaKolomMcuRecords();
-    const kolomDilewati: string[] = [];
-    if (kolomTersedia) {
-      for (const key of Object.keys(encryptedData)) {
-        if (!kolomTersedia.has(key)) {
-          kolomDilewati.push(key);
-          delete encryptedData[key];
-        }
-      }
-      if (kolomDilewati.length > 0) {
-        console.warn('[MCU save] Kolom belum ada di mcu_records, dilewati:', kolomDilewati.join(', '));
-      }
-    }
     const recordId = calculatedFormData?.id || formData?.id;
 
     // Upsert logic: if an ID is provided, strictly update that record
@@ -149,7 +98,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Otherwise, check if one exists for the same tgl_mcu
-    const { data: existing, error: searchError } = await supabase()
+    const { data: existing } = await supabase()
       .from('mcu_records')
       .select('id')
       .eq('nik_karyawan_hash', encryptedData.nik_karyawan_hash)

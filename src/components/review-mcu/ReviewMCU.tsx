@@ -9,37 +9,28 @@ import {
   Shield, Pill, ScanLine, Wind, Ear, Brain, Dumbbell,
   ClipboardCheck, Calculator, Save, RotateCcw,
   ChevronRight, Loader2, AlertCircle, CheckCircle2, FileText, Lightbulb, RefreshCw,
-  Cigarette, TestTube, Biohazard, ClipboardList,
+  Cigarette, TestTube, Biohazard, ClipboardList, Microscope,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useMCUStore, type EmployeeData as MCUEmployeeData } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { getEmployeeLookupAccessToken } from '@/lib/employee-lookup-client';
-import {
-  MCU_FIELDS,
-  MCU_SECTIONS,
-  MCU_GROUPS,
-  getFieldsBySection,
-  normalizeMCUEcgOption,
-  type MCUFieldDef,
-} from '@/lib/mcu-fields';
+import { MCU_SECTIONS, MCU_GROUPS, getFieldsBySection, getNormalText, getFieldPlaceholder, normalizeMCUEcgOption, type MCUFieldDef } from '@/lib/mcu-fields';
 import { authFetch } from '@/lib/api-client';
 import MCUPdfRedactor from './MCUPdfRedactor';
+import MultiSelectField from './MultiSelectField';
 import { calcEgfrCkdEpi2021, getMissingZonasiInputs } from '@/lib/zonasi-engine';
 import { parseVisusPerMata } from '@/lib/visus-parser';
 
 type SearchBy = 'nik' | 'national_id' | 'nama';
-type AvailableAIModel = { id: string; name: string; accountId?: string };
-type AiAccountSummary = { id: string; label: string; provider: string; model: string; enabled: boolean; hasApiKey: boolean };
+type AvailableAIProfile = { id: string; name: string; provider: string; model: string };
 
 function calculateAge(birthDate?: string | null) {
   if (!birthDate) return '';
@@ -168,6 +159,7 @@ const SECTION_ICONS: Record<string, React.ReactNode> = {
   Cigarette: <Cigarette className="size-4" />,
   TestTube: <TestTube className="size-4" />,
   Biohazard: <Biohazard className="size-4" />,
+  Microscope: <Microscope className="size-4" />,
 };
 
 // Slide variants for step transitions
@@ -229,11 +221,9 @@ function isAbnormal(field: MCUFieldDef, value: string, gender?: string): boolean
   return false;
 }
 
-function getNormalRangeText(field: MCUFieldDef, gender?: string): string {
-  if (gender?.toLowerCase().includes('laki') && field.normalMale) return field.normalMale;
-  if (gender?.toLowerCase().includes('perem') && field.normalFemale) return field.normalFemale;
-  return field.normalRange || '';
-}
+// Nilai normal untuk label dan placeholder, dari satu sumber (mcu-fields.ts)
+// supaya form dan data lama konsisten.
+const getNormalRangeText = getNormalText;
 
 export default function ReviewMCU() {
   const store = useMCUStore();
@@ -241,27 +231,25 @@ export default function ReviewMCU() {
   const [direction, setDirection] = useState(1);
   const [ocrProgress, setOcrProgress] = useState(0);
   const [extractionCooldown, setExtractionCooldown] = useState(0);
-  const [ocrModelId, setOcrModelId] = useState('');
-  const [ocrModels, setOcrModels] = useState<AvailableAIModel[]>([]);
-  const [ocrAccounts, setOcrAccounts] = useState<AiAccountSummary[]>([]);
+  // '' = otomatis: AI dicoba sesuai urutan prioritas di Pengaturan, dan bila
+  // kuota/token sebuah AI habis, otomatis lanjut ke AI berikutnya.
+  const [ocrProfileId, setOcrProfileId] = useState('');
+  const [ocrProfiles, setOcrProfiles] = useState<AvailableAIProfile[]>([]);
   const [loadingOcrModels, setLoadingOcrModels] = useState(true);
   const [ocrModelError, setOcrModelError] = useState('');
   const loadOcrModels = useCallback(async () => {
     setLoadingOcrModels(true);
     setOcrModelError('');
     try {
-      const result = await authFetch<{ configuredModel: string; models: AvailableAIModel[]; accounts?: AiAccountSummary[] }>('/api/integrations/ai/models');
-      // Simpan daftar akun untuk ditampilkan di UI.
-      if (result.accounts) setOcrAccounts(result.accounts);
-      setOcrModels(result.models);
-      setOcrModelId((current) => result.models.some((model) => model.id === current)
-        ? current
-        : result.models.some((model) => model.id === result.configuredModel)
-          ? result.configuredModel
-          : result.models[0]?.id || '');
+      const result = await authFetch<{ profiles: AvailableAIProfile[] }>('/api/integrations/ai');
+      setOcrProfiles(result.profiles);
+      setOcrProfileId((current) => (result.profiles.some((profile) => profile.id === current) ? current : ''));
+      if (result.profiles.length === 0) {
+        setOcrModelError('Belum ada AI yang siap dipakai. Tambahkan AI beserta API key di Pengaturan > Integrasi.');
+      }
     } catch (error) {
-      setOcrModels([]);
-      setOcrModelError(error instanceof Error ? error.message : 'Daftar model AI gagal dimuat.');
+      setOcrProfiles([]);
+      setOcrModelError(error instanceof Error ? error.message : 'Daftar AI gagal dimuat.');
     } finally {
       setLoadingOcrModels(false);
     }
@@ -276,10 +264,6 @@ export default function ReviewMCU() {
     }, 1000);
     return () => window.clearInterval(timer);
   }, [extractionCooldown]);
-
-  const stepIndex = useMemo(() => {
-    return store.reviewStep === 'search' ? 0 : store.reviewStep === 'ocr' ? 1 : 2;
-  }, [store.reviewStep]);
 
   const goStep = useCallback(
     (step: 'search' | 'ocr' | 'form', dir?: number) => {
@@ -392,7 +376,7 @@ export default function ReviewMCU() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ images, modelId: ocrModelId }),
+        body: JSON.stringify({ images, ...(ocrProfileId ? { profileId: ocrProfileId } : {}) }),
       });
       clearInterval(interval);
       setOcrProgress(100);
@@ -404,18 +388,21 @@ export default function ReviewMCU() {
           ...extractedData,
           ...(store.employee ? employeeFormData(store.employee) : {}),
         });
-        store.showToast('Data berhasil diekstrak', 'success');
+        const attempts: Array<{ status: string; profileName: string }> = Array.isArray(json.attempts) ? json.attempts : [];
+        const failedBefore = attempts.filter((attempt) => attempt.status === 'failed').length;
+        store.showToast(
+          failedBefore > 0 && json.used?.profileName
+            ? `Data berhasil diekstrak memakai AI cadangan "${json.used.profileName}" (${failedBefore} AI sebelumnya gagal atau kehabisan kuota).`
+            : 'Data berhasil diekstrak',
+          'success',
+        );
         setTimeout(() => goStep('form', 1), 500);
         return true;
       } else {
         const retrySeconds = Number(json.retryAfterSeconds || res.headers.get('Retry-After') || 0);
         if (retrySeconds > 0) setExtractionCooldown(retrySeconds);
-        // Jika daftar attempts tersedia, tampilkan ringkasan akun yang sudah dicoba.
-        const attemptsInfo = Array.isArray(json.attempts) && json.attempts.length > 0
-          ? json.attempts.map((a: { label?: string; message?: string }) => `${a.label || '?'}: ${a.message || 'gagal'}`).join(' | ')
-          : '';
         const message = retrySeconds > 0
-          ? `${json.error || 'Kuota habis.'}${attemptsInfo ? ` (Percobaan: ${attemptsInfo})` : ''} Jangan menekan tombol selama penghitung berjalan. Jika masih ditolak, tambahkan akun AI cadangan di Pengaturan > Integrasi.`
+          ? `${json.error || 'Batas penggunaan sementara tercapai.'} Jangan menekan tombol selama penghitung berjalan. Setelah selesai, coba satu kali. Jika masih ditolak, quota proyek masih penuh dan perlu menunggu window berikutnya.`
           : (json.error || 'Gagal mengekstrak data');
         store.showToast(message, 'error');
         return false;
@@ -433,7 +420,7 @@ export default function ReviewMCU() {
       store.setExtractingOCR(false);
       setTimeout(() => setOcrProgress(0), 600);
     }
-  }, [ocrModelId, store, goStep]);
+  }, [ocrProfileId, store, goStep]);
 
   // Save to Supabase
   const handleSave = useCallback(async () => {
@@ -720,19 +707,24 @@ export default function ReviewMCU() {
 
               <div className="mt-3 flex flex-col gap-1.5">
                 <label htmlFor="ocr-model-mode" className="text-xs font-medium text-muted-foreground">
-                  Model AI untuk Ekstraksi
+                  AI untuk Ekstraksi
                 </label>
                 <div className="flex gap-2">
                   <select
                     id="ocr-model-mode"
-                    value={ocrModelId}
-                    onChange={(e) => setOcrModelId(e.target.value)}
-                    disabled={loadingOcrModels || ocrModels.length === 0 || store.extractingOCR || extractionCooldown > 0}
+                    value={ocrProfileId}
+                    onChange={(e) => setOcrProfileId(e.target.value)}
+                    disabled={loadingOcrModels || ocrProfiles.length === 0 || store.extractingOCR || extractionCooldown > 0}
                     className="h-10 min-w-0 flex-1 rounded-xl border border-input bg-background px-3 text-sm text-foreground"
                   >
-                    {loadingOcrModels && <option value="">Memuat model dari provider...</option>}
-                    {!loadingOcrModels && ocrModels.length === 0 && <option value="">Model tidak tersedia</option>}
-                    {ocrModels.map((model) => <option key={model.id} value={model.id}>{model.name} ({model.id})</option>)}
+                    {loadingOcrModels && <option value="">Memuat daftar AI...</option>}
+                    {!loadingOcrModels && ocrProfiles.length === 0 && <option value="">AI belum diatur</option>}
+                    {!loadingOcrModels && ocrProfiles.length > 0 && (
+                      <option value="">
+                        {ocrProfiles.length > 1 ? `Otomatis (urut prioritas, ${ocrProfiles.length} AI)` : `Otomatis (${ocrProfiles[0].name})`}
+                      </option>
+                    )}
+                    {ocrProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name} · {profile.model}</option>)}
                   </select>
                   <Button
                     type="button"
@@ -740,15 +732,15 @@ export default function ReviewMCU() {
                     size="icon"
                     onClick={() => void loadOcrModels()}
                     disabled={loadingOcrModels || store.extractingOCR || extractionCooldown > 0}
-                    aria-label="Muat ulang daftar model AI"
-                    title="Muat ulang daftar model AI"
+                    aria-label="Muat ulang daftar AI"
+                    title="Muat ulang daftar AI"
                   >
                     {loadingOcrModels ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
                   </Button>
                 </div>
                 {ocrModelError && <p role="alert" className="text-xs text-destructive">{ocrModelError}</p>}
                 <p className="text-xs text-muted-foreground">
-                  Daftar model diambil dari provider berdasarkan API key yang tersimpan di Pengaturan Integrasi.
+                  Bila AI yang dipakai kehabisan token atau batas pemakaian, ekstraksi otomatis dilanjutkan ke AI berikutnya pada daftar di Pengaturan Integrasi.
                 </p>
               </div>
 
@@ -946,7 +938,8 @@ function FieldRenderer({
   const abnormal = isAbnormal(field, value, gender);
   const normalRange = getNormalRangeText(field, gender);
   const selectValue = field.type === 'select' ? normalizeSelectValue(field, value) : value;
-  const selectedValues = field.multiple ? selectValue.split(' | ').filter(Boolean) : [];
+  // Placeholder = nilai normal (mis. "Normal: 13-16,5") bila field punya acuan.
+  const placeholder = getFieldPlaceholder(field, gender);
   const opsiSelect = opsiDenganNilaiLama(field.options, selectValue);
   const visus = field.id === 'visusJauh' || field.id === 'visusDekat'
     ? parseVisusPerMata(value)
@@ -972,7 +965,7 @@ function FieldRenderer({
           {field.autoCalc && (
             <span
               className="rounded border border-amber-400/50 bg-amber-400/10 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400"
-              title="Isi otomatis oleh sistem, tetap bisa ditimpa manual"
+              title={field.locked ? 'Dihitung otomatis oleh sistem' : 'Isi otomatis oleh sistem, tetap bisa ditimpa manual'}
             >
               Auto
             </span>
@@ -988,7 +981,7 @@ function FieldRenderer({
 
       {field.type === 'textarea' ? (
         <Textarea
-          placeholder={field.placeholder || normalRange || ''}
+          placeholder={field.placeholder || (field.autoCalc ? 'Terisi otomatis dari hasil pemeriksaan; boleh ditulis manual' : '')}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="min-h-[60px] text-sm rounded-xl bg-background"
@@ -1013,7 +1006,7 @@ function FieldRenderer({
                     next.os && `VOS: ${next.os}`,
                   ].filter(Boolean).join(' | '));
                 }}
-                placeholder="Contoh: 20/20"
+                placeholder="Normal: 6/6 (20/20)"
                 className="h-9 rounded-lg bg-background text-sm"
               />
             </label>
@@ -1021,51 +1014,17 @@ function FieldRenderer({
         </div>
       ) : field.type === 'select' ? (
         field.multiple ? (
-          // Multi-pilih memakai Popover yang di-render lewat Portal, BUKAN
-          // <details> dengan dropdown absolute. AccordionContent memakai
-          // overflow-hidden untuk animasi buka-tutup, sehingga dropdown
-          // absolute di dalamnya terpotong dan pilihan di bagian bawah tidak
-          // bisa diklik. Popover keluar dari aliran dokumen sehingga bebas
-          // dari kliping tersebut.
-          <Popover>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className={`flex min-h-9 w-full cursor-pointer flex-wrap items-center gap-1.5 rounded-lg border border-input bg-background px-3 py-1.5 text-left text-xs text-foreground ${abnormal ? 'border-red-500/60 dark:border-red-500/50' : ''}`}
-              >
-                {selectedValues.length
-                  ? selectedValues.map((selected) => (
-                      <span key={selected} className="rounded-md bg-primary/10 px-2 py-1 text-primary">{selected}</span>
-                    ))
-                  : <span className="text-muted-foreground">Pilih satu atau lebih...</span>}
-              </button>
-            </PopoverTrigger>
-            <PopoverContent
-              align="start"
-              side="bottom"
-              className="w-[var(--radix-popover-trigger-width)] max-h-64 overflow-y-auto p-2"
-              collisionPadding={12}
-            >
-              <div className="space-y-1">
-                {field.options?.map((opt) => (
-                  <label key={opt} className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
-                    <input
-                      type="checkbox"
-                      checked={selectedValues.includes(opt)}
-                      onChange={(event) => onChange(event.target.checked
-                        ? [...selectedValues, opt].join(' | ')
-                        : selectedValues.filter((selected) => selected !== opt).join(' | '))}
-                      className="mt-0.5 accent-primary"
-                    />
-                    <span className="text-xs">{opt}</span>
-                  </label>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
+          <MultiSelectField
+            options={field.options ?? []}
+            value={selectValue}
+            onChange={onChange}
+            allowCustom={field.allowCustom}
+            invalid={abnormal}
+          />
         ) : (
           <>
           <select
+            disabled={field.locked}
             value={selectMenampilkanNilai(opsiSelect, selectValue, modeManual)}
             onChange={(e) => {
               const picked = e.target.value;
@@ -1078,9 +1037,9 @@ function FieldRenderer({
               setModeManual(false);
               onChange(picked);
             }}
-            className={`iOS-select h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground ${abnormal ? 'border-red-500/60 dark:border-red-500/50' : ''}`}
+            className={`iOS-select h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-70 ${abnormal ? 'border-red-500/60 dark:border-red-500/50' : ''}`}
           >
-            <option value="">Pilih...</option>
+            <option value="">{normalRange ? `Pilih... (normal: ${normalRange})` : 'Pilih...'}</option>
             {opsiSelect.nilaiLama && (
               <option value={opsiSelect.nilaiLama}>{opsiSelect.nilaiLama} (nilai lama)</option>
             )}
@@ -1113,7 +1072,7 @@ function FieldRenderer({
         <Input
           type={field.type === 'number' ? 'number' : 'text'}
           step={field.type === 'number' ? 'any' : undefined}
-          placeholder={field.placeholder || normalRange || ''}
+          placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className={
@@ -1123,11 +1082,15 @@ function FieldRenderer({
         />
       )}
 
-      {/* Label nilai normal tampil untuk SEMUA field yang punya normalRange
-          (number, text, maupun select) supaya operator selalu melihat acuan. */}
+      {/* Rujukan normal tampil untuk SEMUA field yang punya acuan (number, text,
+          maupun select). Ini rujukan baca, BUKAN batas zonasi: zona memakai
+          ambang STD-006 di clinical-classification.ts. */}
       {normalRange && (
-        <p className={`text-[10px] mt-1 ${abnormal ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
-          Normal: {normalRange} {field.unit || ''}
+        <p
+          className={`text-[10px] mt-1 ${abnormal ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}
+          title="Rujukan umum untuk membaca hasil. Zona Hijau/Kuning/Merah dihitung dari batas STD-006 yang bisa berbeda dari angka ini."
+        >
+          Rujukan normal: {normalRange} {field.unit || ''}
         </p>
       )}
       {egfrEstimate !== null && (
@@ -1162,7 +1125,7 @@ function ZonasiCard({
           ? 'bg-zona-merah'
             : zona === 'Belum Lengkap'
               ? 'bg-orange-500'
-            : 'bg-muted';
+            : 'bg-popover';
 
   const textColor =
     zona === 'Hijau'
@@ -1230,6 +1193,10 @@ function ZonasiCard({
           {' '}(hasil lab eGFR tidak tersedia).
         </p>
       )}
+
+      <p className={`mb-2 text-[10px] ${textColor} opacity-70 leading-tight`}>
+        Zona dihitung dari batas STD-006, bukan dari &quot;Rujukan normal&quot; di tiap kolom.
+      </p>
 
       {pengendalian && (
         <div className="max-h-32 overflow-y-auto">

@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 
 export async function authFetch<T = any>(input: string, init: RequestInit = {}): Promise<T> {
   const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token || (process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_PREVIEW_ROLE ? 'preview-access-token' : '');
+  const token = session?.access_token;
   const res = await fetch(input, {
     ...init,
     headers: {

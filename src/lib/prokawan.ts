@@ -217,65 +217,6 @@ export interface PesertaProKawan {
   kelayakanKerja: string | null;
 }
 
-/**
- * Detail pemantauan kunjungan kontrol satu peserta — diisi Paramedic Site /
- * QSHE Medic saat peserta kembali dari kontrol (bukti dokter / hasil lab).
- */
-export interface KunjunganKontrol {
-  id: string;
-  nik: string;
-  /** Tanggal kontrol yang dijadwalkan (jatuhTempo). */
-  jadwalTanggal: string | null;
-  /** Tanggal aktual peserta benar-benar diperiksa. */
-  aktualTanggal: string | null;
-  /** Link/link dokumen evidence: surat kontrol, hasil lab, resume dokter. */
-  evidenceUrl: string | null;
-  /** Catatan singkat dokter pemeriksa / paramedic. */
-  catatan: string | null;
-  /** Kesimpulan kunjungan: Membaik / Stabil / Memburuk / Belum diketahui. */
-  hasil: 'MEMBAIK' | 'STABIL' | 'MEMBURUK' | 'BELUM' | null;
-}
-
-export function ringkasProKawan(peserta: PesertaProKawan[]) {
-  const total = peserta.length;
-  const byZona = { Kuning: 0, Merah: 0 };
-  const byJalur: Record<JalurProKawan, number> = {
-    'kontrol-dokter': 0, 'pemantauan-paramedis': 0, 'evaluasi-alat-bantu': 0, 'konseling-eap': 0,
-  };
-  const byStatus: Record<StatusKepatuhan, number> = {
-    'sesuai-jadwal': 0, 'akan-datang': 0, terlambat: 0, 'belum-kontrol': 0, selesai: 0,
-  };
-  const bySite = new Map<string, number>();
-
-  for (const p of peserta) {
-    byZona[p.zona] += 1;
-    byJalur[p.jalur] += 1;
-    byStatus[p.status] += 1;
-    const site = p.site || 'Tidak tercatat';
-    bySite.set(site, (bySite.get(site) || 0) + 1);
-  }
-
-  const patuh = byStatus['sesuai-jadwal'] + byStatus['akan-datang'] + byStatus.selesai;
-  const tingkatKepatuhan = total ? (patuh / total) * 100 : 0;
-
-  return {
-    total,
-    byZona,
-    byJalur,
-    byStatus,
-    bySite: [...bySite.entries()].sort((a, b) => b[1] - a[1]),
-    tingkatKepatuhan,
-    /** Peserta yang lewat jatuh tempo — daftar tindak lanjut Paramedic Site. */
-    perluTindakLanjut: peserta.filter((p) => p.status === 'terlambat'),
-  };
-}
-
-/** Bulan yang harus dimiliki seorang peserta: zona Merah 1 bln, Kuning 3/6 bln. */
-export function frekuensiLabel(bulan: number | null): string {
-  if (bulan === null) return 'Tanpa kontrol berkala';
-  return `Setiap ${bulan} bulan`;
-}
-
 // ────────────────────────────────────────────────────────────
 // Pelaporan agregat ProKawan
 // ────────────────────────────────────────────────────────────

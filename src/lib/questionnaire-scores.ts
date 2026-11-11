@@ -29,7 +29,6 @@ import { DASS21_SECTIONS, SDS_SECTIONS } from '@/lib/questionnaire-items';
 // ────────────────────────────────────────────────────────────
 
 export const ESS_ITEM_COUNT = 8;
-export const ESS_MAX_SCORE = 32;
 
 export type EssCategory = 'normal' | 'ringan-sedang' | 'berat' | 'tidak-lengkap';
 
@@ -343,9 +342,6 @@ export function scoreDass21(answers: Record<string, string | number | null | und
 export const SDS_ITEM_COUNT = 30;
 export const SDS_SCALE_MIN = 1;
 export const SDS_SCALE_MAX = 7;
-/** Skor per indikator: 5 item × rentang 1–7. */
-export const SDS_INDICATOR_MIN = 5;
-export const SDS_INDICATOR_MAX = 35;
 
 export type SdsCategory = 'ringan' | 'sedang' | 'berat' | 'tidak-lengkap';
 

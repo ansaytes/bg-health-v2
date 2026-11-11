@@ -71,10 +71,6 @@ export const PARAMETER_KONTROL: DefinisiParameterKontrol[] = [
   { key: 'srq20Score', label: 'Skor SRQ-20', unit: '0–20', kelompok: 'fungsi' },
 ];
 
-export const LABEL_PARAMETER = Object.fromEntries(
-  PARAMETER_KONTROL.map((p) => [p.key, p]),
-) as Record<string, DefinisiParameterKontrol>;
-
 /**
  * Nilai kontrol yang dapat diisi QSHE Medic.
  * Semua opsional: pengukuran hanya dilakukan untuk parameter yang relevan.

@@ -3,7 +3,7 @@ import { decryptEmployee, decryptMCURecord, hashField, isEncryptedValue } from '
 import { MCU_FIELDS } from '@/lib/mcu-fields';
 import { getServerCaller, requireServerRole, STAFF_ROLES } from '@/lib/server-auth';
 import { integrationAdminClient } from '@/lib/integration-settings';
-import { safeHash } from '@/lib/query-safety';
+import { orEq, isHexDigest } from '@/lib/sql-safety';
 
 const client = () => integrationAdminClient();
 
@@ -19,12 +19,12 @@ export async function GET(req: NextRequest) {
   const nik = params.get('nik')?.trim() || '';
   const nationalId = params.get('national_id')?.trim() || '';
   if (caller!.role === 'pic' && (nik || nationalId)) {
-    const digest = safeHash(hashField(nik || nationalId));
+    const digest = hashField(nik || nationalId);
     if (!digest) return NextResponse.json({ record: null });
     const { data: employee } = await client()
       .from('employees')
       .select('site_name')
-      .or(`nik_hash.eq.${digest},national_id_hash.eq.${digest}`)
+      .or(`${orEq('nik_hash', digest)},${orEq('national_id_hash', digest)}`)
       .maybeSingle();
     if (!employee?.site_name
       || String(employee.site_name).trim().toLowerCase() !== caller!.site!.trim().toLowerCase()) {
@@ -53,13 +53,12 @@ export async function GET(req: NextRequest) {
       .range(from, from + pageSize - 1);
     if (caller!.role === 'pic') listQuery = listQuery.eq('site', caller!.site);
     if (search) {
-      const hash = safeHash(hashField(search));
-      if (hash) {
-        listQuery = listQuery.or(`nik_karyawan_hash.eq.${hash},national_id_hash.eq.${hash}`);
+      const hash = hashField(search);
+      // Hash HMAC hex murni; bila gagal dibuat, jangan kirim "null" ke filter.
+      if (hash && isHexDigest(hash)) {
+        listQuery = listQuery.or(`${orEq('nik_karyawan_hash', hash)},${orEq('national_id_hash', hash)}`);
       } else {
-        // Hash tidak terbentuk berarti input tidak bisa dipetakan ke karyawan
-        // mana pun. Kembalikan kosong, jangan menjalankan filter tanpa nilai.
-        return NextResponse.json({ records: [], count: 0, page, pageSize });
+        return NextResponse.json({ records: [], page, pageSize, offset: from, hasMore: false, total: 0, totalPages: 0 });
       }
     }
     const { data: records, count, error: listError } = await listQuery;

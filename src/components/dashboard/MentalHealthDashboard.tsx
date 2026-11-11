@@ -43,7 +43,6 @@ const DASS_BAND_WARNA: Record<string, string> = {
 const RED = 'rgba(231, 76, 60, 0.72)';
 const AMBER = 'rgba(243, 156, 18, 0.72)';
 const GREEN = 'rgba(0, 184, 148, 0.72)';
-const BLUE = 'rgba(52, 152, 219, 0.72)';
 const STEEL = 'rgba(119, 136, 153, 0.55)';
 
 function ChartCard({ title, sub, accent = '#ff4d00', empty, children }: { title: string; sub?: string; accent?: string; empty?: boolean; children: React.ReactNode }) {
@@ -263,7 +262,6 @@ export default function MentalHealthDashboard() {
   // skrining langsung terbaca sebelum melihat diagram.
   const srqPerlu = Number(i.srq20.perluTindakLanjut || 0);
   const srqTerisi = Number(i.srq20.terisi || 0);
-  const srqPersen = srqTerisi ? (srqPerlu / srqTerisi) * 100 : 0;
   const dassPerlu = Object.entries((i.dass21.band || {}) as Record<string, number>)
     .filter(([k]) => ['Sedang', 'Berat', 'Sangat Berat'].includes(k))
     .reduce((sum, [, v]) => sum + Number(v || 0), 0);

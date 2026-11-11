@@ -84,18 +84,6 @@ export function Stat({ label, value, color, sub }: { label: string; value: React
   );
 }
 
-export function BarRow({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, marginBottom: 4 }}>
-      <span style={{ width: 110, flexShrink: 0 }}>{label}</span>
-      <div style={{ flex: 1, background: 'var(--muted)', borderRadius: 4, height: 14, overflow: 'hidden' }}>
-        <div style={{ width: `${max ? (value / max) * 100 : 0}%`, background: color, height: '100%', minWidth: value ? 2 : 0 }} />
-      </div>
-      <b style={{ width: 28, textAlign: 'right' }}>{value}</b>
-    </div>
-  );
-}
-
 /* ───────── Tombol seragam: tinggi tetap, teks tidak pernah keluar dari tombol ───────── */
 type BtnKind = 'primary' | 'secondary' | 'danger';
 export function Btn({ kind = 'secondary', size = 'sm', children, style, ...rest }:

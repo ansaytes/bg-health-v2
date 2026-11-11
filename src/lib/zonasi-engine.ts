@@ -29,47 +29,7 @@
 // angka klinis apa pun.
 // ============================================================
 
-import {
-  classifyBmi,
-  classifyBloodPressure,
-  classifyChestXr,
-  classifyEgfr,
-  classifyGlucose,
-  classifyHemoglobin,
-  classifyHearing,
-  classifyLdl,
-  classifyLiver,
-  classifyLung,
-  classifyTriglyceride,
-  classifyUricAcid,
-  classifyVision,
-  detectGender,
-  hasActiveLiverDisease,
-  hasArtritisUrat,
-  hasAnyCardiacHistory,
-  hasAnyStroke,
-  hasAsthma,
-  hasChronicLbp,
-  hasControlledEpilepsy,
-  hasDmKomplikasi,
-  hasFunctionalObesityLimitation,
-  hasInactiveLiverCarrier,
-  hasLbpWithNeurologicalDeficit,
-  hasResidualCardiacSymptom,
-  hasResidualStroke,
-  hasSleepApnea,
-  hasUncontrolledEpilepsy,
-  isEpilepsyCompliantAndSeizureFree,
-  isEpilepsyNonCompliantOrRecentSeizure,
-  isEssTreatedAndControlled,
-  isEssUncontrolledOrUntreated,
-  isMentalConfirmedStable,
-  isMentalConfirmedUnstable,
-  isReactive,
-  parseVisualAcuity,
-  toNumber,
-  type Classification,
-} from '@/lib/clinical-classification';
+import { classifyBmi, classifyBloodPressure, classifyChestXr, classifyEgfr, classifyGlucose, classifyHemoglobin, classifyHearing, classifyLdl, classifyLiver, classifyLung, classifyTriglyceride, classifyUricAcid, classifyVision, detectGender, hasActiveLiverDisease, hasArtritisUrat, hasAnyCardiacHistory, hasAnyStroke, hasAsthma, hasChronicLbp, hasControlledEpilepsy, hasDmKomplikasi, hasFunctionalObesityLimitation, hasInactiveLiverCarrier, hasLbpWithNeurologicalDeficit, hasResidualCardiacSymptom, hasResidualStroke, hasSleepApnea, hasUncontrolledEpilepsy, isEpilepsyCompliantAndSeizureFree, isEpilepsyNonCompliantOrRecentSeizure, isEssTreatedAndControlled, isMentalConfirmedStable, isMentalConfirmedUnstable, isReactive, toNumber, type Classification } from '@/lib/clinical-classification';
 import { dassBandLabel, dassCategory, isDassActionable, SRQ20_THRESHOLD, type DassDomain } from '@/lib/questionnaire-scores';
 import {
   aturanDariLabel,
@@ -249,7 +209,7 @@ function assessObjectiveZonasi(ctx: AssessCtx) {
 
   // -- 5. Asam urat (STD-006 Rev.002: bila ada riwayat artritis urat, AU >=7 langsung Merah)
   const auVal = toNumber(d.au);
-  const auClass = classifyUricAcid(auVal, detectGender(ctx.genderKey));
+  const auClass = classifyUricAcid(auVal);
   if (auClass) {
     if (hasArtritisUrat(d.artritisUrat) && auVal !== null && auVal >= 7) {
       ctx.merah.push({
@@ -592,30 +552,12 @@ export function calcPct(act: number | null, pred: number | null): number | null 
   return parseFloat(((act / pred) * 100).toFixed(1));
 }
 
-/**
- * Pure Tone Average: rata-rata ambang dengar pada 500, 1000, 2000, dan
- * 4000 Hz. Nilai yang dipakai untuk klasifikasi NIHL pada SOP. Bila
- * hanya satu frekuensi yang terisi, rata-rata dihitung dari frekuensi
- * yang tersedia (minimal satu nilai).
- */
-export function calcPTA(frequencies: (number | null)[]): number | null {
-  const available = frequencies.filter((value): value is number => value !== null && Number.isFinite(value));
-  if (available.length === 0) return null;
-  const average = available.reduce((sum, value) => sum + value, 0) / available.length;
-  return Number(average.toFixed(1));
-}
-
 export function calcDiabetes(gdp: number | null, gdpSeSATA: number | null, hba1c: number | null): string | null {
   if (gdp === null && gdpSeSATA === null && hba1c === null) return null;
   if ((gdp !== null && gdp >= 126) || (gdpSeSATA !== null && gdpSeSATA >= 200) || (hba1c !== null && hba1c >= 6.5)) {
     return 'Ya';
   }
   return 'Tidak';
-}
-
-export function calcPerluFU(kesVendor: string | undefined, hasAbnormal: boolean): string {
-  if (!kesVendor || kesVendor === 'Fit To Work') return 'Tidak';
-  return hasAbnormal ? 'Ya' : 'Tidak';
 }
 
 // ═══════════════════════════════════════════

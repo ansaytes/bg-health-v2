@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { looksLikeSqlInjection } from '@/lib/sql-safety';
 
 // Penegakan "wajib ganti password" di sisi SERVER.
 // Modal PasswordChangeGate hanya UI; tanpa ini akun berpassword awal tetap bisa memanggil API
@@ -22,7 +23,19 @@ function mustChangePassword(token: string): boolean {
 }
 
 export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, search } = request.nextUrl;
+
+  // Lapisan pertahanan tambahan terhadap SQL/filter injection: tolak query string
+  // dan path yang jelas memuat pola serangan (UNION SELECT, ' OR 1=1, pg_sleep,
+  // sisipan operator PostgREST, dsb.). Ini HEURISTIK; perlindungan utamanya ada
+  // di sql-safety.ts (nilai filter selalu dibersihkan dan dikutip, query lain
+  // memakai parameter terikat Supabase). Body tidak dipindai di sini agar teks
+  // klinis bebas tidak salah blokir; route pencarian memakai sanitizeSearchTerm.
+  if (looksLikeSqlInjection(search) || looksLikeSqlInjection(pathname)) {
+    console.warn('[security] Permintaan diblokir: pola SQL injection pada URL', pathname);
+    return NextResponse.json({ error: 'Permintaan tidak valid.' }, { status: 400 });
+  }
+
   if (pathname === '/api/auth') return NextResponse.next();
 
   const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '')

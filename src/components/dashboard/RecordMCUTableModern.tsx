@@ -2,14 +2,14 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, ChevronRight, Search, Eye, Pin, SlidersHorizontal, Edit, Trash2, ChevronDown, X, RefreshCw, Activity } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Eye, Pin, SlidersHorizontal, Edit, Trash2, ChevronDown, X, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/lib/supabase';
 import { MCU_FIELDS } from '@/lib/mcu-fields';
 import { useAuth } from '@/lib/auth-context';
 import { useMCUStore } from '@/lib/store';
-import MCUFollowUpModal from '@/components/mcu/MCUFollowUpModal';
+import FormTindakLanjut from '@/components/followup/FormTindakLanjut';
 
 type RecordRow = Record<string, any>;
 
@@ -181,6 +181,8 @@ function ColFilterDropdown({ label, selected, getOptions, onChange }: ColFilterD
 // ---------------------------------------------------------------------------
 export default function RecordMCUTableModern() {
   const { isSuperuser, isAdmin } = useAuth();
+  // isAdmin = superuser/administrator/pic, sama dengan ROLES_TULIS di /api/followups.
+  const bisaTindakLanjut = isAdmin;
   const store = useMCUStore();
   const [rows, setRows] = useState<RecordRow[]>([]);
   const [page, setPage] = useState(1);
@@ -194,10 +196,11 @@ export default function RecordMCUTableModern() {
   const [frozenColumnsMonitor, setFrozenColumnsMonitor] = useState<string[]>(['nik_karyawan', 'nama']);
   const [showFrozenPicker, setShowFrozenPicker] = useState(false);
   const [editingRow, setEditingRow] = useState<RecordRow | null>(null);
-  const [followUpTargetRow, setFollowUpTargetRow] = useState<RecordRow | null>(null);
   const [saving, setSaving] = useState(false);
-  // Popup detail record (berisi field + menu Edit / Follow Up / Hapus)
+  // Popup detail record (berisi field + menu Edit / Hapus)
   const [viewingRow, setViewingRow] = useState<RecordRow | null>(null);
+  // Tindak lanjut (alur follow up baru) dari tab Monitoring.
+  const [tindakLanjutRow, setTindakLanjutRow] = useState<RecordRow | null>(null);
 
   const [activeTab, setActiveTab] = useState<'record' | 'monitor'>('monitor');
   const [monitorRows, setMonitorRows] = useState<RecordRow[]>([]);
@@ -606,7 +609,7 @@ export default function RecordMCUTableModern() {
                     </th>
                   );
                 })}
-                {activeTab === 'record' && <th className="mcu-records-action-head">Aksi</th>}
+                {(activeTab === 'record' || bisaTindakLanjut) && <th className="mcu-records-action-head">Aksi</th>}
               </tr>
             </thead>
             <tbody>
@@ -648,6 +651,21 @@ export default function RecordMCUTableModern() {
                           </td>
                         );
                       })}
+                      {activeTab === 'monitor' && bisaTindakLanjut && (
+                        <td className="mcu-records-action">
+                          {String(row.status_follow_up ?? '').startsWith('Open') && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => setTindakLanjutRow(row)}
+                              title="Catat hasil tindak lanjut"
+                            >
+                              <span>Tindak Lanjut</span>
+                            </Button>
+                          )}
+                        </td>
+                      )}
                       {activeTab === 'record' && (
                         <td className="mcu-records-action">
                           {/* Satu tombol: buka popup Detail (berisi semua field)
@@ -715,9 +733,6 @@ export default function RecordMCUTableModern() {
               <Button variant="outline" onClick={() => { handleEdit(viewingRow!); setViewingRow(null); }}>
                 <Edit size={14} className="mr-1" /> Edit
               </Button>
-              <Button variant="outline" className="text-cyan-600" onClick={() => { setFollowUpTargetRow(viewingRow!); setViewingRow(null); }}>
-                <Activity size={14} className="mr-1" /> Follow Up
-              </Button>
               {activeTab === 'record' && (isSuperuser || isAdmin) && (
                 <Button
                   variant="outline"
@@ -728,6 +743,25 @@ export default function RecordMCUTableModern() {
                 </Button>
               )}
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Tindak lanjut — form bersama dengan halaman ProKawan */}
+        <Dialog open={!!tindakLanjutRow} onOpenChange={open => !open && setTindakLanjutRow(null)}>
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Tindak Lanjut — {tindakLanjutRow?.nama || '-'}</DialogTitle></DialogHeader>
+            {tindakLanjutRow && (
+              <FormTindakLanjut
+                key={String(tindakLanjutRow.nik_karyawan)}
+                peserta={{
+                  nik: String(tindakLanjutRow.nik_karyawan ?? ''),
+                  nama: String(tindakLanjutRow.nama ?? ''),
+                  site: tindakLanjutRow.site ? String(tindakLanjutRow.site) : null,
+                }}
+                jenis={/^(kuning|merah)$/i.test(String(tindakLanjutRow.zona_status_kesehatan ?? '')) ? 'prokawan' : 'mcu'}
+                onSelesai={() => void loadMonitor(true)}
+              />
+            )}
           </DialogContent>
         </Dialog>
 
@@ -756,16 +790,6 @@ export default function RecordMCUTableModern() {
             </div>
           </DialogContent>
         </Dialog>
-        {/* Follow-Up Modal */}
-        <MCUFollowUpModal
-          isOpen={!!followUpTargetRow}
-          onClose={() => setFollowUpTargetRow(null)}
-          mcuRecord={followUpTargetRow}
-          onSuccess={() => {
-            if (activeTab === 'record') void load();
-            else void loadMonitor(true);
-          }}
-        />
       </div>
     </div>
   );

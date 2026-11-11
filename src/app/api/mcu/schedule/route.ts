@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { decrypt, decryptEmployee, decryptMCURecord, encrypt, hashField } from '@/lib/encryption';
+import { decrypt, decryptEmployee, encrypt, hashField } from '@/lib/encryption';
 import { getServerCaller } from '@/lib/server-auth';
 import { integrationAdminClient } from '@/lib/integration-settings';
-import { sanitizeSearchTerm } from '@/lib/query-safety';
+import { orContains } from '@/lib/sql-safety';
 
 const client = () => integrationAdminClient();
 
@@ -13,19 +13,6 @@ async function caller(req: NextRequest) {
 function canUseSite(user: { role: string; site?: string | null }, site: string) {
   return user.role !== 'pic' || (user.site || '').trim().toLowerCase() === 'head office'
     || (user.site || '').trim().toLowerCase() === site.trim().toLowerCase();
-}
-
-async function fetchAllRows<T = Record<string, any>>(
-  fetchPage: (from: number, to: number) => any,
-) {
-  const pageSize = 1000;
-  const rows: T[] = [];
-  for (let from = 0; ; from += pageSize) {
-    const { data, error } = await fetchPage(from, from + pageSize - 1);
-    if (error) return { data: null, error };
-    rows.push(...(data || []));
-    if (!data || data.length < pageSize) return { data: rows, error: null };
-  }
 }
 
 export async function GET(req: NextRequest) {
@@ -56,12 +43,12 @@ export async function GET(req: NextRequest) {
   }
   if (departmentFilter) employeeQuery = employeeQuery.eq('department', departmentFilter);
   if (searchFilter) {
-    const safeSearch = sanitizeSearchTerm(searchFilter);
-    if (safeSearch) {
-      employeeQuery = employeeQuery.or(
-        `nama.ilike.%${safeSearch}%,department.ilike.%${safeSearch}%,site_name.ilike.%${safeSearch}%`
-      );
-    }
+    // Kata dibersihkan + dikutip (sql-safety). Sebelumnya hanya ( ) , yang dibuang,
+    // sehingga kutip ganda dan wildcard % _ masih lolos ke filter PostgREST.
+    const conditions = ['nama', 'department', 'site_name']
+      .map((column) => orContains(column, searchFilter))
+      .filter((condition): condition is string => Boolean(condition));
+    if (conditions.length) employeeQuery = employeeQuery.or(conditions.join(','));
   }
   // ── OPTIMASI (perbaikan "canceling statement due to statement timeout") ──
   //

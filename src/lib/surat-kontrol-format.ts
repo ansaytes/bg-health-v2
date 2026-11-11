@@ -29,14 +29,6 @@ const FIELD_BY_ID = new Map<string, MCUFieldDef>(MCU_FIELDS.map((f) => [f.id, f]
 /** Nilai hasil follow up: angka, teks, atau kosong. */
 export type NilaiFollowUp = string | number | null | undefined;
 
-/**
- * Field yang digabung penulisannya menjadi satu entri.
- * `tdS` dan `tdD` selalu dicetak bersama sebagai "TD : sistol/diastol".
- */
-const GABUNGAN: Record<string, string[]> = {
-  tdS: ['tdS', 'tdD'],
-};
-
 /** Label ringkas untuk surat — dipendekkan agar muat satu baris. */
 const LABEL_RINGKAS: Record<string, string> = {
   tdS: 'TD',
@@ -198,5 +190,3 @@ export function formatSuratKontrolAbnormal(
   return formatSuratKontrol(terfilter, fieldAbnormal);
 }
 
-/** Daftar field yang digabung, untuk dipakai pemanggil saat menyaring. */
-export const FIELD_GABUNGAN = GABUNGAN;

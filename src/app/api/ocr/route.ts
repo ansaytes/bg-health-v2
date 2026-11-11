@@ -1,10 +1,18 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 import { MCU_FIELDS, normalizeMCUEcgOption } from '@/lib/mcu-fields';
-import { decryptIntegrationSecret, integrationAdminClient, readIntegration } from '@/lib/integration-settings';
+import { integrationAdminClient } from '@/lib/integration-settings';
 import { getServerCaller, requireServerRole, STAFF_ROLES } from '@/lib/server-auth';
-import { resolveAccounts } from '@/lib/ai-accounts';
-import { callVisionWithFailover } from '@/lib/ai-executor';
+import {
+  extractJsonObject,
+  loadAiProfiles,
+  runVisionWithFailover,
+  summariseAttempts,
+} from '@/lib/ai-providers';
+
+// Failover antar-AI bisa mencoba beberapa profil berurutan; beri fungsi waktu
+// cukup (runVisionWithFailover membatasi total 55 dtk agar tetap di bawah ini).
+export const maxDuration = 60;
 
 // Create a schema mapping dynamically from MCU_FIELDS
 function generatePromptSchema() {
@@ -35,19 +43,18 @@ ATURAN DATA:
     Fit To Work, Fit With Note, Fit With Restriction, Currently Unfit, Temporary Unfit, atau Unfit.
 14. "rekQSHE" harus mengambil nilai dropdown kolom DG secara persis:
     Fit To Work, Fit With Note, Fit With Restriction, Currently Unfit, Unfit, atau Temporary Unfit.
-15. "perluFU" harus mengambil nilai Ya/Tidak dari dokumen. Jangan menyimpulkan hanya dari adanya abnormalitas.
-15. Tanggal harus dikembalikan dalam format YYYY-MM-DD jika tanggal lengkap terbaca.
+15. "perluFU" jangan diisi; aplikasi menghitungnya otomatis dari temuan abnormal.
+16. Tanggal harus dikembalikan dalam format YYYY-MM-DD jika tanggal lengkap terbaca.
 16. Jika field tanggal expired tidak tertulis, jangan mengarangnya; aplikasi akan menghitungnya dari tanggal MCU.
 
 DETAIL WAJIB:
 17. Wajib membaca dan memetakan seluruh nilai detail spirometri:
-   - Spirometri: fvcPred, fvcAct, fvcPct, fev1Pred, fev1Act, fev1Pct, fev1FvcPred, fev1FvcAct, fev1FvcPct, spiInterp.
-   Jangan menambahkan "L" pada angka.
-   Format gabungan interpretasi boleh disimpan di spiInterp, tetapi angka detail tetap harus diisi ke field masing-masing.
+   - Spirometri: fvcPred, fvcAct, fvcPct, fev1Pred, fev1Act, fev1Pct, fev1FvcPred, fev1FvcAct, fev1FvcPct.
+   Jangan menambahkan "L" pada angka. JANGAN mengisi spiInterp: teks interpretasi dibuat otomatis oleh aplikasi dari angka-angka tersebut.
 18. Wajib membaca seluruh nilai audiometri:
    acr_500, acr_1k, acr_2k, acr_3k, acr_4k, acr_6k, acr_8k,
-   acl_500, acl_1k, acl_2k, acl_3k, acl_4k, acl_6k, acl_8k, audInterp.
-   ACR adalah telinga kanan dan ACL telinga kiri. Frekuensi yang tidak diperiksa harus dikosongkan, bukan diisi N/A.
+   acl_500, acl_1k, acl_2k, acl_3k, acl_4k, acl_6k, acl_8k.
+   ACR adalah telinga kanan dan ACL telinga kiri. Frekuensi yang tidak diperiksa harus dikosongkan, bukan diisi N/A. JANGAN mengisi audInterp: interpretasi dibuat otomatis oleh aplikasi dari ambang dengar.
 19. Normalisasi identitas: Laki-laki/Pria menjadi "Laki - Laki"; Perempuan/Wanita menjadi "Perempuan".
 20. Status MCU wajib mengikuti dropdown kolom H spreadsheet secara persis: Pre Employee, Annual, Specific, Retirement, Follow Up - Pre Employee, Follow Up - Annual.
 21. Format dokumen dapat berupa pasangan Item/Hasil atau teks berurutan. Gunakan label item sebagai batas nilai, termasuk bila seluruh data menempel tanpa pemisah baris.
@@ -60,9 +67,10 @@ DETAIL WAJIB:
 28. Untuk hbsag, antiHbs, vdrl, tpha, dan hiv: "Negatif"/"Negative" menjadi "Non - Reaktif"; "Positif"/"Positive" menjadi "Reaktif".
 29. Untuk defWarna dan semua field Neurologi (balance, romberg, phalen, thinel, patrick, kontraPatrick, laseque, kernig), "DBN" menjadi "Normal". Hasil positif/negatif Neurologi ditulis "Positif"/"Negatif".
 30. Semua field tipe select wajib memakai salah satu teks opsi form secara persis. Untuk field yang tidak diperiksa atau tidak ditemukan pada dokumen, kembalikan string kosong, bukan "N/A" dan bukan "Tidak Diperiksa" — aplikasi menyimpannya sebagai NULL.
-30a. Field multi-pilih (gigiMulut, fisikMata, riwayatEpilepsi, riwayatJantung, riwayatStroke, riwayatAsma, riwayatSleepApnea, rekFU) boleh berisi LEBIH DARI SATU nilai, dipisah " | ". Contoh: "Karies | Ginggivitis" atau "Pterigium | Katarak".
-30b. Riwayat kebiasaan: merokok (Tidak Merokok/Perokok Aktif/Mantan Perokok), olahraga (Rutin (≥3x/minggu)/Kadang-kadang (<3x/minggu)/Tidak Berolahraga), alkohol (Tidak/Ya (Sosial)/Ya (Rutin)). Isi jumlahRokok dan lamaMerokok hanya bila tertulis.
+30a. Field multi-pilih (gigiMulut, fisikMata, riwayatEpilepsi, riwayatJantung, riwayatStroke, riwayatAsma, riwayatSleepApnea, rekFU) boleh berisi LEBIH DARI SATU nilai, dipisah " | ". Contoh: "Karies | Kalkulus (Karang Gigi)" atau "Pterigium | Katarak". Untuk gigi & mulut, petakan temuan seperti karang gigi/kalkulus, gigi hilang/missing, sisa akar/radix, gangren radix/pulpa ke opsi yang tersedia; opsi "Normal" tidak boleh digabung dengan temuan lain.
+30b. Riwayat kebiasaan: merokok (Tidak Merokok/Perokok Aktif/Mantan Perokok), olahraga (Rutin (≥3x/minggu)/Kadang-kadang (<3x/minggu)/Tidak Berolahraga), alkohol (Tidak/Ya (Sosial)/Ya (Rutin)). Isi jumlahRokok dan lamaMerokok hanya bila tertulis. Kebiasaan alkohol (field alkohol) adalah RIWAYAT KEBIASAAN dari anamnesis, bukan hasil tes NAPZA urine.
 30c. Tes kebugaran punya field sendiri per jenis tes: tes6mwt (meter), tesHarvard (skor), tesYMCAStep (bpm), tesQueensCollege (mL/kg/menit), tesErgocycle (mL/kg/menit), tesSitUp (kali), tesPushUp (kali), tesSitAndReach (cm). Isi hanya tes yang benar-benar tercantum. Treadmill TIDAK punya field di sini — hasilnya masuk ke tmHasil.
+30c1. Tes NAPZA urine hanya berisi drugAmp, drugMeth, drugMorph, drugCanna, drugBenz, drugCoc, drugCaris. PSA (psa) adalah penanda tumor prostat, bukan NAPZA. ECG (ecgHasil) dan Treadmill (tmHasil) adalah pemeriksaan jantung, bukan radiologi.
 30d. spiMetode adalah pilihan metode penilaian, bukan hasil: PDPI 2016 (Indonesia), GOLD 2024, ATS/ERS 2022 (GLI-2012), NHANES III, atau Manual (tulis sendiri). Isi hanya bila dokumen menyebut metodenya.
 31. Visus jauh dan dekat harus menyertakan kedua mata bila ada: format "VOD: 20/200 | VOS: 20/400". Jangan gabungkan dua rasio tanpa label mata.
 32. Urinalisis dipecah menjadi 20 field terindividual (ulWarna, ulKejernihan, ulBau, ulPh, ulBeratJenis, ulProtein, ulGlukosa, ulBilirubin, ulUrobilinogen, ulKeton, ulNitrit, ulLeukositEsterase, ulDarah, ulLeukosit, ulEritrosit, ulSelEpitel, ulSilinder, ulKristal, ulBakteri, ulJamur). Untuk setiap field, kembalikan salah satu nilai dari daftar opsi form: Warna (Kuning Muda/Kuning/Kuning Gelap/Amber/Merah/Keruh Kemerahan), Kejernihan (Jernih/Agak Keruh/Keruh/Sangat Keruh), Bau (Aromatik/Manis/Amoniakal/Busuk), Berat Jenis (angka, mis. 1,015), pH (angka, mis. 6,0), Protein/Glukosa/Bilirubin/Keton/Darah/Leukosit Esterase (Negatif/Trace/+1/+2/+3/+4), Nitrit (Negatif/Positif), Urobilinogen (Normal/+1/+2/Tinggi), Eritrosit/Leukosit (angka per LPB, mis. 0-1 atau 3-5), Sel Epitel (Sedikit/Sedang/Banyak), Silinder/Kristal/Bakteri/Jamur (Negatif/+1/+2/+3). Field tidak diperiksa = string kosong. Jangan mengarang parameter. Jangan mengisi field ul (Kesimpulan Urinalisis) — aplikasi menghitungnya dari parameter abnormal.
@@ -109,10 +117,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Permintaan OCR tidak valid.' }, { status: 400 });
     }
     const input = body as Record<string, unknown>;
-    if (Object.keys(input).some((key) => !['images', 'modelId'].includes(key))) {
+    if (Object.keys(input).some((key) => !['images', 'profileId'].includes(key))) {
       return NextResponse.json({ success: false, error: 'Endpoint OCR hanya menerima gambar hasil penyamaran.' }, { status: 400 });
     }
-    const { modelId } = input;
+    const { profileId } = input;
+    if (profileId !== undefined && (typeof profileId !== 'string' || !/^[a-z0-9][a-z0-9-]{1,39}$/.test(profileId))) {
+      return NextResponse.json({ success: false, error: 'Pilihan AI tidak valid.' }, { status: 400 });
+    }
     const rawImages = input.images;
     if (!Array.isArray(rawImages) || rawImages.length < 1 || rawImages.length > 30) {
       return NextResponse.json({ success: false, error: 'Kirim 1 sampai 30 gambar halaman yang sudah disamarkan.' }, { status: 400 });
@@ -135,64 +146,41 @@ export async function POST(req: NextRequest) {
     }
     const promptText = `Ekstrak hasil pemeriksaan MCU dari ${images.length} gambar halaman terlampir. Identitas telah dipilih terpisah di aplikasi.`;
 
-    const aiIntegration = await readIntegration('ai');
-    const aiSecrets = decryptIntegrationSecret(aiIntegration?.secret_ciphertext ?? null);
-    const accounts = resolveAccounts(aiIntegration?.config, aiSecrets);
-    const configuredModel = typeof aiIntegration?.config.model === 'string' ? aiIntegration.config.model : '';
-    const requestedModel = typeof modelId === 'string' && modelId.trim() ? modelId.trim() : '';
-    if (modelId !== undefined && (typeof modelId !== 'string' || !modelId.trim() || modelId.length > 200)) {
-      return NextResponse.json({ success: false, error: 'Model AI tidak valid.' }, { status: 400 });
-    }
-    if (accounts.filter((account) => account.enabled && account.apiKey).length === 0) {
-      return NextResponse.json({ success: false, error: 'API key AI belum diatur pada menu Pengaturan > Integrasi.' }, { status: 503 });
-    }
-
-    // FAILOVER: jalankan berurutan ke setiap akun. Bila akun pertama kehabisan
-    // kuota / limit / key ditolak, permintaan otomatis lanjut ke akun kedua,
-    // ketiga, dst. Hanya bila SEMUA akun gagal barulah error dikembalikan.
-    const vision = await callVisionWithFailover(accounts, {
-      images,
-      systemInstruction: generatePromptSchema(),
-      prompt: promptText,
-      model: requestedModel || configuredModel || undefined,
-      temperature: 0.1,
-      jsonMode: true,
-      timeoutMs: 60_000,
+    // Coba profil AI berurutan sesuai prioritas (atau profil pilihan operator
+    // lebih dulu). Bila kuota/token habis atau key ditolak, otomatis lanjut ke
+    // profil berikutnya — lihat runVisionWithFailover.
+    const profiles = await loadAiProfiles();
+    const outcome = await runVisionWithFailover({
+      profiles,
+      preferredProfileId: typeof profileId === 'string' ? profileId : undefined,
+      request: { system: generatePromptSchema(), userText: promptText, images },
+      parse: extractJsonObject,
     });
-
-    if (!vision.ok) {
-      const isQuota = vision.errorKind === 'quota';
-      const isAuth = vision.errorKind === 'auth';
-      return NextResponse.json(
-        {
+    if (!outcome.ok) {
+      if (outcome.noUsableProfile) {
+        return NextResponse.json({
           success: false,
-          errorCode: isQuota ? 'QUOTA' : isAuth ? 'API_KEY' : 'PROVIDER',
-          error: isQuota
-            ? `${vision.errorMessage} Tambahkan akun AI cadangan atau tunggu kuota pulih.`
-            : vision.errorMessage || 'Layanan ekstraksi gagal memproses dokumen.',
-          attempts: vision.attempts,
-          ...(vision.retryAfterSeconds ? { retryAfterSeconds: vision.retryAfterSeconds } : {}),
-        },
-        {
-          status: isQuota ? 429 : 502,
-          ...(vision.retryAfterSeconds ? { headers: { 'Retry-After': String(vision.retryAfterSeconds) } } : {}),
-        },
-      );
+          error: 'Belum ada AI yang siap dipakai. Tambahkan minimal satu AI lengkap dengan API key dan model di Pengaturan > Integrasi.',
+        }, { status: 503 });
+      }
+      const detail = summariseAttempts(outcome.attempts);
+      if (outcome.allQuota) {
+        const retry = outcome.retryAfterSeconds ?? 60;
+        return NextResponse.json({
+          success: false,
+          error: `Kuota semua AI yang terdaftar sedang habis. Tambahkan AI cadangan atau coba lagi nanti. (${detail})`,
+          retryAfterSeconds: retry,
+          attempts: outcome.attempts,
+        }, { status: 429, headers: { 'Retry-After': String(retry) } });
+      }
+      return NextResponse.json({
+        success: false,
+        errorCode: 'PROVIDER',
+        error: `Semua AI yang terdaftar gagal memproses dokumen. (${detail})`,
+        attempts: outcome.attempts,
+      }, { status: 502 });
     }
-
-    const outputText = vision.text;
-    const usedAccountLabel = vision.accountLabel;
-    if (!outputText.trim()) {
-      return NextResponse.json({ success: false, error: 'Layanan AI mengembalikan hasil kosong. Coba ulangi dokumen.' }, { status: 502 });
-    }
-
-    let parsedData = {};
-    try {
-        parsedData = JSON.parse(outputText);
-    } catch {
-        console.error('[OCR] Provider returned invalid JSON.');
-        return NextResponse.json({ success: false, error: 'Hasil ekstraksi tidak dapat dibaca. Coba ulangi dokumen tersebut.' }, { status: 500 });
-    }
+    const parsedData: Record<string, unknown> = outcome.value;
 
     // Hanya ambil field yang valid sesuai mcu-fields.ts
     const validData: Record<string, string> = {};
@@ -338,8 +326,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.log(`[OCR] Ekstraksi MCU berhasil via akun AI: ${usedAccountLabel}`);
-    return NextResponse.json({ success: true, data: validData, usedAccount: usedAccountLabel });
+    // Interpretasi spirometri/audiometri dihitung aplikasi dari angka yang terbaca
+    // (lihat clinical-classification.ts), jadi teks dari AI tidak dipakai.
+    delete validData.spiInterp;
+    delete validData.audInterp;
+
+    return NextResponse.json({
+      success: true,
+      data: validData,
+      used: { profileId: outcome.used.profileId, profileName: outcome.used.profileName, model: outcome.used.model },
+      attempts: outcome.attempts,
+    });
 
   } catch (err: unknown) {
     console.error('Error in OCR API:', err);

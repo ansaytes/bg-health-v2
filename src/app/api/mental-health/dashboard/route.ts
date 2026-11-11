@@ -72,13 +72,6 @@ function dassBand(depresi: number, ansietas: number, stres: number): string {
   return ['Normal', 'Ringan', 'Sedang', 'Berat', 'Sangat Berat'][worst];
 }
 
-/** SDS-30: kategori per indikator, skor 5–35 — mengikuti Lampiran Permenaker 5/2018. */
-function sdsBand(score: number): string {
-  if (score > 24) return 'Stres Berat';
-  if (score >= 10) return 'Stres Sedang';
-  return 'Stres Ringan';
-}
-
 /** Nomor item (1-based) milik tiap indikator SDS-30 — Permenaker 5/2018. */
 const SDS_INDICATORS = [
   { id: 'ketaksaan-peran', title: 'Ketaksaan Peran', items: [1, 7, 13, 19, 25] },

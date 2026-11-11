@@ -6,9 +6,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { authFetch } from '@/lib/api-client';
 import { aptRequirement, jatuhTempoUkur, zonaFromLeq, ZONA_COLOR, type Zona } from '@/lib/hc-ergo';
 import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
-import {
-  Btn, BtnRow, Chip, Field, Notice, Section, SITES, Tabs, fmtDate, grid2, grid3, inputStyle, smallInput, tableStyle, tdStyle, thStyle,
-} from './hc-ergo-ui';
+import { Btn, Chip, Field, Notice, Section, SITES, Tabs, fmtDate, grid2, grid3, inputStyle, smallInput, tableStyle, tdStyle, thStyle } from './hc-ergo-ui';
 
 type Row = Record<string, any>;
 interface Pt { kode_titik: string; deskripsi: string; leq_dba: string; durasi_menit: string; }

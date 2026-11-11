@@ -1,13 +1,10 @@
 ﻿// ============================================================
 // MCU Field Definitions
 // ============================================================
-// Kolom A adalah nomor urut yang dibuat otomatis, jadi field pertama
-// (NIK KTP) berada di kolom B. Huruf dan indeks kolom DITURUNKAN dari
-// urutan deklarasi di bawah — lihat assignColumns().
-//
-// The order here is the Excel/Supabase contract for Record MCU.
-// Menyisipkan field baru cukup menaruhnya pada posisi yang tepat;
-// seluruh field setelahnya otomatis bergeser.
+// Satu-satunya definisi field MCU: label, tipe, opsi, nilai normal, dan
+// pengelompokan di form Review MCU. Id field = nama kolom tabel mcu_records
+// (camelCase -> snake_case, lihat api/mcu/save), jadi urutan di sini TIDAK
+// memengaruhi database; yang menentukan hanya urutan tampil di form.
 // ============================================================
 
 import {
@@ -32,15 +29,19 @@ export type FieldType = 'number' | 'text' | 'select' | 'date' | 'textarea';
 
 export interface MCUFieldDef {
   id: string;
-  col: string;
-  colIndex: number;
   label: string;
   section: string;
-  sectionOrder: number;
   type: FieldType;
   unit?: string;
   placeholder?: string;
   normalRange?: string;
+  /**
+   * Nilai normal yang HANYA ditampilkan (placeholder dan label "Normal: ...").
+   * Berbeda dengan `normalRange`, field ini tidak dibaca engine deteksi
+   * abnormal (mcu-normal-range.ts), jadi menambahkannya tidak mengubah hasil
+   * kalkulasi, zonasi, maupun daftar Item Follow Up.
+   */
+  normalHint?: string;
   min?: number;
   max?: number;
   options?: string[];
@@ -55,6 +56,8 @@ export interface MCUFieldDef {
   autoSuggest?: boolean;
   autoCalc?: boolean;
   autoCalcFrom?: string[];
+  /** Dihitung sistem dan tidak bisa diubah operator (tampil sebagai pilihan nonaktif). */
+  locked?: boolean;
   normalMale?: string;
   normalFemale?: string;
   lowMale?: number;
@@ -82,18 +85,26 @@ export const MCU_SECTIONS = [
   { id: 'serology', label: 'Serologi / Imunologi', icon: 'Shield', order: 9 },
   { id: 'drug', label: 'Tes NAPZA (Urine)', icon: 'Pill', order: 10 },
   { id: 'toxicology', label: 'Logam Berat / Toksikologi', icon: 'Biohazard', order: 11 },
-  // EKG & Treadmill bukan radiologi/USG, jadi judul diperlebar agar
-  // operator tidak bingung mengapa ada pemeriksaan kardiak di sini.
-  { id: 'imaging', label: 'Pemeriksaan Penunjang & Radiologi', icon: 'Scan', order: 12 },
-  // PSA adalah biomarker onkologis (prostat), bukan NAPZA.
-  { id: 'pemeriksaanLain', label: 'Pemeriksaan Lain', icon: 'FlaskConical', order: 13 },
-  { id: 'spirometry', label: 'Spirometri', icon: 'Wind', order: 14 },
-  { id: 'audiometry', label: 'Audiometri', icon: 'Ear', order: 15 },
-  { id: 'neuro', label: 'Neurologi', icon: 'Brain', order: 16 },
-  { id: 'fitness', label: 'Kebugaran', icon: 'Dumbbell', order: 17 },
-  { id: 'assessment', label: 'Penilaian', icon: 'ClipboardCheck', order: 18 },
-  { id: 'calculated', label: 'Hasil Kalkulasi', icon: 'Calculator', order: 19 },
+  { id: 'other', label: 'Pemeriksaan Penunjang Lain', icon: 'Microscope', order: 12 },
+  { id: 'cardiac', label: 'Jantung (EKG & Treadmill)', icon: 'HeartPulse', order: 13 },
+  { id: 'imaging', label: 'Radiologi & USG', icon: 'Scan', order: 14 },
+  { id: 'spirometry', label: 'Spirometri', icon: 'Wind', order: 15 },
+  { id: 'audiometry', label: 'Audiometri', icon: 'Ear', order: 16 },
+  { id: 'neuro', label: 'Neurologi', icon: 'Brain', order: 17 },
+  { id: 'fitness', label: 'Kebugaran', icon: 'Dumbbell', order: 18 },
+  { id: 'assessment', label: 'Penilaian', icon: 'ClipboardCheck', order: 19 },
+  { id: 'calculated', label: 'Hasil Kalkulasi', icon: 'Calculator', order: 20 },
 ] as const;
+
+// Catatan penataan kategori:
+//  • 'cardiac'  — EKG dan Treadmill adalah pemeriksaan fungsi jantung, bukan
+//    pencitraan, jadi tidak lagi berada di "Radiologi & USG".
+//  • 'other'    — PSA (penanda tumor prostat) bukan NAPZA dan bukan hematologi
+//    atau kimia rutin, sehingga diberi kelompok "Pemeriksaan Penunjang Lain".
+//  • Golongan darah dipindah dari Fisik ke Hematologi (bukan hasil pemeriksaan
+//    fisik, melainkan hasil laboratorium).
+//  • Kebiasaan alkohol hanya ada di Riwayat Kebiasaan; tes NAPZA urine tidak
+//    lagi memuat baris "Alkohol" yang sebenarnya duplikat id.
 
 /**
  * Sub-kelompok di dalam satu section, mis. "Darah Lengkap" dan "Hitung Jenis
@@ -109,8 +120,8 @@ export const MCU_GROUPS: Record<string, string> = {
   basofil: 'Hitung Jenis Leukosit', eosinofil: 'Hitung Jenis Leukosit',
   neutrofilBatang: 'Hitung Jenis Leukosit', neutrofilSegmen: 'Hitung Jenis Leukosit',
   limfosit: 'Hitung Jenis Leukosit', monosit: 'Hitung Jenis Leukosit',
-  golDarah: 'Hemostasis & Golongan Darah', masaPerdarahan: 'Hemostasis & Golongan Darah',
-  masaPembekuan: 'Hemostasis & Golongan Darah',
+  masaPerdarahan: 'Hemostasis & Golongan Darah', masaPembekuan: 'Hemostasis & Golongan Darah',
+  golDarah: 'Hemostasis & Golongan Darah',
 
   // Kimia darah
   chol: 'Lemak Darah', hdl: 'Lemak Darah', ldl: 'Lemak Darah', tg: 'Lemak Darah',
@@ -148,6 +159,12 @@ export const MCU_GROUPS: Record<string, string> = {
   drugBenz: 'Tes NAPZA (Urine)', drugCoc: 'Tes NAPZA (Urine)',
   drugCaris: 'Tes NAPZA (Urine)',
 
+  // Pemeriksaan penunjang lain
+  psa: 'Penanda Tumor',
+
+  // Radiologi & USG
+  chestXR: 'Rontgen', lumboXR: 'Rontgen', usg: 'Ultrasonografi',
+
   // Toksikologi
   pb: 'Logam Berat', hg: 'Logam Berat', as: 'Logam Berat', cd: 'Logam Berat',
   cr: 'Logam Berat', mn: 'Logam Berat', ni: 'Logam Berat', cu: 'Logam Berat',
@@ -155,17 +172,8 @@ export const MCU_GROUPS: Record<string, string> = {
   kolinesterase: 'Paparan Pestisida & Gas', karboksihemoglobin: 'Paparan Pestisida & Gas',
 };
 
-type FieldOptions = Omit<MCUFieldDef, 'id' | 'col' | 'colIndex' | 'label' | 'section' | 'sectionOrder' | 'type'>;
+type FieldOptions = Omit<MCUFieldDef, 'id' | 'label' | 'section' | 'type'>;
 
-/**
- * Kolom spreadsheet ditetapkan dari URUTAN deklarasi, bukan dari huruf
- * yang ditulis manual. Kolom A dipakai nomor urut otomatis, jadi field
- * pertama (NIK KTP) berada di kolom B.
- *
- * Konsekuensinya: menyisipkan field baru cukup dengan menaruhnya di
- * posisi yang tepat pada array MCU_FIELDS. Semua field setelahnya
- * otomatis bergeser, dan tidak ada lagi huruf kolom yang bisa salah.
- */
 const f = (
   id: string,
   label: string,
@@ -174,33 +182,11 @@ const f = (
   options: FieldOptions = {},
 ): MCUFieldDef => ({
   id,
-  col: '',
-  colIndex: 0,
   label,
   section,
-  sectionOrder: 0,
   type,
   ...options,
 });
-
-function columnLetter(index: number): string {
-  let result = '';
-  let current = index;
-  while (current > 0) {
-    const remainder = (current - 1) % 26;
-    result = String.fromCharCode(65 + remainder) + result;
-    current = Math.floor((current - 1) / 26);
-  }
-  return result;
-}
-
-/** Menempelkan huruf dan indeks kolom ke setiap field menurut urutannya. */
-function assignColumns(fields: MCUFieldDef[]): MCUFieldDef[] {
-  return fields.map((field, position) => {
-    const colIndex = position + 1; // kolom A = nomor urut
-    return { ...field, col: columnLetter(colIndex + 1), colIndex };
-  });
-}
 
 const normal = (normalRange: string, unit?: string): FieldOptions => ({ normalRange, unit });
 const select = (options: string[]): FieldOptions => ({ options });
@@ -214,7 +200,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('nationalId', 'NIK KTP', 'identity', 'text'),
   f('nikKaryawan', 'NIK Karyawan', 'identity', 'text'),
   f('nama', 'Nama', 'identity'),
-  f('usia', 'Usia', 'identity', 'number', { unit: 'tahun', placeholder: '35', autoCalc: true }),
+  f('usia', 'Usia', 'identity', 'number', { unit: 'tahun', autoCalc: true }),
   f('jenisKelamin', 'Jenis Kelamin', 'identity', 'select', { options: ['Laki - Laki', 'Perempuan'] }),
   f('jabatan', 'Jabatan', 'identity'),
   f('site', 'Site', 'identity'),
@@ -319,31 +305,56 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('merokok', 'Kebiasaan Merokok', 'habits', 'select', {
     options: ['Tidak Merokok', 'Perokok Aktif', 'Mantan Perokok'],
   }),
-  f('jumlahRokok', 'Jumlah Rokok per Hari (batang)', 'habits', 'number', { unit: 'batang', placeholder: '0' }),
-  f('lamaMerokok', 'Lama Merokok (tahun)', 'habits', 'number', { unit: 'tahun', placeholder: '0' }),
+  f('jumlahRokok', 'Jumlah Rokok per Hari (batang)', 'habits', 'number', { unit: 'batang' }),
+  f('lamaMerokok', 'Lama Merokok (tahun)', 'habits', 'number', { unit: 'tahun' }),
   f('olahraga', 'Kebiasaan Olahraga', 'habits', 'select', {
     options: ['Rutin (≥3x/minggu)', 'Kadang-kadang (<3x/minggu)', 'Tidak Berolahraga'],
   }),
   f('jenisOlahraga', 'Jenis Olahraga', 'habits'),
+  // Hanya ada di sini. Dulu id `alkohol` juga didaftarkan di Tes NAPZA (Urine)
+  // sebagai "Alkohol: Negatif/Positif", sehingga satu kolom database punya dua
+  // arti dan dua dropdown. Data lama berisi "Positif"/"Negatif" tetap tampil
+  // sebagai "(nilai lama)" dan diagnosis "Alcohol Use Detected" untuk nilai
+  // reaktif tetap berjalan (DRUG_TEST_DIAGNOSIS).
   f('alkohol', 'Kebiasaan Konsumsi Alkohol', 'habits', 'select', {
-    options: ['Tidak', 'Ya (Sosial)', 'Ya (Rutin)'],
+    options: ['Tidak', 'Ya (Sosial)', 'Ya (Rutin)', 'Mantan Peminum'],
   }),
   f('kebiasaanLain', 'Kebiasaan Lain (kopi, jam tidur, dll.)', 'habits', 'textarea'),
 
   // Fisik
-  f('golDarah', 'Golongan Darah & Rhesus', 'physical', 'select', select(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'])),
   // Gigi & Mulut bisa berisi lebih dari satu temuan (mis. Karies + Kalkulus),
-  // jadi memakai multi-pilih, bukan dropdown tunggal.
-  //
-  // Daftar ini mengikuti temuan odontogram yang lazim pada MCU perusahaan:
-  // kalkulus (karang gigi), gigi hilang (missing), sisa akar (radix),
-  // gangren radix (akar membusuk), impaksi, dan karies. Tanpa opsi ini
-  // operator terpaksa memakai "Lainnya" sehingga laporan tidak bisa direkap.
+  // jadi memakai multi-pilih, bukan dropdown tunggal. Istilah mengikuti
+  // odontogram yang lazim dipakai dokter gigi di Indonesia:
+  //  • Karies / Karies Profunda  — lubang gigi (superfisial → mencapai pulpa)
+  //  • Kalkulus (Karang Gigi)     — plak yang mengeras
+  //  • Gigi Hilang (Missing)      — gigi sudah tercabut / tidak ada
+  //  • Sisa Akar (Radix)          — hanya akar yang tersisa
+  //  • Gangren Radix              — sisa akar dengan pulpa nekrosis/infeksi
+  //  • Gangren Pulpa              — pulpa nekrosis pada gigi yang masih ada mahkota
+  //  • Persistensi                — gigi susu belum tanggal
+  //  • Impaksi                    — gigi tidak erupsi sempurna (mis. molar 3)
+  //  • Abses / Fistula            — infeksi dengan nanah
+  //  • Gigi Goyang (Mobility)     — goyah akibat periodontitis/trauma
+  //  • Gigi Berjejal (Crowding), Malposisi
+  //  • Atrisi / Abrasi / Erosi    — keausan gigi
+  //  • Tumpatan (Filling) / Mahkota (Crown) / Gigi Tiruan — sudah dirawat
   f('gigiMulut', 'Gigi & Mulut', 'physical', 'select', {
     options: [
-      'Normal', 'Karies', 'Kalkulus (Karang Gigi)', 'Ginggivitis', 'Periodontitis',
-      'Missing (Gigi Hilang)', 'Radix (Sisa Akar)', 'Gangren Radix',
-      'Impaksi', 'Edentul', 'Protodonsia', 'Gigi Tiruan', 'Stomatitis',
+      'Normal',
+      'Karies', 'Karies Profunda',
+      'Kalkulus (Karang Gigi)',
+      'Gigi Hilang (Missing)',
+      'Sisa Akar (Radix)', 'Gangren Radix', 'Gangren Pulpa',
+      'Persistensi', 'Impaksi',
+      'Abses / Fistula',
+      'Gigi Goyang',
+      'Ginggivitis', 'Periodontitis',
+      'Stomatitis / Sariawan',
+      'Edentul',
+      'Gigi Berjejal', 'Malposisi',
+      'Atrisi / Abrasi / Erosi',
+      'Tumpatan', 'Mahkota (Crown)', 'Gigi Tiruan',
+      'Protodonsia',
     ],
     multiple: true,
     allowCustom: true,
@@ -378,8 +389,8 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('tdS', 'Tekanan Darah Sistolik', 'vital', 'number', normal('90-119', 'mmHg')),
   f('tdD', 'Tekanan Darah Diastolik', 'vital', 'number', normal('60-79', 'mmHg')),
   f('nadi', 'Nadi', 'vital', 'number', { unit: 'bpm', high: 100 }),
-  f('bb', 'Berat Badan', 'vital', 'number', { unit: 'kg', placeholder: '65' }),
-  f('tb', 'Tinggi Badan', 'vital', 'number', { unit: 'cm', placeholder: '170' }),
+  f('bb', 'Berat Badan', 'vital', 'number', { unit: 'kg' }),
+  f('tb', 'Tinggi Badan', 'vital', 'number', { unit: 'cm' }),
   f('bmi', 'BMI', 'vital', 'number', { unit: 'kg/m²', high: 30, autoCalc: true, autoCalcFrom: ['bb', 'tb'] }),
   f('lp', 'Lingkar Pinggang', 'vital', 'number', { unit: 'cm', normalMale: '<90', normalFemale: '<80' }),
 
@@ -408,6 +419,8 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   // Hemostasis & Golongan Darah
   f('masaPerdarahan', 'Masa Perdarahan (BT)', 'hematology', 'number', normal('1-3', 'menit')),
   f('masaPembekuan', 'Masa Pembekuan (CT)', 'hematology', 'number', normal('4-10', 'menit')),
+  // Golongan darah adalah hasil laboratorium, bukan temuan pemeriksaan fisik.
+  f('golDarah', 'Golongan Darah & Rhesus', 'hematology', 'select', select(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'])),
 
   // AK–BB Kimia darah
   // Lemak Darah
@@ -418,7 +431,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
 
   // Fungsi Ginjal
   f('ureum', 'Ureum', 'chemistry', 'number', normal('16,6-48,5', 'mg/dL')),
-  f('kreatinin', 'Kreatinin', 'chemistry', 'number', normal('0.6-1.2', 'mg/dL')),
+  f('kreatinin', 'Kreatinin', 'chemistry', 'number', normal('0,6-1,2', 'mg/dL')),
   // eGFR boleh diisi manual dari hasil laboratorium. Bila kosong, engine
   // menghitungnya otomatis dengan CKD-EPI 2021 dari kreatinin + usia + jenis kelamin.
   f('egfr', 'eGFR (Glomerular Filtration Rate)', 'chemistry', 'number', { ...normal('≥90', 'mL/menit/1,73 m²'), autoCalc: true, autoCalcFrom: ['kreatinin', 'usia', 'jenisKelamin'] }),
@@ -597,24 +610,18 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   }),
 
   // ── TES NAPZA (URINE) ─────────────────────────────────────────
-  // Hanya zat yang benar-benar diskrining lewat urin. Alkohol dipindah ke
-  // Riwayat Kebiasaan karena yang dicatat di sana adalah kebiasaan minum,
-  // bukan hasil skrining urin; PSA juga dikeluarkan karena itu biomarker
-  // prostat, bukan NAPZA.
   ...([
     ['drugAmp', 'Amfetamin'], ['drugMeth', 'Metamfetamin'],
     ['drugMorph', 'Morfin'], ['drugCanna', 'THC (Marijuana)'],
     ['drugBenz', 'Benzodiazepin'], ['drugCoc', 'Kokain'],
     ['drugCaris', 'Carisoprodol'],
-  ] as const).map(([id, label]) => f(id, label, 'drug', 'select', select(['Negatif', 'Positif']))),
+  ] as const).map(([id, label]) => f(id, label, 'drug', 'select', { ...select(['Negatif', 'Positif']), normalHint: 'Negatif' })),
 
-  // ── PEMERIKSAAN LAIN ──────────────────────────────────────────
-  // Pemeriksaan penunjang yang tidak masuk kelompok mana pun di atas.
-  // PSA (Prostate-Specific Antigen) adalah penanda tumor prostat — sama
-  // sekali bukan NAPZA, sehingga sebelumnya salah kategori.
-  f('psa', 'PSA (Prostate-Specific Antigen)', 'pemeriksaanLain', 'number', {
-    unit: 'ng/mL', normalRange: '<4',
-  }),
+  // ── PEMERIKSAAN PENUNJANG LAIN ────────────────────────────────
+  // PSA (Prostate-Specific Antigen) adalah penanda tumor prostat — bukan tes
+  // NAPZA. Id `psa` tidak berubah sehingga kolom database dan klasifikasi
+  // Urologi tetap berjalan.
+  f('psa', 'PSA (Prostate-Specific Antigen)', 'other', 'number', { unit: 'ng/mL', normalRange: '<4' }),
 
   // ── LOGAM BERAT / TOKSIKOLOGI ─────────────────────────────────
   ...([
@@ -623,8 +630,8 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
     ['ni', 'Nikel (Ni)'], ['cu', 'Tembaga (Cu)'], ['zn', 'Seng (Zn)'],
     ['co', 'Kobalt (Co)'],
   ] as const).map(([id, label]) => f(id, label, 'toxicology', 'number', { unit: 'µg/dL' })),
-  f('kolinesterase', 'Kolinesterase (paparan pestisida)', 'toxicology', 'number', { unit: 'U/L', normalRange: '>3930', placeholder: '5000' }),
-  f('karboksihemoglobin', 'Karboksihemoglobin (CO)', 'toxicology', 'number', { unit: '%', normalRange: '<5', placeholder: '1,5' }),
+  f('kolinesterase', 'Kolinesterase (paparan pestisida)', 'toxicology', 'number', { unit: 'U/L' }),
+  f('karboksihemoglobin', 'Karboksihemoglobin (CO)', 'toxicology', 'number', { unit: '%' }),
 
   // BQ–BU Imaging
   //
@@ -639,19 +646,40 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   // tetap ditampilkan sebagai opsi "(nilai lama)" oleh ReviewMCU, sehingga
   // operator tidak mengira field kosong lalu menimpanya. Lihat
   // opsiDenganNilaiLama di ReviewMCU.tsx.
-  f('ecgHasil', 'ECG', 'imaging', 'select', select([...STANDARD_ECG_OPTIONS])),
-  f('tmHasil', 'Treadmill', 'imaging', 'select', select([...STANDARD_TMT_OPTIONS])),
-  f('chestXR', 'Chest X-Ray', 'imaging', 'select', {
-    options: ['Normal', 'ILO 1/0', 'ILO 1/1', 'ILO ≥2/1', 'Pulmonary Fibrosis', 'Abnormal Lainnya'],
+  //
+  // EKG dan Treadmill berada di section 'cardiac' ("Jantung"), bukan
+  // "Radiologi & USG": keduanya rekaman aktivitas listrik/respons jantung
+  // terhadap beban, bukan pencitraan.
+  f('ecgHasil', 'ECG (Elektrokardiogram)', 'cardiac', 'select', { ...select([...STANDARD_ECG_OPTIONS]), normalHint: 'Normal Sinus Rhythm' }),
+  f('tmHasil', 'Treadmill Test', 'cardiac', 'select', { ...select([...STANDARD_TMT_OPTIONS]), normalHint: 'Negative Ischemic Response' }),
+  f('chestXR', 'Chest X-Ray (Foto Toraks)', 'imaging', 'select', {
+    options: [
+      'Normal', 'ILO 1/0', 'ILO 1/1', 'ILO ≥2/1', 'Pulmonary Fibrosis', 'Pneumokoniosis',
+      'Progressive Massive Fibrosis (PMF)',
+      'Kardiomegali', 'Infiltrat / Pneumonia', 'Bronkitis (Corakan Bronkovaskular Meningkat)',
+      'Suspek Tuberkulosis Paru', 'Efusi Pleura', 'Nodul Paru', 'Skoliosis Torakal',
+      'Abnormal Lainnya',
+    ],
     allowCustom: true,
+    normalHint: 'Normal',
   }),
   f('lumboXR', 'Lumbosacral X-Ray', 'imaging', 'select', {
-    options: ['Normal', 'Spondilosis', 'Hernia Nukleus Pulposus', 'Fraktur', 'Abnormal Lainnya'],
+    options: [
+      'Normal', 'Spondilosis', 'Hernia Nukleus Pulposus', 'Spondilolistesis',
+      'Penyempitan Ruang Diskus', 'Osteofit', 'Skoliosis', 'Hilangnya Lordosis Lumbal',
+      'Lumbalisasi / Sakralisasi', 'Fraktur', 'Abnormal Lainnya',
+    ],
     allowCustom: true,
+    normalHint: 'Normal',
   }),
   f('usg', 'USG', 'imaging', 'select', {
-    options: ['Normal', 'Hepatomegali', 'Splenomegali', 'Nefrolitiasis', 'Hiperplasia Prostat', 'Kista', 'Ginjal Polikistik', 'Ascites', 'Pleural Effusion', 'Abnormal Lainnya'],
+    options: [
+      'Normal', 'Fatty Liver (Perlemakan Hati)', 'Hepatomegali', 'Splenomegali',
+      'Kolelitiasis (Batu Empedu)', 'Nefrolitiasis', 'Hidronefrosis', 'Hiperplasia Prostat',
+      'Kista', 'Ginjal Polikistik', 'Ascites', 'Pleural Effusion', 'Abnormal Lainnya',
+    ],
     allowCustom: true,
+    normalHint: 'Normal',
   }),
 
 
@@ -670,20 +698,22 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
       'Manual (tulis sendiri)',
     ],
   }),
-  f('fvcPred', 'Spirometry FVC PRED', 'spirometry', 'number', { unit: 'L', placeholder: '4,0' }),
-  f('fvcAct', 'Spirometry FVC ACT', 'spirometry', 'number', { unit: 'L', placeholder: '3,8' }),
-  f('fvcPct', 'Spirometry FVC %', 'spirometry', 'number', { unit: '%', normalRange: '≥80', autoCalc: true, autoCalcFrom: ['fvcAct', 'fvcPred'] }),
-  f('fev1Pred', 'Spirometry FEV1 PRED', 'spirometry', 'number', { unit: 'L', placeholder: '3,2' }),
-  f('fev1Act', 'Spirometry FEV1 ACT', 'spirometry', 'number', { unit: 'L', placeholder: '3,0' }),
-  f('fev1Pct', 'Spirometry FEV1 %', 'spirometry', 'number', { unit: '%', normalRange: '≥80', autoCalc: true, autoCalcFrom: ['fev1Act', 'fev1Pred'] }),
-  f('fev1FvcPred', 'Spirometry FEV1%G PRED', 'spirometry', 'number', { unit: '%', normalRange: '≥70', placeholder: '80' }),
+  f('fvcPred', 'Spirometry FVC PRED', 'spirometry', 'number', { unit: 'L' }),
+  f('fvcAct', 'Spirometry FVC ACT', 'spirometry', 'number', { unit: 'L' }),
+  f('fvcPct', 'Spirometry FVC %', 'spirometry', 'number', { unit: '%', autoCalc: true, autoCalcFrom: ['fvcAct', 'fvcPred'] }),
+  f('fev1Pred', 'Spirometry FEV1 PRED', 'spirometry', 'number', { unit: 'L' }),
+  f('fev1Act', 'Spirometry FEV1 ACT', 'spirometry', 'number', { unit: 'L' }),
+  f('fev1Pct', 'Spirometry FEV1 %', 'spirometry', 'number', { unit: '%', autoCalc: true, autoCalcFrom: ['fev1Act', 'fev1Pred'] }),
+  f('fev1FvcPred', 'Spirometry FEV1%G PRED', 'spirometry', 'number', { unit: '%' }),
   // fev1FvcAct disimpan sebagai RASIO desimal (0,83), bukan persen, karena
 // engine mcu-calculations menghitungnya sebagai FEV1 aktual / FVC aktual.
 // Label sengaja tidak memakai satuan '%' supaya tidak dibaca 0,83 persen;
 // ambang 70% sudah dinormalisasi di dalam classifyLung.
 f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoCalc: true, autoCalcFrom: ['fev1Act', 'fvcAct'] }),
-  f('fev1FvcPct', 'Spirometry FEV1%G %', 'spirometry', 'number', { unit: '%', normalRange: '≥70', autoCalc: true, autoCalcFrom: ['fev1FvcAct', 'fev1FvcPred'] }),
-  f('spiInterp', 'Spirometry Interpretasi', 'spirometry', 'text', { autoCalc: true }),
+  f('fev1FvcPct', 'Spirometry FEV1%G %', 'spirometry', 'number', { unit: '%', autoCalc: true, autoCalcFrom: ['fev1FvcAct', 'fev1FvcPred'] }),
+  // Terisi otomatis dari angka FVC/FEV1/rasio (interpretSpirometry di clinical-classification.ts).
+  // Operator tetap boleh menimpa; metode "Manual" mematikan pengisian otomatis.
+  f('spiInterp', 'Spirometry Interpretasi', 'spirometry', 'textarea', { autoCalc: true, autoCalcFrom: ['fvcPct', 'fev1Pct', 'fev1FvcAct'] }),
 
   // CF–CT Audiometry (ACR first, as specified)
   ...([
@@ -695,17 +725,21 @@ f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoC
     ['acl_3k', 'Audiometry ACL 3K'], ['acl_4k', 'Audiometry ACL 4K'],
     ['acl_6k', 'Audiometry ACL 6K'], ['acl_8k', 'Audiometry ACL 8K'],
   ] as const).map(([id, label]) => f(id, label, 'audiometry', 'number', { unit: 'dB' })),
-  // Pure Tone Average = rata-rata ambang dengar pada 500, 1000, 2000, dan
-  // 4000 Hz (rumus WHO). Angka inilah yang dipakai klasifikasi NIHL
-  // pada STD-006 (Hijau ≤25 dB, Kuning 26–40, Merah 41–90 / >90 dB),
-  // sehingga tidak lagi bergantung pada teks interpretasi.
-  f('pta', 'Audiometry PTA (Pure Tone Average)', 'audiometry', 'number', {
+  // Pure Tone Average = rata-rata ambang dengar 500/1000/2000/4000 Hz per telinga,
+  // dibulatkan; yang tersimpan adalah telinga yang LEBIH BAIK (derajat WHO,
+  // STD/033 6.4 Rev.001). Angka inilah yang dipakai klasifikasi NIHL pada STD-006
+  // (Hijau ≤25 dB, Kuning 26–40, Merah 41–90 / >90 dB).
+  f('pta', 'Audiometry PTA (Pure Tone Average, telinga terbaik)', 'audiometry', 'number', {
     unit: 'dB',
     normalRange: '≤25',
     autoCalc: true,
-    autoCalcFrom: ['acr_500', 'acr_1k', 'acr_2k', 'acr_4k'],
+    autoCalcFrom: ['acr_500', 'acr_1k', 'acr_2k', 'acr_4k', 'acl_500', 'acl_1k', 'acl_2k', 'acl_4k'],
   }),
-  f('audInterp', 'Audiometry Interpretasi', 'audiometry', 'text', { autoCalc: true }),
+  // Terisi otomatis dari ambang dengar kedua telinga (interpretAudiometry di clinical-classification.ts).
+  f('audInterp', 'Audiometry Interpretasi', 'audiometry', 'textarea', {
+    autoCalc: true,
+    autoCalcFrom: ['acr_500', 'acr_1k', 'acr_2k', 'acr_4k', 'acl_500', 'acl_1k', 'acl_2k', 'acl_4k'],
+  }),
 
   // CU–DB Neurologi
   f('balance', 'Balance Test', 'neuro', 'select', neurologicalSelect(['Normal', 'Abnormal'])),
@@ -734,14 +768,14 @@ f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoC
   // `tmHasil` di Radiologi & USG, dan engine sudah mengklasifikasikannya
   // (classifyTreadmill). Menambah field kedua untuk pemeriksaan yang sama
   // hanya membuat data terbelah di dua kolom.
-  f('tes6mwt', '6 Minutes Walk Test — Jarak Tempuh', 'fitness', 'number', { unit: 'meter', normalRange: '≥550', placeholder: '600' }),
-  f('tesHarvard', 'Harvard Step Test — Indeks Kebugaran', 'fitness', 'number', { unit: 'skor', normalRange: '≥80', placeholder: '85' }),
-  f('tesYMCAStep', 'YMCA Step Test — Nadi Pemulihan', 'fitness', 'number', { unit: 'bpm', normalRange: '<110', placeholder: '95' }),
+  f('tes6mwt', '6 Minutes Walk Test — Jarak Tempuh', 'fitness', 'number', { unit: 'meter' }),
+  f('tesHarvard', 'Harvard Step Test — Indeks Kebugaran', 'fitness', 'number', { unit: 'skor' }),
+  f('tesYMCAStep', 'YMCA Step Test — Nadi Pemulihan', 'fitness', 'number', { unit: 'bpm' }),
   f('tesQueensCollege', 'Queen\'s College Step Test — VO2max', 'fitness', 'number', { unit: 'mL/kg/menit' }),
-  f('tesErgocycle', 'Ergocycle / Astrand-Ryhming — VO2max', 'fitness', 'number', { unit: 'mL/kg/menit', normalRange: '≥35', placeholder: '40' }),
-  f('tesSitUp', 'Sit-Up 30 Detik', 'fitness', 'number', { unit: 'kali', placeholder: '20' }),
-  f('tesPushUp', 'Push-Up', 'fitness', 'number', { unit: 'kali', placeholder: '25' }),
-  f('tesSitAndReach', 'Fleksi (Sit and Reach)', 'fitness', 'number', { unit: 'cm', placeholder: '20' }),
+  f('tesErgocycle', 'Ergocycle / Astrand-Ryhming — VO2max', 'fitness', 'number', { unit: 'mL/kg/menit' }),
+  f('tesSitUp', 'Sit-Up 30 Detik', 'fitness', 'number', { unit: 'kali' }),
+  f('tesPushUp', 'Push-Up', 'fitness', 'number', { unit: 'kali' }),
+  f('tesSitAndReach', 'Fleksi (Sit and Reach)', 'fitness', 'number', { unit: 'cm' }),
   // Ringkasan otomatis dari seluruh tes di atas. Tes ini BUKAN parameter
   // zonasi menurut SOP, tetapi hasilnya tetap dicatat sebagai temuan.
   f('tesKebugaran', 'Ringkasan Tes Kebugaran (Otomatis)', 'fitness', 'text', { autoCalc: true }),
@@ -758,7 +792,8 @@ f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoC
   // Ringkasan skor kuesioner terakhir, ditulis otomatis oleh engine
   // supaya QSHE Medic tidak perlu membuka tabel mcu_ess / mcu_mental_health.
   f('ringkasanKuesioner', 'Ringkasan Skor Kuesioner (Otomatis)', 'assessment', 'textarea', { autoCalc: true }),
-  f('perluFU', 'Perlu Follow Up?', 'assessment', 'select', { options: ['Ya', 'Tidak'] }),
+  // Otomatis: Ya bila ada temuan abnormal (trigger STD/006 atau rujukan nasional).
+  f('perluFU', 'Perlu Follow Up?', 'assessment', 'select', { options: ['Ya', 'Tidak'], autoCalc: true, locked: true }),
   f('rekFU', 'Rekomendasi Follow Up', 'assessment', 'select', {
     multiple: true,
     options: [
@@ -781,7 +816,7 @@ f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoC
   f('itemFU', 'Item Follow Up', 'assessment', 'textarea', { autoCalc: true }),
   f('linkMCU', 'Link File MCU', 'assessment'),
   f('tglExpired', 'Tanggal Expired MCU', 'calculated', 'date', { autoCalc: true, autoCalcFrom: ['tglMCU'] }),
-  f('framScore', 'Framingham Score Lipid Based – Score', 'calculated', 'number', { normalRange: '<10', autoCalc: true }),
+  f('framScore', 'Framingham Score Lipid Based – Score', 'calculated', 'number', { autoCalc: true }),
   f('framProb', 'Framingham Score Lipid Based – Probabilitas', 'calculated', 'text', { autoCalc: true }),
   f('framKat', 'Framingham Score Lipid Based – Kategori', 'calculated', 'text', { autoCalc: true }),
   f('zonasi', 'Zonasi', 'calculated', 'text', { autoCalc: true }),
@@ -798,9 +833,78 @@ f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoC
   f('catatan', 'Catatan & Rekomendasi', 'assessment', 'textarea'),
 ];
 
-/** MCU_FIELDS dengan huruf dan indeks kolom yang sudah ditempel. */
-export const MCU_FIELDS: MCUFieldDef[] = assignColumns(MCU_FIELD_DEFINITION);
-export const TOTAL_COLS = MCU_FIELDS.length + 1; // + kolom A untuk nomor urut
+/**
+ * Nilai normal TAMPILAN untuk parameter yang belum punya `normalRange`.
+ * Hanya dipakai sebagai placeholder dan label "Rujukan normal: ..."; sengaja bukan
+ * `normalRange` agar deteksi abnormal / zonasi / Item Follow Up tidak berubah.
+ *
+ * Logam berat selain timbal tidak diisi: nilai rujukannya bergantung pada
+ * spesimen (darah/urine) dan metode lab, jadi angka umum akan menyesatkan.
+ */
+const NORMAL_HINTS: Record<string, string> = {
+  // Tanda vital
+  nadi: '60-100',
+  bmi: '18,5-25,0',
+  // Spirometri
+  fvcPct: '≥80', fev1Pct: '≥80', fev1FvcAct: '≥0,70',
+  // Audiometri: ambang dengar normal ≤25 dB di semua frekuensi
+  ...Object.fromEntries(
+    ['500', '1k', '2k', '3k', '4k', '6k', '8k']
+      .flatMap((freq) => [`acr_${freq}`, `acl_${freq}`])
+      .map((id) => [id, '≤25']),
+  ),
+  // Toksikologi
+  pb: '<10',
+  karboksihemoglobin: '<3 (bukan perokok)',
+  // Mata
+  visusJauh: '6/6 (20/20)', visusDekat: '6/6 (20/20)',
+  defWarna: 'Normal', lapangPandang: 'Normal', fisikMata: 'Normal',
+  // Fisik
+  gigiMulut: 'Normal', fisikHeadToToe: 'Normal', hemoroid: 'Negatif',
+  // Serologi
+  hbsag: 'Non - Reaktif', antiHbc: 'Non - Reaktif', antiHcv: 'Non - Reaktif',
+  hiv: 'Non - Reaktif', vdrl: 'Non - Reaktif', tpha: 'Non - Reaktif',
+  widal: 'Negatif', mantoux: 'Negatif',
+  // Neurologi
+  balance: 'Normal',
+  romberg: 'Normal / Negatif', phalen: 'Normal / Negatif', thinel: 'Normal / Negatif',
+  patrick: 'Normal / Negatif', kontraPatrick: 'Normal / Negatif',
+  laseque: 'Normal / Negatif', kernig: 'Normal / Negatif',
+  // Lain-lain
+  diabetes: 'Tidak',
+};
+
+/** Semua field MCU, dengan nilai normal tampilan (NORMAL_HINTS) bila belum punya rentang. */
+export const MCU_FIELDS: MCUFieldDef[] = MCU_FIELD_DEFINITION.map((field) => {
+  const hint = NORMAL_HINTS[field.id];
+  return hint && !field.normalHint && !field.normalRange ? { ...field, normalHint: hint } : field;
+});
+
+/**
+ * Teks nilai normal yang ditampilkan untuk satu field, menurut jenis kelamin
+ * bila rentangnya berbeda. Urutan: rentang pria/wanita → normalRange →
+ * normalHint. String kosong bila field memang tidak punya acuan normal.
+ */
+export function getNormalText(field: MCUFieldDef, gender?: string): string {
+  const g = (gender ?? '').toLowerCase();
+  if (g.includes('laki') && field.normalMale) return field.normalMale;
+  if (g.includes('perem') && field.normalFemale) return field.normalFemale;
+  if (field.normalRange) return field.normalRange;
+  if (field.normalMale || field.normalFemale) return field.normalMale || field.normalFemale || '';
+  return field.normalHint || '';
+}
+
+/**
+ * Placeholder input: nilai normal bila ada (mis. "13-16,5"), supaya operator
+ * langsung melihat acuan di dalam kotak isian. `placeholder` yang ditulis
+ * eksplisit selalu didahulukan.
+ */
+export function getFieldPlaceholder(field: MCUFieldDef, gender?: string): string {
+  if (field.placeholder) return field.placeholder;
+  if (field.type !== 'number' && field.type !== 'text') return '';
+  const text = getNormalText(field, gender);
+  return text ? `Normal: ${text}` : '';
+}
 
 export function normalizeMCUEcgOption(value: string): string {
   const token = value.toLowerCase().replace(/[^a-z]/g, '');
@@ -819,10 +923,6 @@ export function normalizeMCUEcgOption(value: string): string {
 
 export function getFieldsBySection(sectionId: string): MCUFieldDef[] {
   return MCU_FIELDS.filter(field => field.section === sectionId);
-}
-
-export function getFieldById(id: string): MCUFieldDef | undefined {
-  return MCU_FIELDS.find(field => field.id === id);
 }
 
 // ============================================================
@@ -968,6 +1068,5 @@ export function parseUlToParams(raw: string | null | undefined): Record<string, 
   }
   return out;
 }
-
 
 

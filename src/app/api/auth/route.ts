@@ -11,8 +11,6 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : supabase;
 
-const PREVIEW_ROLE = process.env.NEXT_PUBLIC_PREVIEW_ROLE as string | undefined;
-
 async function getSessionRole(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
   let accessToken = authHeader?.replace('Bearer ', '');
@@ -21,9 +19,6 @@ async function getSessionRole(req: NextRequest) {
     if (cookie) accessToken = cookie;
   }
   if (!accessToken) return null;
-  if (process.env.NODE_ENV !== 'production' && accessToken === 'preview-access-token' && PREVIEW_ROLE) {
-    return { userId: 'preview-0000-0000-0000-000000000001', role: PREVIEW_ROLE };
-  }
   const { data: { user }, error } = await supabase.auth.getUser(accessToken);
   if (error || !user) return null;
   const { data: profile } = await supabaseAdmin
@@ -42,16 +37,13 @@ export async function POST(req: NextRequest) {
       supabase, supabaseAdmin, supabaseServiceKey,
     };
 
-    if (action === 'login') return handleLogin(req, body, ctx);
+    if (action === 'login') return handleLogin(body, ctx);
     if (action === 'change-password') return handleChangePassword(req, body, ctx);
 
     if (action === 'register') {
       const authInfo = await getSessionRole(req);
       const isSuperuser = authInfo?.role === 'superuser';
-      const isPreview = req.headers.get('authorization')?.replace('Bearer ', '') === 'preview-access-token'
-        && process.env.NODE_ENV !== 'production'
-        && Boolean(process.env.NEXT_PUBLIC_PREVIEW_ROLE);
-      return handleRegister(req, body, { supabaseAdmin, isSuperuser, isPreview });
+      return handleRegister(body, { supabaseAdmin, isSuperuser });
     }
 
     return NextResponse.json({ error: 'Action tidak dikenal' }, { status: 400 });

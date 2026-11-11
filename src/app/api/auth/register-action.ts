@@ -1,5 +1,5 @@
 // register action extracted from src/app/api/auth/route.ts.
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { decryptEmployee, hashField } from '@/lib/encryption';
 import {
@@ -52,19 +52,11 @@ export function validateRegisterInput(body: Record<string, unknown>): { input?: 
 }
 
 export async function handleRegister(
-  req: NextRequest,
   body: Record<string, unknown>,
-  ctx: { supabaseAdmin: SupabaseClient; isSuperuser: boolean; isPreview: boolean },
+  ctx: { supabaseAdmin: SupabaseClient; isSuperuser: boolean },
 ): Promise<NextResponse> {
   if (!ctx.isSuperuser) {
     return NextResponse.json({ error: 'Akses ditolak. Hanya administrator yang dapat mendaftarkan pengguna.' }, { status: 403 });
-  }
-  if (ctx.isPreview) {
-    return NextResponse.json({
-      success: true,
-      message: 'Pengguna berhasil didaftarkan (preview mode — tidak disimpan ke database)',
-      userId: 'preview-' + Date.now(),
-    });
   }
 
   const validation = validateRegisterInput(body);

@@ -39,7 +39,7 @@
 // "berat" tiap subskala berbeda: depresi mulai 22, ansietas 20, stres 26.
 // ============================================================
 
-import { dassCategory, type DassCategory } from '@/lib/questionnaire-scores';
+import type { DassCategory } from '@/lib/questionnaire-scores';
 
 export interface KesimpulanEss {
   score: number;
@@ -59,14 +59,6 @@ export interface SkorDass21 {
   ansietas: { score: number; category: DassCategory };
   stres: { score: number; category: DassCategory };
   answered: number;
-}
-
-export interface SkorSds {
-  rawIndex: number;
-  category: string;
-  answered: number;
-  /** Skor per indikator (5–35) untuk pemetaan risiko psikologis kerja. */
-  indicators?: { id: string; title: string; score: number; category: string; label: string }[];
 }
 
 /**
@@ -141,30 +133,4 @@ export function kesimpulanSrqDass(
     ? 'Tidak ada skor yang masuk kategori berat, tapi tetap ada anjuran untuk diperiksa.'
     : 'Tidak ditemukan gejala yang perlu tindak lanjut dari instrumen yang diisi. '
       + 'Tetap jaga tidur, kelola stres, dan cari bantuan lebih awal bila keluhan berlanjut.';
-}
-
-/**
- * Mengembalikan 'Merah' atau 'Kuning' bila hasil kuesioner semestinya menggeser
- * zona MCU, atau null bila tidak.
- *
- * Dipakai oleh skrip verifikasi untuk memastikan angka kesimpulan, ambang
- * kategori, dan hasil zonasi engine benar-benar sepakat satu sama lain. Kalau
- * ketiganya menyimpang, yang salah biasanya angka di modul ini.
- */
-export function zonaDariKuesioner(
-  dass: SkorDass21,
-  srq: SkorSrq20,
-): 'Merah' | 'Kuning' | null {
-  if (dass.depresi.category === 'sangat-berat'
-    || dass.ansietas.category === 'sangat-berat'
-    || dass.stres.category === 'sangat-berat') {
-    return 'Merah';
-  }
-  if (srq.answered > 0 && srq.category === 'perlu-tindak-lanjut') return 'Kuning';
-  if (dassCategory('depresi', dass.depresi.score) === 'berat'
-    || dassCategory('ansietas', dass.ansietas.score) === 'berat'
-    || dassCategory('stres', dass.stres.score) === 'berat') {
-    return 'Kuning';
-  }
-  return null;
 }

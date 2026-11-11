@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { decrypt, decryptEmployee, hashField, isEncryptedValue } from '@/lib/encryption';
+import { muatFollowUpSelesai } from '@/lib/followup-status';
 import { siteDihitung } from '@/lib/site-filter';
 import { getServerCaller, requireServerRole, STAFF_ROLES } from '@/lib/server-auth';
 import { integrationAdminClient } from '@/lib/integration-settings';
@@ -73,8 +74,7 @@ const EMPLOYEE_COLUMNS = [
 
 const MCU_COLUMNS = [
   'id', 'national_id', 'nik_karyawan', 'status_mcu', 'tgl_mcu', 'tgl_expired',
-  'kes_vendor', 'rek_fu', 'kesimpulan_fu1', 'rek_fu2', 'kesimpulan_fu2', 'rek_fu3',
-  'kesimpulan_fu3', 'rek_fu4', 'zonasi', 'item_fu', 'diagnosa_medis', 'fram_kat',
+  'kes_vendor', 'perlu_fu', 'rek_fu', 'zonasi', 'item_fu', 'diagnosa_medis', 'fram_kat',
 ].join(',');
 
 const SCHEDULE_COLUMNS = 'id,national_id,nik_karyawan,tanggal_jadwal';
@@ -95,10 +95,11 @@ async function buildRows(): Promise<Row[]> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [employeeRaw, mcuRaw, scheduleRaw] = await Promise.all([
+  const [employeeRaw, mcuRaw, scheduleRaw, followUpByHash] = await Promise.all([
     fetchAll('employees', EMPLOYEE_COLUMNS, q => q.ilike('employment_status', 'Aktif').eq('division', 'Mining')),
     fetchAll('mcu_records', MCU_COLUMNS),
     fetchAll('mcu_schedules', SCHEDULE_COLUMNS),
+    muatFollowUpSelesai(client()),
   ]);
 
   // --- karyawan (dekripsi NIK Karyawan & NIK KTP)
@@ -161,7 +162,10 @@ async function buildRows(): Promise<Row[]> {
     const latest = valid.length ? valid[valid.length - 1] : null;
     const lastDate = latest?.date ?? null;
 
-    const followUp = getFollowUp(latest?.rec ?? null);
+    // Status follow up mengikuti follow up terbaru (followups_prokawan);
+    // bila belum ada, memakai kesimpulan vendor pada MCU terakhir.
+    const nikHash = hashField(String(emp.nik ?? '').trim());
+    const followUp = getFollowUp(latest?.rec ?? null, latest?.date ?? null, nikHash ? followUpByHash.get(nikHash) ?? [] : []);
     const validity = evaluateValidity(lastDate, latest?.rec?.tgl_expired, today);
     const jadwal = scheduleByEmployee.get(emp) ?? null;
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Package, Search, Plus, Edit, Trash2, AlertTriangle, Loader2, ArchiveRestore } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, AlertTriangle, ArchiveRestore } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';

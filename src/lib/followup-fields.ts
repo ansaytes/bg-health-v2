@@ -1,34 +1,26 @@
 // ============================================================
-// Penentu field tindak lanjut — TIGA sumber
+// Penentu field tindak lanjut — DUA acuan
 // ============================================================
 //
-// Field yang ditampilkan pada form tindak lanjut diambil dari tiga jalur yang
-// berlapis. Perannya BERBEDA, bukan saling menggantikan:
+// Nilai rujukan yang berlaku di aplikasi hanya dua. Engine (clinical-classification,
+// zonasi-engine) bukan sumber rujukan sendiri: ia hanya menghitung berdasarkan
+// kedua acuan ini.
 //
 // ┌─────────────────────────────────────────────────────────────────────┐
-// │ 1. TRIGGER ZONA (STD/006)                                          │
-// │    Parameter yang menentukan Zona Risiko PTM. Hanya yang tercantum  │
-// │    di Bab 7 yang masuk. Inilah yang WAJIB dikendalikan lewat        │
-// │    ProKawan, karena berhubungan dengan kewajiban & biaya program.   │
-// │    Contoh: Hypertension Grade I (145/92)                            │
+// │ 1. TRIGGER ZONA (BG/QSHE/STD/006 Bab 7)                             │
+// │    Parameter yang menentukan Zona Risiko PTM. WAJIB dikendalikan    │
+// │    lewat ProKawan. Contoh: Hypertension Grade I (145/92).           │
 // ├─────────────────────────────────────────────────────────────────────┤
-// │ 2. TEMUAN ABNORMAL STANDAR INDONESIA (Jalur 1)                     │
-// │    Nilai di luar rentang rujukan laboratorium/klinis Indonesia      │
-// │    (MCU_FIELDS normalRange). Menangkap LEBIH LUAS dari STD/006.     │
-// │    Contoh: TD 120/80 = pre-hipertensi → abnormal, tetapi TIDAK      │
-// │    menjadi peserta ProKawan.                                        │
-// ├─────────────────────────────────────────────────────────────────────┤
-// │ 3. NILAI ABNORMAL ENGINE (clinical-classification)                 │
-// │    Parameter yang severity-nya bukan hijau menurut STD/006, tetapi  │
-// │    tidak masuk trigger. Contoh: HDL rendah, trigliserida borderline │
-// │    (severity 'normal' bukan hijau).                                 │
+// │ 2. TEMUAN ABNORMAL (rujukan nasional Indonesia)                     │
+// │    Nilai di luar rentang rujukan klinis/laboratorium Indonesia      │
+// │    (MCU_FIELDS normalRange), plus parameter yang melewati ambang    │
+// │    STD/006 tetapi bukan trigger zona. Menangkap LEBIH LUAS dari     │
+// │    STD/006. Contoh: TD 120/80 = pre-hipertensi → abnormal, tetapi   │
+// │    bukan peserta ProKawan.                                          │
 // └─────────────────────────────────────────────────────────────────────┘
 //
-// KENAPA TETAP DITAMPILKAN SEMUA
-// Jalur 1 adalah praktik kedokteran yang benar: setiap penyimpangan dari nilai
-// rujukan perlu ditindaklanjuti. Jalur 2 & 3 adalah kebijakan perusahaan yang
-// sengaja lebih ketat ambangnya. Membuang Jalur 1 berarti mengabaikan temuan
-// klinis; memakai STD/006 saja membuat ProKawan membengkak.
+// Keduanya menjadi dasar `perlu_fu` otomatis (hitungTemuanAbnormal) dan
+// penutupan follow up otomatis (hitungSisaTindakLanjut).
 // ============================================================
 
 import {
@@ -41,7 +33,7 @@ import { MCU_FIELDS, type MCUFieldDef } from '@/lib/mcu-fields';
 import { diLuarRentang, labelRentang, fmtAngka, angkaDari } from '@/lib/mcu-normal-range';
 import { parseVisusPerMata } from '@/lib/visus-parser';
 
-export type SumberField = 'trigger' | 'abnormal' | 'engine';
+export type SumberField = 'trigger' | 'abnormal';
 
 export interface FieldTindakLanjut {
   id: string;
@@ -62,7 +54,7 @@ export interface FieldTindakLanjut {
   sumber: SumberField;
   /** Penjelasan singkat mengapa field ini muncul. */
   alasan: string;
-  /** Nilai abnormal dari engine (label klasifikasi), bila ada. */
+  /** Label klasifikasi klinis (ambang STD/006), bila ada. */
   klasifikasi?: string;
   /** true bila tipe input berupa teks (visus, interpretasi). */
   teks: boolean;
@@ -85,6 +77,8 @@ const SECTION_LABEL: Record<string, string> = {
   toxicology: 'Logam Berat / Toksikologi',
   habits: 'Riwayat Kebiasaan',
   imaging: 'Radiologi & USG',
+  cardiac: 'Jantung (EKG & Treadmill)',
+  other: 'Pemeriksaan Penunjang Lain',
   anamnesis: 'Riwayat & Skrining',
   spirometry: 'Spirometri',
   audiometry: 'Audiometri',
@@ -134,6 +128,9 @@ const BUKAN_PARAMETER = new Set([
   // `statusMCU` (huruf besar) adalah id sebenarnya di MCU_FIELDS — jangan
   // hanya menulis `statusMcu`, karena filter bersifat case-sensitive.
   'statusMcu', 'statusMCU', 'kesVendor', 'perluFu', 'rekFu', 'itemFu',
+  // Kesimpulan/administratif yang diturunkan dari temuan — tidak boleh menjadi
+  // temuan itu sendiri (mis. "Fit With Note" bukan parameter abnormal).
+  'rekQSHE', 'dugaanPAK', 'tempatMCU',
   // Serologi yang hanya dibaca sekali (bukan diukur ulang per kontrol).
   // HBsAg sendiri dinilai lewat klasifikasi khusus di atas.
   'hbsag', 'antiHbs', 'vdrl', 'tpha', 'hiv',
@@ -185,11 +182,8 @@ const DINILAI_KHUSUS = new Set(['visusJauh']);
  */
 
 
-/**
- * Klasifikasi klinis STD/006 per field — dipakai untuk menentukan sumber
- * "engine" (severity bukan hijau).
- */
-function klasifikasiEngine(id: string, d: Record<string, unknown>, gender: string): Classification | null {
+/** Klasifikasi klinis per field (STD/006 dan kriteria klinis); null bila tidak dinilai. */
+function klasifikasiKlinis(id: string, d: Record<string, unknown>, gender: string): Classification | null {
   const g = detectGender(gender);
   switch (id) {
     case 'tdS': return classifyBloodPressure(toNumber(d.tdS as string), toNumber(d.tdD as string));
@@ -200,7 +194,7 @@ function klasifikasiEngine(id: string, d: Record<string, unknown>, gender: strin
     case 'ldl': return classifyLdl(toNumber(d.ldl as string));
     case 'tg': return classifyTriglyceride(toNumber(d.tg as string));
     case 'egfr': return classifyEgfr(toNumber(d.egfr as string));
-    case 'au': return classifyUricAcid(toNumber(d.au as string), g);
+    case 'au': return classifyUricAcid(toNumber(d.au as string));
     case 'bmi': {
       // Sesuai arahan: IMT hanya menjadi temuan bila ≥30 (obesitas).
       // `classifyBmi` mengembalikan 'kuning' untuk 23–29,9 sehingga tanpa
@@ -295,7 +289,7 @@ export function tentukanFieldTindakLanjut(
 
     // ── Sumber 1: trigger zona ───────────────────────────────────
     if (fieldTrigger.has(field.id)) {
-      const k = klasifikasiEngine(field.id, baseline, gender);
+      const k = klasifikasiKlinis(field.id, baseline, gender);
       daftar.push({
         ...dasarField(field, gender, nilaiMcu, nilaiFU),
         // tdS selalu ditampilkan bersama tdD — sertakan nilai diastole sebagai
@@ -371,13 +365,13 @@ export function tentukanFieldTindakLanjut(
       }
     }
 
-    // ── Sumber 3: abnormal menurut engine (severity ≠ hijau) ─────
-    const k = klasifikasiEngine(field.id, baseline, gender);
+    // ── Sumber 2 (lanjutan): klasifikasi klinis non-hijau ────────
+    const k = klasifikasiKlinis(field.id, baseline, gender);
     if (k && k.severity !== 'hijau' && k.severity !== 'normal' && k.severity !== 'tidak-dinilai') {
       if (sudah.has(field.id)) continue;
       daftar.push({
         ...dasarField(field, gender, nilaiMcu, nilaiFU),
-        sumber: 'engine',
+        sumber: 'abnormal',
         alasan: k.detail ?? k.label,
         klasifikasi: k.label,
       });
@@ -386,7 +380,7 @@ export function tentukanFieldTindakLanjut(
   }
 
   // Field select/textarea yang nilainya bukan kata normal (mis. HBsAg Reaktif)
-  // — masuk sumber engine bila belum tercakup.
+  // — masuk temuan abnormal bila belum tercakup.
   for (const field of MCU_FIELDS) {
     if (sudah.has(field.id) || BUKAN_PARAMETER.has(field.id)) continue;
     if (DINILAI_KHUSUS.has(field.id)) continue;
@@ -395,7 +389,7 @@ export function tentukanFieldTindakLanjut(
     if (!nilai || KATA_NORMAL.test(nilai)) continue;
     daftar.push({
       ...dasarField(field, gender, nilai, nilaiFU),
-      sumber: 'engine',
+      sumber: 'abnormal',
       alasan: 'Nilai tidak normal',
       teks: true,
     });
@@ -412,14 +406,8 @@ export function tentukanFieldTindakLanjut(
     {
       sumber: 'abnormal',
       judul: 'Temuan Abnormal',
-      keterangan: 'Di luar rentang rujukan — tidak selalu menjadi peserta ProKawan',
+      keterangan: 'Di luar nilai rujukan nasional Indonesia atau ambang STD/006 yang bukan trigger zona — tidak selalu menjadi peserta ProKawan',
       fields: daftar.filter((f) => f.sumber === 'abnormal'),
-    },
-    {
-      sumber: 'engine',
-      judul: 'Temuan Lain',
-      keterangan: 'Parameter dengan nilai di luar kriteria normal',
-      fields: daftar.filter((f) => f.sumber === 'engine'),
     },
   ];
 
@@ -445,9 +433,48 @@ function dasarField(
   };
 }
 
-/** Label singkat kelompok untuk tampilan. */
-export function labelSumber(s: SumberField): string {
-  return s === 'trigger' ? 'Trigger Zona' : s === 'abnormal' ? 'Abnormal' : 'Lainnya';
+/**
+ * Jumlah parameter yang masih abnormal DAN bisa diukur ulang pada follow up
+ * (trigger STD/006 + rujukan nasional). Dasar penutupan follow up otomatis:
+ * 0 = semua parameter yang dikontrol sudah kembali normal.
+ */
+export function hitungSisaTindakLanjut(
+  data: Record<string, unknown>,
+  triggerZona: string | null | undefined,
+): number {
+  return tentukanFieldTindakLanjut(data, triggerZona)
+    .reduce((jumlah, kelompok) => jumlah + kelompok.fields.length, 0);
+}
+
+/** Hasil skrining kualitatif yang tidak diukur ulang tetapi jelas abnormal bila reaktif/positif. */
+const SKRINING_KUALITATIF = [
+  'hbsag', 'vdrl', 'tpha', 'hiv',
+  'drugAmp', 'drugMeth', 'drugMorph', 'drugCanna', 'drugCoc', 'drugBenz', 'drugCaris',
+] as const;
+
+const NILAI_REAKTIF = /reaktif|positif|positive/i;
+const NILAI_NON_REAKTIF = /non\s*-?\s*reaktif|nonreaktif|negatif|negative/i;
+
+/**
+ * Jumlah seluruh temuan abnormal pada satu MCU: parameter yang bisa diukur ulang
+ * (hitungSisaTindakLanjut) ditambah skrining reaktif/positif dan foto toraks
+ * abnormal yang tidak diukur ulang. Dasar kolom `perlu_fu` otomatis.
+ */
+export function hitungTemuanAbnormal(
+  data: Record<string, unknown>,
+  triggerZona: string | null | undefined,
+): number {
+  let jumlah = hitungSisaTindakLanjut(data, triggerZona);
+
+  for (const id of SKRINING_KUALITATIF) {
+    const nilai = String(data[id] ?? '').trim();
+    if (nilai && NILAI_REAKTIF.test(nilai) && !NILAI_NON_REAKTIF.test(nilai)) jumlah += 1;
+  }
+
+  const toraks = klasifikasiKlinis('chestXR', data, String(data.jenisKelamin ?? ''));
+  if (toraks && toraks.severity !== 'hijau' && toraks.severity !== 'normal' && toraks.severity !== 'tidak-dinilai') jumlah += 1;
+
+  return jumlah;
 }
 
 export { fmtAngka };

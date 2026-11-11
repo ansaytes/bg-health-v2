@@ -134,26 +134,6 @@ export default function InventoryDashboard() {
     return 'Aman';
   };
 
-  // KPIs
-  const totalRagam = items.length;
-  const totalStokFisik = useMemo(() => items.reduce((acc, i) => acc + (i.stock || 0), 0), [items]);
-
-  const perluRestockCount = useMemo(() => {
-    return items.filter(i => {
-      const status = getStockStatus(i);
-      return status === 'Menipis' || status === 'Kritis' || status === 'Habis';
-    }).length;
-  }, [items]);
-
-  const expiredAlertCount = useMemo(() => {
-    return items.filter(i => {
-      const exp = getExpiredStatus(i.tanggal_expired);
-      return exp === 'Sudah Kadaluarsa' || exp === 'Kadaluarsa < 3 Bulan';
-    }).length;
-  }, [items]);
-
-  const totalAvgMonthly = useMemo(() => items.reduce((acc, i) => acc + (i.avg_monthly_usage || 0), 0), [items]);
-
   // Operational Action Tab State
   const [actionTab, setActionTab] = useState<'semua' | 'habis' | 'kritis' | 'fast' | 'fefo'>('semua');
   const [isDashboardView, setIsDashboardView] = useState(true);
@@ -188,30 +168,6 @@ export default function InventoryDashboard() {
   const expiredItems = useMemo(() => items.filter(i => getExpiredStatus(i.tanggal_expired) === 'Sudah Kadaluarsa'), [items]);
   const expSoonItems = useMemo(() => items.filter(i => getExpiredStatus(i.tanggal_expired) === 'Kadaluarsa < 3 Bulan'), [items]);
 
-  // Specific List: Items that are OUT OF STOCK or NEED RESTOCK (Critical / Low)
-  const criticalStockItems = useMemo(() => {
-    return items
-      .filter(i => {
-        const status = getStockStatus(i);
-        return status === 'Habis' || status === 'Kritis' || status === 'Menipis';
-      })
-      .map(i => {
-        const safeLimit = Math.max(1, (i.avg_monthly_usage || 0) * 3);
-        const defisit = Math.max(0, safeLimit - i.stock);
-        const status = getStockStatus(i);
-        return {
-          ...i,
-          safeLimit,
-          defisit,
-          status,
-        };
-      })
-      .sort((a, b) => {
-        if (a.stock === 0 && b.stock !== 0) return -1;
-        if (b.stock === 0 && a.stock !== 0) return 1;
-        return b.defisit - a.defisit;
-      });
-  }, [items]);
 
   // Specific List: Items that are EXPIRED or EXPIRING SOON (< 3 Months)
   const criticalExpiredItems = useMemo(() => {

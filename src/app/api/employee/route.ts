@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { decryptEmployee, hashField } from '@/lib/encryption';
-import { sanitizeSearchTerm, safeHash } from '@/lib/query-safety';
+import { orEq, orContains, sanitizeSearchTerm } from '@/lib/sql-safety';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
-const previewRole = process.env.NEXT_PUBLIC_PREVIEW_ROLE;
 
-type SearchBy = 'nik' | 'national_id' | 'nama';
 type EmployeeLookupRow = {
   nik: string | null;
   nama: string | null;
@@ -27,9 +25,6 @@ async function getCaller(request: NextRequest): Promise<{ role: string; site: st
   const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
     || request.cookies.get('sb-access-token')?.value;
   if (!token) return null;
-  if (process.env.NODE_ENV !== 'production' && token === 'preview-access-token' && previewRole) {
-    return { role: previewRole, site: process.env.NEXT_PUBLIC_PREVIEW_SITE || 'Head Office' };
-  }
 
   const authClient = createClient(supabaseUrl, supabaseAnonKey);
   const { data: { user }, error } = await authClient.auth.getUser(token);
@@ -98,23 +93,24 @@ export async function POST(request: NextRequest) {
     const query = searchKey.trim();
     const filters: string[] = [];
     if (rawSearchBy === 'nik') {
-      const queryHash = safeHash(hashField(query));
+      const queryHash = hashField(query);
       if (!queryHash) throw new Error('Employee lookup hash could not be generated.');
-      filters.push(`nik_hash.eq."${queryHash}"`);
+      filters.push(orEq('nik_hash', queryHash));
     } else if (rawSearchBy === 'national_id') {
-      const queryHash = safeHash(hashField(query));
+      const queryHash = hashField(query);
       if (!queryHash) throw new Error('Employee lookup hash could not be generated.');
-      filters.push(`national_id_hash.eq."${queryHash}"`);
+      filters.push(orEq('national_id_hash', queryHash));
     } else {
-      // sanitizeSearchTerm membuang koma, kurung, titik, kutip, dan wildcard
-      // LIKE — semuanya bermakna sintaks bagi parser filter PostgREST.
+      // sanitizeSearchTerm membuang koma, kurung, kutip, dan wildcard; orContains
+      // lalu mengutip nilainya sehingga tidak bisa menambah kondisi filter baru.
       const nameQuery = sanitizeSearchTerm(query);
       if (nameQuery.length < 3) {
         return NextResponse.json({ success: false, error: 'Pencarian nama minimal 3 karakter.' }, { status: 400 });
       }
-      filters.push(`nama.ilike."%${nameQuery}%"`);
-      filters.push(`department.ilike."%${nameQuery}%"`);
-      filters.push(`site_name.ilike."%${nameQuery}%"`);
+      for (const column of ['nama', 'department', 'site_name']) {
+        const condition = orContains(column, nameQuery);
+        if (condition) filters.push(condition);
+      }
     }
 
     let employeeQuery = supabaseAdmin!

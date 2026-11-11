@@ -9,7 +9,7 @@ import {
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { fetchDashboardData } from '@/lib/dashboard-data';
-import { BAR_LAYOUT, STANDAR_ANIMASI, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, animasiUlang, skalaBar, useAnimationReady, warnaBar } from '@/lib/chart-standard';
+import { BAR_LAYOUT, STANDAR_ANIMASI, STANDAR_ANIMASI_BAR, animasiUlang, skalaBar, useAnimationReady, warnaBar } from '@/lib/chart-standard';
 
 // Register Chart.js plugins and all controllers/scales/elements
 ChartJS.register(...registerables, ChartDataLabels);
@@ -273,7 +273,6 @@ export default function KunjunganBerobat() {
     // ANIMASI STANDAR APLIKASI: selalu berjalan (chart selalu dibuat ulang
     // saat data berubah, dan dibuat baru saat pertama tampil).
     const animationSettings = STANDAR_ANIMASI_BAR;
-    const lineAnimationSettings = STANDAR_ANIMASI;
 
       // Common theme colors
       const textColor = isDark ? '#F9FAFB' : '#111827';

@@ -201,7 +201,7 @@ function StatistikKesehatanForm() {
         });
       } else {
         // No data — keep empty
-        setRow(prev => ({ ...EMPTY_ROW, tahun: row.tahun, bulan: row.bulan, jobsite: row.jobsite }));
+        setRow({ ...EMPTY_ROW, tahun: row.tahun, bulan: row.bulan, jobsite: row.jobsite });
       }
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Gagal memuat data');

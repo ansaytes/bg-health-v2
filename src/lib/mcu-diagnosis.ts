@@ -58,7 +58,7 @@ import {
   type Classification,
 } from '@/lib/clinical-classification';
 import { classifyEcg, classifyTreadmill, DRUG_TEST_LABEL } from '@/lib/clinical-classification';
-import { dassBandLabel, dassCategory, essBandLabel, sdsBandLabel, type DassDomain } from '@/lib/questionnaire-scores';
+import { dassBandLabel, dassCategory, essBandLabel, type DassDomain } from '@/lib/questionnaire-scores';
 import { URINALYSIS_FIELD_IDS, URINALYSIS_FIELD_LABELS } from '@/lib/mcu-fields';
 
 export type MCURaw = Record<string, string | number | null | undefined>;
@@ -222,7 +222,7 @@ function buildLaboratoryEntries(values: MCURaw): DiagnosisEntry[] {
   add(classifyLdl(toNumber(values.ldl)), 'Metabolik');
   add(classifyTriglyceride(toNumber(values.tg)), 'Metabolik');
   add(classifyHdl(toNumber(values.hdl), gender), 'Metabolik');
-  add(classifyUricAcid(toNumber(values.au), gender), 'Metabolik');
+  add(classifyUricAcid(toNumber(values.au)), 'Metabolik');
   add(classifyUreum(toNumber(values.ureum)), 'Ginjal');
   add(classifyEgfr(toNumber(values.egfr)), 'Ginjal');
   add(classifyLiver(toNumber(values.sgot), toNumber(values.sgpt), isReactive(values.hbsag)), 'Hati');
@@ -457,18 +457,6 @@ export function formatDiagnosis(entries: DiagnosisEntry[]): string {
   return entries
     .map((entry) => entry.diagnosis)
     .join(', ');
-}
-
-/** Ringkasan singkat untuk kolom ringkasan. */
-export function diagnosisSummary(entries: DiagnosisEntry[]): string {
-  if (entries.length === 0) return 'No Abnormal Finding';
-  const counts = { merah: 0, kuning: 0, normal: 0 };
-  for (const entry of entries) counts[entry.severity] = (counts[entry.severity] ?? 0) + 1;
-  const parts: string[] = [];
-  if (counts.merah) parts.push(`${counts.merah} merah`);
-  if (counts.kuning) parts.push(`${counts.kuning} kuning`);
-  if (counts.normal) parts.push(`${counts.normal} lain-lain`);
-  return parts.join(', ');
 }
 
 export { essBandLabel, fmt };

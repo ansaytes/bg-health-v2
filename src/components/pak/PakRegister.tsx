@@ -15,7 +15,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { authFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { useMCUStore } from '@/lib/store';
-import CenteredTabs from '@/components/ui/centered-tabs';
 import { DEFAULT_SETTINGS, mergeSettings, type AppSettings } from '@/lib/app-settings';
 import EmployeeLookupInput from '@/components/administrator/EmployeeLookupInput';
 

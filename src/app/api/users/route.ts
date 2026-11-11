@@ -9,9 +9,6 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : supabase;
 
-const PREVIEW_TOKEN = 'preview-access-token';
-const PREVIEW_ROLE = process.env.NEXT_PUBLIC_PREVIEW_ROLE as string | undefined;
-
 async function getCallerRole(req: NextRequest): Promise<{ userId: string; role: string } | null> {
   const authHeader = req.headers.get('authorization');
   let accessToken = authHeader?.replace('Bearer ', '');
@@ -20,9 +17,6 @@ async function getCallerRole(req: NextRequest): Promise<{ userId: string; role: 
     if (cookie) accessToken = cookie;
   }
   if (!accessToken) return null;
-  if (process.env.NODE_ENV !== 'production' && accessToken === 'preview-access-token' && PREVIEW_ROLE) {
-    return { userId: 'preview-0000-0000-0000-000000000001', role: PREVIEW_ROLE };
-  }
 
   const client = supabaseServiceKey ? supabaseAdmin : supabase;
   const { data: { user }, error } = await client.auth.getUser(accessToken);
@@ -49,17 +43,6 @@ export async function GET(req: NextRequest) {
         caller_found: !!caller,
         caller_role: caller?.role || null,
       }, { status: 403 });
-    }
-
-    const PREVIEW_TOKEN_VAL = 'preview-access-token';
-    const reqAuthToken = req.headers.get('authorization')?.replace('Bearer ', '');
-    if (reqAuthToken === PREVIEW_TOKEN_VAL && PREVIEW_ROLE) {
-      const PREVIEW_MOCK_USERS = [
-        { id: 'preview-1', user_id: 'preview-0000-0000-0000-000000000001', username: 'superuser.preview', full_name: 'Preview Superuser', role: 'superuser', national_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        { id: 'preview-2', user_id: 'preview-0000-0000-0000-000000000002', username: 'admin.preview', full_name: 'Preview Administrator', role: 'administrator', national_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        { id: 'preview-3', user_id: 'preview-0000-0000-0000-000000000003', username: 'manager.preview', full_name: 'Ir. Budi Manager, QSHE', role: 'manager', national_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-      ];
-      return NextResponse.json({ users: PREVIEW_MOCK_USERS });
     }
 
     const client = supabaseServiceKey ? supabaseAdmin : supabase;

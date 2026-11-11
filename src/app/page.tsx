@@ -9,10 +9,8 @@ import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import DashboardView from '@/components/dashboard/DashboardView';
 import MonitoringMCUTabs from '@/components/dashboard/MonitoringMCUTabs';
-import KunjunganBerobat from '@/components/dashboard/KunjunganBerobat';
 import ReviewMCU from '@/components/review-mcu/ReviewMCU';
 
-import InputLaggingIndicator from '@/components/administrator/InputLaggingIndicator';
 import LaggingIndicatorPage from '@/components/administrator/LaggingIndicatorPage';
 import KunjunganBerobatForm from '@/components/administrator/KunjunganBerobatForm';
 import HealthCampaignForm from '@/components/administrator/HealthCampaignForm';
@@ -36,9 +34,6 @@ import DataKesehatanTable from '@/components/dashboard/DataKesehatanTable';
 import DataKunjunganTable from '@/components/dashboard/DataKunjunganTable';
 import RecordMCUTable from '@/components/dashboard/RecordMCUTableModern';
 import DataManPowerTable from '@/components/dashboard/DataManPowerTable';
-import InventoryDashboard from '@/components/dashboard/InventoryDashboard';
-import HearingConservationDashboard from '@/components/dashboard/HearingConservationDashboard';
-import ErgonomiDashboard from '@/components/dashboard/ErgonomiDashboard';
 import MentalHealthDashboard from '@/components/dashboard/MentalHealthDashboard';
 import HigieneIndustriTabs from '@/components/dashboard/HigieneIndustriTabs';
 import LayananKuratifTabs from '@/components/dashboard/LayananKuratifTabs';
@@ -161,16 +156,6 @@ function IconMonitoring() {
     </svg>
   );
 }
-function IconKunjunganDash() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <line x1="12" y1="8" x2="12" y2="16" />
-      <line x1="8" y1="12" x2="16" y2="12" />
-    </svg>
-  );
-}
-
 function IconSemuaFeed() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -208,24 +193,6 @@ function IconReviewMCU() {
     </svg>
   );
 }
-function IconQuestionnaire() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-      <line x1="8" y1="13" x2="9" y2="13" /><line x1="12" y1="13" x2="13" y2="13" />
-      <line x1="16" y1="13" x2="17" y2="13" /><line x1="8" y1="17" x2="9" y2="17" />
-      <line x1="12" y1="17" x2="13" y2="17" />
-    </svg>
-  );
-}
-function IconStatistikHealth() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" /><circle cx="12" cy="7" r="3" /><path d="M12 4v1" />
-    </svg>
-  );
-}
 function IconInputLagging() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -240,17 +207,6 @@ function IconCampaignAdmin() {
     </svg>
   );
 }
-function IconUsers() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
-}
-
 /** Bulan & bintang — Gangguan Tidur. */
 function IconTidur() {
   return (
@@ -326,16 +282,6 @@ const HOME_SIDEBAR: SidebarItem[] = [
 ];
 
 /** Laporan Mingguan — kalender dengan tanda centang. */
-function IconLaporanMingguan() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="17" rx="2" />
-      <path d="M3 9h18M8 2v4M16 2v4" />
-      <path d="M9 15l1.5 1.5L14 13" />
-    </svg>
-  );
-}
-
 const DASH_SIDEBAR: SidebarItem[] = [
   { key: 'statistik', label: 'Statistik Kesehatan', icon: <IconStatistik /> },
   { key: 'monitoring', label: 'Monitoring MCU', icon: <IconMonitoring /> },
@@ -676,7 +622,7 @@ function AdminTogglePanel({ formContent, tableContents, hasTable, stepLabels }: 
 
 function AdminContent() {
   const activeAdminSidebar = useMCUStore((s) => s.activeAdminSidebar);
-  const { isAdmin, role } = useAuth();
+  const { isAdmin } = useAuth();
 
   // Kelola Pengguna kini menjadi tab di dalam menu Pengaturan.
   if (activeAdminSidebar === 'pengaturan' || activeAdminSidebar === 'kelola-pengguna') {
@@ -1125,7 +1071,7 @@ export default function Home() {
   const setActiveDataEntrySidebar = useMCUStore((s) => s.setActiveDataEntrySidebar);
   const setActiveAdminSidebar = useMCUStore((s) => s.setActiveAdminSidebar);
   const { theme, setTheme } = useTheme();
-  const { user, profile, loading: authLoading, isAdmin, isSuperuser, role } = useAuth();
+  const { user, profile, loading: authLoading, isSuperuser, role } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const activePage = role === 'employee' ? 'home' : store.activePage;
@@ -1241,7 +1187,6 @@ export default function Home() {
 
   // Get user display name and initials
   const displayName = profile?.full_name || profile?.username || 'User';
-  const initials = displayName.charAt(0).toUpperCase();
   const roleLabel = profile?.role === 'superuser' ? 'Superuser'
     : profile?.role === 'administrator' ? 'QSHE Medic'
       : profile?.role === 'pic' ? 'PIC Site'

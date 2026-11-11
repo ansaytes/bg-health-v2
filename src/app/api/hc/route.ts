@@ -3,11 +3,12 @@
 // POST  {resource: area|noise|exposure|baseline|sts, ...}
 // PATCH {resource:'sts', id, ...}   DELETE ?resource=area|noise|exposure&id=
 import { NextRequest } from 'next/server';
-import { decryptMCURecord, decrypt, encrypt, hashField } from '@/lib/encryption';
+import { decrypt, encrypt, hashField } from '@/lib/encryption';
 import {
   audiogramCompleteness, audiogramFromRecord, evaluateAudiogram, FREQS, KELAS_LABEL, type KelasPendengaran,
 } from '@/lib/hc-ergo';
 import { db, fail, ok, requireCaller, today } from '@/lib/hc-ergo-server';
+import { inHexList } from '@/lib/sql-safety';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,9 +45,9 @@ async function loadAudiometriEval() {
   const hashes = [...byHash.keys()];
   const records = new Map<string, Row[]>();       // exposure.id -> records
   for (let i = 0; i < hashes.length; i += 60) {
-    const list = hashes.slice(i, i + 60).join(',');
+    const chunk = hashes.slice(i, i + 60);
     const { data, error } = await db.from('mcu_records').select(MCU_COLS)
-      .or(`nik_karyawan_hash.in.(${list}),national_id_hash.in.(${list})`).order('tgl_mcu', { ascending: false });
+      .or(`${inHexList('nik_karyawan_hash', chunk)},${inHexList('national_id_hash', chunk)}`).order('tgl_mcu', { ascending: false });
     if (error) throw new Error(error.message);
     for (const rec of (data as unknown as Row[]) || []) {
       const emp = byHash.get(rec.nik_karyawan_hash) || byHash.get(rec.national_id_hash);

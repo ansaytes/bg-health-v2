@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
-import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
+import EmployeeLookupInput from './EmployeeLookupInput';
 
 interface UserProfile {
   id: string;

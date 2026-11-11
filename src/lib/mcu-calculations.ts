@@ -5,13 +5,14 @@
   calcFramingham,
   calcMCHC,
   calcPct,
-  calcPTA,
   calcEgfrCkdEpi2021,
 } from '@/lib/zonasi-engine';
 import { buildDiagnosisList, formatDiagnosis } from '@/lib/mcu-diagnosis';
 import { summariseQuestionnaires } from '@/lib/questionnaire-scores';
-import { classifyFitnessTest } from '@/lib/clinical-classification';
+import { AUTO_INTERPRETATION_FIELDS, classifyFitnessTest } from '@/lib/clinical-classification';
+import { audiogramFromRecord, evaluateAudiogram } from '@/lib/hc-ergo';
 import { parseVisusPerMata } from '@/lib/visus-parser';
+import { hitungTemuanAbnormal } from '@/lib/followup-fields';
 import { normalizeMCUEcgOption, buildUlComposite, URINALYSIS_FIELD_IDS } from '@/lib/mcu-fields';
 
 type MCUValues = Record<string, string | number | null | undefined>;
@@ -314,99 +315,6 @@ export function suggestRekQSHE(values: MCUValues): string {
 }
 
 /**
- * Interpretasi spirometri otomatis dari angka hasil pengukuran.
- *
- * Sebelumnya kolom `spiInterp` hanya bisa diisi manual/OCR, sehingga
- * interpretasi sering kosong padahal FVC/FEV1 sudah terukur. Fungsi ini
- * membangun teks interpretasi standar dari rasio FEV1/FVC dan FEV1 %
- * prediksi, memakai ambang yang sama dengan `classifyLung` agar form dan
- * zonasi tidak pernah berbeda pendapat.
- *
- * ATURAN (PDPI/GOLD — sama untuk semua metode di SPIROMETRY_THRESHOLDS):
- *   - FEV1/FVC < 70%  -> pola OBSTRUKTIF
- *       FEV1 >=80% ringan, 50-79% sedang, 30-49% berat, <30% sangat berat
- *   - FEV1/FVC >= 70% dan FVC < 80% -> pola RESTRIKTIF
- *   - Selain itu -> NORMAL
- *
- * Nilai manual TIDAK ditimpa: hasil hanya dipakai bila `spiInterp` kosong.
- */
-export function buildSpirometryInterpretation(values: MCUValues): string {
-  const fev1Pct = numberValue(values.fev1Pct);
-  const fvcPct = numberValue(values.fvcPct);
-  const rasioRaw = numberValue(values.fev1FvcAct);
-
-  // Rasio tersimpan sebagai desimal (0,83). Nilai >1,5 berarti sudah persen.
-  const rasio = rasioRaw === null ? null : rasioRaw <= 1.5 ? rasioRaw * 100 : rasioRaw;
-  if (fev1Pct === null && fvcPct === null && rasio === null) return '';
-
-  const fmt = (n: number) => String(Math.round(n * 10) / 10).replace('.', ',');
-
-  if (rasio !== null && rasio < 70) {
-    const derajat = fev1Pct === null ? '' : fev1Pct >= 80 ? 'Ringan'
-      : fev1Pct >= 50 ? 'Sedang'
-        : fev1Pct >= 30 ? 'Berat'
-          : 'Sangat Berat';
-    const detail = [
-      `FEV1/FVC ${fmt(rasio)}%`,
-      fev1Pct !== null ? `FEV1 ${fmt(fev1Pct)}% prediksi` : '',
-    ].filter(Boolean).join(', ');
-    return `Obstruktif${derajat ? ` ${derajat}` : ''} - ${detail}`;
-  }
-
-  if (fvcPct !== null && fvcPct < 80) {
-    return `Restriktif - FVC ${fmt(fvcPct)}% prediksi`;
-  }
-
-  const detail = [
-    rasio !== null ? `FEV1/FVC ${fmt(rasio)}%` : '',
-    fev1Pct !== null ? `FEV1 ${fmt(fev1Pct)}% prediksi` : '',
-    fvcPct !== null ? `FVC ${fmt(fvcPct)}% prediksi` : '',
-  ].filter(Boolean).join(', ');
-  return `Normal - ${detail}`;
-}
-
-/**
- * Interpretasi audiometri otomatis dari PTA.
- *
- * Ambang mengikuti STD-006 / Kemenkes RI 2011 dan SAMA dengan
- * `classifyHearing`, supaya teks di form konsisten dengan zona:
- *   <=25 dB Normal | 26-40 Mild | 41-60 Moderate | 61-90 Severe | >90 Very Severe
- *
- * Nilai tetap kosong bila tidak ada satu pun ambang dengar yang terisi.
- */
-export function buildAudiometryInterpretation(values: MCUValues): string {
-  const pta = numberValue(values.pta);
-  if (pta === null) return '';
-
-  // Telinga kanan (ACR) dan kiri (ACL) dilaporkan terpisah bila tersedia,
-  // karena NIHL sering asimetris (mis. notch 4 kHz hanya di satu telinga).
-  const ptaTelinga = (prefix: 'acr' | 'acl'): number | null => {
-    const freqs = ['500', '1k', '2k', '4k'];
-    const nilai = freqs.map((f) => numberValue(values[`${prefix}_${f}`]))
-      .filter((n): n is number => n !== null);
-    if (!nilai.length) return null;
-    return nilai.reduce((a, b) => a + b, 0) / nilai.length;
-  };
-  const ptaKanan = ptaTelinga('acr');
-  const ptaKiri = ptaTelinga('acl');
-
-  const fmt = (n: number) => String(Math.round(n * 10) / 10).replace('.', ',');
-  const derajat = (n: number) => n <= 25 ? 'Normal'
-    : n <= 40 ? 'Mild (Ringan)'
-      : n <= 60 ? 'Moderate (Sedang)'
-        : n <= 90 ? 'Severe (Berat)'
-          : 'Very Severe (Sangat Berat)';
-
-  const bagian: string[] = [`PTA ${fmt(pta)} dB - ${derajat(pta)}`];
-  if (ptaKanan !== null && ptaKiri !== null) {
-    bagian.push(`Kanan ${fmt(ptaKanan)} dB (${derajat(ptaKanan)})`);
-    bagian.push(`Kiri ${fmt(ptaKiri)} dB (${derajat(ptaKiri)})`);
-  }
-  return bagian.join(' | ');
-}
-
-
-/**
  * Applies the calculated columns before persistence. These are the
  * database-side equivalents of the formula columns maintained by the
  * Excel/Google Sheet.
@@ -438,26 +346,26 @@ export function applyMCUCalculations(values: MCUValues): MCUValues {
   const fev1FvcPct = calcPct(fev1FvcAct, fev1FvcPred);
   if (fev1FvcPct !== null) result.fev1FvcPct = fev1FvcPct;
 
-  // PTA = rata-rata ambang dengar 500/1000/2000/4000 Hz (rumus WHO).
-  // Angka inilah yang dipakai klasifikasi NIHL pada STD-006, sehingga zona
-  // tidak lagi bergantung pada teks interpretasi audiometri.
-  const pta = calcPTA([
-    numberValue(result.acr_500), numberValue(result.acr_1k),
-    numberValue(result.acr_2k), numberValue(result.acr_4k),
-  ]);
-  if (pta !== null) result.pta = pta;
-
-  // Interpretasi spirometri & audiometri terisi OTOMATIS dari angka hasil
-  // pengukuran, sehingga operator tidak perlu mengetik ulang dan hasilnya
-  // konsisten dengan ambang yang dipakai engine zonasi. Nilai yang sudah
-  // ada (manual/OCR) dipertahankan apa adanya.
-  if (!text(result.spiInterp)) {
-    const spiAuto = buildSpirometryInterpretation(result);
-    if (spiAuto) result.spiInterp = spiAuto;
+  // PTA = rata-rata ambang dengar 500/1000/2000/4000 Hz per telinga, dibulatkan,
+  // dan yang dipakai adalah telinga yang LEBIH BAIK (derajat WHO, STD/033 6.4 Rev.001;
+  // logikanya sama dengan modul Konservasi Pendengaran di hc-ergo.ts). Kedua
+  // telinga memerlukan keempat frekuensi agar rata-ratanya bermakna.
+  const audiogram = audiogramFromRecord(result);
+  if (audiogram) {
+    const evaluation = evaluateAudiogram(audiogram);
+    const averages = [evaluation.kanan.avg4, evaluation.kiri.avg4].filter((value): value is number => value !== null);
+    if (averages.length > 0) result.pta = Math.round(Math.min(...averages));
   }
-  if (!text(result.audInterp)) {
-    const audAuto = buildAudiometryInterpretation(result);
-    if (audAuto) result.audInterp = audAuto;
+
+  // Interpretasi spirometri & audiometri dibangun dari angka di atas. Hanya
+  // diisi bila kosong, sehingga tulisan manual pemeriksa tidak ditimpa. (Form
+  // memakai pelacak sendiri di store.ts agar teks otomatis ikut berubah saat
+  // angka diedit.) Harus sebelum diagnosis karena keduanya membaca teks ini.
+  for (const [key, build] of Object.entries(AUTO_INTERPRETATION_FIELDS)) {
+    if (!text(result[key]) || /^n\/a$/i.test(text(result[key]))) {
+      const generated = build(result);
+      if (generated) result[key] = generated;
+    }
   }
 
   result.diabetes = calcDiabetes(
@@ -495,14 +403,9 @@ export function applyMCUCalculations(values: MCUValues): MCUValues {
   if (!text(result.diagnosaMedis)) {
     result.diagnosaMedis = formatDiagnosis(diagnosisEntries);
   }
-  const findings = diagnosisEntries.map((entry) => entry.diagnosis);
 
   // DK is formula-driven in the spreadsheet. It remains empty for Fit To Work.
   result.itemFU = buildFormulaFollowUp(result);
-  // DI is a Ya/Tidak dropdown in the workbook, so preserve an extracted/manual value.
-  if (!text(result.perluFU)) {
-    result.perluFU = text(result.kesVendor) && text(result.kesVendor) !== 'Fit To Work' && findings.length > 0 ? 'Ya' : 'Tidak';
-  }
   if (text(result.rekFU)) result.rekFU = compactFollowUpRecommendation(result.rekFU);
 
   const calculationInput: Record<string, string | number | undefined> = {};
@@ -523,6 +426,11 @@ export function applyMCUCalculations(values: MCUValues): MCUValues {
   result.pengendalian = zonasi.pengendalian;
   result.frekuensiEvaluasi = zonasi.frekuensiEvaluasi;
   result.catatanSOP = zonasi.catatanSOP.join(' | ');
+
+  // Perlu Follow Up: otomatis. Ya bila ada peserta ProKawan (zona Kuning/Merah)
+  // atau ada parameter abnormal menurut trigger STD/006 maupun rujukan nasional.
+  const zonaButuhFu = zonasi.zona === 'Kuning' || zonasi.zona === 'Merah';
+  result.perluFU = zonaButuhFu || hitungTemuanAbnormal(result, result.triggerZona) > 0 ? 'Ya' : 'Tidak';
 
   // RekQSHE: auto-suggest from zonasi/findings when empty; preserve manual.
   if (!text(result.rekQSHE)) {

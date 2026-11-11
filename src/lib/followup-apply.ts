@@ -19,9 +19,9 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { decryptMCURecord } from '@/lib/encryption';
 import { applyMCUCalculations } from '@/lib/mcu-calculations';
-import { tentukanFieldTindakLanjut } from '@/lib/followup-fields';
+import { barisKeDraft } from '@/lib/prokawan-evaluasi-server';
+import { hitungSisaTindakLanjut, tentukanFieldTindakLanjut } from '@/lib/followup-fields';
 import { formatSuratKontrolAbnormal } from '@/lib/surat-kontrol-format';
 
 export interface HasilTerap {
@@ -32,7 +32,16 @@ export interface HasilTerap {
   pengendalian: string;
   frekuensi: string;
   evaluasi: Record<string, unknown>;
+  /** Nilai baseline yang diukur ulang (disalin ke baris follow up). */
   baseline: Record<string, string | number>;
+  /** Nilai follow up terbaru per parameter sebelum penyimpanan ini (untuk prefill form). */
+  nilaiTerbaru: Record<string, string | number | null>;
+  /** Parameter yang masih abnormal (bisa diukur ulang) setelah follow up ini; 0 = tuntas. */
+  sisaAbnormal: number;
+  /** Perlu follow up menurut dataset efektif (nilai kolom `perlu_fu`). */
+  perluFollowUp: 'Ya' | 'Tidak';
+  /** Seluruh baseline MCU dalam nama field engine (camelCase), tanpa overlay. */
+  baselinePenuh: Record<string, string | number | undefined>;
   ringkasanSurat: string;
 }
 
@@ -48,29 +57,28 @@ const PERINGKAT: Record<string, number> = {
 export async function buildDatasetEfektifDanZona(opsi: {
   client: SupabaseClient;
   nikHash: string;
+  /** Record MCU baseline (sudah ditemukan lewat cariMcuByNik, select '*'). */
+  mcu: Record<string, unknown>;
   nilaiBaru: Record<string, string | number>;
 }): Promise<HasilTerap> {
-  const { client, nikHash, nilaiBaru } = opsi;
+  const { client, nikHash, mcu, nilaiBaru } = opsi;
 
-  // ── 1. Baseline MCU terakhir ──────────────────────────────────────
-  const { data: mcuRows } = await client
-    .from('mcu_records')
-    .select('*')
-    .eq('nik_karyawan_hash', nikHash)
-    .order('tgl_mcu', { ascending: false, nullsFirst: false })
-    .limit(1);
-  const mcu = mcuRows?.[0] as Record<string, unknown> | undefined;
-  if (!mcu) throw new Error('Record MCU tidak ditemukan untuk karyawan ini');
-
-  const baseline = decryptMCURecord(mcu) as Record<string, unknown>;
+  // ── 1. Baseline MCU → nama field engine ───────────────────────────
+  // Kolom DB snake_case (`td_s`, `visus_jauh`) HARUS dikonversi ke camelCase
+  // (`tdS`, `visusJauh`); engine dan overlay follow up memakai nama itu.
+  const baseline = barisKeDraft(mcu);
 
   // ── 2. Nilai follow up sebelumnya (kronologis) ────────────────────
-  const { data: riwayat } = await client
+  // Hanya follow up SESUDAH MCU baseline ini: hasil follow up dari MCU yang lebih
+  // lama tidak boleh menimpa baseline MCU yang lebih baru.
+  const tglMcu = String(mcu.tgl_mcu ?? '').slice(0, 10);
+  let kueriRiwayat = client
     .from('followups_prokawan')
     .select('aktual_tanggal,nilai,selesai')
     .eq('nik_hash', nikHash)
-    .eq('selesai', true)
-    .order('aktual_tanggal', { ascending: true });
+    .eq('selesai', true);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(tglMcu)) kueriRiwayat = kueriRiwayat.gte('aktual_tanggal', tglMcu);
+  const { data: riwayat } = await kueriRiwayat.order('aktual_tanggal', { ascending: true });
 
   const overlayLama: Record<string, string | number> = {};
   for (const r of (riwayat ?? []) as Record<string, unknown>[]) {
@@ -137,7 +145,11 @@ export async function buildDatasetEfektifDanZona(opsi: {
       ringkasanSurat: surat.teks,
       nilaiTindakLanjut: nilaiBaru,
     },
+    nilaiTerbaru: overlayLama,
+    sisaAbnormal: hitungSisaTindakLanjut(efektif, String(hitung.triggerZona ?? '')),
+    perluFollowUp: String(hitung.perluFU ?? '') === 'Ya' ? 'Ya' : 'Tidak',
     baseline: baselineRingkas,
+    baselinePenuh: baseline,
     ringkasanSurat: surat.teks,
   };
 }
