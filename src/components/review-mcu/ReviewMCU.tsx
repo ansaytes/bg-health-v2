@@ -938,7 +938,8 @@ function FieldRenderer({
   const abnormal = isAbnormal(field, value, gender);
   const normalRange = getNormalRangeText(field, gender);
   const selectValue = field.type === 'select' ? normalizeSelectValue(field, value) : value;
-  // Placeholder = nilai normal (mis. "Normal: 13-16,5") bila field punya acuan.
+  // Placeholder = contoh data yang harus diisikan (bukan nilai normal —
+  // nilai normal sudah tampil di label "Rujukan normal" di bawah field).
   const placeholder = getFieldPlaceholder(field, gender);
   const opsiSelect = opsiDenganNilaiLama(field.options, selectValue);
   const visus = field.id === 'visusJauh' || field.id === 'visusDekat'
@@ -1006,7 +1007,7 @@ function FieldRenderer({
                     next.os && `VOS: ${next.os}`,
                   ].filter(Boolean).join(' | '));
                 }}
-                placeholder="Normal: 6/6 (20/20)"
+                placeholder="6/6"
                 className="h-9 rounded-lg bg-background text-sm"
               />
             </label>
@@ -1039,7 +1040,7 @@ function FieldRenderer({
             }}
             className={`iOS-select h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-70 ${abnormal ? 'border-red-500/60 dark:border-red-500/50' : ''}`}
           >
-            <option value="">{normalRange ? `Pilih... (normal: ${normalRange})` : 'Pilih...'}</option>
+            <option value="">Pilih...</option>
             {opsiSelect.nilaiLama && (
               <option value={opsiSelect.nilaiLama}>{opsiSelect.nilaiLama} (nilai lama)</option>
             )}

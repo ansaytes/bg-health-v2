@@ -1,18 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import {
-  Chart as ChartJS,
-  registerables,
-  type ChartData,
-  type ChartOptions,
-} from 'chart.js';
-import ChartDataLabels from 'chartjs-plugin-datalabels';
+import type { ChartData, ChartOptions } from 'chart.js';
+import { ChartJS } from '@/lib/chart-register';
 import { fetchDashboardData } from '@/lib/dashboard-data';
 import { BAR_LAYOUT, STANDAR_ANIMASI, STANDAR_ANIMASI_BAR, animasiUlang, skalaBar, useAnimationReady, warnaBar } from '@/lib/chart-standard';
-
-// Register Chart.js plugins and all controllers/scales/elements
-ChartJS.register(...registerables, ChartDataLabels);
 
 interface KunjunganRecord {
   id: string;
@@ -442,7 +434,6 @@ export default function KunjunganBerobat() {
             grace: '12%',
             grid: { color: gridColor },
             ticks: { color: textColor, font: { size: 10, family: fontFamily }, precision: 0 },
-            title: { display: true, text: 'Jumlah kunjungan', color: textColor, font: { size: 9, weight: 'bold' as const, family: fontFamily } },
           },
           y: {
             grid: { display: false },
@@ -452,7 +443,6 @@ export default function KunjunganBerobat() {
               font: { size: 9, family: fontFamily },
               autoSkip: false,
             },
-            title: { display: true, text: 'Nama pasien', color: textColor, font: { size: 9, weight: 'bold' as const, family: fontFamily } },
           },
         },
       };
@@ -621,7 +611,6 @@ export default function KunjunganBerobat() {
             grace: '12%',
             grid: { color: gridColor },
             ticks: { color: textColor, font: { size: 10, family: fontFamily }, precision: 0 },
-            title: { display: true, text: 'Jumlah keluar (pcs/tablet)', color: textColor, font: { size: 9, weight: 'bold' as const, family: fontFamily } },
           },
           y: {
             grid: { display: false },
@@ -634,7 +623,6 @@ export default function KunjunganBerobat() {
                 return label.length > 22 ? label.slice(0, 20) + '...' : label;
               },
             },
-            title: { display: true, text: 'Jenis obat', color: textColor, font: { size: 9, weight: 'bold' as const, family: fontFamily } },
           },
         },
       };

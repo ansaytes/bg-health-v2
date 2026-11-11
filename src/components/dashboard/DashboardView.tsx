@@ -1,13 +1,10 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { Chart as ChartJS, registerables } from 'chart.js';
-import ChartDataLabels from 'chartjs-plugin-datalabels';
+import { ChartJS } from '@/lib/chart-register';
 import { MONTHS, JOBSITES } from '@/lib/lagging-data';
 import { fetchDashboardData } from '@/lib/dashboard-data';
 import { STANDAR_ANIMASI_BAR, BAR_LAYOUT, animasiUlang, skalaBar, useAnimationReady } from '@/lib/chart-standard';
-
-ChartJS.register(...registerables, ChartDataLabels);
 
 const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
@@ -115,29 +112,110 @@ export default function DashboardView() {
     return () => observer.disconnect();
   }, []);
 
-  /* ─── Fetch KPI data when site/year changes ─────────────── */
+  /*
+   * ─── SATU effect untuk SEMUA data dashboard ──────────────────
+   *
+   * Sebelumnya ada tiga useEffect terpisah (KPI, peringkat ASR, karyawan
+   * sakit) yang masing-masing setState sendiri → tiga kali render ulang dan
+   * tiga "gelombang" layout shift.
+   *
+   * Ketiganya sebenarnya bisa dijalankan PARALEL karena parameter yang
+   * dibutuhkan sudah diketahui dari filter:
+   *   • KPI   : site + tahun
+   *   • ASR   : tahun + bulan (YTD → tahun saja)
+   *   • Sakit : bulan + tahun + site (dilewati saat YTD)
+   *
+   * Satu-satunya nilai yang dulu menunggu KPI adalah `bulanNum` saat mode YTD,
+   * tetapi di mode itu daftar karyawan sakit memang kosong dan peringkat ASR
+   * hanya memakai tahun — jadi tidak ada yang benar-benar perlu ditunggu.
+   * Hasil: satu render, tiga request berjalan bersamaan.
+   */
   useEffect(() => {
     let cancelled = false;
+    const fetchBulan = selectedMonth === 'all' ? null : selectedMonth;
+
     setLoadingKpi(true);
-    (async () => {
-      try {
-        const view = selectedSite === 'All Site' ? 'view=all_site&' : '';
-        const siteParam = selectedSite === 'All Site' ? '' : `jobsite=${encodeURIComponent(selectedSite)}&`;
-        const url = `/api/health-indicators?${view}${siteParam}tahun=${selectedYear || ''}`;
-        const json = await fetchDashboardData<{ success: boolean; data?: KpiRow[] }>(url);
-        if (!cancelled && json.success && Array.isArray(json.data)) {
-          setKpiData(json.data);
-        } else if (!cancelled) {
-          setKpiData([]);
-        }
-      } catch {
-        if (!cancelled) setKpiData([]);
-      } finally {
-        if (!cancelled) setLoadingKpi(false);
-      }
+    setLoadingAsr(true);
+    setLoadingSick(fetchBulan !== null);
+
+    const kpiUrl = (() => {
+      const view = selectedSite === 'All Site' ? 'view=all_site&' : '';
+      const siteParam = selectedSite === 'All Site' ? '' : `jobsite=${encodeURIComponent(selectedSite)}&`;
+      return `/api/health-indicators?${view}${siteParam}tahun=${selectedYear || ''}`;
     })();
+
+    const asrUrl = fetchBulan === null
+      ? `/api/health-indicators?asr_ranking=true&tahun=${selectedYear || ''}`
+      : `/api/health-indicators?asr_ranking=true&tahun=${selectedYear || ''}&bulan=${fetchBulan}`;
+
+    const sickUrl = fetchBulan === null
+      ? null
+      : (() => {
+          const period = getSickPeriodRange(fetchBulan, selectedYear);
+          return `/api/sick-employees?bulan=${fetchBulan}&tahun=${selectedYear || ''}`
+            + (selectedSite !== 'All Site' ? `&jobsite=${encodeURIComponent(selectedSite)}` : '')
+            + `&period_start=${period.start}&period_end=${period.end}`;
+        })();
+
+    (async () => {
+      const [kpiRes, asrRes, sickRes] = await Promise.allSettled([
+        fetchDashboardData<{ success: boolean; data?: KpiRow[] }>(kpiUrl),
+        fetchDashboardData<{ success: boolean; data?: AsrRankRow[] }>(asrUrl),
+        sickUrl
+          ? fetchDashboardData<{ success: boolean; data?: SickEmployee[] }>(sickUrl)
+          : Promise.resolve(null),
+      ]);
+      if (cancelled) return;
+
+      // ── KPI ──
+      if (kpiRes.status === 'fulfilled' && kpiRes.value.success && Array.isArray(kpiRes.value.data)) {
+        setKpiData(kpiRes.value.data);
+      } else {
+        setKpiData([]);
+      }
+      setLoadingKpi(false);
+
+      // ── Peringkat ASR ──
+      if (asrRes.status === 'fulfilled' && asrRes.value.success) {
+        let rows: AsrRankRow[] = asrRes.value.data || [];
+        if (fetchBulan === null) {
+          // Mode YTD: rata-ratakan ASR tiap site sepanjang tahun.
+          const bySite: Record<string, { sum: number; count: number; mp: number }> = {};
+          rows.forEach((r: AsrRankRow) => {
+            if (!bySite[r.jobsite]) bySite[r.jobsite] = { sum: 0, count: 0, mp: 0 };
+            bySite[r.jobsite].sum += r.asr;
+            bySite[r.jobsite].count++;
+            bySite[r.jobsite].mp = Math.max(bySite[r.jobsite].mp, r.man_power);
+          });
+          rows = Object.entries(bySite)
+            .map(([site, v]) => ({
+              jobsite: site,
+              asr: v.count > 0 ? v.sum / v.count : 0,
+              man_power: v.mp,
+              bulan: 0,
+              tahun: selectedYear,
+            }))
+            .filter(s => s.asr > 0)
+            .sort((a, b) => b.asr - a.asr)
+            .slice(0, 10);
+        }
+        setAsrRanking(rows);
+      } else {
+        setAsrRanking([]);
+      }
+      setLoadingAsr(false);
+
+      // ── Karyawan sakit ──
+      if (sickRes.status === 'fulfilled' && sickRes.value && sickRes.value.success) {
+        setSickList(sickRes.value.data || []);
+      } else {
+        setSickList([]);
+      }
+      setLoadingSick(false);
+    })();
+
     return () => { cancelled = true; };
-  }, [selectedSite, selectedYear]);
+  }, [selectedSite, selectedYear, selectedMonth]);
 
   /* ─── Determine display month ──────────────────────────── */
   const effectiveMonthIdx: number = useMemo(() => {
@@ -191,79 +269,6 @@ export default function DashboardView() {
     // Specific month: find the row
     return kpiData.find(r => r.bulan === bulanNum) || null;
   }, [kpiData, bulanNum, isYTD, selectedSite, selectedYear]);
-
-  /* ─── Fetch ASR ranking ────────────────────────────────── */
-  useEffect(() => {
-    let cancelled = false;
-    setLoadingAsr(true);
-    (async () => {
-      try {
-        const url = isYTD
-          ? `/api/health-indicators?asr_ranking=true&tahun=${selectedYear || ''}`
-          : `/api/health-indicators?asr_ranking=true&tahun=${selectedYear || ''}&bulan=${bulanNum}`;
-        const json = await fetchDashboardData<{ success: boolean; data?: AsrRankRow[] }>(url);
-        if (!cancelled && json.success) {
-          let rows: AsrRankRow[] = json.data || [];
-          if (isYTD) {
-            // Aggregate ASR across months per site (average)
-            const bySite: Record<string, { sum: number; count: number; mp: number }> = {};
-            rows.forEach((r: AsrRankRow) => {
-              if (!bySite[r.jobsite]) bySite[r.jobsite] = { sum: 0, count: 0, mp: 0 };
-              bySite[r.jobsite].sum += r.asr;
-              bySite[r.jobsite].count++;
-              bySite[r.jobsite].mp = Math.max(bySite[r.jobsite].mp, r.man_power);
-            });
-            rows = Object.entries(bySite)
-              .map(([site, v]) => ({
-                jobsite: site,
-                asr: v.count > 0 ? v.sum / v.count : 0,
-                man_power: v.mp,
-                bulan: 0,
-                tahun: selectedYear,
-              }))
-              .filter(s => s.asr > 0)
-              .sort((a, b) => b.asr - a.asr)
-              .slice(0, 10);
-          }
-          if (!cancelled) setAsrRanking(rows);
-        }
-      } catch {
-        if (!cancelled) setAsrRanking([]);
-      } finally {
-        if (!cancelled) setLoadingAsr(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [selectedYear, bulanNum, isYTD]);
-
-  /* ─── Fetch sick list when month != 'all' ──────────────── */
-  useEffect(() => {
-    if (isYTD) {
-      setSickList([]);
-      return;
-    }
-    let cancelled = false;
-    setLoadingSick(true);
-    const period = getSickPeriodRange(bulanNum, selectedYear);
-    (async () => {
-      try {
-        const url = `/api/sick-employees?bulan=${bulanNum}&tahun=${selectedYear || ''}` +
-          (selectedSite !== 'All Site' ? `&jobsite=${encodeURIComponent(selectedSite)}` : '') +
-          `&period_start=${period.start}&period_end=${period.end}`;
-        const json = await fetchDashboardData<{ success: boolean; data?: SickEmployee[] }>(url);
-        if (!cancelled && json.success) {
-          setSickList(json.data || []);
-        } else if (!cancelled) {
-          setSickList([]);
-        }
-      } catch {
-        if (!cancelled) setSickList([]);
-      } finally {
-        if (!cancelled) setLoadingSick(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [isYTD, bulanNum, selectedYear, selectedSite]);
 
   /* ─── Stat values (safe access) ───────────────────────── */
   const rkk = (currentMonth?.rkk ?? 0) * 100;
@@ -513,6 +518,12 @@ export default function DashboardView() {
           },
           tooltip: {
             mode: 'index',
+            // WAJIB 'y': diagram ini horizontal (indexAxis 'y') sehingga
+            // kategori (nama karyawan) tersusun pada sumbu Y. Tanpa `axis`,
+            // Chart.js memakai sumbu X (nilai hari) sebagai acuan item
+            // terdekat — kursor di satu batang bisa memunculkan tooltip
+            // karyawan lain yang panjang batangnya berdekatan.
+            axis: 'y',
             intersect: false,
             bodyFont: { size: 10, family: FONT },
             titleFont: { size: 10, family: FONT },

@@ -418,3 +418,37 @@ describe('interpretasi terhubung ke engine kalkulasi', () => {
     expect(String(result.spiInterp ?? '')).toMatch(/obstruksi/i);
   });
 });
+
+describe('diagnosisHati (saran otomatis dari SGOT/SGPT/HBsAg)', () => {
+  const base = { jenisKelamin: 'Laki - Laki', usia: 40 };
+
+  it('fungsi hati normal → "Normal / Tidak Ada"', () => {
+    const r = applyMCUCalculations({ ...base, sgot: 25, sgpt: 30, hbsag: 'Non - Reaktif' }) as Record<string, unknown>;
+    expect(r.diagnosisHati).toBe('Normal / Tidak Ada');
+  });
+
+  it('enzim >3× ULN (SGOT 121 > 120) → gangguan kronis/aktif', () => {
+    const r = applyMCUCalculations({ ...base, sgot: 121, sgpt: 30, hbsag: 'Non - Reaktif' }) as Record<string, unknown>;
+    expect(r.diagnosisHati).toBe('Hepatitis Aktif / Sirosis / Gangguan Fungsi Hati Kronis');
+  });
+
+  it('HBsAg reaktif + enzim normal → carrier sehat', () => {
+    const r = applyMCUCalculations({ ...base, sgot: 30, sgpt: 35, hbsag: 'Reaktif' }) as Record<string, unknown>;
+    expect(r.diagnosisHati).toBe('Inaktif / Carrier Sehat (Fungsi Hati Normal)');
+  });
+
+  it('HBsAg reaktif + SGPT >3× ULN (125 > 123) → prioritas gangguan kronis', () => {
+    const r = applyMCUCalculations({ ...base, sgot: 30, sgpt: 125, hbsag: 'Reaktif' }) as Record<string, unknown>;
+    expect(r.diagnosisHati).toBe('Hepatitis Aktif / Sirosis / Gangguan Fungsi Hati Kronis');
+  });
+
+  it('isi manual operator tidak ditimpa', () => {
+    const r = applyMCUCalculations({ ...base, sgot: 25, sgpt: 30, hbsag: 'Non - Reaktif', diagnosisHati: 'Hepatitis Aktif / Sirosis / Gangguan Fungsi Hati Kronis' }) as Record<string, unknown>;
+    expect(r.diagnosisHati).toBe('Hepatitis Aktif / Sirosis / Gangguan Fungsi Hati Kronis');
+  });
+
+  it('tanpa input lab → field tetap kosong (pengisian manual)', () => {
+    const r = applyMCUCalculations(base) as Record<string, unknown>;
+    expect(r.diagnosisHati ?? '').toBe('');
+  });
+});

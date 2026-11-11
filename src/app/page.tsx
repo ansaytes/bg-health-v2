@@ -7,43 +7,45 @@ import { useTheme } from 'next-themes';
 import { useMCUStore, type PageTab, type DashSidebar, type AdminSidebar, type DataEntrySidebar, type HomeSidebar } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
-import DashboardView from '@/components/dashboard/DashboardView';
-import MonitoringMCUTabs from '@/components/dashboard/MonitoringMCUTabs';
-import ReviewMCU from '@/components/review-mcu/ReviewMCU';
-
-import LaggingIndicatorPage from '@/components/administrator/LaggingIndicatorPage';
-import KunjunganBerobatForm from '@/components/administrator/KunjunganBerobatForm';
-import HealthCampaignForm from '@/components/administrator/HealthCampaignForm';
-import AppSettingsPage from '@/components/settings/AppSettingsPage';
-import PakRegister from '@/components/pak/PakRegister';
-import AdminProKawan from '@/components/administrator/AdminProKawan';
-import MonitoringKaryawanSakit from '@/components/administrator/MonitoringKaryawanSakit';
-import InspeksiSanitasi from '@/components/administrator/InspeksiSanitasi';
-import InspeksiLingkungan from '@/components/administrator/InspeksiLingkungan';
-import GiziKerja from '@/components/administrator/GiziKerja';
-import SaranaKlinik from '@/components/administrator/SaranaKlinik';
-import InputJadwalMCU from '@/components/administrator/InputJadwalMCUModern';
-import GangguanTidurPage from '@/components/administrator/GangguanTidurPage';
-import InputMentalHealthPage from '@/components/administrator/InputMentalHealthPage';
-import InputPsikologiLingkunganPage from '@/components/administrator/InputPsikologiLingkunganPage';
-import InventoryAdmin from '@/components/administrator/InventoryAdmin';
 import { clearDashboardDataCache, preloadDashboardData } from '@/lib/dashboard-data';
 import { clearMCUDashboardData } from '@/components/dashboard/MCUDashboardShared';
 import HomeView from '@/components/home/HomeView';
-import DataKesehatanTable from '@/components/dashboard/DataKesehatanTable';
-import DataKunjunganTable from '@/components/dashboard/DataKunjunganTable';
-import RecordMCUTable from '@/components/dashboard/RecordMCUTableModern';
-import DataManPowerTable from '@/components/dashboard/DataManPowerTable';
-import MentalHealthDashboard from '@/components/dashboard/MentalHealthDashboard';
-import HigieneIndustriTabs from '@/components/dashboard/HigieneIndustriTabs';
-import LayananKuratifTabs from '@/components/dashboard/LayananKuratifTabs';
-import ProKawanDashboard from '@/components/dashboard/ProKawanDashboard';
-import SPIPDashboard from '@/components/dashboard/SPIPDashboard';
-import ErgoApproval from '@/components/dashboard/ErgoApproval';
-import HcInputPage from '@/components/administrator/HcInputPage';
-import HcAudiometriEval from '@/components/administrator/HcAudiometriEval';
-import ErgoSurveyForm from '@/components/administrator/ErgoSurveyForm';
-import ErgoSurveyTable from '@/components/administrator/ErgoSurveyTable';
+
+/* ──── Lazy imports: semua komponen dashboard berat di-load on-demand ──── */
+import { lazy, Suspense } from 'react';
+const DashboardView = lazy(() => import('@/components/dashboard/DashboardView'));
+const MonitoringMCUTabs = lazy(() => import('@/components/dashboard/MonitoringMCUTabs'));
+const ReviewMCU = lazy(() => import('@/components/review-mcu/ReviewMCU'));
+const LaggingIndicatorPage = lazy(() => import('@/components/administrator/LaggingIndicatorPage'));
+const KunjunganBerobatForm = lazy(() => import('@/components/administrator/KunjunganBerobatForm'));
+const HealthCampaignForm = lazy(() => import('@/components/administrator/HealthCampaignForm'));
+const AppSettingsPage = lazy(() => import('@/components/settings/AppSettingsPage'));
+const PakRegister = lazy(() => import('@/components/pak/PakRegister'));
+const AdminProKawan = lazy(() => import('@/components/administrator/AdminProKawan'));
+const MonitoringKaryawanSakit = lazy(() => import('@/components/administrator/MonitoringKaryawanSakit'));
+const InspeksiSanitasi = lazy(() => import('@/components/administrator/InspeksiSanitasi'));
+const InspeksiLingkungan = lazy(() => import('@/components/administrator/InspeksiLingkungan'));
+const GiziKerja = lazy(() => import('@/components/administrator/GiziKerja'));
+const SaranaKlinik = lazy(() => import('@/components/administrator/SaranaKlinik'));
+const InputJadwalMCU = lazy(() => import('@/components/administrator/InputJadwalMCUModern'));
+const GangguanTidurPage = lazy(() => import('@/components/administrator/GangguanTidurPage'));
+const InputMentalHealthPage = lazy(() => import('@/components/administrator/InputMentalHealthPage'));
+const InputPsikologiLingkunganPage = lazy(() => import('@/components/administrator/InputPsikologiLingkunganPage'));
+const InventoryAdmin = lazy(() => import('@/components/administrator/InventoryAdmin'));
+const DataKesehatanTable = lazy(() => import('@/components/dashboard/DataKesehatanTable'));
+const DataKunjunganTable = lazy(() => import('@/components/dashboard/DataKunjunganTable'));
+const RecordMCUTable = lazy(() => import('@/components/dashboard/RecordMCUTableModern'));
+const DataManPowerTable = lazy(() => import('@/components/dashboard/DataManPowerTable'));
+const MentalHealthDashboard = lazy(() => import('@/components/dashboard/MentalHealthDashboard'));
+const HigieneIndustriTabs = lazy(() => import('@/components/dashboard/HigieneIndustriTabs'));
+const LayananKuratifTabs = lazy(() => import('@/components/dashboard/LayananKuratifTabs'));
+const ProKawanDashboard = lazy(() => import('@/components/dashboard/ProKawanDashboard'));
+const SPIPDashboard = lazy(() => import('@/components/dashboard/SPIPDashboard'));
+const ErgoApproval = lazy(() => import('@/components/dashboard/ErgoApproval'));
+const HcInputPage = lazy(() => import('@/components/administrator/HcInputPage'));
+const HcAudiometriEval = lazy(() => import('@/components/administrator/HcAudiometriEval'));
+const ErgoSurveyForm = lazy(() => import('@/components/administrator/ErgoSurveyForm'));
+const ErgoSurveyTable = lazy(() => import('@/components/administrator/ErgoSurveyTable'));
 import CenteredTabs from '@/components/ui/centered-tabs';
 
 /*   Admin sub-tab containers (Layanan Kuratif & Higiene Industri)   */
@@ -285,8 +287,8 @@ const HOME_SIDEBAR: SidebarItem[] = [
 const DASH_SIDEBAR: SidebarItem[] = [
   { key: 'statistik', label: 'Statistik Kesehatan', icon: <IconStatistik /> },
   { key: 'monitoring', label: 'Monitoring MCU', icon: <IconMonitoring /> },
-  { key: 'layanan-kuratif', label: 'Layanan Kuratif', icon: <IconKuratif /> },
   { key: 'prokawan-dashboard', label: 'ProKawan', icon: <IconProkawan />, adminOnly: true },
+  { key: 'layanan-kuratif', label: 'Layanan Kuratif', icon: <IconKuratif /> },
   // SPIP = Sarana, Prasarana, Instalasi, Peralatan (SOP/028 poin 5.5).
   // Menu sendiri karena bukan faktor lingkungan kerja (Higiene Industri).
   { key: 'spip', label: 'SPIP', icon: <IconSarana />, adminOnly: true },
@@ -474,6 +476,41 @@ function DataEntryContent() {
     : null;
 }
 
+/*   Fallback saat chunk halaman di-load (React.lazy) */
+
+/**
+ * Fallback Suspense — SENGAJA sangat ringan.
+ *
+ * Tidak meng-import Chart.js, framer-motion, atau komponen berat apa pun:
+ * hanya CSS spinner yang sudah ada di globals.css. Jika fallback ini
+ * meng-import hal berat, ia akan ikut masuk bundle halaman awal dan
+ * menghapus manfaat lazy loading.
+ */
+function PageFallback() {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flex: 1,
+        minHeight: 0,
+        width: '100%',
+      }}
+    >
+      <div className="bm-loading is-card" role="status" aria-live="polite" aria-label="Memuat halaman">
+        <div className="bm-loading-spinner">
+          <div className="bm-loading-ring" aria-hidden="true" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+        </div>
+        <p className="bm-loading-label">Memuat halaman…</p>
+      </div>
+    </div>
+  );
+}
+
 function DashContent() {
   const activeDashSidebar = useMCUStore((s) => s.activeDashSidebar);
   const { user, profile } = useAuth();
@@ -493,6 +530,31 @@ function DashContent() {
     }).catch(error => {
       console.error('Gagal memuat data awal dashboard:', error);
     });
+
+    /*
+     * PREFETCH BACKGROUND: setelah halaman utama ter-render, download
+     * semua chunk komponen dashboard di background. User yang pindah-pindah
+     * tab tidak akan lagi mengalami jeda loading karena chunk sudah siap.
+     *
+     * Jalankan dengan jeda kecil agar tidak bersaing bandwidth dengan
+     * fetch data preload.
+     */
+    const idle = () => {
+      void Promise.allSettled([
+        import('@/components/dashboard/DashboardView'),
+        import('@/components/dashboard/MonitoringMCUTabs'),
+        import('@/components/dashboard/LayananKuratifTabs'),
+        import('@/components/dashboard/HigieneIndustriTabs'),
+        import('@/components/dashboard/ProKawanDashboard'),
+        import('@/components/dashboard/SPIPDashboard'),
+        import('@/components/dashboard/MentalHealthDashboard'),
+        import('@/components/administrator/LaggingIndicatorPage'),
+        import('@/components/review-mcu/ReviewMCU'),
+      ]);
+    };
+    // Tunda sampai setelah fetch preload dimulai agar tidak bersaing
+    const timer = setTimeout(idle, 1500);
+    return () => clearTimeout(timer);
   }, [isLoggedIn, profile?.role]);
 
   if (!isLoggedIn) {
@@ -1310,11 +1372,18 @@ export default function Home() {
             className="page-transition"
             style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100%' }}
           >
-            {activePage === 'home' ? <HomeContent />
-              : activePage === 'dashboard' ? <DashContent />
-              : activePage === 'data-entry' ? <DataEntryContent />
-              : activePage === 'administrator' ? <AdminContent />
-              : null}
+            {/*
+              Suspense: komponen halaman di-load on-demand (React.lazy).
+              Fallback sengaja sangat ringan (spinner CSS, tanpa dependensi)
+              agar tidak menambah bundle halaman awal.
+            */}
+            <Suspense fallback={<PageFallback />}>
+              {activePage === 'home' ? <HomeContent />
+                : activePage === 'dashboard' ? <DashContent />
+                : activePage === 'data-entry' ? <DataEntryContent />
+                : activePage === 'administrator' ? <AdminContent />
+                : null}
+            </Suspense>
           </div>
         </div>
       </div>

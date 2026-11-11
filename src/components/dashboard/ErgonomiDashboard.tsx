@@ -2,15 +2,13 @@
 // Dashboard > Ergonomi. Data dari /api/ergo?resource=dashboard (12 bulan terakhir, survei berstatus Disetujui).
 // Layout grafik-first: donut klasifikasi, bar per metode, tren bulanan, status rekomendasi, kepatuhan per site.
 import { useEffect, useRef, useState } from 'react';
-import { Chart as ChartJS, registerables, type ChartOptions } from 'chart.js';
-import ChartDataLabels from 'chartjs-plugin-datalabels';
+import type { ChartOptions } from 'chart.js';
+import { ChartJS } from '@/lib/chart-register';
 import { authFetch } from '@/lib/api-client';
 import { KLAS_COLOR, type Klasifikasi } from '@/lib/hc-ergo';
 import { Chip, SITES, fmtDate, tableStyle, tdStyle, thStyle } from '@/components/administrator/hc-ergo-ui';
 import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, gradientBatangArray, useAnimationReady } from '@/lib/chart-standard';
 import PageLoading from '@/components/ui/page-loading';
-
-ChartJS.register(...registerables, ChartDataLabels);
 
 type D = Record<string, any>;
 const KLAS: Klasifikasi[] = ['RENDAH', 'SEDANG', 'TINGGI', 'SANGAT_TINGGI'];
@@ -94,10 +92,10 @@ export default function ErgonomiDashboard() {
         },
       },
       scales: horizontal
-        ? { x: { stacked, beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah survei', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
-            y: { stacked, grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false }, title: { display: true, text: 'Metode', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } } }
+        ? { x: { stacked, beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } },
+            y: { stacked, grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false } } }
         : { x: { stacked, grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false } },
-            y: { stacked, beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah survei', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } } },
+            y: { stacked, beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } } },
     } as ChartOptions<'bar'>);
 
     // 1. Donut distribusi klasifikasi risiko (semua metode)
@@ -168,8 +166,8 @@ export default function ErgonomiDashboard() {
           datalabels: { display: false },
         },
         scales: {
-          x: { grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT } }, title: { display: true, text: 'Bulan', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
-          y: { beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah survei', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+          x: { grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT } } },
+          y: { beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } },
         },
       } as ChartOptions,
     }));
@@ -230,8 +228,8 @@ export default function ErgonomiDashboard() {
           datalabels: { display: false },
         },
         scales: {
-          x: { beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah survei', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
-          y: { grid: { display: false }, ticks: { color: text, font: { size: 10, family: FONT }, autoSkip: false }, title: { display: true, text: 'Site', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+          x: { beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } },
+          y: { grid: { display: false }, ticks: { color: text, font: { size: 10, family: FONT }, autoSkip: false } },
         },
       } as ChartOptions<'bar'>,
     }));

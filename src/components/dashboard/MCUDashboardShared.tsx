@@ -3,17 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import {
-  Chart as ChartJS,
-  registerables,
   type Chart as ChartInstance,
   type ChartConfiguration,
   type ChartOptions,
 } from 'chart.js';
-import ChartDataLabels from 'chartjs-plugin-datalabels';
+import { ChartJS } from '@/lib/chart-register';
 import { supabase } from '@/lib/supabase';
 import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, animasiUlang, gradientBatang, skalaBar, useAnimationReady } from '@/lib/chart-standard';
-
-ChartJS.register(...registerables, ChartDataLabels);
 
 function contrastColor(background: unknown, fallback: string): string {
   if (typeof background !== 'string') return fallback;

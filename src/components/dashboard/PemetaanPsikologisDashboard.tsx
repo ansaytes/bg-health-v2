@@ -3,14 +3,12 @@
 // Agregasi tingkat DEPARTEMEN: rata-rata skor 6 indikator per departemen.
 // Ambang skor mengikuti dokumen; ambang jumlah responden = kebijakan internal.
 import { useEffect, useRef, useState } from 'react';
-import { Chart as ChartJS, registerables, type ChartOptions } from 'chart.js';
-import ChartDataLabels from 'chartjs-plugin-datalabels';
+import type { ChartOptions } from 'chart.js';
+import { ChartJS } from '@/lib/chart-register';
 import { authFetch } from '@/lib/api-client';
 import { SITES } from '@/components/administrator/hc-ergo-ui';
 import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, gradientBatangArray, useAnimationReady } from '@/lib/chart-standard';
 import PageLoading from '@/components/ui/page-loading';
-
-ChartJS.register(...registerables, ChartDataLabels);
 
 type D = Record<string, any>;
 const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
@@ -123,7 +121,7 @@ export default function PemetaanPsikologisDashboard() {
         },
         scales: {
           x: { stacked: true, beginAtZero: true, max: indikator.length, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } },
-          y: { stacked: true, grid: { display: false }, ticks: { color: text, font: { size: 9.5, family: FONT }, autoSkip: false }, title: { display: true, text: 'Departemen', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+          y: { stacked: true, grid: { display: false }, ticks: { color: text, font: { size: 9.5, family: FONT }, autoSkip: false } },
         },
       } as ChartOptions<'bar'>,
     }));
@@ -209,8 +207,8 @@ export default function PemetaanPsikologisDashboard() {
           },
         },
         scales: {
-          x: { beginAtZero: true, max: 35, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT } }, title: { display: true, text: 'Rata-rata skor indikator', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
-          y: { grid: { display: false }, ticks: { color: text, font: { size: 9.5, family: FONT }, autoSkip: false }, title: { display: true, text: 'Departemen', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+          x: { beginAtZero: true, max: 35, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT } } },
+          y: { grid: { display: false }, ticks: { color: text, font: { size: 9.5, family: FONT }, autoSkip: false } },
         },
       } as ChartOptions<'bar'>,
     }));

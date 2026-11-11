@@ -65,6 +65,13 @@ interface MCUStore {
    * dipertahankan.
    */
   autoInterp: Record<string, string>;
+  /**
+   * Saran "Diagnosis Klinis Penyakit Hati" terakhir yang ditulis OTOMATIS.
+   * Pola sama dengan autoInterp: field hanya ditimpa ulang bila isinya masih
+   * sama dengan saran ini; begitu operator memilih opsi sendiri, pelacak
+   * dikosongkan dan pilihannya dipertahankan.
+   */
+  autoDiagnosisHati: string;
   /** Zona hasil kalkulasi terakhir, untuk tampilan ringkasan. */
   zonasi: string;
   /**
@@ -125,6 +132,8 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
   autoRekFU: '',
   autoRekQSHE: '',
   autoInterp: {},
+  /** Saran diagnosis hati terakhir yang ditulis OTOMATIS (track manual/otomatis, pola sama dengan autoInterp). */
+  autoDiagnosisHati: '',
   zonasi: '',
   parameterBelumDinilai: [],
   setFieldValue: (id, value) => {
@@ -134,6 +143,9 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
       ...(id === 'rekQSHE' ? { autoRekQSHE: '' } : {}),
       // Ketikan operator pada kolom interpretasi = tulisan manual.
       ...(id in AUTO_INTERPRETATION_FIELDS ? { autoInterp: { ...state.autoInterp, [id]: '' } } : {}),
+      // Pilihan manual operator pada diagnosis hati = tulisan manual:
+      // saran otomatis tidak akan menimpanya lagi.
+      ...(id === 'diagnosisHati' ? { autoDiagnosisHati: '' } : {}),
     }));
     // Trigger auto-calcs after a short delay
     setTimeout(() => get().runAutoCalcs(), 0);
@@ -163,11 +175,14 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
         autoInterp,
         ...('rekFU' in data ? { autoRekFU: '' } : {}),
         ...('rekQSHE' in data ? { autoRekQSHE: '' } : {}),
+        // Record tersimpan/OCR yang sudah punya diagnosis hati dianggap
+        // tulisan pemeriksa: saran otomatis tidak boleh menimpanya.
+        ...('diagnosisHati' in data ? { autoDiagnosisHati: '' } : {}),
       };
     });
     setTimeout(() => get().runAutoCalcs(), 0);
   },
-  resetForm: () => set({ formData: initialFormData(), autoRekFU: '', autoRekQSHE: '', autoInterp: {}, zonasi: '', parameterBelumDinilai: [], employee: null, reviewStep: 'search', ocrEnabled: false }),
+  resetForm: () => set({ formData: initialFormData(), autoRekFU: '', autoRekQSHE: '', autoInterp: {}, autoDiagnosisHati: '', zonasi: '', parameterBelumDinilai: [], employee: null, reviewStep: 'search', ocrEnabled: false }),
 
   searchingEmployee: false,
   setSearchingEmployee: (v) => set({ searchingEmployee: v }),
@@ -234,6 +249,14 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
       if (value === null || value === undefined) continue;
       updates[key] = String(value);
     }
+    // Saran diagnosis hati: hanya ditulis bila field masih kosong atau masih
+    // berisi saran otomatis sebelumnya — pilihan manual operator dipertahankan.
+    const suggestionHati = String(calculated.diagnosisHati ?? '');
+    const currentHati = fd.diagnosisHati || '';
+    if (!currentHati || (currentState.autoDiagnosisHati && currentHati === currentState.autoDiagnosisHati)) {
+      updates.diagnosisHati = suggestionHati;
+    }
+    const nextAutoDiagnosisHati = updates.diagnosisHati !== undefined ? suggestionHati : currentState.autoDiagnosisHati;
     // Interpretasi otomatis (kosong bila data belum cukup).
     for (const key of autoKeys) updates[key] = nextAutoInterp[key];
 
@@ -268,6 +291,7 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
     if (changed
       || nextAutoRekFU !== currentState.autoRekFU
       || nextAutoRekQSHE !== currentState.autoRekQSHE
+      || nextAutoDiagnosisHati !== currentState.autoDiagnosisHati
       || autoKeys.some((key) => nextAutoInterp[key] !== (currentState.autoInterp[key] || ''))
       || zonasi !== currentState.zonasi
       || missingKey !== currentState.parameterBelumDinilai.join('|')) {
@@ -275,6 +299,7 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
         formData: newFd,
         autoRekFU: nextAutoRekFU,
         autoRekQSHE: nextAutoRekQSHE,
+        autoDiagnosisHati: nextAutoDiagnosisHati,
         autoInterp: nextAutoInterp,
         zonasi,
         parameterBelumDinilai: missing,

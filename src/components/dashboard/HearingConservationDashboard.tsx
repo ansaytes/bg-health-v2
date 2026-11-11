@@ -2,15 +2,13 @@
 // Dashboard > Hearing Conservation. Data dari /api/hc?resource=dashboard (noise mapping, klasifikasi, audiometri MCU, STS).
 // Layout grafik-first: donut zona, bar kategori, cakupan audiometri, derajat WHO, status STS, tren Leq & tabel area.
 import { useEffect, useRef, useState } from 'react';
-import { Chart as ChartJS, registerables, type ChartOptions } from 'chart.js';
-import ChartDataLabels from 'chartjs-plugin-datalabels';
+import type { ChartOptions } from 'chart.js';
+import { ChartJS } from '@/lib/chart-register';
 import { authFetch } from '@/lib/api-client';
 import { ZONA_COLOR, type Zona } from '@/lib/hc-ergo';
 import { SITES } from '@/components/administrator/hc-ergo-ui';
 import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, useAnimationReady } from '@/lib/chart-standard';
 import PageLoading from '@/components/ui/page-loading';
-
-ChartJS.register(...registerables, ChartDataLabels);
 
 type D = Record<string, any>;
 const KELAS_COLOR: Record<string, string> = { Normal: '#00B894', Ringan: '#F5C518', Sedang: '#F5A623', Berat: '#FF6B35', 'Sangat Berat': '#E63946' };
@@ -97,10 +95,10 @@ export default function HearingConservationDashboard() {
         },
       },
       scales: horizontal
-        ? { x: { beginAtZero: true, max, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+        ? { x: { beginAtZero: true, max, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } },
             y: { grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false } } }
         : { x: { grid: { display: false }, ticks: { color: text, font: { size: 11, weight: 'bold' as const, family: FONT }, autoSkip: false } },
-            y: { beginAtZero: true, max, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah karyawan', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } } },
+            y: { beginAtZero: true, max, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } } },
     } as ChartOptions<'bar'>);
 
     // 1. Donut zona kebisingan area
@@ -195,8 +193,8 @@ export default function HearingConservationDashboard() {
           datalabels: { color: text, anchor: 'center', align: 'center', font: { size: 10, weight: 'bold', family: FONT }, formatter: (v: number) => (v ? String(v) : '') },
         },
         scales: {
-          x: { stacked: true, beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah karyawan', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
-          y: { stacked: true, grid: { display: false }, ticks: { color: text, font: { size: 10, family: FONT } }, title: { display: true, text: 'Kategori pajanan', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+          x: { stacked: true, beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } },
+          y: { stacked: true, grid: { display: false }, ticks: { color: text, font: { size: 10, family: FONT } } },
         },
       } as ChartOptions<'bar'>,
     }));

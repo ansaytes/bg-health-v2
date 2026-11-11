@@ -24,22 +24,6 @@ import { RefreshCw } from 'lucide-react';
 import { authFetch } from '@/lib/api-client';
 import { MCUChart } from '@/components/dashboard/MCUDashboardShared';
 import PageLoading from '@/components/ui/page-loading';
-
-/**
- * Warna status kelayakan kerja — SALINAN PERSIS dari `RESULT_COLORS` di
- * HasilTindakLanjutMCU.tsx. Kedua diagram menampilkan label yang sama, jadi
- * warnanya harus identik agar pembaca tidak perlu menghafal dua skema.
- */
-const WARNA_KELAYAKAN: Record<string, string> = {
-  'fit to work': '#00B894',
-  'fit with note': '#FFD700',
-  'fit with restriction': '#9B59B6',
-  'currently unfit': '#FF4444',
-  'temporary unfit': '#8B4513',
-  unfit: '#FF4444',
-  'no data': '#616161',
-  'belum ada mcu': '#616161',
-};
 import { PALET_BAR } from '@/lib/chart-standard';
 import {
   JALUR_LABEL,
@@ -210,8 +194,11 @@ export default function ProKawanDashboard() {
         </div>
       </div>
 
-      {/* Baris 2 — peringkat */}
-      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr)', gap: 8, flex: 1, minHeight: 0 }}>
+      {/* Baris 2 — peringkat. Dua diagram penuh lebar (kard Kelayakan Kerja
+          dihapus: status kelayakan kerja sudah terefleksi lewat jalur &
+          status kepatuhan, dan menampilkannya lagi di sini justru
+          redundan untuk laporan agregat). */}
+      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: 8, flex: 1, minHeight: 0 }}>
         <div className="card mcu-dashboard-card">
           <div className="card-head">
             <div><h2>Peringkat Trigger Zona</h2><p>Parameter pemicu terbanyak</p></div>
@@ -239,25 +226,6 @@ export default function ProKawanDashboard() {
               values={ringkas.byFrekuensi.map(([, v]) => v)}
               colors={ringkas.byFrekuensi.map(([k]) =>
                 k.startsWith('1') ? '#FF2D2D' : k.startsWith('3') ? '#FFD400' : k.startsWith('6') ? '#3498DB' : '#778899')}
-              legendLabel="Peserta"
-            />
-          </div>
-        </div>
-
-        <div className="card mcu-dashboard-card">
-          <div className="card-head">
-            <div><h2>Kelayakan Kerja</h2><p>Status dari MCU</p></div>
-          </div>
-          <div className="mcu-dashboard-chart">
-            <MCUChart
-              type="bar"
-              labels={ringkas.byKelayakan.map(([k]) => k)}
-              values={ringkas.byKelayakan.map(([, v]) => v)}
-              // Warna SAMA dengan diagram "Hasil MCU" pada Analisa & Tindak
-              // Lanjut MCU — labelnya identik (Fit To Work, Fit With Note,
-              // Currently Unfit, Unfit), jadi warnanya wajib seragam.
-              colors={ringkas.byKelayakan.map(([k]) => WARNA_KELAYAKAN[k.trim().toLowerCase()] ?? '#616161')}
-              horizontal
               legendLabel="Peserta"
             />
           </div>

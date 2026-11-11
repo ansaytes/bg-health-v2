@@ -129,12 +129,15 @@ function mapRow(row) {
 function isEligibleEmployee(employee) {
   const division = String(employee.division || '').trim().toLowerCase();
   const status = String(employee.employment_status || '').trim().toLowerCase();
+  // Kolom K spreadsheet (index 10) = "Status Karyawan": hanya "PKWT" atau "Permanen".
+  const empStatus = String(employee.employee_status || '').trim().toLowerCase();
 
   // More flexible matching - allow variations
   const isMining = division === 'mining' || division.includes('mining');
-  const isActive = status === 'aktif' || status === 'active' || status === 'active';
+  const isActive = status === 'aktif' || status === 'active';
+  const isEligibleContract = empStatus === 'pkwt' || empStatus === 'permanen';
 
-  return isMining && isActive;
+  return isMining && isActive && isEligibleContract;
 }
 
 async function upsertBatch(batch) {

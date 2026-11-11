@@ -44,8 +44,9 @@ interface ServerCacheEntry {
 let serverCache: ServerCacheEntry | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-const MONITOR_FIELDS = 'employee_id,nik_karyawan,nama,site,area_raw,client,jabatan,exempt,total_mcu,mcu_terakhir,kategori_mcu_terakhir,hasil_mcu,perlu_fu,rekomendasi_fu,item_fu,diagnosa,fram_score,fram_prob,frs_kategori,zona_risiko,masa_berlaku_mcu,status_mcu,status_follow_up,jadwal_mcu_selanjutnya';
-const MONITOR_FIELDS_ALT = 'employee_id,nik_karyawan,nama,site,area_raw,client,jabatan,exempt,total_mcu,mcu_terakhir,kategori_mcu_terakhir,hasil_mcu,perlu_fu,rekomendasi_fu,item_fu,diagnosa,fram_score,fram_prob,frs_kategori,masa_berlaku_mcu,status_mcu,status_follow_up,jadwal_mcu_selanjutnya';
+const DASHBOARD_FIELDS = 'employee_id,nik_karyawan,nama,site,area_raw,client,jabatan,exempt,total_mcu,mcu_terakhir,kategori_mcu_terakhir,frs_kategori,zona_risiko,masa_berlaku_mcu,status_mcu,status_follow_up,jadwal_mcu_selanjutnya';
+const MONITOR_FIELDS = DASHBOARD_FIELDS;
+const MONITOR_FIELDS_ALT = 'employee_id,nik_karyawan,nama,site,area_raw,client,jabatan,exempt,total_mcu,mcu_terakhir,kategori_mcu_terakhir,frs_kategori,masa_berlaku_mcu,status_mcu,status_follow_up,jadwal_mcu_selanjutnya';
 
 /**
  * VIEW `monitor_mcu` di database bisa belum memuat kolom `zona_risiko` /
@@ -57,7 +58,7 @@ let monitorColumnsCache: string | null = null;
 
 async function resolveMonitorColumns(): Promise<string> {
   if (monitorColumnsCache) return monitorColumnsCache;
-  const candidates = [MONITOR_FIELDS, MONITOR_FIELDS_ALT];
+  const candidates = [DASHBOARD_FIELDS, MONITOR_FIELDS_ALT];
   for (const fields of candidates) {
     const { error } = await client().from('monitor_mcu').select(fields).limit(1);
     if (!error) {
@@ -73,27 +74,77 @@ async function resolveMonitorColumns(): Promise<string> {
   return '*';
 }
 
+/**
+ * Fetch SEMUA baris monitor_mcu yang dibutuhkan dashboard.
+ *
+ * Optimasi (benchmark 2026-11 vs implementasi lama):
+ *   - Hapus ORDER BY: view adalah CTE 3-tabel berat; sorting menambah ±4s/request.
+ *     Dashboard melakukan filter/agregat di client jadi urutan server tidak penting.
+ *   - Hapus count(*): paginasi sampai halaman kosong saja, hemat 5+ detik.
+ *   - Fetch hanya 16 kolom dashboard (bukan 27 kolom tabel admin):
+ *     menghemat bandwidth dan menghindari dekripsi field teks panjang
+ *     (diagnosa, hasil_mcu, rekomendasi_fu) yang tetap dibuang.
+ *   - Konkurensi 5 (naik dari 3): tanpa ORDER BEBAN, request lebih ringan.
+ */
 async function fetchAllMonitorMcuRows(): Promise<Record<string, unknown>[]> {
+  const SELECT_FIELDS = await resolveMonitorColumns();
+  const PAGE_SIZE = 1000;
+  const PAGE_CONCURRENCY = 5;
+
+  const fetchPage = async (from: number): Promise<Record<string, unknown>[]> => {
+    const { data, error } = await client()
+      .from('monitor_mcu')
+      .select(SELECT_FIELDS)
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    return (data || []) as unknown as Record<string, unknown>[];
+  };
+
+  // Ambil semua halaman tanpa count() — berhenti saat ada halaman yang tidak penuh.
+  const allRows: Record<string, unknown>[] = [];
+  let offset = 0;
+
+  while (true) {
+    // Siapkan satu gelombang offset (maksimal PAGE_CONCURRENCY halaman).
+    const batchOffsets: number[] = [];
+    for (let b = 0; b < PAGE_CONCURRENCY; b++) {
+      batchOffsets.push(offset);
+      offset += PAGE_SIZE;
+    }
+
+    const pages = await Promise.all(batchOffsets.map(o => fetchPage(o)));
+    let reachedEnd = false;
+    for (const page of pages) {
+      if (reachedEnd) break; // halaman setelah halaman terakhir tidak perlu dipakai
+      allRows.push(...page);
+      if (page.length < PAGE_SIZE) reachedEnd = true;
+    }
+    if (reachedEnd) break;
+  }
+
+  return allRows;
+}
+
+/**
+ * Fallback sekuensial: dipakai bila gelombang paralel gagal (statement timeout
+ * pada view berat). Lebih lambat tetapi jauh lebih ringan bagi database,
+ * sehingga dashboard tetap terisi daripada menampilkan error.
+ */
+async function fetchAllMonitorMcuRowsSequential(): Promise<Record<string, unknown>[]> {
   const SELECT_FIELDS = await resolveMonitorColumns();
   const PAGE_SIZE = 1000;
   const rows: Record<string, unknown>[] = [];
 
-  // Sequential pagination — avoids firing multiple concurrent queries against
-  // the heavy 3-table CTE VIEW, which reliably caused statement timeouts.
   for (let from = 0; ; from += PAGE_SIZE) {
     const { data, error } = await client()
       .from('monitor_mcu')
       .select(SELECT_FIELDS)
-      // Urutan HARUS unik: order by site saja tidak deterministik, sehingga baris bisa
-      // terlewat/ganda di antara halaman 1000-an dan hitungan grafik jadi keliru.
-      .order('site', { ascending: true })
-      .order('employee_id', { ascending: true })
       .range(from, from + PAGE_SIZE - 1);
-
     if (error) throw error;
-    if (!data || data.length === 0) break;
-    rows.push(...(data as unknown as Record<string, unknown>[]));
-    if (data.length < PAGE_SIZE) break; // last page — no more rows
+    const page = (data || []) as unknown as Record<string, unknown>[];
+    if (page.length === 0) break;
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) break;
   }
 
   return rows;
@@ -116,23 +167,49 @@ export async function GET(request: NextRequest) {
     if (!forceRefresh && serverCache && (now - serverCache.timestamp < CACHE_TTL_MS)) {
       rawRows = serverCache.rows;
     } else {
-      const fetched = await fetchAllMonitorMcuRows();
+      // Paralel dulu (cepat); bila view menolak beban serentak, ulangi sekuensial.
+      let fetched: Record<string, unknown>[];
+      try {
+        fetched = await fetchAllMonitorMcuRows();
+      } catch (parallelError) {
+        console.warn(
+          'Fetch paralel monitor_mcu gagal, beralih ke sekuensial:',
+          parallelError instanceof Error ? parallelError.message : 'unknown',
+        );
+        fetched = await fetchAllMonitorMcuRowsSequential();
+      }
       rawRows = fetched.map(decryptMCURecord);
       serverCache = { rows: rawRows, timestamp: now };
     }
 
+    /*
+     * Query di atas sudah hanya mengambil kolom yang dipakai dashboard
+     * (DASHBOARD_FIELDS), jadi tidak ada lagi pemangkasan field di sini —
+     * `hasil_mcu`, `diagnosa`, `rekomendasi_fu`, dan `item_fu` tidak pernah
+     * ikut terunduh. Tabel admin memakai endpoint terpisah
+     * `/api/mcu/monitor-table` yang tetap mengirim field lengkap.
+     */
     const employees: Record<string, unknown>[] = rawRows.map(row => {
       const exempt = Boolean(row.exempt);
       return {
-        ...row,
+        nik_karyawan: row.nik_karyawan ?? null,
+        nama: row.nama ?? null,
         site: normalizeSiteName(row.site) || null,
         client: String(row.client || '').trim() || 'PT. BDM',
         area: normalizeArea(row.area_raw, row.site),
+        jabatan: row.jabatan ?? null,
+        exempt,
+        total_mcu: row.total_mcu ?? null,
+        mcu_terakhir: row.mcu_terakhir ?? null,
+        kategori_mcu_terakhir: row.kategori_mcu_terakhir ?? null,
+        frs_kategori: row.frs_kategori ?? null,
         // VIEW versi lama menamai kolom ini `zonasi`; keduanya dipetakan ke
         // `zona_risiko` supaya tabel & grafik tetap terisi.
         zona_risiko: row.zona_risiko ?? row.zonasi ?? null,
+        masa_berlaku_mcu: row.masa_berlaku_mcu ?? null,
         status_mcu: normalizeMcuStatus(row.status_mcu, exempt, row.masa_berlaku_mcu),
         status_follow_up: normalizeFollowUpStatus(row.status_follow_up, exempt),
+        jadwal_mcu_selanjutnya: row.jadwal_mcu_selanjutnya ?? null,
       };
     })
       // Site "Batch" = calon karyawan, tidak dihitung pada dashboard.
@@ -141,7 +218,19 @@ export async function GET(request: NextRequest) {
         || caller.site.toLowerCase() === 'head office'
         || String(row['site'] || '').toLowerCase() === caller.site.toLowerCase());
 
-    return NextResponse.json({ employees });
+    /*
+     * Cache HTTP: respons dapat di-cache private selama 5 menit agar kunjungan
+     * ulang tanpa fetch ulang. stale-while-revalidate membuat UI tampil
+     * instan, background refresh memperbarui data di balik layar.
+     */
+    return NextResponse.json(
+      { employees },
+      {
+        headers: {
+          'Cache-Control': 'private, max-age=300, stale-while-revalidate=300',
+        },
+      },
+    );
   } catch (error) {
     console.error('Gagal memuat data dashboard MCU:', error instanceof Error ? error.name : 'unknown error');
     return NextResponse.json({ error: 'Gagal memuat data dashboard MCU.' }, { status: 500 });

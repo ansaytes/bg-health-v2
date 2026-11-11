@@ -106,12 +106,32 @@ export async function preloadDashboardData({
     },
   ];
 
-  if (canViewMCU) {
-    const { preloadMCUDashboardData } = await import('@/components/dashboard/MCUDashboardShared');
-    requests.push({ label: 'monitoring MCU', request: preloadMCUDashboardData() });
-  }
   if (canViewInventory) {
     requests.push({ label: 'inventaris', request: fetchDashboardData('/api/inventory') });
+  }
+
+  /*
+   * MCU TIDAK ikut di Promise.allSettled.
+   *
+   * /api/mcu/dashboard memuat SELURUH baris monitor_mcu (puluhan ribu baris,
+   * dipaginasi 1000 per request, lalu didekripsi per baris) sehingga butuh
+   * 5–8 detik. Kalau ikut ditunggu, preload dashboard lain ikut tertahan dan
+   * fungsi ini baru selesai setelah MCU rampung — padahal grafik KPI/ASR/
+   * kunjungan sudah siap jauh lebih awal.
+   *
+   * Jadi MCU dijalankan "fire and forget": hasilnya tetap masuk cache
+   * (preloadMCUDashboardData menyimpan ke dashboardCache), sehingga saat user
+   * membuka tab Monitoring MCU datanya sudah tersedia.
+   */
+  if (canViewMCU) {
+    void (async () => {
+      try {
+        const { preloadMCUDashboardData } = await import('@/components/dashboard/MCUDashboardShared');
+        await preloadMCUDashboardData();
+      } catch (error) {
+        console.error('Preload dashboard monitoring MCU gagal:', error);
+      }
+    })();
   }
 
   const results = await Promise.allSettled(requests.map(({ request }) => request));

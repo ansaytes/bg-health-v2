@@ -1255,6 +1255,32 @@ export function hasInactiveLiverCarrier(value: MultiValue): boolean {
   return matchesAny(value, /carrier|inaktif/i);
 }
 
+/**
+ * Sugesti otomatis field "Diagnosis Klinis Penyakit Hati" berdasarkan
+ * parameter yang sudah ada di form (SGOT/SGPT/HBsAg). Mengikuti logika
+ * zonasi STD-006 Rev.002 Bab 7 (klasifikasi hati, zona merah/kuning):
+ *  • Enzim >3x ULN (SGOT 40 / SGPT 41) → gangguan fungsi hati kronis/aktif
+ *    (di form: opsi "Hepatitis Aktif / Sirosis / Gangguan Fungsi Hati Kronis")
+ *  • HBsAg reaktif + enzim dalam batas normal → carrier sehat
+ *    (di form: opsi "Inaktif / Carrier Sehat (Fungsi Hati Normal)")
+ *  • Enzim terisi dan normal + HBsAg non-reaktif → "Normal / Tidak Ada"
+ * Bila salah satu input belum terisi, tidak ada yang bisa diturunkan
+ * secara aman → null (field dibiarkan kosong, operator mengisi manual).
+ */
+export function suggestDiagnosisHati(
+  sgot: number | null,
+  sgpt: number | null,
+  hbsag: MultiValue,
+): string | null {
+  const reaktif = isReactive(hbsag);
+  if (sgot === null && sgpt === null) return null;
+  if ((sgot !== null && sgot > LIVER_ULN.sgot * 3) || (sgpt !== null && sgpt > LIVER_ULN.sgpt * 3)) {
+    return 'Hepatitis Aktif / Sirosis / Gangguan Fungsi Hati Kronis';
+  }
+  if (reaktif) return 'Inaktif / Carrier Sehat (Fungsi Hati Normal)';
+  return 'Normal / Tidak Ada';
+}
+
 export function hasFunctionalObesityLimitation(value: MultiValue): boolean {
   return matchesAny(value, /keterbatasan/i) && !matchesAny(value, /tidak ada keterbatasan/i);
 }

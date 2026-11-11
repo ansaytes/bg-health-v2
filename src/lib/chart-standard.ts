@@ -17,7 +17,7 @@ import type { ChartOptions } from 'chart.js';
 
 /** Animasi baku. Donut selalu berputar searah jarum jam. */
 export const STANDAR_ANIMASI = {
-  duration: 900,
+  duration: 600,
   easing: 'easeOutQuart' as const,
   /** 0 = mulai dari pukul 12, bergerak ke kanan → searah jarum jam. */
   rotation: 0,
@@ -26,7 +26,7 @@ export const STANDAR_ANIMASI = {
 /** Animasi baku khusus donut: berputar, tanpa scale. */
 export const STANDAR_ANIMASI_DONUT = {
   ...STANDAR_ANIMASI,
-  duration: 1000,
+  duration: 650,
   animateRotate: true,
   animateScale: false,
 } as const;
@@ -38,7 +38,7 @@ export const STANDAR_ANIMASI_DONUT = {
  * (index) membuat batang muncul berurutan dari atas ke bawah.
  */
 export const STANDAR_ANIMASI_BAR = {
-  duration: 800,
+  duration: 500,
   easing: 'easeOutQuart' as const,
   animateRotate: false,
   animateScale: false,
@@ -335,7 +335,7 @@ export function useAnimationReady(deps: unknown[]): boolean {
  * karena chart yang dibuat saat transisi sedang berjalan menyelesaikan
  * animasinya di luar pandangan pengguna — itulah gejala "diagram diam".
  */
-export const ANIMASI_JEDA_MS = 260;
+export const ANIMASI_JEDA_MS = 80;
 
 // ═══════════════════════════════════════════════════════════════
 // MENGAPA DIAGRAM ASR BERANIMASI SEDANGKAN YANG LAIN TIDAK

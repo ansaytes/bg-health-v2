@@ -3,19 +3,12 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '@/lib/auth-context';
-import {
-  Chart as ChartJS,
-  registerables,
-  type ChartData,
-  type ChartOptions,
-} from 'chart.js';
-import ChartDataLabels from 'chartjs-plugin-datalabels';
+import type { ChartData, ChartOptions } from 'chart.js';
+import { ChartJS } from '@/lib/chart-register';
 import DownloadButton from '@/components/ui/download-button';
 import { AlertTriangle, Clock, PackageCheck, AlertCircle, RefreshCw, ShieldAlert, Boxes } from 'lucide-react';
 import { fetchDashboardData } from '@/lib/dashboard-data';
 import { STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, animasiUlang, useAnimationReady } from '@/lib/chart-standard';
-
-ChartJS.register(...registerables, ChartDataLabels);
 
 interface InventoryItem {
   id: string;

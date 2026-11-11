@@ -36,7 +36,8 @@ export interface MCUFieldDef {
   placeholder?: string;
   normalRange?: string;
   /**
-   * Nilai normal yang HANYA ditampilkan (placeholder dan label "Normal: ...").
+   * Nilai normal yang HANYA ditampilkan di label "Rujukan normal: ..."
+   * di bawah field (normalHint — bukan acuan placeholder).
    * Berbeda dengan `normalRange`, field ini tidak dibaca engine deteksi
    * abnormal (mcu-normal-range.ts), jadi menambahkannya tidak mengubah hasil
    * kalkulasi, zonasi, maupun daftar Item Follow Up.
@@ -287,8 +288,17 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('artritisUrat', 'Riwayat Artritis Gout / Nyeri Sendi Asam Urat Berulang', 'anamnesis', 'select', {
     options: [...ARTRITIS_URAT_OPTIONS],
   }),
+  // Diagnosis klinis hati (STD/006 Rev.002): terisi OTOMATIS oleh engine
+  // (suggestDiagnosisHati di mcu-calculations.ts) dari SGOT/SGPT/HBsAg yang
+  // sudah ada di form — operator hanya mengisi manual bila ada informasi
+  // klinis tambahan yang tidak tercakup parameter lab.
+  // Diagnosis klinis hati (STD/006 Rev.002): terisi OTOMATIS oleh engine
+  // (suggestDiagnosisHati di mcu-calculations.ts) dari SGOT/SGPT/HBsAg yang
+  // sudah ada di form — operator hanya mengisi manual bila ada informasi
+  // klinis tambahan yang tidak tercakup parameter lab.
   f('diagnosisHati', 'Diagnosis Klinis Penyakit Hati', 'anamnesis', 'select', {
     options: [...DIAGNOSIS_HATI_OPTIONS],
+    autoCalc: true,
   }),
   f('obesitasFungsional', 'Keterbatasan Fungsional Obesitas (IMT ≥35)', 'anamnesis', 'select', {
     options: [...OBESITAS_FUNGSIONAL_OPTIONS],
@@ -881,6 +891,43 @@ export const MCU_FIELDS: MCUFieldDef[] = MCU_FIELD_DEFINITION.map((field) => {
 });
 
 /**
+ * Contoh isian untuk placeholder input field. Dipakai HANYA untuk teks
+ * pembimbing di dalam kotak — nilai normal TIDAK ditampilkan di sini karena
+ * sudah muncul di label "Rujukan normal: ..." di bawah field.
+ *
+ * Prinsip: placeholder = contoh data yang harus diisikan, bukan acuan nilai
+ * normal. Contoh: 'usg' → "Fatty Liver, Hepatomegali", 'catatan' →
+ * "Diet rendah garam, kontrol tensi 3 bulan, evaluasi MCU".
+ */
+const FIELD_EXAMPLES: Record<string, string> = {
+  // Identitas
+  nama: 'Budi Santoso',
+  nikKaryawan: 'A12345',
+  jabatan: 'Operator',
+  site: 'Kaltim',
+  tempatMCU: 'Klinik Mitra Sehat',
+  // Riwayat & kebiasaan
+  jenisOlahraga: 'Lari 30 menit, 3x seminggu',
+  kebiasaanLain: 'Kopi 2 cangkir/hari, tidur 6 jam',
+  // Fisik — teks bebas
+  fisikHeadToToe: 'Normal',
+  visusJauh: 'VOD: 6/6 VOS: 6/6',
+  visusDekat: 'VOD: 6/6 VOS: 6/6',
+  // Kimia darah & laboratorium
+  sgot: '28',
+  sgpt: '35',
+  gdp: '95',
+  ureum: '35',
+  kreatinin: '0,9',
+  sdsScore: '120',
+  // Penunjang
+  pemeriksaanLain: 'USG abdomen, Rontgen thorax',
+  catatan: 'Diet rendah garam, kontrol tensi 3 bulan, evaluasi MCU',
+  // Neurologi
+  romberg: 'Negatif',
+};
+
+/**
  * Teks nilai normal yang ditampilkan untuk satu field, menurut jenis kelamin
  * bila rentangnya berbeda. Urutan: rentang pria/wanita → normalRange →
  * normalHint. String kosong bila field memang tidak punya acuan normal.
@@ -895,15 +942,16 @@ export function getNormalText(field: MCUFieldDef, gender?: string): string {
 }
 
 /**
- * Placeholder input: nilai normal bila ada (mis. "13-16,5"), supaya operator
- * langsung melihat acuan di dalam kotak isian. `placeholder` yang ditulis
- * eksplisit selalu didahulukan.
+ * Placeholder input: CONTOH DATA yang harus diisikan operator — BUKAN nilai
+ * normal. Nilai normal sengaja TIDAK ditampilkan di dalam kotak karena sudah
+ * muncul di label "Rujukan normal: ..." di bawah field; menampilkan dua-duanya
+ * justru membingungkan operator.
+ *
+ * Prioritas: `placeholder` eksplisit → `FIELD_EXAMPLES[field.id]` → kosong.
  */
-export function getFieldPlaceholder(field: MCUFieldDef, gender?: string): string {
+export function getFieldPlaceholder(field: MCUFieldDef, _gender?: string): string {
   if (field.placeholder) return field.placeholder;
-  if (field.type !== 'number' && field.type !== 'text') return '';
-  const text = getNormalText(field, gender);
-  return text ? `Normal: ${text}` : '';
+  return FIELD_EXAMPLES[field.id] || '';
 }
 
 export function normalizeMCUEcgOption(value: string): string {

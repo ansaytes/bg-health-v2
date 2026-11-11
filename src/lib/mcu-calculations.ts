@@ -9,7 +9,7 @@
 } from '@/lib/zonasi-engine';
 import { buildDiagnosisList, formatDiagnosis } from '@/lib/mcu-diagnosis';
 import { summariseQuestionnaires } from '@/lib/questionnaire-scores';
-import { AUTO_INTERPRETATION_FIELDS, classifyFitnessTest } from '@/lib/clinical-classification';
+import { AUTO_INTERPRETATION_FIELDS, classifyFitnessTest, suggestDiagnosisHati } from '@/lib/clinical-classification';
 import { audiogramFromRecord, evaluateAudiogram } from '@/lib/hc-ergo';
 import { parseVisusPerMata } from '@/lib/visus-parser';
 import { hitungTemuanAbnormal } from '@/lib/followup-fields';
@@ -373,6 +373,21 @@ export function applyMCUCalculations(values: MCUValues): MCUValues {
     numberValue(result.gd2pp),
     numberValue(result.hba1c),
   );
+
+  // Diagnosis Klinis Penyakit Hati (STD/006 Rev.002 Bab 7): diturunkan dari
+  // SGOT/SGPT/HBsAg yang sudah ada di form — operator tidak perlu mengisi
+  // manual bila nilai lab tersedia. HANYA diisi bila field masih kosong;
+  // tulisan manual selalu dipertahankan. Harus DIHITUNG SEBELUM
+  // buildDiagnosisList & assessZonasi karena keduanya membaca
+  // `diagnosisHati` (trigger zona merah/kuning untuk penyakit hati).
+  const saranHati = suggestDiagnosisHati(
+    numberValue(result.sgot),
+    numberValue(result.sgpt),
+    result.hbsag,
+  );
+  if (saranHati && !text(result.diagnosisHati)) {
+    result.diagnosisHati = saranHati;
+  }
   result.tglExpired = addOneYear(result.tglMCU);
 
   // eGFR: pakai nilai laboratorium bila tersedia, kalau kosong hitung sendiri

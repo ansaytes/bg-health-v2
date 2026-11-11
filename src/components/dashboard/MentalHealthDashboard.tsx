@@ -6,15 +6,13 @@
 // tindak lanjut). Tiga kartu (SRQ-20, DASS-21, skor subskala) disusun dalam satu
 // baris sehingga memenuhi layar tanpa ruang kosong dan tanpa perlu scroll.
 import { useEffect, useRef, useState } from 'react';
-import { Chart as ChartJS, registerables, type ChartOptions } from 'chart.js';
-import ChartDataLabels from 'chartjs-plugin-datalabels';
+import type { ChartOptions } from 'chart.js';
+import { ChartJS } from '@/lib/chart-register';
 import { authFetch } from '@/lib/api-client';
 import { SITES } from '@/components/administrator/hc-ergo-ui';
 import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, gradientBatangArray, useAnimationReady } from '@/lib/chart-standard';
 import PageLoading from '@/components/ui/page-loading';
 import { MCUChart } from '@/components/dashboard/MCUDashboardShared';
-
-ChartJS.register(...registerables, ChartDataLabels);
 
 type D = Record<string, any>;
 const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
@@ -215,8 +213,8 @@ export default function MentalHealthDashboard() {
           datalabels: { color: text, anchor: 'end', align: 'top', clamp: true, clip: false, font: { size: 10, weight: 'bold' as const, family: FONT }, formatter: (v: number) => (v ? String(v) : '') },
         },
         scales: {
-          x: { grid: { display: false }, ticks: { color: text, font: { size: 10, family: FONT }, autoSkip: false }, title: { display: true, text: 'Subskala DASS-21', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
-          y: { beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT } }, title: { display: true, text: 'Rata-rata skor', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+          x: { grid: { display: false }, ticks: { color: text, font: { size: 10, family: FONT }, autoSkip: false } },
+          y: { beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT } } },
         },
       } as ChartOptions<'bar'>,
     }));
@@ -240,8 +238,8 @@ export default function MentalHealthDashboard() {
           datalabels: { display: false },
         },
         scales: {
-          x: { beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 }, title: { display: true, text: 'Jumlah orang', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
-          y: { grid: { display: false }, ticks: { color: text, font: { size: 10, family: FONT }, autoSkip: false }, title: { display: true, text: 'Site', color: text, font: { size: 9, weight: 'bold' as const, family: FONT } } },
+          x: { beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } },
+          y: { grid: { display: false }, ticks: { color: text, font: { size: 10, family: FONT }, autoSkip: false } },
         },
       } as ChartOptions<'bar'>,
     }));
@@ -309,13 +307,19 @@ export default function MentalHealthDashboard() {
         <ChartCard title="SRQ-20 per Site" sub="Responden · perlu tindak lanjut" accent="#2E86DE" empty={!perSite.length}><canvas ref={siteRef} /></ChartCard>
       </div>
 
-      {/* Baris 2 — sebaran derajat keparahan & indikator SDS.
-          Tiga diagram ini memakai data yang SUDAH tersedia di API tetapi
-          belum pernah ditampilkan: `srq20.band`, `dass21.band`, dan
-          `sds.perIndikator`. Sebelumnya empat diagram sebelumnya hanya
-          menunjukkan total, bukan DERAJAT — sehingga tidak informatif untuk
-          menentukan prioritas tindak lanjut. */}
-      <div className="mcu-live-chart-row">
+      {/* Baris 2 — sebaran derajat keparahan & indikator SDS-30.
+          Menggunakan data yang SUDAH tersedia di API tetapi belum pernah
+          ditampilkan: `srq21.band`, `dass21.band`, dan `sds.perIndikator`.
+          Sebelumnya kartu hanya menampilkan total, bukan DERAJAT, sehingga
+          tidak informatif untuk menentukan prioritas tindak lanjut.
+
+          SDS-30 diperluas menjadi tiga kartu (pelaporan UKL — Kepdirjen
+          Minerba 1855.K/2019):
+            • Rata-rata skor per indikator (5–35)
+            • Sebaran derajat: ringan <10 · sedang 10–24 · berat >24
+            • Indikator dengan kategori berat terbanyak → prioritas
+              intervensi lingkungan kerja */}
+      <div className="mcu-live-chart-row" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}>
         <ChartCard title="Sebaran Skor SRQ-20" sub="Ringan · sedang · berat" accent="#E74C3C" empty={!Object.keys(i.srq20.band || {}).length}>
           <MCUChart
             type="bar"
@@ -338,14 +342,62 @@ export default function MentalHealthDashboard() {
           />
         </ChartCard>
 
-        <ChartCard title="Indikator SDS" sub="Rata-rata skor per indikator (skala 5–35)" accent="#8E44AD" empty={!(i.sds?.perIndikator || []).length}>
+        {/* SDS-30 — instrumen faktor psikologi kerja (Lampiran Permenaker
+            5/2018), dipakai UKL untuk pelaporan Kepdirjen Minerba 1855.K/2019.
+            6 indikator × 5 item, skor indikator 5–35. Kategori derajat
+            (hal. 207 Permenaker 5/2018): ringan <10 · sedang 10–24 · berat >24.
+            Tiga diagram ini disusun agar laporan UKL langsung terbaca:
+            rata-rata skor tiap indikator, jumlah responden per derajat,
+            dan indikator mana yang paling banyak kategori berat. */}
+        <ChartCard
+          title="SDS-30 — Stres Kerja (UKL · Kepdirjen Minerba)"
+          sub="6 indikator faktor psikologi kerja · skor 5–35"
+          accent="#8E44AD"
+          empty={!(i.sds?.perIndikator || []).length}
+        >
           <MCUChart
             type="bar"
             labels={(i.sds?.perIndikator || []).map((x: any) => x.title)}
             values={(i.sds?.perIndikator || []).map((x: any) => Number(x.rataRata || 0))}
             colors={(i.sds?.perIndikator || []).map((_: any, idx: number) => ['#8E44AD', '#3498DB', '#E74C3C', '#F39C12', '#00B894', '#1ABC9C'][idx % 6])}
             horizontal
-            legendLabel="Skor rata-rata"
+            legendLabel="Skor rata-rata (skala 5–35)"
+          />
+        </ChartCard>
+
+        <ChartCard
+          title="SDS-30 — Sebaran Derajat Stres"
+          sub="Ringan <10 · Sedang 10–24 · Berat >24 (per indikator)"
+          accent="#E67E22"
+          empty={!(i.sds?.perIndikator || []).length}
+        >
+          <MCUChart
+            type="bar"
+            labels={['Ringan', 'Sedang', 'Berat']}
+            values={[
+              (i.sds?.perIndikator || []).reduce((a: number, x: any) => a + Number(x.ringan || 0), 0),
+              (i.sds?.perIndikator || []).reduce((a: number, x: any) => a + Number(x.sedang || 0), 0),
+              (i.sds?.perIndikator || []).reduce((a: number, x: any) => a + Number(x.berat || 0), 0),
+            ]}
+            colors={['#F1C40F', '#E67E22', '#E74C3C']}
+            horizontal
+            legendLabel="Responden × indikator"
+          />
+        </ChartCard>
+
+        <ChartCard
+          title="SDS-30 — Indikator dengan Kategori Berat Terbanyak"
+          sub="Prioritas intervensi lingkungan kerja"
+          accent="#E74C3C"
+          empty={!((i.sds?.perIndikator || []) as any[]).some((x) => Number(x.berat || 0) > 0)}
+        >
+          <MCUChart
+            type="bar"
+            labels={[(i.sds?.perIndikator || []) as any[]].flat().filter((x: any) => Number(x.berat || 0) > 0).sort((a: any, b: any) => b.berat - a.berat).slice(0, 6).map((x: any) => x.title)}
+            values={[(i.sds?.perIndikator || []) as any[]].flat().filter((x: any) => Number(x.berat || 0) > 0).sort((a: any, b: any) => b.berat - a.berat).slice(0, 6).map((x: any) => Number(x.berat))}
+            colors={['#E74C3C']}
+            horizontal
+            legendLabel="Responden kategori berat"
           />
         </ChartCard>
       </div>
