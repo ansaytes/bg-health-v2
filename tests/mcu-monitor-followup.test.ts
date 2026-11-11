@@ -18,7 +18,7 @@ describe('aturan penutupan follow up', () => {
     expect(tindakLanjutDitutup({ paramedis: false, zona: 'Hijau', sisa: 2 })).toBe(false);
     expect(tindakLanjutDitutup({ paramedis: false, zona: null, sisa: 0 })).toBe(false);
   });
-  it('konfirmasi paramedis menutup apa pun kondisinya', () => {
+  it('Konfirmasi QSHE Medic menutup apa pun kondisinya', () => {
     expect(tindakLanjutDitutup({ paramedis: true, zona: 'Merah', sisa: 3 })).toBe(true);
   });
 });
@@ -54,10 +54,10 @@ describe('status follow up Monitoring MCU', () => {
     expect(merah.kesimpulan).toContain('memburuk');
   });
 
-  it('konfirmasi paramedis menutup walau temuan masih ada, dan tercatat di kesimpulan', () => {
+  it('Konfirmasi QSHE Medic menutup walau temuan masih ada, dan tercatat di kesimpulan', () => {
     const r = getFollowUp({ perlu_fu: 'Ya' }, tglMcu, [fu({ zona: 'Kuning', sisa: 2, paramedis: true })]);
     expect(r.status).toBe('Close: FTW');
-    expect(r.kesimpulan).toContain('dikonfirmasi paramedis');
+    expect(r.kesimpulan).toContain('dikonfirmasi QSHE Medic');
   });
 
   it('urutan ditentukan tanggal aktual, bukan urutan baris', () => {

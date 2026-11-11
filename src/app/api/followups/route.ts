@@ -189,12 +189,12 @@ export async function POST(req: NextRequest) {
   const tutupParamedis = body.tutupParamedis === true;
   const catatanBody = typeof body.catatan === 'string' ? body.catatan.trim() : '';
   if (tutupParamedis && !catatanBody) {
-    return NextResponse.json({ error: 'Konfirmasi paramedis wajib disertai catatan alasan penutupan.' }, { status: 400 });
+    return NextResponse.json({ error: 'Konfirmasi QSHE Medic wajib disertai catatan alasan penutupan.' }, { status: 400 });
   }
-  // Tanpa hasil ukur, follow up hanya boleh dicatat bila paramedis menutupnya
+  // Tanpa hasil ukur, follow up hanya boleh dicatat bila QSHE Medic menutupnya
   // secara eksplisit dan menuliskan alasannya.
   if (!Object.keys(nilai).length && !(tutupParamedis && catatanBody)) {
-    return NextResponse.json({ error: 'Isi minimal satu hasil tindak lanjut, atau tutup FU dengan catatan paramedis.' }, { status: 400 });
+    return NextResponse.json({ error: 'Isi minimal satu hasil tindak lanjut, atau tutup FU dengan catatan QSHE Medic.' }, { status: 400 });
   }
   if (Object.keys(nilai).length > 40 || Object.values(nilai).some((value) =>
     (typeof value !== 'string' && typeof value !== 'number')

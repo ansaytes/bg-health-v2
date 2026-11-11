@@ -264,7 +264,7 @@ const clean = (v: unknown) => (v == null ? '' : String(v).trim());
  * persis aturan ini di SQL):
  *   - otomatis: zona Hijau DAN tidak ada parameter abnormal tersisa
  *     (trigger STD/006 maupun rujukan nasional), atau
- *   - dikonfirmasi paramedis (tombol "Konfirmasi paramedis").
+ *   - dikonfirmasi QSHE Medic (tombol "Konfirmasi QSHE Medic").
  * `sisa` null = tidak diketahui (data migrasi lama): dianggap tidak ada sisa.
  */
 export function tindakLanjutDitutup(fu: { paramedis: boolean; zona: string | null; sisa: number | null }): boolean {
@@ -284,7 +284,7 @@ export interface FollowUpRingkas {
   arah: string | null;
   /** Jumlah parameter yang masih abnormal setelah follow up ini. */
   sisa: number | null;
-  /** Ditutup manual lewat konfirmasi paramedis. */
+  /** Ditutup manual lewat Konfirmasi QSHE Medic. */
   paramedis: boolean;
 }
 
@@ -311,7 +311,7 @@ export function ringkasFollowUp(tglMcu: Date | null, daftar: FollowUpRingkas[]):
   const arah = ['membaik', 'tetap', 'memburuk'].includes(clean(fu.arah)) ? `, ${clean(fu.arah)}` : '';
   const sisa = fu.sisa && fu.sisa > 0 ? `, ${fu.sisa} parameter masih abnormal` : '';
   const ditutup = tindakLanjutDitutup(fu);
-  const penutup = fu.paramedis ? ' [dikonfirmasi paramedis]' : '';
+  const penutup = fu.paramedis ? ' [dikonfirmasi QSHE Medic]' : '';
   const kesimpulan = `FU ${ke} (${formatDate(tgl)}): ${zona ? `Zona ${zona}` : 'zona belum dihitung'}${arah}${sisa}${penutup}`;
 
   if (ditutup) return { status: 'Close: FTW', kesimpulan };

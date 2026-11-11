@@ -40,7 +40,7 @@ export interface PesertaTindakLanjut {
  *
  * PENUTUPAN
  * Otomatis bila zona Hijau dan tidak ada parameter abnormal tersisa. Tombol
- * "Konfirmasi paramedis" menutupnya manual (wajib catatan alasan).
+ * "Konfirmasi QSHE Medic" menutupnya manual (wajib catatan alasan).
  */
 export default function FormTindakLanjut({ peserta, jenis, onSelesai }: {
   peserta: PesertaTindakLanjut;
@@ -117,11 +117,11 @@ export default function FormTindakLanjut({ peserta, jenis, onSelesai }: {
 
   async function simpan() {
     if (!jumlahTerisi && !(tutupParamedis && catatan.trim())) {
-      store.showToast('Isi minimal satu hasil tindak lanjut, atau tutup dengan konfirmasi paramedis dan catatan', 'error');
+      store.showToast('Isi minimal satu hasil tindak lanjut, atau tutup dengan Konfirmasi QSHE Medic dan catatan', 'error');
       return;
     }
     if (tutupParamedis && !catatan.trim()) {
-      store.showToast('Konfirmasi paramedis wajib disertai catatan alasan penutupan', 'error');
+      store.showToast('Konfirmasi QSHE Medic wajib disertai catatan alasan penutupan', 'error');
       return;
     }
     setMenyimpan(true);
@@ -335,11 +335,11 @@ export default function FormTindakLanjut({ peserta, jenis, onSelesai }: {
         })}
 
         <label className="flex flex-col gap-1" style={{ marginBottom: 8 }}>
-          <span className="text-[10px] font-semibold text-muted-foreground">Catatan dokter / paramedis</span>
+          <span className="text-[10px] font-semibold text-muted-foreground">Catatan dokter / QSHE Medic</span>
           <Input value={catatan} onChange={(e) => setCatatan(e.target.value)} placeholder={tutupParamedis ? 'Alasan penutupan (wajib)' : ''} className="h-8 rounded-lg text-sm" />
         </label>
 
-        {/* Konfirmasi paramedis — penutupan manual. Tanpa ini, FU ditutup otomatis
+        {/* Konfirmasi QSHE Medic — penutupan manual. Tanpa ini, FU ditutup otomatis
             bila zona Hijau dan semua parameter sudah normal. */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', marginBottom: 8,
@@ -350,7 +350,7 @@ export default function FormTindakLanjut({ peserta, jenis, onSelesai }: {
             type="button"
             role="switch"
             aria-checked={tutupParamedis}
-            aria-label="Konfirmasi paramedis"
+            aria-label="Konfirmasi QSHE Medic"
             onClick={() => setTutupParamedis((v) => !v)}
             style={{
               position: 'relative', width: 38, height: 22, flexShrink: 0, borderRadius: 11, border: 'none',
@@ -364,7 +364,7 @@ export default function FormTindakLanjut({ peserta, jenis, onSelesai }: {
           </button>
           <span style={{ minWidth: 0 }}>
             <span style={{ fontSize: 11, fontWeight: 700, display: 'block' }}>
-              {tutupParamedis ? 'Ditutup oleh paramedis' : 'Tutup otomatis'}
+              {tutupParamedis ? 'Dikonfirmasi QSHE Medic' : 'Tutup otomatis'}
             </span>
             <span style={{ fontSize: 9.5, color: 'var(--muted-foreground)', lineHeight: 1.4, display: 'block' }}>
               {tutupParamedis
@@ -415,7 +415,7 @@ export default function FormTindakLanjut({ peserta, jenis, onSelesai }: {
             <span style={{ color: ARAH_WARNA[hasilSimpan.arah] ?? '#778899', fontWeight: 800 }}> ({hasilSimpan.arah})</span>
             <div style={{ marginTop: 2 }}>
               {hasilSimpan.ditutup
-                ? <b style={{ color: '#00806a' }}>Tindak lanjut ditutup {hasilSimpan.paramedis ? '(konfirmasi paramedis)' : '(otomatis: semua parameter normal)'}</b>
+                ? <b style={{ color: '#00806a' }}>Tindak lanjut ditutup {hasilSimpan.paramedis ? '(Konfirmasi QSHE Medic)' : '(otomatis: semua parameter normal)'}</b>
                 : <b style={{ color: '#9a6b00' }}>Masih terbuka — {hasilSimpan.sisaAbnormal} parameter abnormal tersisa</b>}
             </div>
           </div>
