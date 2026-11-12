@@ -1,54 +1,58 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { buildSpirometryInterpretation, buildAudiometryInterpretation } from '@/lib/mcu-calculations';
+import { interpretSpirometry, interpretAudiometry } from '@/lib/clinical-classification';
 import { sanitizeFilterValue, sanitizeSearchTerm, isSafeHash, safeHash, safeInt } from '@/lib/query-safety';
 
-describe('buildSpirometryInterpretation', () => {
+describe('interpretSpirometry', () => {
   it('menghasilkan "Normal" saat rasio dan FEV1 sehat', () => {
-    const hasil = buildSpirometryInterpretation({
+    const hasil = interpretSpirometry({
       fev1Pct: '95', fvcPct: '98', fev1FvcAct: '0,82',
     });
     expect(hasil).toContain('Normal');
     expect(hasil).toContain('FEV1/FVC 82%');
   });
 
-  it('menandai pola obstruktif saat FEV1/FVC < 70%', () => {
-    const hasil = buildSpirometryInterpretation({
+  it('menandai obstruksi saat FEV1/FVC < 70%', () => {
+    const hasil = interpretSpirometry({
       fev1Pct: '68', fvcPct: '90', fev1FvcAct: '0,55',
     });
-    expect(hasil.toLowerCase()).toContain('obstruktif');
+    expect(hasil.toLowerCase()).toContain('obstruksi');
   });
 
-  it('menandai restriktif saat FVC < 80% tetapi rasio normal', () => {
-    const hasil = buildSpirometryInterpretation({
+  it('menandai suspek restriksi saat FVC < 80% tetapi rasio normal', () => {
+    const hasil = interpretSpirometry({
       fev1Pct: '72', fvcPct: '65', fev1FvcAct: '0,80',
     });
-    expect(hasil.toLowerCase()).toContain('restriktif');
+    expect(hasil.toLowerCase()).toContain('restriksi');
   });
 
   it('kosong bila tidak ada angka spirometri', () => {
-    expect(buildSpirometryInterpretation({})).toBe('');
+    expect(interpretSpirometry({})).toBe('');
   });
 });
 
-describe('buildAudiometryInterpretation', () => {
-  it('normal untuk PTA rendah', () => {
-    const hasil = buildAudiometryInterpretation({ pta: '20' });
+describe('interpretAudiometry', () => {
+  const audiogramNormal = { acr_500: 10, acr_1k: 10, acr_2k: 10, acr_4k: 10, acl_500: 10, acl_1k: 10, acl_2k: 10, acl_4k: 10 };
+  const audiogramRingan = { acr_500: 30, acr_1k: 30, acr_2k: 30, acr_4k: 30, acl_500: 30, acl_1k: 30, acl_2k: 30, acl_4k: 30 };
+  const audiogramSedang = { acr_500: 45, acr_1k: 45, acr_2k: 45, acr_4k: 45, acl_500: 45, acl_1k: 45, acl_2k: 45, acl_4k: 45 };
+
+  it('normal untuk ambang rendah', () => {
+    const hasil = interpretAudiometry(audiogramNormal);
     expect(hasil).toContain('Normal');
   });
 
   it('ringan untuk PTA 26-40', () => {
-    const hasil = buildAudiometryInterpretation({ pta: '30' });
-    expect(hasil.toLowerCase()).toContain('mild');
+    const hasil = interpretAudiometry(audiogramRingan);
+    expect(hasil.toLowerCase()).toContain('ringan');
   });
 
-  it('berat untuk PTA 41-60', () => {
-    const hasil = buildAudiometryInterpretation({ pta: '45' });
-    expect(hasil.toLowerCase()).toContain('moderate');
+  it('sedang untuk PTA 41-60', () => {
+    const hasil = interpretAudiometry(audiogramSedang);
+    expect(hasil.toLowerCase()).toContain('sedang');
   });
 
-  it('kosong bila PTA kosong', () => {
-    expect(buildAudiometryInterpretation({})).toBe('');
+  it('kosong bila tidak ada audiogram', () => {
+    expect(interpretAudiometry({})).toBe('');
   });
 });
 

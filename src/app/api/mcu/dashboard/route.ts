@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { decryptMCURecord } from '@/lib/encryption';
-import { normalizeArea } from '@/lib/mcu-monitor';
+import { decryptMCURecord, hashField } from '@/lib/encryption';
+import { muatFollowUpSelesai } from '@/lib/followup-status';
+import { getFollowUp, normalizeArea, parseDate, type FollowUpRingkas } from '@/lib/mcu-monitor';
 import { siteDihitung } from '@/lib/site-filter';
 import { getServerCaller, requireServerRole, STAFF_ROLES } from '@/lib/server-auth';
 import { integrationAdminClient } from '@/lib/integration-settings';
@@ -39,14 +40,24 @@ function normalizeFollowUpStatus(value: unknown, exempt: boolean) {
 
 interface ServerCacheEntry {
   rows: Record<string, unknown>[];
+  followUpByHash: Map<string, FollowUpRingkas[]>;
   timestamp: number;
 }
 let serverCache: ServerCacheEntry | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-const DASHBOARD_FIELDS = 'employee_id,nik_karyawan,nama,site,area_raw,client,jabatan,exempt,total_mcu,mcu_terakhir,kategori_mcu_terakhir,frs_kategori,zona_risiko,masa_berlaku_mcu,status_mcu,status_follow_up,jadwal_mcu_selanjutnya';
+/**
+ * Field klinis `diagnosa`, `hasil_mcu`, `perlu_fu`, `rekomendasi_fu`,
+ * `item_fu` ditambahkan KEMBALI ke payload dashboard — tab "Analisa &
+ * Tindak Lanjut" (HasilTindakLanjutMCU) memplot "Top 10 Diseases"
+ * (dari `diagnosa`) dan "10 Peringkat Konsultasi Dokter" (dari
+ * `rekomendasi_fu`) dengan data ini. View `monitor_mcu` mengekspos kolom
+ * tersebut langsung (migration 010), jadi tidak ada pemetaan nama lama
+ * yang perlu dilakukan di sini.
+ */
+const DASHBOARD_FIELDS = 'employee_id,nik_karyawan,nama,site,area_raw,client,jabatan,exempt,total_mcu,mcu_terakhir,kategori_mcu_terakhir,frs_kategori,zona_risiko,masa_berlaku_mcu,status_mcu,status_follow_up,jadwal_mcu_selanjutnya,diagnosa,hasil_mcu,rekomendasi_fu,item_fu,perlu_fu';
 const MONITOR_FIELDS = DASHBOARD_FIELDS;
-const MONITOR_FIELDS_ALT = 'employee_id,nik_karyawan,nama,site,area_raw,client,jabatan,exempt,total_mcu,mcu_terakhir,kategori_mcu_terakhir,frs_kategori,masa_berlaku_mcu,status_mcu,status_follow_up,jadwal_mcu_selanjutnya';
+const MONITOR_FIELDS_ALT = 'employee_id,nik_karyawan,nama,site,area_raw,client,jabatan,exempt,total_mcu,mcu_terakhir,kategori_mcu_terakhir,frs_kategori,masa_berlaku_mcu,status_mcu,status_follow_up,jadwal_mcu_selanjutnya,diagnosa,hasil_mcu,rekomendasi_fu,item_fu,perlu_fu';
 
 /**
  * VIEW `monitor_mcu` di database bisa belum memuat kolom `zona_risiko` /
@@ -164,8 +175,10 @@ export async function GET(request: NextRequest) {
     const now = Date.now();
 
     let rawRows: Record<string, unknown>[];
+    let followUpByHash: Map<string, FollowUpRingkas[]> = new Map();
     if (!forceRefresh && serverCache && (now - serverCache.timestamp < CACHE_TTL_MS)) {
       rawRows = serverCache.rows;
+      followUpByHash = serverCache.followUpByHash;
     } else {
       // Paralel dulu (cepat); bila view menolak beban serentak, ulangi sekuensial.
       let fetched: Record<string, unknown>[];
@@ -179,18 +192,40 @@ export async function GET(request: NextRequest) {
         fetched = await fetchAllMonitorMcuRowsSequential();
       }
       rawRows = fetched.map(decryptMCURecord);
-      serverCache = { rows: rawRows, timestamp: now };
+      // Follow up terkini dari tabel `followups_prokawan` (wadah tunggal
+      // tindak lanjut baru) — menggantikan logika lama view yang masih
+      // membaca kolom `kesimpulan_fu1/2/3` di mcu_records.
+      followUpByHash = await muatFollowUpSelesai(client());
+      serverCache = { rows: rawRows, followUpByHash, timestamp: now };
     }
 
     /*
-     * Query di atas sudah hanya mengambil kolom yang dipakai dashboard
-     * (DASHBOARD_FIELDS), jadi tidak ada lagi pemangkasan field di sini —
-     * `hasil_mcu`, `diagnosa`, `rekomendasi_fu`, dan `item_fu` tidak pernah
-     * ikut terunduh. Tabel admin memakai endpoint terpisah
-     * `/api/mcu/monitor-table` yang tetap mengirim field lengkap.
+     * Query mengambil kolom dashboard + field klinis (diagnosa, hasil_mcu,
+     * perlu_fu, rekomendasi_fu, item_fu) yang dibutuhkan tab
+     * "Analisa & Tindak Lanjut". Tabel admin tetap memakai endpoint
+     * terpisah /api/mcu/monitor-table yang mengirim field lengkap.
+     *
+     * `status_follow_up` di-hitung ulang di sini (bukan diambil dari kolom
+     * view) karena view masih memakai logika lama kolom `kesimpulan_fu1/2/3`;
+     * sumber tunggal tindak lanjut kini tabel `followups_prokawan` —
+     * logikanya disamakan dengan /api/mcu/monitor-table (getFollowUp).
      */
     const employees: Record<string, unknown>[] = rawRows.map(row => {
       const exempt = Boolean(row.exempt);
+      // Follow up yang berlaku untuk MCU terakhir: baris followups_prokawan
+      // yang selesai dan tgl aktual >= tgl MCU terakhir (pencocokan lewat
+      // nik_hash, sama persis dengan /api/mcu/monitor-table).
+      const nikHash = hashField(String(row.nik_karyawan ?? '').trim());
+      const daftarFollowUp = nikHash ? followUpByHash.get(nikHash) ?? [] : [];
+      const statusFu = getFollowUp(
+        {
+          kes_vendor: row.hasil_mcu,
+          perlu_fu: row.perlu_fu,
+          rek_fu: row.rekomendasi_fu,
+        },
+        parseDate(row.mcu_terakhir),
+        daftarFollowUp,
+      ).status;
       return {
         nik_karyawan: row.nik_karyawan ?? null,
         nama: row.nama ?? null,
@@ -208,8 +243,15 @@ export async function GET(request: NextRequest) {
         zona_risiko: row.zona_risiko ?? row.zonasi ?? null,
         masa_berlaku_mcu: row.masa_berlaku_mcu ?? null,
         status_mcu: normalizeMcuStatus(row.status_mcu, exempt, row.masa_berlaku_mcu),
-        status_follow_up: normalizeFollowUpStatus(row.status_follow_up, exempt),
+        status_follow_up: normalizeFollowUpStatus(statusFu, exempt),
         jadwal_mcu_selanjutnya: row.jadwal_mcu_selanjutnya ?? null,
+        // Field klinis untuk tab "Analisa & Tindak Lanjut" (Top 10 Diseases,
+        // Hasil MCU, 10 Peringkat Konsultasi Dokter).
+        diagnosa: row.diagnosa ?? null,
+        hasil_mcu: row.hasil_mcu ?? null,
+        perlu_fu: row.perlu_fu ?? null,
+        rekomendasi_fu: row.rekomendasi_fu ?? null,
+        item_fu: row.item_fu ?? null,
       };
     })
       // Site "Batch" = calon karyawan, tidak dihitung pada dashboard.
