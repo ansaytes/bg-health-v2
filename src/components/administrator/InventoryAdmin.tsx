@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Search, Plus, Edit, Trash2, AlertTriangle, ArchiveRestore } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Search, Plus, Edit, Trash2, ArchiveRestore, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { fetchDashboardData } from '@/lib/dashboard-data';
 import { usePopup, Popup } from '@/lib/popup';
 import DownloadButton from '@/components/ui/download-button';
-import InventoryOperationalTable from '@/components/dashboard/InventoryOperationalTable';
 import {
   Dialog,
   DialogContent,
@@ -28,6 +27,60 @@ type InventoryItem = {
   avg_monthly_usage: number;
 };
 
+// Klasifikasi status stok — sama persis dengan yang dipakai dashboard
+// (InventoryDashboard) dan tabel Analisa Operasional, supaya angka di kedua
+// halaman tidak pernah berbeda.
+type StockStatus = 'Aman' | 'Menipis' | 'Kritis' | 'Habis';
+
+function getStockStatus(item: InventoryItem): StockStatus {
+  if ((item.stock || 0) <= 0) return 'Habis';
+  const monthly = item.avg_monthly_usage || 0;
+  if (monthly > 0) {
+    const monthsOfStock = item.stock / monthly;
+    if (monthsOfStock <= 0.5 || item.stock <= 5) return 'Kritis';
+    if (monthsOfStock <= 1.2) return 'Menipis';
+    return 'Aman';
+  }
+  if (item.stock <= 5) return 'Kritis';
+  if (item.stock <= 15) return 'Menipis';
+  return 'Aman';
+}
+
+function getDaysUntilExpired(dateStr: string | null): number | null {
+  if (!dateStr) return null;
+  const expDate = new Date(dateStr);
+  if (isNaN(expDate.getTime())) return null;
+  return Math.ceil((expDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+}
+
+type ExpiredStatus = 'Sudah Kadaluarsa' | 'Kadaluarsa < 3 Bulan' | 'Kadaluarsa < 6 Bulan' | 'Aman' | 'Tidak Ada Data';
+
+function getExpiredStatus(dateStr: string | null): ExpiredStatus {
+  const days = getDaysUntilExpired(dateStr);
+  if (days === null) return 'Tidak Ada Data';
+  if (days <= 0) return 'Sudah Kadaluarsa';
+  if (days <= 90) return 'Kadaluarsa < 3 Bulan';
+  if (days <= 180) return 'Kadaluarsa < 6 Bulan';
+  return 'Aman';
+}
+
+const STOCK_BADGE: Record<StockStatus, { bg: string; color: string }> = {
+  Habis:   { bg: 'rgba(255,68,68,0.15)',  color: '#FF4444' },
+  Kritis:  { bg: 'rgba(255,152,0,0.15)',  color: '#d97706' },
+  Menipis: { bg: 'rgba(255,202,40,0.15)', color: '#b45309' },
+  Aman:    { bg: 'rgba(0,184,148,0.10)',  color: '#00B894' },
+};
+
+const EXPIRED_BADGE: Record<ExpiredStatus, { bg: string; color: string }> = {
+  'Aman':                    { bg: 'rgba(0,184,148,0.10)',  color: '#00B894' },
+  'Kadaluarsa < 6 Bulan':    { bg: 'rgba(255,202,40,0.15)', color: '#b45309' },
+  'Kadaluarsa < 3 Bulan':    { bg: 'rgba(255,152,0,0.15)',  color: '#d97706' },
+  'Sudah Kadaluarsa':        { bg: 'rgba(255,68,68,0.15)',  color: '#dc2626' },
+  'Tidak Ada Data':          { bg: 'rgba(0,0,0,0.05)',      color: 'var(--muted-foreground)' },
+};
+
+type StockFilter = 'Semua' | StockStatus | 'Fast Moving';
+
 export default function InventoryAdmin() {
   const { isSuperuser } = useAuth();
   const { popup, popupState, closePopup } = usePopup();
@@ -36,9 +89,9 @@ export default function InventoryAdmin() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('Semua');
-  // Tabel operasional (Semua / Habis / Menipis / Fast-Moving / Expired-FEFO)
-  // dipindah dari dashboard ke sini.
-  const [view, setView] = useState<'master' | 'operasional'>('master');
+  // Filter klasifikasi status stok (Aman / Menipis / Kritis / Habis) + Fast Moving.
+  const [stockFilter, setStockFilter] = useState<StockFilter>('Semua');
+  
   
   
   // Add Master Item state
@@ -229,24 +282,29 @@ export default function InventoryAdmin() {
     });
   };
 
+  // Fast Moving = item dengan pemakaian rata-rata per bulan tertinggi.
+  // Ambangnya 15 item teratas (sama dengan tabel Fast-Moving di Analisa
+  // Operasional) supaya daftarnya konsisten.
+  const fastMovingIds = useMemo(() => {
+    return new Set(
+      [...items]
+        .filter(i => (i.avg_monthly_usage || 0) > 0)
+        .sort((a, b) => (b.avg_monthly_usage || 0) - (a.avg_monthly_usage || 0))
+        .slice(0, 15)
+        .map(i => i.id),
+    );
+  }, [items]);
+
   const filteredItems = items.filter(item => {
     const matchSearch = item.name.toLowerCase().includes(search.toLowerCase());
     const matchCategory = categoryFilter === 'Semua' || item.category === categoryFilter;
-    return matchSearch && matchCategory;
+    const matchStock = stockFilter === 'Semua'
+      ? true
+      : stockFilter === 'Fast Moving'
+        ? fastMovingIds.has(item.id)
+        : getStockStatus(item) === stockFilter;
+    return matchSearch && matchCategory && matchStock;
   });
-
-  const getExpiryStatus = (expDateStr: string | null) => {
-    if (!expDateStr) return { label: '-', color: 'inherit', bg: 'transparent', isAlert: false };
-    const expDate = new Date(expDateStr);
-    const now = new Date();
-    const diffTime = expDate.getTime() - now.getTime();
-    const diffMonths = diffTime / (1000 * 3600 * 24 * 30);
-    
-    if (diffMonths < 0) return { label: 'Expired', color: 'white', bg: 'black', isAlert: true };
-    if (diffMonths < 1) return { label: '< 1 Bulan', color: 'white', bg: '#ef4444', isAlert: true };
-    if (diffMonths < 3) return { label: '< 3 Bulan', color: '#3a2a00', bg: '#FFD000', isAlert: true };
-    return { label: 'Aman', color: '#10b981', bg: 'transparent', isAlert: false };
-  };
 
   const tableDataForExport = () => {
     return filteredItems.map((i, idx) => ({
@@ -258,7 +316,9 @@ export default function InventoryAdmin() {
       Stok_Total: i.stock,
       Satuan: i.unit,
       Rata2_Pakai: i.avg_monthly_usage,
-      Status: i.stock < (i.avg_monthly_usage * 3) ? 'Menipis' : 'Aman'
+      Status_Stok: getStockStatus(i),
+      Status_Expired: getExpiredStatus(i.tanggal_expired),
+      Fast_Moving: fastMovingIds.has(i.id) ? 'Ya' : 'Tidak',
     }));
   };
 
@@ -288,37 +348,6 @@ export default function InventoryAdmin() {
         </Button>
       </div>
 
-      {/* Pilih tampilan: tabel master (CRUD) atau tabel operasional yang
-          dipindah dari dashboard. */}
-      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-        {([
-          { key: 'master', label: 'Data Master' },
-          { key: 'operasional', label: 'Analisa Operasional' },
-        ] as const).map(t => (
-          <button
-            key={t.key}
-            type="button"
-            onClick={() => setView(t.key)}
-            style={{
-              height: 32, padding: '0 14px', borderRadius: 6, cursor: 'pointer',
-              fontSize: 12, fontWeight: 700,
-              border: view === t.key ? '1px solid var(--brand-primary, #ff4d00)' : '1px solid var(--border)',
-              background: view === t.key ? 'var(--brand-primary, #ff4d00)' : 'var(--card)',
-              color: view === t.key ? '#fff' : 'var(--foreground)',
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {view === 'operasional' ? (
-        <div style={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <InventoryOperationalTable items={items} />
-        </div>
-      ) : (
-      <>
-
       {/* Toolbar TANPA latar card: sebelumnya kotak putih membentang selebar
           halaman dan menyisakan area putih di kiri-kanan pencarian. Sekarang
           toolbar transparan (menyatu dengan background), sedangkan kotak
@@ -346,6 +375,21 @@ export default function InventoryAdmin() {
             <option value="Lainnya">Lainnya</option>
           </select>
         </div>
+        <div style={{ flexShrink: 0, width: '170px' }}>
+          <select
+            value={stockFilter}
+            onChange={(e) => setStockFilter(e.target.value as StockFilter)}
+            title="Filter klasifikasi status stok"
+            style={{ width: '100%', height: '38px', padding: '0 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card)', fontSize: '13px', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
+          >
+            <option value="Semua">Semua Status Stok</option>
+            <option value="Aman">Aman</option>
+            <option value="Menipis">Menipis</option>
+            <option value="Kritis">Kritis</option>
+            <option value="Habis">Habis</option>
+            <option value="Fast Moving">Fast Moving</option>
+          </select>
+        </div>
         <div style={{ flexShrink: 0 }}>
           <DownloadButton
             variant="compact"
@@ -365,14 +409,16 @@ export default function InventoryAdmin() {
               <th style={inventoryHeaderCellStyle}>Tanggal Masuk</th>
               <th style={inventoryHeaderCellStyle}>Tgl Expired (Terdekat)</th>
               <th style={inventoryHeaderCellStyle}>Total Stok</th>
-              <th style={inventoryHeaderCellStyle}>Status</th>
+              <th style={inventoryHeaderCellStyle}>Pakai/Bln</th>
+              <th style={{ ...inventoryHeaderCellStyle, textAlign: 'center' }}>Status Stok</th>
+              <th style={{ ...inventoryHeaderCellStyle, textAlign: 'center' }}>Status Expired</th>
               <th style={{ ...inventoryHeaderCellStyle, textAlign: 'center' }}>Aksi</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} style={{ padding: 0 }}>
+                <td colSpan={9} style={{ padding: 0 }}>
                   <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data inventory admin">
                     <div className="bm-loading-spinner">
                       <div className="bm-loading-ring" aria-hidden="true" />
@@ -384,7 +430,7 @@ export default function InventoryAdmin() {
               </tr>
             ) : filteredItems.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: '32px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                <td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
                   {error ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
                       <span>Gagal memuat data: {error}</span>
@@ -395,9 +441,11 @@ export default function InventoryAdmin() {
               </tr>
             ) : (
               filteredItems.map((item, idx) => {
-                const safeLimit = item.avg_monthly_usage * 3;
-                const isLowStock = item.stock < safeLimit;
-                const exp = getExpiryStatus(item.tanggal_expired);
+                const stockStatus = getStockStatus(item);
+                const expStatus = getExpiredStatus(item.tanggal_expired);
+                const stockBadge = STOCK_BADGE[stockStatus];
+                const expBadge = EXPIRED_BADGE[expStatus];
+                const isFastMoving = fastMovingIds.has(item.id);
 
                 return (
                   <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
@@ -411,36 +459,35 @@ export default function InventoryAdmin() {
                       {item.tanggal_masuk ? new Date(item.tanggal_masuk).toLocaleDateString('id-ID') : '-'}
                     </td>
 
-                    <td style={{ padding: '10px 12px' }}>
-                      <div style={{ fontWeight: 500 }}>{item.tanggal_expired ? new Date(item.tanggal_expired).toLocaleDateString('id-ID') : '-'}</div>
-                      {exp.isAlert && (
-                        <div style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '4px',
-                          background: exp.bg, color: exp.color,
-                          padding: '2px 6px', borderRadius: '4px', fontSize: '10px',
-                          fontWeight: 700, marginTop: '4px'
-                        }}>
-                          <AlertTriangle size={10} /> {exp.label}
-                        </div>
-                      )}
+                    <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                      {item.tanggal_expired ? new Date(item.tanggal_expired).toLocaleDateString('id-ID') : '-'}
                     </td>
 
                     <td style={{ padding: '10px 12px' }}>
                       <div style={{ fontWeight: 700, fontSize: '14px' }}>{item.stock} <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--muted-foreground)' }}>{item.unit}</span></div>
-                      <div style={{ fontSize: '10px', color: 'var(--muted-foreground)', marginTop: '2px' }}>Aman: ≥ {safeLimit}</div>
                     </td>
 
-                    <td style={{ padding: '10px 12px' }}>
-                      {isLowStock ? (
-                        <span style={{ color: '#F5B000', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }}>
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#F5B000' }}></span> Menipis
-                        </span>
-                      ) : (
-                        <span style={{ color: '#10b981', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }}>
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }}></span> Aman
-                        </span>
+                    <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontWeight: 600 }}>{item.avg_monthly_usage || 0} <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--muted-foreground)' }}>{item.unit}</span></div>
+                      {isFastMoving && (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 3, fontSize: 10, fontWeight: 700, color: '#00838f' }}>
+                          <Clock size={10} /> Fast Moving
+                        </div>
                       )}
                     </td>
+
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      <span style={{ background: stockBadge.bg, color: stockBadge.color, padding: '3px 8px', borderRadius: 4, fontSize: 10.5, fontWeight: 800 }}>
+                        {stockStatus.toUpperCase()}
+                      </span>
+                    </td>
+
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      <span style={{ background: expBadge.bg, color: expBadge.color, padding: '3px 8px', borderRadius: 4, fontSize: 10.5, fontWeight: 700 }}>
+                        {expStatus}
+                      </span>
+                    </td>
+
                     <td style={{ padding: '10px 12px', textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
                         <Button size="sm" variant="outline" title="Tambah Stok / Restock (Batch Baru)" style={{ padding: '0 8px', height: '28px', fontSize: '12px', background: '#c2410c', color: '#ffffff', border: 'none' }} onClick={() => openRestock(item)}>
@@ -459,8 +506,6 @@ export default function InventoryAdmin() {
           </tbody>
         </table>
       </div>
-      </>
-      )}
 
       {/* ADD MASTER ITEM DIALOG */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>

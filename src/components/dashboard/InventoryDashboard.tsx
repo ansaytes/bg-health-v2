@@ -158,8 +158,8 @@ export default function InventoryDashboard() {
         .sort((a, b) => (b.stock || 0) - (a.stock || 0))
         .slice(0, 10);
 
-      // Nama item bisa berulang (varian/kemasan) â€” beri penomoran agar label sumbu tetap unik.
-      const rawExpired = topExpired.map(i => i.name.length > 22 ? i.name.slice(0, 20) + 'â€¦' : i.name);
+      // Nama item bisa berulang (varian/kemasan) — beri penomoran agar label sumbu tetap unik.
+      const rawExpired = topExpired.map(i => i.name.length > 22 ? i.name.slice(0, 20) + '…' : i.name);
       const dupExpired = new Map<string, number>();
       const labels = rawExpired.map(name => {
         const n = (dupExpired.get(name) || 0) + 1;
@@ -219,7 +219,7 @@ export default function InventoryDashboard() {
               autoSkip: false,
               callback: (value) => {
                 const label = labels[Number(value)] ?? String(value);
-                return label.length > 26 ? `${label.slice(0, 24)}â€¦` : label;
+                return label.length > 26 ? `${label.slice(0, 24)}…` : label;
               },
             },
           },
@@ -238,7 +238,7 @@ export default function InventoryDashboard() {
         });
     }
 
-    // 2. Status Stok (doughnut, total di tengah) â€” menggantikan bar tanpa nama
+    // 2. Status Stok (doughnut, total di tengah) — menggantikan bar tanpa nama
     if (stockStatusCanvasRef.current) {
 
       const ORDER = ['Aman', 'Menipis', 'Kritis', 'Habis'] as const;
@@ -286,7 +286,7 @@ export default function InventoryDashboard() {
           },
           datalabels: {
             display: (ctx) => Number(ctx.dataset.data[ctx.dataIndex]) > 0,
-            // Label % bisa berada di atas kuning cerah â†’ pakai warna kontras otomatis.
+            // Label % bisa berada di atas kuning cerah → pakai warna kontras otomatis.
             color: (ctx) => {
               const bg = String((ctx.dataset.backgroundColor as string[])?.[ctx.dataIndex] ?? '#fff');
               const hex = bg.replace('#', '');
@@ -338,7 +338,7 @@ export default function InventoryDashboard() {
         .sort((a, b) => (a.daysLeft ?? 999) - (b.daysLeft ?? 999))
         .slice(0, 10);
 
-      const rawExpSoon = topExpSoon.map(i => i.name.length > 22 ? i.name.slice(0, 20) + 'â€¦' : i.name);
+      const rawExpSoon = topExpSoon.map(i => i.name.length > 22 ? i.name.slice(0, 20) + '…' : i.name);
       const dupExpSoon = new Map<string, number>();
       const labels = rawExpSoon.map(name => {
         const n = (dupExpSoon.get(name) || 0) + 1;
@@ -398,7 +398,7 @@ export default function InventoryDashboard() {
               autoSkip: false,
               callback: (value) => {
                 const label = labels[Number(value)] ?? String(value);
-                return label.length > 26 ? `${label.slice(0, 24)}â€¦` : label;
+                return label.length > 26 ? `${label.slice(0, 24)}…` : label;
               },
             },
           },
@@ -426,7 +426,7 @@ export default function InventoryDashboard() {
 
       // Label sumbu harus unik: dua item berjulukan sama (mis. "Caviplex" ganda) tidak boleh
       // bertabrakan, karena Chart.js memakai indeks baris untuk memetakan label.
-      const rawFast = topFast.map(i => i.name.length > 22 ? i.name.slice(0, 20) + 'â€¦' : i.name);
+      const rawFast = topFast.map(i => i.name.length > 22 ? i.name.slice(0, 20) + '…' : i.name);
       const dupFast = new Map<string, number>();
       const labels = rawFast.map(name => {
         const n = (dupFast.get(name) || 0) + 1;
@@ -492,7 +492,7 @@ export default function InventoryDashboard() {
               autoSkip: false,
               callback: (value) => {
                 const label = labels[Number(value)] ?? String(value);
-                return label.length > 26 ? `${label.slice(0, 24)}â€¦` : label;
+                return label.length > 26 ? `${label.slice(0, 24)}…` : label;
               },
             },
           },
@@ -511,7 +511,7 @@ export default function InventoryDashboard() {
         });
     }
 
-    // PEMICU ANIMASI EKSPLISIT â€” lihat komentar di chart-standard.ts.
+    // PEMICU ANIMASI EKSPLISIT — lihat komentar di chart-standard.ts.
     // Tanpa ini keempat diagram tampil langsung jadi (Chart.js melewati
     // animasi bila canvas baru diberi ukuran / perubahan data kecil).
     for (const inst of [topExpiredChart, stockStatusChart, topExpSoonChart, fastMovingChart]) {
@@ -688,7 +688,7 @@ export default function InventoryDashboard() {
                 </div>
               </div>
 
-              {/* Grid grafik â€” dua baris, kartu lebar agar grafik dominan */}
+              {/* Grid grafik — dua baris, kartu lebar agar grafik dominan */}
               <div key="charts-grid" style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1.1fr 1fr', gap: 8 }}>
         {/* Chart 1: Top Sudah Expired */}
         <div className="card mcu-dashboard-card glow-coral" data-chart="expired" style={{ padding: '3px 6px' }}>
@@ -700,7 +700,7 @@ export default function InventoryDashboard() {
 
         {/* Chart 2: Status Stok (donut, total di tengah) */}
         <div className="card mcu-dashboard-card glow-orange" data-chart="status" style={{ padding: '3px 6px' }}>
-          <div className="card-head"><div><h2>Status Stok Obat & BHP</h2><p className="mcu-dashboard-card-sub">Aman Â· menipis Â· kritis Â· habis</p></div></div>
+          <div className="card-head"><div><h2>Status Stok Obat & BHP</h2><p className="mcu-dashboard-card-sub">Aman · menipis · kritis · habis</p></div></div>
           <div className="mcu-dashboard-chart">
             <canvas ref={stockStatusCanvasRef} className="inventory-chart-canvas" />
           </div>

@@ -639,7 +639,7 @@ export default function KunjunganBerobatForm() {
                             gap: 4,
                           }}
                         >
-                          ➕ Simpan &quot;{diag.text}&quot; ke Master Diagnosa (Database)
+                          ➕ Simpan "{diag.text}" ke Master Diagnosa (Database)
                         </button>
                       </div>
                     )}
@@ -743,7 +743,7 @@ export default function KunjunganBerobatForm() {
                             gap: 4,
                           }}
                         >
-                          ➕ Simpan &quot;{med.aturan}&quot; ke master dosis
+                          ➕ Simpan "{med.aturan}" ke master dosis
                         </button>
                       </div>
                     )}

@@ -2311,15 +2311,19 @@ select.admin-input.compact-input {
 .inventory-admin-table th:nth-child(2),
 .inventory-admin-table td:nth-child(2) { width: 240px; }
 .inventory-admin-table th:nth-child(3),
-.inventory-admin-table td:nth-child(3) { width: 135px; }
+.inventory-admin-table td:nth-child(3) { width: 125px; }
 .inventory-admin-table th:nth-child(4),
-.inventory-admin-table td:nth-child(4) { width: 180px; }
+.inventory-admin-table td:nth-child(4) { width: 125px; }
 .inventory-admin-table th:nth-child(5),
-.inventory-admin-table td:nth-child(5) { width: 125px; }
+.inventory-admin-table td:nth-child(5) { width: 120px; }
 .inventory-admin-table th:nth-child(6),
-.inventory-admin-table td:nth-child(6) { width: 110px; }
+.inventory-admin-table td:nth-child(6) { width: 120px; }
 .inventory-admin-table th:nth-child(7),
-.inventory-admin-table td:nth-child(7) { width: 185px; }
+.inventory-admin-table td:nth-child(7) { width: 110px; }
+.inventory-admin-table th:nth-child(8),
+.inventory-admin-table td:nth-child(8) { width: 130px; }
+.inventory-admin-table th:nth-child(9),
+.inventory-admin-table td:nth-child(9) { width: 185px; }
 .inventory-admin-table th {
   background: #f1e7e3;
   color: #30231f;

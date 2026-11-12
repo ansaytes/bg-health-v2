@@ -121,7 +121,7 @@ export default function IntegrationSettings({ canEdit }: { canEdit: boolean }) {
             Buat nilainya satu kali dengan perintah:
           </p>
           <code className="mt-2 block select-all break-all rounded bg-background/70 p-2 text-xs">
-            node -e &quot;console.log(require(&apos;crypto&apos;).randomBytes(32).toString(&apos;hex&apos;))&quot;
+            node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
           </code>
           <p className="mt-1">Salin 64 karakter hasilnya ke Vercel, lalu redeploy. Simpan key cadangan dengan aman; jangan ganti setelah API key disimpan karena data terenkripsi lama tidak bisa dibuka dengan key baru.</p>
         </div>

@@ -379,7 +379,7 @@ function FefoItems({ items }: { items: InventoryItem[] }) {
               </td>
               <td style={tdC}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: isPassed ? '#FF4444' : '#00B894' }}>
-                  {isPassed ? 'Tarik &amp; Berita Acara' : 'Prioritas FEFO'}
+                  {isPassed ? 'Tarik & Berita Acara' : 'Prioritas FEFO'}
                 </span>
               </td>
             </tr>
