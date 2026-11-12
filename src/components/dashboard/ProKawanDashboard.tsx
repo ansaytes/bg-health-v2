@@ -126,8 +126,8 @@ export default function ProKawanDashboard() {
         {error && <span style={{ fontSize: 10, color: '#b3261e' }}>{error}</span>}
       </div>
 
-      {/* Baris 1 — donut komposisi */}
-      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, flex: 1, minHeight: 0 }}>
+      {/* Baris 1 — komposisi (donut) + kepatuhan (bar horizontal), 3 kolom */}
+      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, flex: 1, minHeight: 0 }}>
         <div className="card mcu-dashboard-card">
           <div className="card-head">
             <div><h2>Komposisi Zona</h2><p>Peserta per zona risiko</p></div>
@@ -172,21 +172,6 @@ export default function ProKawanDashboard() {
               labels={statusKeys.map((k) => STATUS_LABEL[k])}
               values={statusKeys.map((k) => ringkas.byStatus[k])}
               colors={statusKeys.map((k) => STATUS_WARNA[k])}
-              legendLabel="Peserta"
-            />
-          </div>
-        </div>
-
-        <div className="card mcu-dashboard-card">
-          <div className="card-head">
-            <div><h2>Status Jadwal</h2><p>Jatuh tempo kontrol</p></div>
-          </div>
-          <div className="mcu-dashboard-chart">
-            <MCUChart
-              type="bar"
-              labels={jadwalKeys.map((k) => jadwalLabel[k])}
-              values={jadwalKeys.map((k) => ringkas.byUmurJadwal[k])}
-              colors={jadwalKeys.map((k) => jadwalWarna[k])}
               horizontal
               legendLabel="Peserta"
             />
@@ -194,11 +179,12 @@ export default function ProKawanDashboard() {
         </div>
       </div>
 
-      {/* Baris 2 — peringkat. Dua diagram penuh lebar (kard Kelayakan Kerja
-          dihapus: status kelayakan kerja sudah terefleksi lewat jalur &
-          status kepatuhan, dan menampilkannya lagi di sini justru
-          redundan untuk laporan agregat). */}
-      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: 8, flex: 1, minHeight: 0 }}>
+      {/* Baris 2 — peringkat (2 diagram) + Status Jadwal dipindah paling akhir.
+          Dua diagram penuh lebar (kard Kelayakan Kerja dihapus: status
+          kelayakan kerja sudah terefleksi lewat jalur & status kepatuhan,
+          dan menampilkannya lagi di sini justru redundan untuk laporan
+          agregat). */}
+      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr)', gap: 8, flex: 1, minHeight: 0 }}>
         <div className="card mcu-dashboard-card">
           <div className="card-head">
             <div><h2>Peringkat Trigger Zona</h2><p>Parameter pemicu terbanyak</p></div>
@@ -221,11 +207,29 @@ export default function ProKawanDashboard() {
           </div>
           <div className="mcu-dashboard-chart">
             <MCUChart
-              type="bar"
+              type="doughnut"
               labels={ringkas.byFrekuensi.map(([k]) => k)}
               values={ringkas.byFrekuensi.map(([, v]) => v)}
               colors={ringkas.byFrekuensi.map(([k]) =>
                 k.startsWith('1') ? '#FF2D2D' : k.startsWith('3') ? '#FFD400' : k.startsWith('6') ? '#3498DB' : '#778899')}
+              legendLabel="Peserta"
+              centerText={String(total)}
+              percentLabels
+            />
+          </div>
+        </div>
+
+        <div className="card mcu-dashboard-card">
+          <div className="card-head">
+            <div><h2>Status Jadwal</h2><p>Jatuh tempo kontrol</p></div>
+          </div>
+          <div className="mcu-dashboard-chart">
+            <MCUChart
+              type="bar"
+              labels={jadwalKeys.map((k) => jadwalLabel[k])}
+              values={jadwalKeys.map((k) => ringkas.byUmurJadwal[k])}
+              colors={jadwalKeys.map((k) => jadwalWarna[k])}
+              horizontal
               legendLabel="Peserta"
             />
           </div>

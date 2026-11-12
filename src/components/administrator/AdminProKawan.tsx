@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authFetch } from '@/lib/api-client';
 import { useMCUStore } from '@/lib/store';
+import { usePopup, Popup } from '@/lib/popup';
 import FormTindakLanjut from '@/components/followup/FormTindakLanjut';
 import {
   JALUR_DESKRIPSI,
@@ -100,6 +101,7 @@ function bukaWhatsApp(noWa: string | null | undefined, pesan: string) {
 
 export default function AdminProKawan() {
   const store = useMCUStore();
+  const { popup, popupState, closePopup } = usePopup();
   const [peserta, setPeserta] = useState<PesertaProKawan[]>([]);
   const [kunjungan, setKunjungan] = useState<KunjunganRow[]>([]);
   const [tabelSiap, setTabelSiap] = useState(true);
@@ -235,26 +237,29 @@ export default function AdminProKawan() {
   }
 
   /** Menulis jadwal usulan ke followups_prokawan setelah dikonfirmasi QSHE Medic. */
-  async function tulisJadwal() {
+  function tulisJadwal() {
     if (!jadwalUsulan) return;
-    const setuju = confirm(
-      `Tetapkan ${jadwalUsulan.diusulkan} jadwal kontrol ProKawan?\n\n`
-      + 'Dasar: tanggal pemeriksaan terakhir + frekuensi kolom Pengendalian Bab 7.\n'
-      + 'Jadwal yang sudah ada tidak diubah.',
-    );
-    if (!setuju) return;
-
-    setJadwalLoading(true);
-    try {
-      const r = await authFetch('/api/prokawan/jadwal?mode=konfirmasi', { method: 'POST' });
-      store.showToast(`${Number(r.ditulis ?? 0)} jadwal kontrol ditetapkan`, 'success');
-      setJadwalUsulan(null);
-      await load();
-    } catch (e) {
-      store.showToast(e instanceof Error ? e.message : 'Gagal menetapkan jadwal', 'error');
-    } finally {
-      setJadwalLoading(false);
-    }
+    popup({
+      type: 'confirm',
+      title: `Tetapkan ${jadwalUsulan.diusulkan} jadwal kontrol ProKawan?`,
+      message:
+        'Dasar: tanggal pemeriksaan terakhir + frekuensi kolom Pengendalian Bab 7.\n'
+        + 'Jadwal yang sudah ada tidak diubah.',
+      confirmLabel: 'Tetapkan',
+      onOk: async () => {
+        setJadwalLoading(true);
+        try {
+          const r = await authFetch('/api/prokawan/jadwal?mode=konfirmasi', { method: 'POST' });
+          store.showToast(`${Number(r.ditulis ?? 0)} jadwal kontrol ditetapkan`, 'success');
+          setJadwalUsulan(null);
+          await load();
+        } catch (e) {
+          store.showToast(e instanceof Error ? e.message : 'Gagal menetapkan jadwal', 'error');
+        } finally {
+          setJadwalLoading(false);
+        }
+      },
+    });
   }
 
   async function kirimWa() {
@@ -615,6 +620,7 @@ export default function AdminProKawan() {
           )}
         </div>
       </div>
+      <Popup state={popupState} closePopup={closePopup} />
     </div>
   );
 }

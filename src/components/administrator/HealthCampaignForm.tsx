@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { usePopup, Popup } from '@/lib/popup';
 import DriveFileUpload from '@/components/settings/DriveFileUpload';
 
 interface Campaign {
@@ -43,6 +44,7 @@ export default function HealthCampaignForm() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const { popup, popupState, closePopup } = usePopup();
 
   // Form fields — simple social media style
   const [title, setTitle] = useState('');
@@ -133,15 +135,27 @@ export default function HealthCampaignForm() {
     setErrorMsg('');
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Hapus postingan ini?')) return;
-    try {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`/api/health-campaigns?id=${id}`, { method: 'DELETE', headers });
-      if (res.ok) fetchCampaigns();
-    } catch {
-      // error
-    }
+  const handleDelete = (id: string) => {
+    popup({
+      type: 'confirm',
+      title: 'Hapus postingan?',
+      message: 'Postingan ini akan dihapus secara permanen.',
+      confirmLabel: 'Hapus',
+      onOk: async () => {
+        try {
+          const headers = await getAuthHeaders();
+          const res = await fetch(`/api/health-campaigns?id=${id}`, { method: 'DELETE', headers });
+          if (res.ok) {
+            fetchCampaigns();
+            popup({ type: 'success', title: 'Berhasil', message: 'Postingan dihapus.' });
+          } else {
+            popup({ type: 'error', title: 'Gagal menghapus', message: 'Coba lagi.' });
+          }
+        } catch {
+          popup({ type: 'error', title: 'Gagal terhubung ke server', message: 'Coba lagi beberapa saat.' });
+        }
+      },
+    });
   };
 
   const fmtDate = (dateStr: string) => {
@@ -258,6 +272,7 @@ export default function HealthCampaignForm() {
           ))
         )}
       </div>
+      <Popup state={popupState} closePopup={closePopup} />
     </div>
   );
 }

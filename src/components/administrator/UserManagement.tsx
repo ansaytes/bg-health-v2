@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
+import { usePopup, Popup } from '@/lib/popup';
 import EmployeeLookupInput from './EmployeeLookupInput';
 
 interface UserProfile {
@@ -49,6 +50,7 @@ const ROLE_OPTIONS = [
 
 export default function UserManagement() {
   const { isSuperuser, isAdmin } = useAuth();
+  const { popup, popupState, closePopup } = usePopup();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -91,21 +93,40 @@ export default function UserManagement() {
         body: JSON.stringify({ id: profileId, role: newRole }),
       });
       const data = await res.json();
-      if (!res.ok) { alert(data.error || 'Gagal mengubah role'); return; }
+      if (!res.ok) {
+        popup({ type: 'error', title: 'Gagal mengubah role', message: data.error || 'Gagal mengubah role' });
+        return;
+      }
       setUsers((prev) => prev.map((u) => (u.id === profileId ? { ...u, role: newRole } : u)));
-    } catch { alert('Gagal terhubung ke server'); }
+      popup({ type: 'success', title: 'Berhasil', message: `Role "${ROLE_OPTIONS.find((o) => o.value === newRole)?.label || newRole}" diterapkan.` });
+    } catch {
+      popup({ type: 'error', title: 'Gagal terhubung ke server', message: 'Coba lagi beberapa saat.' });
+    }
   };
 
-  const handleDelete = async (profileId: string, username: string) => {
+  const handleDelete = (profileId: string, username: string) => {
     if (!isSuperuser) return;
-    if (!confirm(`Hapus pengguna "${username}"? Tindakan ini tidak dapat dibatalkan.`)) return;
-    try {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`/api/users?id=${profileId}`, { method: 'DELETE', headers });
-      const data = await res.json();
-      if (!res.ok) { alert(data.error || 'Gagal menghapus pengguna'); return; }
-      setUsers((prev) => prev.filter((u) => u.id !== profileId));
-    } catch { alert('Gagal terhubung ke server'); }
+    popup({
+      type: 'confirm',
+      title: 'Hapus pengguna?',
+      message: `Hapus pengguna "${username}"? Tindakan ini tidak dapat dibatalkan.`,
+      confirmLabel: 'Hapus',
+      onOk: async () => {
+        try {
+          const headers = await getAuthHeaders();
+          const res = await fetch(`/api/users?id=${profileId}`, { method: 'DELETE', headers });
+          const data = await res.json();
+          if (!res.ok) {
+            popup({ type: 'error', title: 'Gagal menghapus pengguna', message: data.error || 'Gagal menghapus pengguna' });
+            return;
+          }
+          setUsers((prev) => prev.filter((u) => u.id !== profileId));
+          popup({ type: 'success', title: 'Berhasil', message: `Pengguna "${username}" dihapus.` });
+        } catch {
+          popup({ type: 'error', title: 'Gagal terhubung ke server', message: 'Coba lagi beberapa saat.' });
+        }
+      },
+    });
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -122,11 +143,19 @@ export default function UserManagement() {
         body: JSON.stringify({ action: 'register', ...regForm }),
       });
       const data = await res.json();
-      if (!res.ok) { setRegError(data.error || 'Gagal mendaftarkan pengguna'); return; }
-      setRegSuccess(data.message || 'Pengguna berhasil didaftarkan!');
+      if (!res.ok) {
+        setRegError(data.error || 'Gagal mendaftarkan pengguna');
+        popup({ type: 'error', title: 'Gagal mendaftarkan pengguna', message: data.error || 'Coba lagi.' });
+        return;
+      }
+      popup({ type: 'success', title: 'Berhasil', message: data.message || 'Pengguna berhasil didaftarkan!' });
       setRegForm({ username: '', password: '', full_name: '', role: 'employee', employee_nik: '', national_id: '', site: '' });
+      setShowRegister(false);
       fetchUsers();
-    } catch { setRegError('Gagal terhubung ke server'); } finally { setRegLoading(false); }
+    } catch {
+      setRegError('Gagal terhubung ke server');
+      popup({ type: 'error', title: 'Gagal terhubung ke server', message: 'Coba lagi beberapa saat.' });
+    } finally { setRegLoading(false); }
   };
 
   if (!isAdmin) {
@@ -319,6 +348,8 @@ export default function UserManagement() {
           </table>
         </div>
       </div>
+
+      <Popup state={popupState} closePopup={closePopup} />
     </div>
   );
 }

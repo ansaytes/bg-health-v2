@@ -1,12 +1,11 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '@/lib/auth-context';
 import type { ChartData, ChartOptions } from 'chart.js';
 import { ChartJS } from '@/lib/chart-register';
-import DownloadButton from '@/components/ui/download-button';
-import { AlertTriangle, Clock, PackageCheck, AlertCircle, RefreshCw, ShieldAlert, Boxes } from 'lucide-react';
+import { AlertTriangle, Clock, AlertCircle, RefreshCw, ShieldAlert, Boxes } from 'lucide-react';
 import { fetchDashboardData } from '@/lib/dashboard-data';
 import { STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, animasiUlang, useAnimationReady } from '@/lib/chart-standard';
 
@@ -32,11 +31,7 @@ export default function InventoryDashboard() {
     () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
   );
 
-  // Filters
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('Semua');
-  const [stockStatusFilter, setStockStatusFilter] = useState('Semua');
-  const [expiredStatusFilter, setExpiredStatusFilter] = useState('Semua');
+
 
   // Tunda pembuatan chart 2 frame agar animasi berjalan di depan pengguna
   // (container baru selesai transisi masuk pada frame-frame awal).
@@ -127,28 +122,10 @@ export default function InventoryDashboard() {
     return 'Aman';
   };
 
-  // Operational Action Tab State
-  const [actionTab, setActionTab] = useState<'semua' | 'habis' | 'kritis' | 'fast' | 'fefo'>('semua');
-  const [isDashboardView, setIsDashboardView] = useState(true);
-  const [arrowRotation, setArrowRotation] = useState(0);
+  // Dashboard hanya menampilkan infografik (KPI card + 4 chart). Tabel
+  // operasional (Habis / Menipis / Fast-Moving / FEFO / Semua) sudah dipindah
+  // ke halaman Admin → Layanan Kuratif → Inventory.
   const [chartRenderKey, setChartRenderKey] = useState(0);
-
-  const handleToggleView = useCallback(() => {
-    setArrowRotation((r) => r + 180);
-    setIsDashboardView((prev) => {
-      if (prev) setActionTab('semua');
-      return !prev;
-    });
-  }, []);
-
-  // chartRenderKey will be updated via onAnimationComplete on the dashboard motion.div
-
-
-  const openTableTab = useCallback((tab: 'semua' | 'habis' | 'kritis' | 'fast' | 'fefo') => {
-    setActionTab(tab);
-    setIsDashboardView(false);
-    setArrowRotation((r) => (isDashboardView ? r + 180 : r));
-  }, [isDashboardView]);
 
   // Specific Lists based on clinic operational needs
   const habisItems = useMemo(() => items.filter(i => (i.stock || 0) <= 0), [items]);
@@ -160,75 +137,6 @@ export default function InventoryDashboard() {
   const topFastItem = fastMovingList[0] || null;
   const expiredItems = useMemo(() => items.filter(i => getExpiredStatus(i.tanggal_expired) === 'Sudah Kadaluarsa'), [items]);
   const expSoonItems = useMemo(() => items.filter(i => getExpiredStatus(i.tanggal_expired) === 'Kadaluarsa < 3 Bulan'), [items]);
-
-
-  // Specific List: Items that are EXPIRED or EXPIRING SOON (< 3 Months)
-  const criticalExpiredItems = useMemo(() => {
-    return items
-      .filter(i => {
-        if (!i.tanggal_expired) return false;
-        const exp = getExpiredStatus(i.tanggal_expired);
-        return exp === 'Sudah Kadaluarsa' || exp === 'Kadaluarsa < 3 Bulan';
-      })
-      .map(i => {
-        const expStatus = getExpiredStatus(i.tanggal_expired);
-        const days = getDaysUntilExpired(i.tanggal_expired);
-        return {
-          ...i,
-          expStatus,
-          daysLeft: days,
-        };
-      })
-      .sort((a, b) => (a.daysLeft ?? 999) - (b.daysLeft ?? 999));
-  }, [items]);
-
-  // Filtered Items for Table & Export
-  const filteredItems = useMemo(() => {
-    return items.filter(item => {
-      // Search by name
-      if (searchQuery.trim() && !item.name.toLowerCase().includes(searchQuery.trim().toLowerCase())) {
-        return false;
-      }
-      // Category filter
-      if (categoryFilter !== 'Semua' && (item.category || '').toLowerCase() !== categoryFilter.toLowerCase()) {
-        return false;
-      }
-      // Stock Status filter
-      if (stockStatusFilter !== 'Semua') {
-        const status = getStockStatus(item);
-        if (stockStatusFilter === 'Perlu Restock') {
-          if (status === 'Aman') return false;
-        } else if (status !== stockStatusFilter) {
-          return false;
-        }
-      }
-      // Expired Status filter
-      if (expiredStatusFilter !== 'Semua') {
-        const expStatus = getExpiredStatus(item.tanggal_expired);
-        if (expiredStatusFilter === 'Kritis / Segera ED') {
-          if (expStatus !== 'Sudah Kadaluarsa' && expStatus !== 'Kadaluarsa < 3 Bulan') return false;
-        } else if (expStatus !== expiredStatusFilter) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [items, searchQuery, categoryFilter, stockStatusFilter, expiredStatusFilter]);
-
-  // Export Data for DownloadButton
-  const tableDataForExport = useMemo(() => {
-    return filteredItems.map((item, idx) => ({
-      No: idx + 1,
-      'Nama Item': item.name,
-      Kategori: item.category || 'Obat',
-      'Total Stok': item.stock,
-      Satuan: item.unit,
-      'Pemakaian/Bulan': item.avg_monthly_usage || 0,
-      'Tgl Expired': item.tanggal_expired || '-',
-      'Status Stok': getStockStatus(item),
-      'Status Expired': getExpiredStatus(item.tanggal_expired),
-    }));
-  }, [filteredItems]);
 
   // Render Charts
 
@@ -250,8 +158,8 @@ export default function InventoryDashboard() {
         .sort((a, b) => (b.stock || 0) - (a.stock || 0))
         .slice(0, 10);
 
-      // Nama item bisa berulang (varian/kemasan) — beri penomoran agar label sumbu tetap unik.
-      const rawExpired = topExpired.map(i => i.name.length > 22 ? i.name.slice(0, 20) + '…' : i.name);
+      // Nama item bisa berulang (varian/kemasan) â€” beri penomoran agar label sumbu tetap unik.
+      const rawExpired = topExpired.map(i => i.name.length > 22 ? i.name.slice(0, 20) + 'â€¦' : i.name);
       const dupExpired = new Map<string, number>();
       const labels = rawExpired.map(name => {
         const n = (dupExpired.get(name) || 0) + 1;
@@ -311,7 +219,7 @@ export default function InventoryDashboard() {
               autoSkip: false,
               callback: (value) => {
                 const label = labels[Number(value)] ?? String(value);
-                return label.length > 26 ? `${label.slice(0, 24)}…` : label;
+                return label.length > 26 ? `${label.slice(0, 24)}â€¦` : label;
               },
             },
           },
@@ -330,7 +238,7 @@ export default function InventoryDashboard() {
         });
     }
 
-    // 2. Status Stok (doughnut, total di tengah) — menggantikan bar tanpa nama
+    // 2. Status Stok (doughnut, total di tengah) â€” menggantikan bar tanpa nama
     if (stockStatusCanvasRef.current) {
 
       const ORDER = ['Aman', 'Menipis', 'Kritis', 'Habis'] as const;
@@ -378,7 +286,7 @@ export default function InventoryDashboard() {
           },
           datalabels: {
             display: (ctx) => Number(ctx.dataset.data[ctx.dataIndex]) > 0,
-            // Label % bisa berada di atas kuning cerah → pakai warna kontras otomatis.
+            // Label % bisa berada di atas kuning cerah â†’ pakai warna kontras otomatis.
             color: (ctx) => {
               const bg = String((ctx.dataset.backgroundColor as string[])?.[ctx.dataIndex] ?? '#fff');
               const hex = bg.replace('#', '');
@@ -430,7 +338,7 @@ export default function InventoryDashboard() {
         .sort((a, b) => (a.daysLeft ?? 999) - (b.daysLeft ?? 999))
         .slice(0, 10);
 
-      const rawExpSoon = topExpSoon.map(i => i.name.length > 22 ? i.name.slice(0, 20) + '…' : i.name);
+      const rawExpSoon = topExpSoon.map(i => i.name.length > 22 ? i.name.slice(0, 20) + 'â€¦' : i.name);
       const dupExpSoon = new Map<string, number>();
       const labels = rawExpSoon.map(name => {
         const n = (dupExpSoon.get(name) || 0) + 1;
@@ -490,7 +398,7 @@ export default function InventoryDashboard() {
               autoSkip: false,
               callback: (value) => {
                 const label = labels[Number(value)] ?? String(value);
-                return label.length > 26 ? `${label.slice(0, 24)}…` : label;
+                return label.length > 26 ? `${label.slice(0, 24)}â€¦` : label;
               },
             },
           },
@@ -518,7 +426,7 @@ export default function InventoryDashboard() {
 
       // Label sumbu harus unik: dua item berjulukan sama (mis. "Caviplex" ganda) tidak boleh
       // bertabrakan, karena Chart.js memakai indeks baris untuk memetakan label.
-      const rawFast = topFast.map(i => i.name.length > 22 ? i.name.slice(0, 20) + '…' : i.name);
+      const rawFast = topFast.map(i => i.name.length > 22 ? i.name.slice(0, 20) + 'â€¦' : i.name);
       const dupFast = new Map<string, number>();
       const labels = rawFast.map(name => {
         const n = (dupFast.get(name) || 0) + 1;
@@ -584,7 +492,7 @@ export default function InventoryDashboard() {
               autoSkip: false,
               callback: (value) => {
                 const label = labels[Number(value)] ?? String(value);
-                return label.length > 26 ? `${label.slice(0, 24)}…` : label;
+                return label.length > 26 ? `${label.slice(0, 24)}â€¦` : label;
               },
             },
           },
@@ -603,7 +511,7 @@ export default function InventoryDashboard() {
         });
     }
 
-    // PEMICU ANIMASI EKSPLISIT — lihat komentar di chart-standard.ts.
+    // PEMICU ANIMASI EKSPLISIT â€” lihat komentar di chart-standard.ts.
     // Tanpa ini keempat diagram tampil langsung jadi (Chart.js melewati
     // animasi bila canvas baru diberi ukuran / perubahan data kecil).
     for (const inst of [topExpiredChart, stockStatusChart, topExpSoonChart, fastMovingChart]) {
@@ -614,7 +522,7 @@ export default function InventoryDashboard() {
       // Don't destroy on every re-render, only on full unmount
     };
      
-  }, [items, chartRenderKey, loading, isAuthorized, isDark, isDashboardView, animReady]);
+  }, [items, chartRenderKey, loading, isAuthorized, isDark, animReady]);
 
   // Access guard
   if (!isAuthorized) {
@@ -642,38 +550,16 @@ export default function InventoryDashboard() {
   return (
     <div className="dashboard" style={{ overflow: 'hidden', padding: '12px 16px', position: 'relative', flex: 1, minHeight: 0, height: '100%' }}>
       <div style={{ position: 'relative', flex: 1, minHeight: 0, width: '100%', overflow: 'hidden' }}>
-        <button
-          type="button"
-          className="admin-toggle-arrow"
-          onClick={handleToggleView}
-          title={isDashboardView ? 'Lihat tabel inventory' : 'Kembali ke dashboard'}
-          aria-label={isDashboardView ? 'Lihat tabel inventory' : 'Kembali ke dashboard'}
-        >
-          <motion.svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            animate={{ rotate: arrowRotation }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-          >
-            <polyline points="9 6 15 12 9 18" />
-          </motion.svg>
-        </button>
-
         <AnimatePresence mode="wait">
-          {isDashboardView ? (
-            <motion.div
-              key="inventory-dashboard"
-              initial={{ opacity: 0, x: -36 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -36 }}
-              transition={{ duration: 0.22, ease: 'easeOut' }}
-              style={{ position: 'absolute', inset: 0, overflow: 'hidden', paddingRight: 28, display: 'flex', flexDirection: 'column', background: 'var(--background)' }}
-              onAnimationComplete={() => setChartRenderKey(prev => prev + 1)}
-            >
+          <motion.div
+            key="inventory-dashboard"
+            initial={{ opacity: 0, x: -36 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -36 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+            style={{ position: 'absolute', inset: 0, overflow: 'hidden', paddingRight: 28, display: 'flex', flexDirection: 'column', background: 'var(--background)' }}
+            onAnimationComplete={() => setChartRenderKey(prev => prev + 1)}
+          >
               {/* Header Bar */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexShrink: 0 }}>
                 <div>
@@ -714,14 +600,8 @@ export default function InventoryDashboard() {
                 {/* Card 1: Obat Habis */}
                 <div
                   className="card glow-coral"
-                  onClick={() => openTableTab('habis')}
-                  style={{
-                    padding: '8px 10px',
-                    cursor: 'pointer',
-                    border: actionTab === 'habis' ? '2px solid #FF4444' : undefined,
-                    transition: 'all 0.15s ease',
-                  }}
-                  title="Klik untuk melihat daftar obat yang stoknya habis"
+                  style={{ padding: '8px 10px' }}
+                  title="Jumlah item dengan stok habis"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 10, color: '#dc2626', fontWeight: 700 }}>Stok Habis</span>
@@ -738,14 +618,8 @@ export default function InventoryDashboard() {
                 {/* Card 2: Stok Kritis / Menipis */}
                 <div
                   className="card glow-amber"
-                  onClick={() => openTableTab('kritis')}
-                  style={{
-                    padding: '8px 10px',
-                    cursor: 'pointer',
-                    border: actionTab === 'kritis' ? '2px solid #FFD000' : undefined,
-                    transition: 'all 0.15s ease',
-                  }}
-                  title="Klik untuk melihat daftar obat yang stoknya menipis"
+                  style={{ padding: '8px 10px' }}
+                  title="Jumlah item dengan stok menipis"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 10, color: '#9a6b00', fontWeight: 700 }}>Stok Menipis</span>
@@ -762,14 +636,8 @@ export default function InventoryDashboard() {
                 {/* Card 3: Top Fast-Moving Item #1 */}
                 <div
                   className="card glow-teal"
-                  onClick={() => openTableTab('fast')}
-                  style={{
-                    padding: '8px 10px',
-                    cursor: 'pointer',
-                    border: actionTab === 'fast' ? '2px solid #00BCD4' : undefined,
-                    transition: 'all 0.15s ease',
-                  }}
-                  title="Klik untuk melihat ranking obat fast moving"
+                  style={{ padding: '8px 10px' }}
+                  title="Item dengan pemakaian rata-rata tertinggi per bulan"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 10, color: '#00838f', fontWeight: 700 }}>Fast-Moving</span>
@@ -786,14 +654,8 @@ export default function InventoryDashboard() {
                 {/* Card 4: Segera Expired (< 3 Bulan) */}
                 <div
                   className="card glow-orange"
-                  onClick={() => openTableTab('fefo')}
-                  style={{
-                    padding: '8px 10px',
-                    cursor: 'pointer',
-                    border: actionTab === 'fefo' ? '2px solid #E67E22' : undefined,
-                    transition: 'all 0.15s ease',
-                  }}
-                  title="Klik untuk melihat obat yang mendekati masa expired"
+                  style={{ padding: '8px 10px' }}
+                  title="Jumlah item yang akan kedaluwarsa dalam 3 bulan ke depan"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 10, color: '#c2410c', fontWeight: 700 }}>Expired &lt; 3 Bln</span>
@@ -810,14 +672,8 @@ export default function InventoryDashboard() {
                 {/* Card 5: Sudah Kadaluarsa */}
                 <div
                   className="card glow-coral"
-                  onClick={() => openTableTab('fefo')}
-                  style={{
-                    padding: '8px 10px',
-                    cursor: 'pointer',
-                    border: actionTab === 'fefo' ? '2px solid #dc2626' : undefined,
-                    transition: 'all 0.15s ease',
-                  }}
-                  title="Klik untuk melihat obat yang sudah kadaluarsa"
+                  style={{ padding: '8px 10px' }}
+                  title="Jumlah item yang sudah kedaluwarsa"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 10, color: '#dc2626', fontWeight: 700 }}>Sudah Expired</span>
@@ -832,7 +688,7 @@ export default function InventoryDashboard() {
                 </div>
               </div>
 
-              {/* Grid grafik — dua baris, kartu lebar agar grafik dominan */}
+              {/* Grid grafik â€” dua baris, kartu lebar agar grafik dominan */}
               <div key="charts-grid" style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1.1fr 1fr', gap: 8 }}>
         {/* Chart 1: Top Sudah Expired */}
         <div className="card mcu-dashboard-card glow-coral" data-chart="expired" style={{ padding: '3px 6px' }}>
@@ -844,7 +700,7 @@ export default function InventoryDashboard() {
 
         {/* Chart 2: Status Stok (donut, total di tengah) */}
         <div className="card mcu-dashboard-card glow-orange" data-chart="status" style={{ padding: '3px 6px' }}>
-          <div className="card-head"><div><h2>Status Stok Obat & BHP</h2><p className="mcu-dashboard-card-sub">Aman · menipis · kritis · habis</p></div></div>
+          <div className="card-head"><div><h2>Status Stok Obat & BHP</h2><p className="mcu-dashboard-card-sub">Aman Â· menipis Â· kritis Â· habis</p></div></div>
           <div className="mcu-dashboard-chart">
             <canvas ref={stockStatusCanvasRef} className="inventory-chart-canvas" />
           </div>
@@ -866,580 +722,9 @@ export default function InventoryDashboard() {
           </div>
         </div>
               </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="inventory-table"
-              initial={{ opacity: 0, x: 36 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 36 }}
-              transition={{ duration: 0.22, ease: 'easeOut' }}
-              style={{ position: 'absolute', inset: 0, overflow: 'hidden', paddingRight: 28, display: 'flex', flexDirection: 'column', background: 'var(--background)' }}
-            >
-      <div className="card glow-steel" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: 'var(--muted)' }}>
-        {/* Tab Headers */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderBottom: '1px solid var(--border)', paddingBottom: 10, marginBottom: 12, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={handleToggleView}
-              style={{
-                height: 32,
-                padding: '0 12px',
-                borderRadius: 6,
-                border: '1px solid var(--border)',
-                background: 'var(--background)',
-                color: 'var(--foreground)',
-                fontSize: 11.5,
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              ← Kembali ke Dashboard
-            </button>
-            <button
-              type="button"
-              onClick={() => setActionTab('semua')}
-              style={{
-                height: 32,
-                padding: '0 12px',
-                borderRadius: 6,
-                border: 'none',
-                background: actionTab === 'semua' ? '#ff4d00' : 'var(--muted)',
-                color: actionTab === 'semua' ? '#ffffff' : 'var(--foreground)',
-                fontSize: 11.5,
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <PackageCheck size={14} />
-              Semua ({items.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActionTab('habis')}
-              style={{
-                height: 32,
-                padding: '0 12px',
-                borderRadius: 6,
-                border: 'none',
-                background: actionTab === 'habis' ? '#FF4444' : 'var(--muted)',
-                color: actionTab === 'habis' ? '#ffffff' : 'var(--foreground)',
-                fontSize: 11.5,
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <AlertCircle size={14} />
-              Habis ({habisItems.length})
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActionTab('kritis')}
-              style={{
-                height: 32,
-                padding: '0 12px',
-                borderRadius: 6,
-                border: 'none',
-                background: actionTab === 'kritis' ? '#FF9800' : 'var(--muted)',
-                color: actionTab === 'kritis' ? '#ffffff' : 'var(--foreground)',
-                fontSize: 11.5,
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <AlertTriangle size={14} />
-              Menipis ({kritisItems.length})
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActionTab('fast')}
-              style={{
-                height: 32,
-                padding: '0 12px',
-                borderRadius: 6,
-                border: 'none',
-                background: actionTab === 'fast' ? '#00BCD4' : 'var(--muted)',
-                color: actionTab === 'fast' ? '#ffffff' : 'var(--foreground)',
-                fontSize: 11.5,
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <Boxes size={14} />
-              Fast-Moving
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActionTab('fefo')}
-              style={{
-                height: 32,
-                padding: '0 12px',
-                borderRadius: 6,
-                border: 'none',
-                background: actionTab === 'fefo' ? '#E67E22' : 'var(--muted)',
-                color: actionTab === 'fefo' ? '#ffffff' : 'var(--foreground)',
-                fontSize: 11.5,
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <Clock size={14} />
-              Expired/FEFO ({expiredItems.length + expSoonItems.length})
-            </button>
-          </div>
-
-          <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>
-            {actionTab === 'semua' && `${filteredItems.length} item`}
-            {actionTab === 'habis' && `${habisItems.length} item stok 0`}
-            {actionTab === 'kritis' && `${kritisItems.length} item stok menipis`}
-            {actionTab === 'fast' && `15 item fast-moving`}
-            {actionTab === 'fefo' && `${expiredItems.length + expSoonItems.length} item expired/FEFO`}
-          </span>
-        </div>
-
-        {/* Tab Content 1: OBAT HABIS */}
-        {actionTab === 'habis' && (
-          <div style={{ overflow: 'auto', flex: 1, minHeight: 0 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr style={{ background: 'var(--muted)', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>No</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Nama</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Kategori</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Stok</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Pakai/Bln</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Rekomendasi</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Status</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Tindakan</th>
-                </tr>
-              </thead>
-              <tbody>
-                {habisItems.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} style={{ padding: 24, textAlign: 'center', color: '#00B894' }}>
-                      ✓ Semua stok tersedia
-                    </td>
-                  </tr>
-                ) : (
-                  habisItems.map((item, idx) => {
-                    const bufferMin = Math.max(10, (item.avg_monthly_usage || 0) * 3);
-                    return (
-                      <tr key={item.id || idx} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '8px 10px', color: 'var(--muted-foreground)' }}>{idx + 1}</td>
-                        <td style={{ padding: '8px 10px', fontWeight: 700, color: 'var(--foreground)' }}>{item.name}</td>
-                        <td style={{ padding: '8px 10px', color: 'var(--muted-foreground)' }}>{item.category}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800, color: '#FF4444' }}>
-                          0 {item.unit}
-                        </td>
-                        <td style={{ padding: '8px 10px', textAlign: 'right' }}>{item.avg_monthly_usage} {item.unit}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600, color: '#ff4d00' }}>
-                          +{bufferMin} {item.unit}
-                        </td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>
-                          <span style={{ background: 'rgba(255,68,68,0.15)', color: '#FF4444', padding: '3px 8px', borderRadius: 4, fontSize: 10.5, fontWeight: 800 }}>
-                            HABIS
-                          </span>
-                        </td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: '#FF4444' }}>
-                            Order
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Tab Content 2: STOK KRITIS / TINGGAL SEDIKIT */}
-        {actionTab === 'kritis' && (
-          <div style={{ overflow: 'auto', flex: 1, minHeight: 0 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr style={{ background: 'var(--muted)', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>No</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Nama</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Stok</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Pakai/Bln</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Batas Aman</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Kurang</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {kritisItems.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} style={{ padding: 24, textAlign: 'center', color: '#00B894' }}>
-                      ✓ Semua stok aman
-                    </td>
-                  </tr>
-                ) : (
-                  kritisItems.map((item, idx) => {
-                    const safeLimit = Math.max(1, (item.avg_monthly_usage || 0) * 3);
-                    const defisit = Math.max(0, safeLimit - item.stock);
-                    const isVeryLow = item.stock <= 5;
-                    return (
-                      <tr key={item.id || idx} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '8px 10px', color: 'var(--muted-foreground)' }}>{idx + 1}</td>
-                        <td style={{ padding: '8px 10px', fontWeight: 600 }}>{item.name}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800, color: isVeryLow ? '#FF4444' : '#FF9800' }}>
-                          {item.stock} {item.unit}
-                        </td>
-                        <td style={{ padding: '8px 10px', textAlign: 'right' }}>{item.avg_monthly_usage} {item.unit}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'right', color: 'var(--muted-foreground)' }}>
-                          {safeLimit} {item.unit}
-                        </td>
-                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: '#FF4444' }}>
-                          +{defisit} {item.unit}
-                        </td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>
-                          <span style={{
-                            background: isVeryLow ? 'rgba(255,68,68,0.15)' : 'rgba(255,152,0,0.15)',
-                            color: isVeryLow ? '#FF4444' : '#d97706',
-                            padding: '3px 8px',
-                            borderRadius: 4,
-                            fontSize: 10.5,
-                            fontWeight: 700,
-                          }}>
-                            {isVeryLow ? 'KRITIS' : 'MENIPIS'}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Tab Content 3: 15 OBAT FAST-MOVING */}
-        {actionTab === 'fast' && (
-          <div style={{ overflow: 'auto', flex: 1, minHeight: 0 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr style={{ background: 'var(--muted)', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, width: 45 }}>Rank</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Nama</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Pakai/Bln</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Stok</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Cukup</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fastMovingList.slice(0, 15).map((item, idx) => {
-                  const status = getStockStatus(item);
-                  const isEnough = item.stock >= (item.avg_monthly_usage * 3);
-                  return (
-                    <tr key={item.id || idx} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td style={{ padding: '8px 10px', fontWeight: 800, color: idx < 3 ? '#ff4d00' : 'var(--muted-foreground)' }}>
-                        #{idx + 1}
-                      </td>
-                      <td style={{ padding: '8px 10px', fontWeight: 600 }}>{item.name}</td>
-                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800, color: '#00BCD4' }}>
-                        {item.avg_monthly_usage} {item.unit}/bln
-                      </td>
-                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: item.stock <= 5 ? '#FF4444' : undefined }}>
-                        {item.stock} {item.unit}
-                      </td>
-                      <td style={{ padding: '8px 10px', textAlign: 'center' }}>
-                        <span style={{
-                          color: isEnough ? '#00B894' : item.stock === 0 ? '#FF4444' : '#FF9800',
-                          fontWeight: 700,
-                          fontSize: 11,
-                        }}>
-                          {item.stock === 0 ? 'Habis' : `${Math.round((item.stock / Math.max(1, item.avg_monthly_usage)) * 10) / 10} bln`}
-                        </span>
-                      </td>
-                      <td style={{ padding: '8px 10px', textAlign: 'center' }}>
-                        <span style={{
-                          background: item.stock === 0 ? 'rgba(255,68,68,0.15)' : isEnough ? 'rgba(0,184,148,0.15)' : 'rgba(255,152,0,0.15)',
-                          color: item.stock === 0 ? '#FF4444' : isEnough ? '#00B894' : '#d97706',
-                          padding: '3px 8px',
-                          borderRadius: 4,
-                          fontSize: 10.5,
-                          fontWeight: 700,
-                        }}>
-                          {status}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Tab Content 4: FEFO / KADALUARSA */}
-        {actionTab === 'fefo' && (
-          <div style={{ overflow: 'auto', flex: 1, minHeight: 0 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr style={{ background: 'var(--muted)', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>No</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Nama</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Tgl Expired</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600 }}>Sisa</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Stok</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Status FEFO</th>
-                  <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center' }}>Tindakan</th>
-                </tr>
-              </thead>
-              <tbody>
-                {criticalExpiredItems.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} style={{ padding: 24, textAlign: 'center', color: '#00B894' }}>
-                      ✓ Tidak ada obat &lt; 3 bulan expired
-                    </td>
-                  </tr>
-                ) : (
-                  criticalExpiredItems.map((item, idx) => {
-                    const isPassed = (item.daysLeft ?? 0) <= 0;
-                    return (
-                      <tr key={item.id || idx} style={{ borderBottom: '1px solid var(--border)', background: isPassed ? 'rgba(255,68,68,0.10)' : undefined }}>
-                        <td style={{ padding: '8px 10px', color: 'var(--muted-foreground)' }}>{idx + 1}</td>
-                        <td style={{ padding: '8px 10px', fontWeight: 600 }}>{item.name}</td>
-                        <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontSize: 11.5 }}>
-                          {item.tanggal_expired}
-                        </td>
-                        <td style={{ padding: '8px 10px', fontWeight: 700, color: isPassed ? '#FF4444' : '#d97706' }}>
-                          {isPassed ? `${Math.abs(item.daysLeft ?? 0)} hari lewat` : `${item.daysLeft} hari`}
-                        </td>
-                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700 }}>
-                          {item.stock} {item.unit}
-                        </td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>
-                          <span style={{
-                            background: isPassed ? 'rgba(255,68,68,0.15)' : 'rgba(255,152,0,0.15)',
-                            color: isPassed ? '#FF4444' : '#d97706',
-                            padding: '3px 8px',
-                            borderRadius: 4,
-                            fontSize: 10.5,
-                            fontWeight: 700,
-                          }}>
-                            {isPassed ? 'Expired' : '&lt; 3 BLN'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>
-                          <span style={{
-                            fontSize: 11,
-                            fontWeight: 700,
-                            color: isPassed ? '#FF4444' : '#00B894',
-                          }}>
-                            {isPassed ? 'Tarik & Berita Acara' : 'Prioritas FEFO'}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {actionTab === 'semua' && (
-          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', flex: 1 }}>
-                  <input
-                    type="text"
-                    placeholder="Cari nama obat / BHP..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="admin-input"
-                    style={{ width: 200, height: 32, fontSize: 12 }}
-                  />
-
-                  <select
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                    className="admin-input"
-                    style={{ width: 140, height: 32, fontSize: 12 }}
-                  >
-                    <option value="Semua">Semua Kategori</option>
-                    <option value="Obat">Obat</option>
-                    <option value="Bahan Medis">Bahan Medis</option>
-                    <option value="Lainnya">Lainnya</option>
-                  </select>
-
-                  <select
-                    value={stockStatusFilter}
-                    onChange={(e) => setStockStatusFilter(e.target.value)}
-                    className="admin-input"
-                    style={{ width: 150, height: 32, fontSize: 12 }}
-                  >
-                    <option value="Semua">Semua Status Stok</option>
-                    <option value="Perlu Restock">Perlu Restock</option>
-                    <option value="Aman">Stok Aman</option>
-                    <option value="Menipis">Stok Menipis</option>
-                    <option value="Kritis">Stok Kritis</option>
-                    <option value="Habis">Stok Habis</option>
-                  </select>
-
-                  <select
-                    value={expiredStatusFilter}
-                    onChange={(e) => setExpiredStatusFilter(e.target.value)}
-                    className="admin-input"
-                    style={{ width: 170, height: 32, fontSize: 12 }}
-                  >
-                    <option value="Semua">Semua Status Expired</option>
-                    <option value="Kritis / Segera ED">Kritis / Segera ED</option>
-                    <option value="Sudah Kadaluarsa">Sudah Kadaluarsa</option>
-                    <option value="Kadaluarsa < 3 Bulan">&lt; 3 Bulan</option>
-                    <option value="Kadaluarsa < 6 Bulan">3 - 6 Bulan</option>
-                    <option value="Aman">Aman (&gt; 6 Bulan)</option>
-                  </select>
-                </div>
-
-                <div style={{ flexShrink: 0 }}>
-                  <DownloadButton
-                    variant="compact"
-                    filename={`Monitoring_Inventory_Klinik_${categoryFilter}`}
-                    title="Monitoring Stok Obat & BHP Klinik"
-                    getData={() => tableDataForExport}
-                  />
-                </div>
-              </div>
-
-              <div style={{ overflowX: 'auto', overflowY: 'auto', flex: 1, minHeight: 0 }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                  <thead>
-                    <tr style={{ background: 'var(--muted)', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                      <th style={{ padding: '8px 10px', fontWeight: 600 }}>No</th>
-                      <th style={{ padding: '8px 10px', fontWeight: 600 }}>Nama</th>
-                      <th style={{ padding: '8px 10px', fontWeight: 600 }}>Kategori</th>
-                      <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Stok</th>
-                      <th style={{ padding: '8px 10px', fontWeight: 600 }}>Satuan</th>
-                      <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'right' }}>Pakai/Bln</th>
-                      <th style={{ padding: '8px 10px', fontWeight: 600 }}>ED</th>
-                      <th style={{ padding: '8px 10px', fontWeight: 600 }}>Stok</th>
-                      <th style={{ padding: '8px 10px', fontWeight: 600 }}>ED</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loading ? (
-                      <tr>
-                        <td colSpan={9} style={{ padding: 0 }}>
-                          <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data inventory">
-                            <div className="bm-loading-spinner">
-                              <div className="bm-loading-ring" aria-hidden="true" />
-                              <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
-                            </div>
-                            <p className="bm-loading-label">Memuat data inventory obat & BHP…</p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : filteredItems.length === 0 ? (
-                      <tr>
-                        <td colSpan={9} style={{ padding: 30, textAlign: 'center', color: 'var(--muted-foreground)' }}>
-                          Tidak ada data
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredItems.map((item, idx) => {
-                        const stockStatus = getStockStatus(item);
-                        const expStatus = getExpiredStatus(item.tanggal_expired);
-
-                        const stockBadgeStyle =
-                          stockStatus === 'Aman'
-                            ? { bg: 'rgba(0,184,148,0.1)', color: '#00B894' }
-                            : stockStatus === 'Menipis'
-                            ? { bg: 'rgba(255,152,0,0.1)', color: '#FF9800' }
-                            : { bg: 'rgba(255,68,68,0.1)', color: '#FF4444' };
-
-                        const expBadgeStyle =
-                          expStatus === 'Aman'
-                            ? { bg: 'rgba(0,184,148,0.1)', color: '#00B894' }
-                            : expStatus === 'Kadaluarsa < 6 Bulan'
-                            ? { bg: 'rgba(255,202,40,0.15)', color: '#b45309' }
-                            : expStatus === 'Kadaluarsa < 3 Bulan'
-                            ? { bg: 'rgba(255,152,0,0.15)', color: '#d97706' }
-                            : expStatus === 'Sudah Kadaluarsa'
-                            ? { bg: 'rgba(255,68,68,0.15)', color: '#dc2626' }
-                            : { bg: 'rgba(0,0,0,0.05)', color: 'var(--muted-foreground)' };
-
-                        return (
-                          <tr
-                            key={item.id || idx}
-                            style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.12s' }}
-                          >
-                            <td style={{ padding: '8px 10px', color: 'var(--muted-foreground)' }}>{idx + 1}</td>
-                            <td style={{ padding: '8px 10px', fontWeight: 600, color: 'var(--foreground)' }}>{item.name}</td>
-                            <td style={{ padding: '8px 10px', color: 'var(--muted-foreground)' }}>{item.category || 'Obat'}</td>
-                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: item.stock <= 5 ? '#FF4444' : 'var(--foreground)' }}>
-                              {item.stock}
-                            </td>
-                            <td style={{ padding: '8px 10px', color: 'var(--muted-foreground)' }}>{item.unit}</td>
-                            <td style={{ padding: '8px 10px', textAlign: 'right' }}>{item.avg_monthly_usage || 0}</td>
-                            <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontSize: 11 }}>
-                              {item.tanggal_expired || '-'}
-                            </td>
-                            <td style={{ padding: '8px 10px' }}>
-                              <span style={{
-                                background: stockBadgeStyle.bg,
-                                color: stockBadgeStyle.color,
-                                padding: '2px 8px',
-                                borderRadius: 4,
-                                fontSize: 10.5,
-                                fontWeight: 700,
-                              }}>
-                                {stockStatus}
-                              </span>
-                            </td>
-                            <td style={{ padding: '8px 10px' }}>
-                              <span style={{
-                                background: expBadgeStyle.bg,
-                                color: expBadgeStyle.color,
-                                padding: '2px 8px',
-                                borderRadius: 4,
-                                fontSize: 10.5,
-                                fontWeight: 700,
-                              }}>
-                                {expStatus}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-          </div>
-        )}
-            </div>
-          </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+      </motion.div>
+      </AnimatePresence>
     </div>
+  </div>
   );
 }

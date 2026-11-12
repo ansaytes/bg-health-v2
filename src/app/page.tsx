@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { clearDashboardDataCache, preloadDashboardData } from '@/lib/dashboard-data';
 import { clearMCUDashboardData } from '@/components/dashboard/MCUDashboardShared';
+import { usePopup, Popup } from '@/lib/popup';
 import HomeView from '@/components/home/HomeView';
 
 /* ──── Lazy imports: semua komponen dashboard berat di-load on-demand ──── */
@@ -757,6 +758,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"login"|"register">("login");
+  const { popup, popupState, closePopup } = usePopup();
   const [regNik, setRegNik] = useState("");
   const [regNama, setRegNama] = useState("");
   const [regJabatan, setRegJabatan] = useState("");
@@ -1001,7 +1003,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
               if (!json.success) throw new Error(json.error || 'Gagal mendaftar');
               setMode('login');
               setError('');
-              alert('Pendaftaran berhasil! Silakan login.');
+              popup({ type: 'success', title: 'Pendaftaran berhasil', message: 'Silakan login dengan akun yang baru didaftarkan.' });
             } catch (err) {
               setError(err instanceof Error ? err.message : 'Gagal mendaftar');
             } finally {
@@ -1116,6 +1118,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
           </form>
           </>
           )}
+          <Popup state={popupState} closePopup={closePopup} />
         </div>
       </motion.div>
     </motion.div>

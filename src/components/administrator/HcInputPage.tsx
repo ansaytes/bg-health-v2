@@ -7,6 +7,7 @@ import { authFetch } from '@/lib/api-client';
 import { aptRequirement, jatuhTempoUkur, zonaFromLeq, ZONA_COLOR, type Zona } from '@/lib/hc-ergo';
 import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
 import { Btn, Chip, Field, Notice, Section, SITES, Tabs, fmtDate, grid2, grid3, inputStyle, smallInput, tableStyle, tdStyle, thStyle } from './hc-ergo-ui';
+import { usePopup, Popup } from '@/lib/popup';
 
 type Row = Record<string, any>;
 interface Pt { kode_titik: string; deskripsi: string; leq_dba: string; durasi_menit: string; }
@@ -17,6 +18,7 @@ export default function HcInputPage() {
   const [tab, setTab] = useState<'noise' | 'exposure' | 'area'>('noise');
   const [areas, setAreas] = useState<Row[]>([]);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+  const { popup, popupState, closePopup } = usePopup();
 
   const loadAreas = useCallback(async () => {
     try { setAreas((await authFetch('/api/hc?resource=area')).data || []); }
@@ -37,6 +39,8 @@ export default function HcInputPage() {
         {tab === 'exposure' && <ExposureTab areas={areas} onMsg={setMsg} />}
         {tab === 'area' && <AreaTab areas={areas} onMsg={setMsg} onChanged={loadAreas} />}
       </div>
+      {/* Popup di level container agar tersedia untuk semua tab yang aktif */}
+      <Popup state={popupState} closePopup={closePopup} />
     </div>
   );
 }
@@ -44,6 +48,7 @@ export default function HcInputPage() {
 /* ───────────── NOISE MAPPING ───────────── */
 function NoiseTab({ areas, onMsg, onSaved }: { areas: Row[]; onMsg: (m: any) => void; onSaved: () => void }) {
   const [site, setSite] = useState('');
+  const { popup, popupState, closePopup } = usePopup();
   const [f, setF] = useState<Row>({
     area_id: '', tanggal: todayStr(), tipe: 'BERKALA', petugas: '', slm_merk_tipe: '', slm_serial: '', slm_kelas: '2',
     sertifikat_kalibrasi_sd: '', kalibrasi_sebelum_db: '', kalibrasi_sesudah_db: '', rambu_terpasang: false,
@@ -75,10 +80,22 @@ function NoiseTab({ areas, onMsg, onSaved }: { areas: Row[]; onMsg: (m: any) => 
     } catch (err) { onMsg({ kind: 'err', text: err instanceof Error ? err.message : 'Gagal menyimpan' }); }
     finally { setSaving(false); }
   };
-  const del = async (id: string) => {
-    if (!confirm('Hapus survei noise mapping ini beserta titik ukurnya?')) return;
-    try { await authFetch(`/api/hc?resource=noise&id=${id}`, { method: 'DELETE' }); loadList(); onSaved(); }
-    catch (err) { onMsg({ kind: 'err', text: err instanceof Error ? err.message : 'Gagal menghapus' }); }
+  const del = (id: string) => {
+    popup({
+      type: 'confirm',
+      title: 'Hapus survei?',
+      message: 'Hapus survei noise mapping ini beserta titik ukurnya?',
+      confirmLabel: 'Hapus',
+      onOk: async () => {
+        try {
+          await authFetch(`/api/hc?resource=noise&id=${id}`, { method: 'DELETE' });
+          loadList(); onSaved();
+          popup({ type: 'success', title: 'Berhasil', message: 'Survei dihapus.' });
+        } catch (err) {
+          popup({ type: 'error', title: 'Gagal menghapus', message: err instanceof Error ? err.message : 'Coba lagi.' });
+        }
+      },
+    });
   };
 
   return (
@@ -166,6 +183,7 @@ function NoiseTab({ areas, onMsg, onSaved }: { areas: Row[]; onMsg: (m: any) => 
           </table>
         </div>
       </div>
+      <Popup state={popupState} closePopup={closePopup} />
     </>
   );
 }
@@ -176,6 +194,7 @@ function ExposureTab({ areas, onMsg }: { areas: Row[]; onMsg: (m: any) => void }
   const [f, setF] = useState<Row>(blank);
   const [list, setList] = useState<Row[]>([]);
   const [saving, setSaving] = useState(false);
+  const { popup, popupState, closePopup } = usePopup();
   const set = (k: string, v: any) => setF((p) => ({ ...p, [k]: v }));
   const load = useCallback(async () => { try { setList((await authFetch('/api/hc?resource=exposure')).data || []); } catch { /* abaikan */ } }, []);
   useEffect(() => { load(); }, [load]);
@@ -192,10 +211,22 @@ function ExposureTab({ areas, onMsg }: { areas: Row[]; onMsg: (m: any) => void }
     } catch (err) { onMsg({ kind: 'err', text: err instanceof Error ? err.message : 'Gagal menyimpan' }); }
     finally { setSaving(false); }
   };
-  const del = async (id: string) => {
-    if (!confirm('Hapus klasifikasi ini?')) return;
-    try { await authFetch(`/api/hc?resource=exposure&id=${id}`, { method: 'DELETE' }); load(); }
-    catch (err) { onMsg({ kind: 'err', text: err instanceof Error ? err.message : 'Gagal menghapus' }); }
+  const del = (id: string) => {
+    popup({
+      type: 'confirm',
+      title: 'Hapus klasifikasi?',
+      message: 'Hapus klasifikasi karyawan ini?',
+      confirmLabel: 'Hapus',
+      onOk: async () => {
+        try {
+          await authFetch(`/api/hc?resource=exposure&id=${id}`, { method: 'DELETE' });
+          load();
+          popup({ type: 'success', title: 'Berhasil', message: 'Klasifikasi dihapus.' });
+        } catch (err) {
+          popup({ type: 'error', title: 'Gagal menghapus', message: err instanceof Error ? err.message : 'Coba lagi.' });
+        }
+      },
+    });
   };
   const siteAreas = areas.filter((a) => !f.site || a.site === f.site);
   const KET: Record<string, string> = { A: 'A — rutin ≥ 4 jam/hari di zona Kuning/Merah', B: 'B — insidental / intermiten', C: 'C — tidak terpajan' };
@@ -244,6 +275,7 @@ function ExposureTab({ areas, onMsg }: { areas: Row[]; onMsg: (m: any) => void }
 /* ───────────── MASTER AREA ───────────── */
 function AreaTab({ areas, onMsg, onChanged }: { areas: Row[]; onMsg: (m: any) => void; onChanged: () => void }) {
   const [site, setSite] = useState(''); const [nama, setNama] = useState(''); const [sumber, setSumber] = useState('');
+  const { popup, popupState, closePopup } = usePopup();
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); onMsg(null);
     try {
@@ -251,10 +283,22 @@ function AreaTab({ areas, onMsg, onChanged }: { areas: Row[]; onMsg: (m: any) =>
       setNama(''); setSumber(''); onChanged(); onMsg({ kind: 'ok', text: 'Area tersimpan.' });
     } catch (err) { onMsg({ kind: 'err', text: err instanceof Error ? err.message : 'Gagal menyimpan' }); }
   };
-  const off = async (id: string) => {
-    if (!confirm('Nonaktifkan area ini? Riwayat ukur tetap tersimpan.')) return;
-    try { await authFetch(`/api/hc?resource=area&id=${id}`, { method: 'DELETE' }); onChanged(); }
-    catch (err) { onMsg({ kind: 'err', text: err instanceof Error ? err.message : 'Gagal' }); }
+  const off = (id: string) => {
+    popup({
+      type: 'confirm',
+      title: 'Nonaktifkan area?',
+      message: 'Nonaktifkan area ini? Riwayat ukur tetap tersimpan.',
+      confirmLabel: 'Nonaktifkan',
+      onOk: async () => {
+        try {
+          await authFetch(`/api/hc?resource=area&id=${id}`, { method: 'DELETE' });
+          onChanged();
+          popup({ type: 'success', title: 'Berhasil', message: 'Area dinonaktifkan.' });
+        } catch (err) {
+          popup({ type: 'error', title: 'Gagal', message: err instanceof Error ? err.message : 'Coba lagi.' });
+        }
+      },
+    });
   };
   return (
     <>
@@ -284,6 +328,7 @@ function AreaTab({ areas, onMsg, onChanged }: { areas: Row[]; onMsg: (m: any) =>
           </tbody>
         </table>
       </div>
+      <Popup state={popupState} closePopup={closePopup} />
     </>
   );
 }

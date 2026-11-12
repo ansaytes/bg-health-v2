@@ -5,7 +5,10 @@ import { Search, Plus, Edit, Trash2, AlertTriangle, ArchiveRestore } from 'lucid
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
+import { fetchDashboardData } from '@/lib/dashboard-data';
+import { usePopup, Popup } from '@/lib/popup';
 import DownloadButton from '@/components/ui/download-button';
+import InventoryOperationalTable from '@/components/dashboard/InventoryOperationalTable';
 import {
   Dialog,
   DialogContent,
@@ -27,10 +30,16 @@ type InventoryItem = {
 
 export default function InventoryAdmin() {
   const { isSuperuser } = useAuth();
+  const { popup, popupState, closePopup } = usePopup();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('Semua');
+  // Tabel operasional (Semua / Habis / Menipis / Fast-Moving / Expired-FEFO)
+  // dipindah dari dashboard ke sini.
+  const [view, setView] = useState<'master' | 'operasional'>('master');
+  
   
   // Add Master Item state
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -64,14 +73,19 @@ export default function InventoryAdmin() {
 
   const fetchItems = async () => {
     setLoading(true);
+    setError('');
     try {
-      const res = await fetch('/api/inventory');
-      const json = await res.json();
-      if (json.success) {
+      // Pakai fetchDashboardData (menempelkan token sesi Supabase + cache 2 menit
+      // yang sama dengan dashboard) — fetch polos tanpa Authorization membuat
+      // getServerCaller gagal menemukan sesi, sehingga endpoint menjawab 403
+      // dan tabel terlihat kosong meski dashboard tetap normal.
+      const json = await fetchDashboardData<{ success: boolean; data?: InventoryItem[] } & { error?: string }>('/api/inventory');
+      if (json.success && Array.isArray(json.data)) {
         setItems(json.data);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Gagal memuat inventory:', err);
+      setError(err instanceof Error ? err.message : 'Gagal memuat data inventory.');
     } finally {
       setLoading(false);
     }
@@ -82,6 +96,10 @@ export default function InventoryAdmin() {
   }, []);
 
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
+    // Reuse logika tokenSesi yang sama persis dengan fetchDashboardData
+    // (lib/dashboard-data): ambil access_token dari sesi Supabase. Tanpa
+    // header Authorization ini, POST/PATCH/DELETE ditolak 403 karena
+    // getServerCaller tidak menemukan sesi.
     const { data: { session } } = await supabase.auth.getSession();
     return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
   };
@@ -100,11 +118,12 @@ export default function InventoryAdmin() {
         setIsAddOpen(false);
         setAddForm({ name: '', category: 'Obat', unit: '', avg_monthly_usage: '' });
         await fetchItems();
+        popup({ type: 'success', title: 'Berhasil', message: `Item "${addForm.name}" ditambahkan.` });
       } else {
-        alert(json.error);
+        popup({ type: 'error', title: 'Gagal menyimpan item', message: json.error || 'Coba lagi.' });
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Gagal menyimpan item');
+      popup({ type: 'error', title: 'Gagal terhubung ke server', message: err instanceof Error ? err.message : 'Coba lagi.' });
     } finally {
       setSaving(false);
     }
@@ -128,11 +147,12 @@ export default function InventoryAdmin() {
         setIsRestockOpen(false);
         setRestockForm({ jumlah_masuk: '', tanggal_masuk: '', tanggal_expired: '' });
         await fetchItems();
+        popup({ type: 'success', title: 'Berhasil', message: `Batch "${restockForm.jumlah_masuk} ${selectedItem.unit}" ditambahkan untuk ${selectedItem.name}.` });
       } else {
-        alert(json.error);
+        popup({ type: 'error', title: 'Gagal menambah batch', message: json.error || 'Coba lagi.' });
       }
     } catch (err) {
-      alert('Gagal menambah batch');
+      popup({ type: 'error', title: 'Gagal menambah batch', message: err instanceof Error ? err.message : 'Coba lagi.' });
     } finally {
       setRestockSaving(false);
     }
@@ -175,33 +195,38 @@ export default function InventoryAdmin() {
       setIsEditOpen(false);
       setEditingItem(null);
       await fetchItems();
+      popup({ type: 'success', title: 'Berhasil', message: `Item "${editingItem.name}" diperbarui.` });
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Gagal mengubah item');
+      popup({ type: 'error', title: 'Gagal mengubah item', message: err instanceof Error ? err.message : 'Coba lagi.' });
     } finally {
       setEditSaving(false);
     }
   };
 
-  const handleDeleteItem = async (item: InventoryItem) => {
-    const confirmed = window.confirm(
-      `Hapus "${item.name}" secara permanen? Stok saat ini: ${item.stock} ${item.unit}. Semua batch dan riwayat transaksi terkait juga akan terhapus.`,
-    );
-    if (!confirmed) return;
-
-    setDeletingItemId(item.id);
-    try {
-      const res = await fetch(`/api/inventory?id=${encodeURIComponent(item.id)}`, {
-        method: 'DELETE',
-        headers: await getAuthHeaders(),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || 'Gagal menghapus item');
-      await fetchItems();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Gagal menghapus item');
-    } finally {
-      setDeletingItemId(null);
-    }
+  const handleDeleteItem = (item: InventoryItem) => {
+    popup({
+      type: 'confirm',
+      title: 'Hapus item inventory?',
+      message: `Hapus "${item.name}" secara permanen? Stok saat ini: ${item.stock} ${item.unit}. Semua batch dan riwayat transaksi terkait juga akan terhapus.`,
+      confirmLabel: 'Hapus',
+      onOk: async () => {
+        setDeletingItemId(item.id);
+        try {
+          const res = await fetch(`/api/inventory?id=${encodeURIComponent(item.id)}`, {
+            method: 'DELETE',
+            headers: await getAuthHeaders(),
+          });
+          const json = await res.json();
+          if (!res.ok || !json.success) throw new Error(json.error || 'Gagal menghapus item');
+          await fetchItems();
+          popup({ type: 'success', title: 'Berhasil', message: `Item "${item.name}" dihapus.` });
+        } catch (err) {
+          popup({ type: 'error', title: 'Gagal menghapus item', message: err instanceof Error ? err.message : 'Coba lagi.' });
+        } finally {
+          setDeletingItemId(null);
+        }
+      },
+    });
   };
 
   const filteredItems = items.filter(item => {
@@ -262,6 +287,37 @@ export default function InventoryAdmin() {
           <Plus size={16} className="mr-2" /> Tambah Item Master
         </Button>
       </div>
+
+      {/* Pilih tampilan: tabel master (CRUD) atau tabel operasional yang
+          dipindah dari dashboard. */}
+      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+        {([
+          { key: 'master', label: 'Data Master' },
+          { key: 'operasional', label: 'Analisa Operasional' },
+        ] as const).map(t => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setView(t.key)}
+            style={{
+              height: 32, padding: '0 14px', borderRadius: 6, cursor: 'pointer',
+              fontSize: 12, fontWeight: 700,
+              border: view === t.key ? '1px solid var(--brand-primary, #ff4d00)' : '1px solid var(--border)',
+              background: view === t.key ? 'var(--brand-primary, #ff4d00)' : 'var(--card)',
+              color: view === t.key ? '#fff' : 'var(--foreground)',
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {view === 'operasional' ? (
+        <div style={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <InventoryOperationalTable items={items} />
+        </div>
+      ) : (
+      <>
 
       {/* Toolbar TANPA latar card: sebelumnya kotak putih membentang selebar
           halaman dan menyisakan area putih di kiri-kanan pencarian. Sekarang
@@ -328,7 +384,14 @@ export default function InventoryAdmin() {
               </tr>
             ) : filteredItems.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: '32px', textAlign: 'center', color: 'var(--muted-foreground)' }}>Tidak ada data ditemukan.</td>
+                <td colSpan={7} style={{ padding: '32px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                  {error ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+                      <span>Gagal memuat data: {error}</span>
+                      <Button size="sm" variant="outline" onClick={() => void fetchItems()}>Coba Lagi</Button>
+                    </div>
+                  ) : 'Tidak ada data ditemukan.'}
+                </td>
               </tr>
             ) : (
               filteredItems.map((item, idx) => {
@@ -396,6 +459,8 @@ export default function InventoryAdmin() {
           </tbody>
         </table>
       </div>
+      </>
+      )}
 
       {/* ADD MASTER ITEM DIALOG */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
@@ -502,6 +567,7 @@ export default function InventoryAdmin() {
         </DialogContent>
       </Dialog>
 
+      <Popup state={popupState} closePopup={closePopup} />
     </div>
   );
 }

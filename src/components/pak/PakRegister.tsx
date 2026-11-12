@@ -17,6 +17,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useMCUStore } from '@/lib/store';
 import { DEFAULT_SETTINGS, mergeSettings, type AppSettings } from '@/lib/app-settings';
 import EmployeeLookupInput from '@/components/administrator/EmployeeLookupInput';
+import { usePopup, Popup } from '@/lib/popup';
 
 interface PakCase {
   id: string;
@@ -107,6 +108,7 @@ function DeadlineBadge({ sisaJam: sisa, label }: { sisaJam: number | null; label
 export default function PakRegister() {
   const store = useMCUStore();
   const { role } = useAuth();
+  const { popup, popupState, closePopup } = usePopup();
   const canWrite = role === 'superuser' || role === 'administrator';
   const [cases, setCases] = useState<PakCase[]>([]);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
@@ -179,15 +181,22 @@ export default function PakRegister() {
     }
   }
 
-  async function deleteCase(id: string) {
-    if (!confirm('Hapus kasus PAK ini dari Register?')) return;
-    try {
-      await authFetch(`/api/pak?id=${id}`, { method: 'DELETE' });
-      store.showToast('Kasus dihapus', 'success');
-      await load();
-    } catch {
-      store.showToast('Gagal menghapus', 'error');
-    }
+  function deleteCase(id: string) {
+    popup({
+      type: 'confirm',
+      title: 'Hapus kasus PAK?',
+      message: 'Hapus kasus PAK ini dari Register?',
+      confirmLabel: 'Hapus',
+      onOk: async () => {
+        try {
+          await authFetch(`/api/pak?id=${id}`, { method: 'DELETE' });
+          store.showToast('Kasus dihapus', 'success');
+          await load();
+        } catch {
+          store.showToast('Gagal menghapus', 'error');
+        }
+      },
+    });
   }
 
   const th = 'px-3 py-2 text-left text-[9.5px] font-bold uppercase tracking-wide text-muted-foreground border-b';
@@ -342,6 +351,8 @@ export default function PakRegister() {
           )}
         </>
       )}
+
+      <Popup state={popupState} closePopup={closePopup} />
     </div>
   );
 }

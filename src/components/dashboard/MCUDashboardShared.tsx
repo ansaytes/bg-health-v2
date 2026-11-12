@@ -288,6 +288,7 @@ export function MCUChart({
   horizontal = false,
   centerText,
   percentLabels = false,
+  tooltips = true,
 }: {
   type: 'bar' | 'doughnut';
   labels: string[];
@@ -297,6 +298,8 @@ export function MCUChart({
   horizontal?: boolean;
   centerText?: string;
   percentLabels?: boolean;
+  /** Default: tooltip menampilkan nilai asli + (persentase bila percentLabels). */
+  tooltips?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const chartRef = useRef<ChartInstance | null>(null);
@@ -396,6 +399,7 @@ export function MCUChart({
             labels: { color: textColor, font: { size: 10, weight: 'bold', family: fontFamily }, boxWidth: 12, usePointStyle: true },
           },
           tooltip: {
+            enabled: tooltips,
             titleFont: { size: 11, family: fontFamily },
             bodyFont: { size: 12, family: fontFamily },
             callbacks: {

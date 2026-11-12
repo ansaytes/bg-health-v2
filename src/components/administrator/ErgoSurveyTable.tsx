@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useState } from 'react';
 import { authFetch } from '@/lib/api-client';
 import { KLAS_COLOR, type Klasifikasi } from '@/lib/hc-ergo';
 import { Btn, BtnRow, Chip, Field, Notice, SITES, fmtDate, grid3, inputStyle, smallInput, tableStyle, tdStyle, thStyle } from './hc-ergo-ui';
+import { usePopup, Popup } from '@/lib/popup';
 
 type Row = Record<string, any>;
 const STATUS: Record<string, { t: string; c: string }> = {
@@ -18,6 +19,7 @@ export default function ErgoSurveyTable() {
   const [recs, setRecs] = useState<Row[]>([]);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [nr, setNr] = useState<Row>({ problem: '', tindakan: '', pic: '', due_date: '', pica_no: '' });
+  const { popup, popupState, closePopup } = usePopup();
 
   const load = useCallback(async () => {
     try {
@@ -37,7 +39,23 @@ export default function ErgoSurveyTable() {
     try { await fn(); setMsg({ kind: 'ok', text: ok }); await load(); then?.(); }
     catch (e) { setMsg({ kind: 'err', text: e instanceof Error ? e.message : 'Gagal' }); }
   };
-  const del = (s: Row) => confirm('Hapus survei ini beserta rekomendasinya?') && act(() => authFetch(`/api/ergo?resource=survey&id=${s.id}`, { method: 'DELETE' }), 'Survei dihapus.');
+  const del = (s: Row) => {
+    popup({
+      type: 'confirm',
+      title: 'Hapus survei?',
+      message: 'Hapus survei ini beserta rekomendasinya?',
+      confirmLabel: 'Hapus',
+      onOk: async () => {
+        try {
+          await authFetch(`/api/ergo?resource=survey&id=${s.id}`, { method: 'DELETE' });
+          await load();
+          popup({ type: 'success', title: 'Berhasil', message: 'Survei dihapus.' });
+        } catch (e) {
+          popup({ type: 'error', title: 'Gagal menghapus survei', message: e instanceof Error ? e.message : 'Coba lagi.' });
+        }
+      },
+    });
+  };
   const addRec = (sid: string) => act(() => authFetch('/api/ergo', { method: 'POST', body: JSON.stringify({ resource: 'recommendation', survey_id: sid, ...nr }) }), 'Rekomendasi ditambahkan.',
     () => { setNr({ problem: '', tindakan: '', pic: '', due_date: '', pica_no: '' }); loadRecs(sid); });
   const patchRec = (r: Row, patch: Row) => act(() => authFetch('/api/ergo', { method: 'PATCH', body: JSON.stringify({ resource: 'recommendation', id: r.id, ...patch }) }), 'Rekomendasi diperbarui.', () => loadRecs(r.survey_id));
@@ -117,6 +135,7 @@ export default function ErgoSurveyTable() {
           </table>
         </div>
       </div>
+      <Popup state={popupState} closePopup={closePopup} />
     </div>
   );
 }

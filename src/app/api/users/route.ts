@@ -191,12 +191,11 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Tidak dapat menghapus akun sendiri' }, { status: 400 });
     }
 
-    const { data: targetProfile } = await supabase
+    const { data: targetProfile } = await supabaseAdmin
       .from('user_profiles')
       .select('user_id')
       .eq('id', userId)
-      .single();
-
+      .maybeSingle();
     if (!targetProfile) {
       return NextResponse.json({ error: 'Pengguna tidak ditemukan' }, { status: 404 });
     }
@@ -204,6 +203,14 @@ export async function DELETE(req: NextRequest) {
     const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(targetProfile.user_id);
     if (deleteAuthError) {
       return NextResponse.json({ error: deleteAuthError.message }, { status: 500 });
+    }
+
+    const { error: deleteProfileError } = await supabaseAdmin
+      .from('user_profiles')
+      .delete()
+      .eq('id', userId);
+    if (deleteProfileError) {
+      return NextResponse.json({ error: deleteProfileError.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, message: 'Pengguna berhasil dihapus' });

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { usePopup, Popup } from '@/lib/popup';
 
 type DownloadFormat = 'excel' | 'csv' | 'pdf';
 
@@ -34,12 +35,13 @@ export default function DownloadButton({
   const [isOpen, setIsOpen] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const { popup, popupState, closePopup } = usePopup();
 
   const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
   const exportToCSV = (data: any[], fname: string) => {
     if (!data.length) {
-      alert('Tidak ada data untuk diexport');
+      popup({ type: 'error', title: 'Tidak ada data', message: 'Tidak ada data untuk diexport.' });
       return;
     }
     const cols = columns || Object.keys(data[0]);
@@ -66,7 +68,7 @@ export default function DownloadButton({
 
   const exportToExcel = async (data: any[], fname: string, sheetTitle?: string) => {
     if (!data.length) {
-      alert('Tidak ada data untuk diexport');
+      popup({ type: 'error', title: 'Tidak ada data', message: 'Tidak ada data untuk diexport.' });
       return;
     }
     // Dynamically import xlsx library
@@ -85,13 +87,13 @@ export default function DownloadButton({
 
   const exportToPDF = (data: any[], fname: string, pdfTitle?: string) => {
     if (!data.length) {
-      alert('Tidak ada data untuk diexport');
+      popup({ type: 'error', title: 'Tidak ada data', message: 'Tidak ada data untuk diexport.' });
       return;
     }
     const cols = columns || Object.keys(data[0]);
     const win = window.open('', '_blank', 'width=900,height=700');
     if (!win) {
-      alert('Pop-up diblokir. Mohon izinkan pop-up untuk download PDF.');
+      popup({ type: 'error', title: 'Pop-up diblokir', message: 'Mohon izinkan pop-up untuk download PDF.' });
       return;
     }
     const rows = data.map(row =>
@@ -140,7 +142,7 @@ tr:nth-child(even) { background: #fafafa; }
       await sleep(400);
     } catch (err) {
       console.error('Download error:', err);
-      alert('Gagal mendownload: ' + (err instanceof Error ? err.message : String(err)));
+      popup({ type: 'error', title: 'Gagal mendownload', message: err instanceof Error ? err.message : String(err) });
     } finally {
       setProgress(null);
       setDownloading(false);
@@ -206,6 +208,7 @@ tr:nth-child(even) { background: #fafafa; }
           </div>
         </>
       )}
+      <Popup state={popupState} closePopup={closePopup} />
     </div>
   );
 }

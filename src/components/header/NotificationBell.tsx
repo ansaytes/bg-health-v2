@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { JENIS_META, PRIORITAS_WARNA, type JenisNotifikasi, type Notifikasi } from '@/lib/notifikasi-medic';
 import { useMCUStore } from '@/lib/store';
+import { usePopup, Popup } from '@/lib/popup';
 
 /**
  * Menavigasi ke halaman tujuan notifikasi.
@@ -78,6 +79,7 @@ export default function NotificationBell({ isSuperuser, canMedic = false }: {
   isSuperuser: boolean;
   canMedic?: boolean;
 }) {
+  const { popup, popupState, closePopup } = usePopup();
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [medic, setMedic] = useState<Notifikasi[]>([]);
   const [open, setOpen] = useState(false);
@@ -165,35 +167,44 @@ export default function NotificationBell({ isSuperuser, canMedic = false }: {
       const json = await res.json();
       if (json.success) {
         setApprovals(prev => prev.filter(a => a.id !== id));
+        popup({ type: 'success', title: 'Berhasil', message: 'Pendaftaran disetujui.' });
       } else {
-        alert(json.error || 'Gagal menyetujui');
+        popup({ type: 'error', title: 'Gagal menyetujui', message: json.error || 'Coba lagi.' });
       }
     } catch {
-      alert('Gagal terhubung ke server');
+      popup({ type: 'error', title: 'Gagal terhubung ke server', message: 'Coba lagi beberapa saat.' });
     }
   };
 
-  const handleReject = async (id: number) => {
-    if (!confirm('Tolak pendaftaran ini?')) return;
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/notifications', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-        },
-        body: JSON.stringify({ id, action: 'reject' }),
-      });
-      const json = await res.json();
-      if (json.success) {
-        setApprovals(prev => prev.filter(a => a.id !== id));
-      } else {
-        alert(json.error || 'Gagal menolak');
-      }
-    } catch {
-      alert('Gagal terhubung ke server');
-    }
+  const handleReject = (id: number) => {
+    popup({
+      type: 'confirm',
+      title: 'Tolak pendaftaran?',
+      message: 'Pendaftaran akan ditolak dan tidak dapat diterima.',
+      confirmLabel: 'Tolak',
+      onOk: async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const res = await fetch('/api/notifications', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+            },
+            body: JSON.stringify({ id, action: 'reject' }),
+          });
+          const json = await res.json();
+          if (json.success) {
+            setApprovals(prev => prev.filter(a => a.id !== id));
+            popup({ type: 'success', title: 'Berhasil', message: 'Pendaftaran ditolak.' });
+          } else {
+            popup({ type: 'error', title: 'Gagal menolak', message: json.error || 'Coba lagi.' });
+          }
+        } catch {
+          popup({ type: 'error', title: 'Gagal terhubung ke server', message: 'Coba lagi beberapa saat.' });
+        }
+      },
+    });
   };
 
   // Kelompokkan per kategori. Urutan kategori mengikuti urutan JENIS_META
@@ -419,6 +430,8 @@ export default function NotificationBell({ isSuperuser, canMedic = false }: {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <Popup state={popupState} closePopup={closePopup} />
     </div>
   );
 }

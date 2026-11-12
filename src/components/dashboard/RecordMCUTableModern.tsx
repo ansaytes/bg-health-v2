@@ -10,6 +10,7 @@ import { MCU_FIELDS } from '@/lib/mcu-fields';
 import { useAuth } from '@/lib/auth-context';
 import { useMCUStore } from '@/lib/store';
 import FormTindakLanjut from '@/components/followup/FormTindakLanjut';
+import { usePopup, Popup } from '@/lib/popup';
 
 type RecordRow = Record<string, any>;
 
@@ -181,6 +182,7 @@ function ColFilterDropdown({ label, selected, getOptions, onChange }: ColFilterD
 // ---------------------------------------------------------------------------
 export default function RecordMCUTableModern() {
   const { isSuperuser, isAdmin } = useAuth();
+  const { popup, popupState, closePopup } = usePopup();
   // isAdmin = superuser/administrator/pic, sama dengan ROLES_TULIS di /api/followups.
   const bisaTindakLanjut = isAdmin;
   const store = useMCUStore();
@@ -212,21 +214,28 @@ export default function RecordMCUTableModern() {
   const [monitorFilters, setMonitorFilters] = useState<Record<string, string[] | undefined>>({});
   const [recordFilters, setRecordFilters] = useState<Record<string, string[] | undefined>>({});
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Apakah Anda yakin ingin menghapus data MCU untuk ${name}?`)) return;
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`/api/mcu/records/${id}`, {
-        method: 'DELETE',
-        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Gagal menghapus data');
-      store.showToast('Data MCU berhasil dihapus', 'success');
-      load();
-    } catch (err) {
-      store.showToast(err instanceof Error ? err.message : 'Gagal menghapus data', 'error');
-    }
+  const handleDelete = (id: string, name: string) => {
+    popup({
+      type: 'confirm',
+      title: 'Hapus data MCU?',
+      message: `Apakah Anda yakin ingin menghapus data MCU untuk ${name}?`,
+      confirmLabel: 'Hapus',
+      onOk: async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const res = await fetch(`/api/mcu/records/${id}`, {
+            method: 'DELETE',
+            headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+          });
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.error || 'Gagal menghapus data');
+          store.showToast('Data MCU berhasil dihapus', 'success');
+          load();
+        } catch (err) {
+          popup({ type: 'error', title: 'Gagal menghapus data', message: err instanceof Error ? err.message : 'Coba lagi.' });
+        }
+      },
+    });
   };
 
   const handleEdit = (row: RecordRow) => setEditingRow({ ...row });
@@ -791,6 +800,7 @@ export default function RecordMCUTableModern() {
           </DialogContent>
         </Dialog>
       </div>
+      <Popup state={popupState} closePopup={closePopup} />
     </div>
   );
 }
