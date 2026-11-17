@@ -6,38 +6,18 @@ import type { ChartOptions } from 'chart.js';
 import { ChartJS } from '@/lib/chart-register';
 import { authFetch } from '@/lib/api-client';
 import { ZONA_COLOR, type Zona } from '@/lib/hc-ergo';
-import { SITES } from '@/components/administrator/hc-ergo-ui';
+import { useSites } from '@/lib/site-list';
 import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, useAnimationReady } from '@/lib/chart-standard';
 import PageLoading from '@/components/ui/page-loading';
+import { MCUChartCard, MCURefreshButton } from '@/components/dashboard/MCUDashboardShared';
 
 type D = Record<string, any>;
 const KELAS_COLOR: Record<string, string> = { Normal: '#00B894', Ringan: '#F5C518', Sedang: '#F5A623', Berat: '#FF6B35', 'Sangat Berat': '#E63946' };
 const KELAS_ORDER = ['Normal', 'Ringan', 'Sedang', 'Berat', 'Sangat Berat'];
 const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
-function ChartCard({ title, sub, accent = '#ff4d00', empty, children }: { title: string; sub?: string; accent?: string; empty?: boolean; children: React.ReactNode }) {
-  return (
-    <div className="card" style={{ padding: '10px 12px', minHeight: 0 }}>
-      <div className="card-head">
-        <span style={{ width: 4, height: 26, borderRadius: 2, background: accent, flexShrink: 0 }} />
-        <div style={{ minWidth: 0 }}>
-          <h2>{title}</h2>
-          {sub && <p>{sub}</p>}
-        </div>
-      </div>
-      <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
-        {empty ? (
-          <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--muted-foreground)' }}>
-            <span style={{ width: 38, height: 38, borderRadius: '50%', border: `2px dashed ${accent}55`, display: 'grid', placeItems: 'center', fontSize: 15, fontWeight: 800, color: `${accent}99` }}>–</span>
-            <span style={{ fontSize: 11.5, fontWeight: 600 }}>Belum ada data</span>
-          </div>
-        ) : children}
-      </div>
-    </div>
-  );
-}
-
 export default function HearingConservationDashboard() {
+  const { sites: daftarSite } = useSites();
   const [d, setD] = useState<D | null>(null);
   const [site, setSite] = useState('');
   const [err, setErr] = useState('');
@@ -272,9 +252,20 @@ export default function HearingConservationDashboard() {
 
   return (
     <div className="dashboard hc-dash" style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* Ringkasan ringkas dalam satu baris, supaya 6 grafik mendapat ruang maksimum */}
-      <div className="kunjungan-filter-bar" style={{ flexShrink: 0, flexWrap: 'wrap' }}>
-        <select className="admin-filter-select" value={site} onChange={(e) => { setErr(''); setSite(e.target.value); }}><option value="">All Site</option>{SITES.map((s) => <option key={s}>{s}</option>)}</select>
+      {/* Top bar — mengikuti pola Monitoring MCU */}
+      <div className="mcu-live-top-bar" style={{ flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <select className="admin-filter-select" value={site} onChange={(e) => { setErr(''); setSite(e.target.value); }}>
+            <option value="">All Site</option>
+            {daftarSite.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <MCURefreshButton loading={false} onClick={() => {
+            setErr('');
+            authFetch(`/api/hc?resource=dashboard&site=${encodeURIComponent(site)}`)
+              .then((r) => setD(r.data))
+              .catch((e) => setErr(e instanceof Error ? e.message : 'Gagal refresh'));
+          }} />
+        </div>
         <span className="kunjungan-total-right" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <span>Konservasi Pendengaran</span>
           <span>Zona merah <b style={{ color: ZONA_COLOR.MERAH }}>{d.zona.MERAH}</b>/{nAreaTot}</span>
@@ -287,12 +278,12 @@ export default function HearingConservationDashboard() {
 
       {/* Enam grafik mengisi seluruh sisa frame — tanpa scroll halaman */}
       <div className="mcu-live-chart-row mcu-live-chart-row--two-rows">
-        <ChartCard title="Zona Kebisingan Area" sub="Area per zona hasil pengukuran terakhir" accent="#E63946" empty={!nAreaTot}><canvas ref={zonaRef} /></ChartCard>
-        <ChartCard title="Karyawan Terpajan" sub="A rutin · B insidental · C tidak terpajan" accent="#F5A623" empty={!katTotal}><canvas ref={kategoriRef} /></ChartCard>
-        <ChartCard title="Cakupan Audiometri Tahun Ini" sub="Kategori A & B — sudah vs belum diperiksa" accent="#2E86DE" empty={!cakTotal}><canvas ref={cakupanRef} /></ChartCard>
-        <ChartCard title="Derajat Gangguan Pendengaran" sub="WHO · telinga yang lebih baik" accent="#8E44AD" empty={!kelasCount}><canvas ref={kelasRef} /></ChartCard>
-        <ChartCard title="Kasus STS" sub="Suspek, retest, terkonfirmasi, terlambat" accent="#E63946" empty={!stsTotal}><canvas ref={stsRef} /></ChartCard>
-        <ChartCard title="Leq Maks per Area" sub="Titik tertinggi (dB(A)) · warna titik = zona" accent="#ff4d00" empty={!adaUkur}><canvas ref={trendRef} /></ChartCard>
+        <MCUChartCard title="Zona Kebisingan Area" subtitle="Area per zona hasil pengukuran terakhir" className="glow-coral"><canvas ref={zonaRef} /></MCUChartCard>
+        <MCUChartCard title="Karyawan Terpajan" subtitle="A rutin · B insidental · C tidak terpajan" className="glow-amber"><canvas ref={kategoriRef} /></MCUChartCard>
+        <MCUChartCard title="Cakupan Audiometri Tahun Ini" subtitle="Kategori A & B — sudah vs belum diperiksa" className="glow-teal"><canvas ref={cakupanRef} /></MCUChartCard>
+        <MCUChartCard title="Derajat Gangguan Pendengaran" subtitle="WHO · telinga yang lebih baik" className="glow-steel"><canvas ref={kelasRef} /></MCUChartCard>
+        <MCUChartCard title="Kasus STS" subtitle="Suspek, retest, terkonfirmasi, terlambat" className="glow-orange"><canvas ref={stsRef} /></MCUChartCard>
+        <MCUChartCard title="Leq Maks per Area" subtitle="Titik tertinggi (dB(A)) · warna titik = zona" className="glow-coral"><canvas ref={trendRef} /></MCUChartCard>
       </div>
 
       {/* Evaluasi efektivitas tahunan — SOP/028 poin 4.3.5:

@@ -9,10 +9,10 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChartOptions } from 'chart.js';
 import { ChartJS } from '@/lib/chart-register';
 import { authFetch } from '@/lib/api-client';
-import { SITES } from '@/components/administrator/hc-ergo-ui';
+import { useSites } from '@/lib/site-list';
 import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, gradientBatangArray, useAnimationReady } from '@/lib/chart-standard';
 import PageLoading from '@/components/ui/page-loading';
-import { MCUChart } from '@/components/dashboard/MCUDashboardShared';
+import { MCUChart, MCUChartCard, MCURefreshButton } from '@/components/dashboard/MCUDashboardShared';
 
 type D = Record<string, any>;
 const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
@@ -36,39 +36,8 @@ const DASS_BAND_WARNA: Record<string, string> = {
   'Sangat Berat': '#8E44AD',
 };
 
-// Warna lembut dan tidak saling bertabrakan: merah = perlu tindak lanjut,
-// oranye = perlu perhatian, hijau = normal. Biru hanya untuk seri netral.
-const RED = 'rgba(231, 76, 60, 0.72)';
-const AMBER = 'rgba(243, 156, 18, 0.72)';
-const GREEN = 'rgba(0, 184, 148, 0.72)';
-const STEEL = 'rgba(119, 136, 153, 0.55)';
-
-function ChartCard({ title, sub, accent = '#ff4d00', empty, children }: { title: string; sub?: string; accent?: string; empty?: boolean; children: React.ReactNode }) {
-  return (
-    <div className="card" style={{ padding: '10px 12px', minHeight: 0 }}>
-      <div className="card-head">
-        <span style={{ width: 4, height: 26, borderRadius: 2, background: accent, flexShrink: 0 }} />
-        <div style={{ minWidth: 0 }}>
-          <h2>{title}</h2>
-          {sub && <p>{sub}</p>}
-        </div>
-      </div>
-      <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
-        {/* Canvas SELALU dirender (hanya disembunyikan) supaya ref tidak null saat
-            data datang belakangan. Tanpa ini chart tidak pernah tergambar. */}
-        <div style={{ position: 'absolute', inset: 0, visibility: empty ? 'hidden' : 'visible' }}>{children}</div>
-        {empty && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--muted-foreground)' }}>
-            <span style={{ width: 38, height: 38, borderRadius: '50%', border: `2px dashed ${accent}55`, display: 'grid', placeItems: 'center', fontSize: 15, fontWeight: 800, color: `${accent}99` }}>–</span>
-            <span style={{ fontSize: 11.5, fontWeight: 600 }}>Belum ada data</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export default function MentalHealthDashboard() {
+  const { sites: daftarSite } = useSites();
   const [d, setD] = useState<D | null>(null);
   const [site, setSite] = useState('');
   const [err, setErr] = useState('');
@@ -264,16 +233,32 @@ export default function MentalHealthDashboard() {
     .filter(([k]) => ['Sedang', 'Berat', 'Sangat Berat'].includes(k))
     .reduce((sum, [, v]) => sum + Number(v || 0), 0);
   const dassTerisi = Number(i.dass21.terisi || 0);
+  const sdsBerat = (i.sds?.perIndikator || []).reduce((a, x) => a + Number(x.berat || 0), 0);
 
   return (
     <div className="dashboard mh-dash" style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: 10, display: 'flex', flexDirection: 'column', gap: 8, height: '100%' }}>
-      <div className="kunjungan-filter-bar" style={{ flexShrink: 0, flexWrap: 'wrap' }}>
-        <select className="admin-filter-select" value={site} onChange={(e) => setSite(e.target.value)}><option value="">All Site</option>{SITES.map((s) => <option key={s}>{s}</option>)}</select>
+      <div className="mcu-live-top-bar" style={{ flexShrink: 0 }}>
+        <div className="kunjungan-filter-bar" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <select className="admin-filter-select" value={site} onChange={(e) => setSite(e.target.value)}>
+            <option value="">All Site</option>
+            {daftarSite.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <MCURefreshButton
+            loading={false}
+            onClick={() => {
+              setErr('');
+              authFetch(`/api/mental-health/dashboard?site=${encodeURIComponent(site)}`)
+                .then((r) => { setD(r.data); setErr(''); })
+                .catch((e) => setErr(e instanceof Error ? e.message : 'Gagal refresh'));
+            }}
+          />
+        </div>
         <span className="kunjungan-total-right" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span>Kesehatan Mental · SRQ-20 · DASS-21</span>
+          <span>Kesehatan Mental · SRQ-20 · DASS-21 · SDS-30</span>
           <span>Responden <b>{d.totalResponden}</b></span>
           <span>SRQ ≥6 <b style={{ color: i.srq20.perluTindakLanjut ? '#FF2D2D' : 'inherit' }}>{i.srq20.perluTindakLanjut}</b></span>
-          <span>DASS terisi <b>{i.dass21.terisi}</b></span>
+          <span>DASS berat/sangat berat <b style={{ color: (i.dass21?.band?.Berat || 0) + (i.dass21?.band?.['Sangat Berat'] || 0) ? '#E67E22' : 'inherit' }}>{(i.dass21?.band?.Berat || 0) + (i.dass21?.band?.['Sangat Berat'] || 0)}</b></span>
+          <span>SDS indikator berat <b style={{ color: sdsBerat ? '#E67E22' : 'inherit' }}>{sdsBerat}</b></span>
         </span>
       </div>
 
@@ -281,7 +266,7 @@ export default function MentalHealthDashboard() {
           Kotak KPI terpisah DIHAPUS — angkanya sudah tampil pada donut
           (total di tengah + persentase per potongan). */}
       <div className="mcu-live-chart-row mcu-live-chart-row--four">
-        <ChartCard title="SRQ-20" sub="Ambang ≥6 = perlu tindak lanjut" accent="#E74C3C" empty={!i.srq20.terisi}>
+        <MCUChartCard title="SRQ-20" subtitle="Ambang ≥6 = perlu tindak lanjut" className="glow-teal">
           <MCUChart
             type="doughnut"
             labels={['Normal (<6)', 'Perlu tindak lanjut (≥6)']}
@@ -291,8 +276,8 @@ export default function MentalHealthDashboard() {
             centerText={String(srqTerisi)}
             percentLabels
           />
-        </ChartCard>
-        <ChartCard title="DASS-21" sub="Keparahan tertinggi 3 subskala" accent="#F39C12" empty={!i.dass21.terisi}>
+        </MCUChartCard>
+        <MCUChartCard title="DASS-21" subtitle="Keparahan tertinggi 3 subskala" className="glow-amber">
           <MCUChart
             type="doughnut"
             labels={['Dalam batas', 'Perlu perhatian']}
@@ -302,9 +287,9 @@ export default function MentalHealthDashboard() {
             centerText={String(dassTerisi)}
             percentLabels
           />
-        </ChartCard>
-        <ChartCard title="Rata-rata Subskala DASS-21" sub="Depresi · ansietas · stres" accent="#3498DB" empty={!i.dass21.terisi}><canvas ref={subskalaRef} /></ChartCard>
-        <ChartCard title="SRQ-20 per Site" sub="Responden · perlu tindak lanjut" accent="#2E86DE" empty={!perSite.length}><canvas ref={siteRef} /></ChartCard>
+        </MCUChartCard>
+        <MCUChartCard title="Rata-rata Subskala DASS-21" subtitle="Depresi · ansietas · stres" className="glow-coral"><canvas ref={subskalaRef} /></MCUChartCard>
+        <MCUChartCard title="SRQ-20 per Site" subtitle="Responden · perlu tindak lanjut" className="glow-steel"><canvas ref={siteRef} /></MCUChartCard>
       </div>
 
       {/* Baris 2 — sebaran derajat keparahan & indikator SDS-30.
@@ -320,7 +305,7 @@ export default function MentalHealthDashboard() {
             • Indikator dengan kategori berat terbanyak → prioritas
               intervensi lingkungan kerja */}
       <div className="mcu-live-chart-row" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}>
-        <ChartCard title="Sebaran Skor SRQ-20" sub="Ringan · sedang · berat" accent="#E74C3C" empty={!Object.keys(i.srq20.band || {}).length}>
+        <MCUChartCard title="Sebaran Skor SRQ-20" subtitle="Ringan · sedang · berat" className="glow-teal">
           <MCUChart
             type="bar"
             labels={Array.from(SRQ_BAND_ORDER, (k) => k).filter((k) => Number((i.srq20.band as Record<string, number>)?.[k] ?? 0) > 0)}
@@ -329,9 +314,9 @@ export default function MentalHealthDashboard() {
             horizontal
             legendLabel="Responden"
           />
-        </ChartCard>
+        </MCUChartCard>
 
-        <ChartCard title="Derajat Keparahan DASS-21" sub="Kategori tertinggi dari 3 subskala" accent="#F39C12" empty={!Object.keys(i.dass21.band || {}).length}>
+        <MCUChartCard title="Derajat Keparahan DASS-21" subtitle="Kategori tertinggi dari 3 subskala" className="glow-amber">
           <MCUChart
             type="bar"
             labels={DASS_BAND_ORDER.filter((k) => Number((i.dass21.band as Record<string, number>)?.[k] ?? 0) > 0)}
@@ -340,7 +325,7 @@ export default function MentalHealthDashboard() {
             horizontal
             legendLabel="Responden"
           />
-        </ChartCard>
+        </MCUChartCard>
 
         {/* SDS-30 — instrumen faktor psikologi kerja (Lampiran Permenaker
             5/2018), dipakai UKL untuk pelaporan Kepdirjen Minerba 1855.K/2019.
@@ -349,11 +334,10 @@ export default function MentalHealthDashboard() {
             Tiga diagram ini disusun agar laporan UKL langsung terbaca:
             rata-rata skor tiap indikator, jumlah responden per derajat,
             dan indikator mana yang paling banyak kategori berat. */}
-        <ChartCard
+        <MCUChartCard
           title="SDS-30 — Stres Kerja (UKL · Kepdirjen Minerba)"
-          sub="6 indikator faktor psikologi kerja · skor 5–35"
-          accent="#8E44AD"
-          empty={!(i.sds?.perIndikator || []).length}
+          subtitle="6 indikator faktor psikologi kerja · skor 5–35"
+          className="glow-coral"
         >
           <MCUChart
             type="bar"
@@ -363,13 +347,12 @@ export default function MentalHealthDashboard() {
             horizontal
             legendLabel="Skor rata-rata (skala 5–35)"
           />
-        </ChartCard>
+        </MCUChartCard>
 
-        <ChartCard
+        <MCUChartCard
           title="SDS-30 — Sebaran Derajat Stres"
-          sub="Ringan <10 · Sedang 10–24 · Berat >24 (per indikator)"
-          accent="#E67E22"
-          empty={!(i.sds?.perIndikator || []).length}
+          subtitle="Ringan <10 · Sedang 10–24 · Berat >24 (per indikator)"
+          className="glow-orange"
         >
           <MCUChart
             type="bar"
@@ -383,13 +366,12 @@ export default function MentalHealthDashboard() {
             horizontal
             legendLabel="Responden × indikator"
           />
-        </ChartCard>
+        </MCUChartCard>
 
-        <ChartCard
+        <MCUChartCard
           title="SDS-30 — Indikator dengan Kategori Berat Terbanyak"
-          sub="Prioritas intervensi lingkungan kerja"
-          accent="#E74C3C"
-          empty={!((i.sds?.perIndikator || []) as any[]).some((x) => Number(x.berat || 0) > 0)}
+          subtitle="Prioritas intervensi lingkungan kerja"
+          className="glow-steel"
         >
           <MCUChart
             type="bar"
@@ -399,7 +381,7 @@ export default function MentalHealthDashboard() {
             horizontal
             legendLabel="Responden kategori berat"
           />
-        </ChartCard>
+        </MCUChartCard>
       </div>
     </div>
   );

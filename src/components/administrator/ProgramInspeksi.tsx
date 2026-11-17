@@ -22,6 +22,7 @@ import { CalendarClock, Check, Plus, RefreshCw, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { authFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
+import { useSites } from '@/lib/site-list';
 import { useMCUStore } from '@/lib/store';
 import { usePopup, Popup } from '@/lib/popup';
 import {
@@ -62,6 +63,7 @@ export default function ProgramInspeksi() {
   const [site, setSite] = useState('');
   const [jenis, setJenis] = useState<JenisInspeksi | ''>('');
   const [data, setData] = useState<Data | null>(null);
+  const { sites: daftarSite } = useSites();
   const [loading, setLoading] = useState(false);
   const [bekerja, setBekerja] = useState(false);
   const [error, setError] = useState('');
@@ -153,7 +155,7 @@ export default function ProgramInspeksi() {
                 style={{ height: 28, minWidth: 130, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 6px' }}
               >
                 <option value="">Semua site</option>
-                {(data?.daftarSite ?? []).map(s => <option key={s} value={s}>{s}</option>)}
+                {daftarSite.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>

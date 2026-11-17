@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
+import { useSites } from '@/lib/site-list';
 import { useMCUStore } from '@/lib/store';
 
 export type JenisChecklist = 'p3k' | 'ambulans' | 'ergonomi';
@@ -92,6 +93,71 @@ const KATEGORI_AMBULANS: Record<string, string> = {
   sanitasi: 'Sanitasi Kabin',
 };
 
+/* ── REFERENSI STANDAR (checklist "sudah ada standarnya") ─────────────────── */
+// Pengguna sering mengira checklist "suruh isi sendiri" padahal isinya sudah
+// baku. Di sini tiap item katalog diberi referensi aturan + standar kuantitatif
+// (di luar kolom jumlah_standar di database) sehingga halamannya terbaca sebagai
+// checklist kelaikan: centang "ada/sebaiknya" + catat kondisi, bukan bikin daftar.
+//
+// Sumber: Permenaker 15/2008 Lampiran (P3K), standar ambulans & tanggap darurat
+// medis (K3), dan kebutuhan ergonomi operasional (Permenaker 5/2018).
+
+interface Rujukan {
+  aturan: string;      // rujukan peraturan
+  standar: string;     // standar kuantitatif / ketetapan
+  acuan?: string;      // penjelasan singkat kenapa item ini wajib
+}
+
+const REFERENSI: Record<string, Rujukan> = {
+  /* ── Kotak P3K (Permenaker 15/2008) ── */
+  'Kasa steril terbungkus': { aturan: 'Permenaker 15/2008 Lampiran', standar: '5 pak', acuan: 'P3K pertama untuk menutup luka' },
+  'Perban (lebar 5 cm)': { aturan: 'Permenaker 15/2008 Lampiran', standar: '2 buah' },
+  'Perban (lebar 10 cm)': { aturan: 'Permenaker 15/2008 Lampiran', standar: '2 buah' },
+  'Plester (lebar 1,25 cm)': { aturan: 'Permenaker 15/2008 Lampiran', standar: '2 buah' },
+  'Plester cepat': { aturan: 'Permenaker 15/2008 Lampiran', standar: '10 buah' },
+  'Kapas (25 gram)': { aturan: 'Permenaker 15/2008 Lampiran', standar: '1 bungkus' },
+  'Pembalut segitiga': { aturan: 'Permenaker 15/2008 Lampiran', standar: '2 buah', acuan: 'Pembidaian & tampon' },
+  'Sarung tangan sekali pakai': { aturan: 'Permenaker 15/2008 Lampiran', standar: '4 pasang' },
+  'Masker': { aturan: 'Permenaker 15/2008 Lampiran', standar: '2 buah' },
+  'Pinset': { aturan: 'Permenaker 15/2008 Lampiran', standar: '1 buah' },
+  'Gunting pembalut': { aturan: 'Permenaker 15/2008 Lampiran', standar: '1 buah' },
+  'Peniti': { aturan: 'Permenaker 15/2008 Lampiran', standar: '12 buah', acuan: 'Menggantungkan pembalut segitiga' },
+  'Larutan antiseptik (povidone iodine)': { aturan: 'Permenaker 15/2008 Lampiran', standar: '1 botol' },
+  'Alkohol 70%': { aturan: 'Permenaker 15/2008 Lampiran', standar: '1 botol' },
+  'Obat luka bakar': { aturan: 'Permenaker 15/2008 Lampiran', standar: '1 tube' },
+  'Salep / krim antiseptik': { aturan: 'Permenaker 15/2008 Lampiran', standar: '1 tube' },
+  'Buku catatan penggunaan P3K': { aturan: 'Permenaker 15/2008', standar: '1 buku', acuan: 'Administrasi: mencatat kejadian & pemakaian' },
+  'Daftar isi kotak P3K': { aturan: 'Permenaker 15/2008', standar: '1 lembar', acuan: 'Kartu isi agar cepat dilengkapi' },
+
+  /* ── Ambulans & tanggap darurat medis ── */
+  'AED (Automated External Defibrillator)': { aturan: 'Standar tanggap darurat medis', standar: '1 unit', acuan: 'Penyelamatan henti jantung (CPR + AED)' },
+  'Tabung oksigen + regulator/tekanan': { aturan: 'Standar ambulans medis', standar: '1 tabung', acuan: 'Dukungan napas' },
+  'Suction pump': { aturan: 'Standar ambulans medis', standar: '1 unit', acuan: 'Kebersihan jalan napas' },
+  'Stretcher / tandu': { aturan: 'Standar ambulans medis', standar: '1 unit' },
+  'Spinal board': { aturan: 'Standar ambulans medis', standar: '1 buah', acuan: 'Imobilisasi trauma tulang belakang' },
+  'Kotak P3K dalam ambulans': { aturan: 'Standar ambulans medis', standar: '1 kotak' },
+  'Rem (fungsi dan kebocoran)': { aturan: 'K3 kendaraan / tanggap darurat', standar: 'Fungsi & bebas kebocoran' },
+  'Ban (tebal bunga & tekanan)': { aturan: 'K3 kendaraan / tanggap darurat', standar: 'Bunga minimal & tekanan sesuai' },
+  'Sirine dan lampu rotator': { aturan: 'K3 kendaraan / tanggap darurat', standar: 'Fungsi', acuan: 'Prioritas lalu lintas evakuasi' },
+  'BBM minimal 3/4 tangki': { aturan: 'K3 kendaraan / tanggap darurat', standar: '≥ 75% tangki', acuan: 'Siap berangkat tanpa jeda' },
+  'Sanitasi kabin pasien': { aturan: 'K3 sanitasi kendaraan', standar: 'Bersih & bebas kontaminasi' },
+  'Tabung oksigen portabel': { aturan: 'Standar ambulans medis', standar: '1 tabung' },
+
+  /* ── Sarana ergonomi operasional ── */
+  'Suspension seat alat berat / unit tambang': { aturan: 'Permenaker 5/2018 (ergonomi)', standar: 'Suspensi efektif & terawat' },
+  'Stasiun kerja kantor (kursi & meja ergonomis)': { aturan: 'Permenaker 5/2018 (ergonomi)', standar: 'Sesuai postur kerja' },
+  'Alat bantu manual handling (trolley, lift)': { aturan: 'Permenaker 5/2018 (ergonomi)', standar: 'Fungsi & aman', acuan: 'Mengurangi angkat manual' },
+  'Penopang kaki (footrest) area kerja': { aturan: 'Permenaker 5/2018 (ergonomi)', standar: 'Tersedia & sesuai' },
+  'Alat bantu angkat vakum / crane kecil': { aturan: 'Permenaker 5/2018 (ergonomi)', standar: 'Fungsi & aman' },
+};
+
+/** Label kategori ergonomi (dipakai saat DB belum memberi kategori). */
+const KATEGORI_ERGONOMI: Record<string, string> = {
+  operator: 'Operator / Alat Berat',
+  kantor: 'Kantor',
+  manual_handling: 'Manual Handling',
+};
+
 /** Satu baris gabungan katalog + kondisi tersimpan. */
 interface Baris {
   katalogId: number | string;
@@ -101,6 +167,7 @@ interface Baris {
   wajib: boolean;
   status: Status;
   jumlah: number | null;
+  jumlahStandar: number | null;
   layak: number | null;
   rusak: number | null;
   tanggalExpired: string | null;
@@ -132,6 +199,7 @@ function gabungBaris(
       wajib: Boolean(k.wajib),
       status: (String(c?.status ?? 'tidak_ada') as Status),
       jumlah: c?.jumlah ?? k.jumlah_standar ?? null,
+      jumlahStandar: k.jumlah_standar ?? null,
       layak: c?.layak ?? null,
       rusak: c?.rusak ?? null,
       tanggalExpired: c?.tanggal_expired ? String(c.tanggal_expired).slice(0, 10) : '',
@@ -150,6 +218,7 @@ export default function ChecklistFasilitas({ jenis, initialGrup }: {
 }) {
   const { isAdmin } = useAuth();
   const store = useMCUStore();
+  const { sites: daftarSite } = useSites();
 
   const [site, setSite] = useState('');
   const [grup, setGrup] = useState(initialGrup ?? '');
@@ -267,7 +336,7 @@ export default function ChecklistFasilitas({ jenis, initialGrup }: {
     ? KATEGORI_P3K
     : jenis === 'ambulans'
       ? KATEGORI_AMBULANS
-      : { operator: 'Operator / Alat Berat', kantor: 'Kantor', manual_handling: 'Manual Handling' };
+      : KATEGORI_ERGONOMI;
 
   const perKategori = useMemo(() => {
     const map = new Map<string, Baris[]>();
@@ -302,8 +371,8 @@ export default function ChecklistFasilitas({ jenis, initialGrup }: {
       <div className="kunjungan-top-bar" style={{ flexShrink: 0 }}>
         <div className="kunjungan-filter-bar">
           <select className="admin-filter-select" value={site} onChange={(e) => setSite(e.target.value)}>
-            {(data?.daftarSite ?? []).map((s) => <option key={s} value={s}>{s}</option>)}
-            {!data?.daftarSite?.length && <option value={site}>{site || '—'}</option>}
+            {daftarSite.map((s) => <option key={s} value={s}>{s}</option>)}
+            {!daftarSite.length && <option value={site}>{site || '—'}</option>}
           </select>
 
           {/* Pemilih kelompok: lokasi kotak / unit ambulans */}
@@ -457,6 +526,22 @@ export default function ChecklistFasilitas({ jenis, initialGrup }: {
                   <h2 style={{ fontSize: 12 }}>{LABEL_KATEGORI[kategori] ?? (kategori || 'Item')}</h2>
                   <p style={{ fontSize: 9 }}>
                     {list.filter((i) => i.status === 'ada').length} siap · {list.length} item
+                    {(() => {
+                      // Persentase sesuai standar: item yang status "ada" dan
+                      // jumlah memenuhi standar (jika ada) dari total item.
+                      const sesuai = list.filter((i) => {
+                        if (i.status !== 'ada') return false;
+                        const rujukan = REFERENSI[i.nama];
+                        if (!rujukan || i.jumlahStandar == null) return true;
+                        return i.jumlah !== null && i.jumlah >= i.jumlahStandar;
+                      }).length;
+                      const persen = list.length ? Math.round((sesuai / list.length) * 100) : 0;
+                      return (
+                        <span style={{ marginLeft: 8, color: persen >= 90 ? '#00B894' : persen >= 70 ? '#C99A00' : '#FF2D2D' }}>
+                          {sesuai}/{list.length} sesuai standar ({persen}%)
+                        </span>
+                      );
+                    })()}
                   </p>
                 </div>
               </div>
@@ -507,6 +592,17 @@ export default function ChecklistFasilitas({ jenis, initialGrup }: {
                               )}
                               {b.satuan && <span style={{ fontSize: 8, color: 'var(--muted-foreground)' }}>{b.satuan}</span>}
                             </div>
+                            {/* Referensi standar: isi checklist ini sudah baku, bukan diisi manual. */}
+                            {(() => {
+                              const rujukan = REFERENSI[b.nama];
+                              if (!rujukan) return null;
+                              return (
+                                <div style={{ fontSize: 8.5, color: 'var(--muted-foreground)', marginTop: 2, lineHeight: 1.35 }} title={rujukan.acuan}>
+                                  <span style={{ color: '#1f5f9b', fontWeight: 600 }}>{rujukan.standar}</span>
+                                  {' · '}{rujukan.aturan}
+                                </div>
+                              );
+                            })()}
                           </td>
 
                           <td style={td}>

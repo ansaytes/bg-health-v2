@@ -21,6 +21,7 @@ import { RefreshCw } from 'lucide-react';
 
 import { authFetch } from '@/lib/api-client';
 import { MCUChart } from '@/components/dashboard/MCUDashboardShared';
+import { useSites } from '@/lib/site-list';
 import PageLoading from '@/components/ui/page-loading';
 import { PALET_BAR } from '@/lib/chart-standard';
 import { periodeBulan, labelPeriode } from '@/lib/inspeksi-program';
@@ -65,6 +66,7 @@ const WARNA = { hijau: '#00B894', kuning: '#F1C40F', merah: '#FF2D2D' };
 const WARNA_SELESAI: Record<string, string> = WARNA;
 
 export default function InspeksiDashboard() {
+  const { sites: daftarSite } = useSites();
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -123,12 +125,14 @@ export default function InspeksiDashboard() {
           </label>
           <label>
             <span>Site</span>
-            <input
+            <select
               value={site}
               onChange={ev => setSite(ev.target.value)}
-              placeholder="Semua site"
-              style={{ height: 28, width: 120, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 10, fontWeight: 700, padding: '0 6px' }}
-            />
+              style={{ height: 28, width: 150, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 10, fontWeight: 700, padding: '0 6px' }}
+            >
+              <option value="">Semua site</option>
+              {daftarSite.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
           </label>
           <label>
             <span>Penyelesaian</span>

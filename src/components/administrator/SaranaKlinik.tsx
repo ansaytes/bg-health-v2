@@ -21,6 +21,7 @@ import { AlertTriangle, Check, Loader2, Plus, RefreshCw, Wrench } from 'lucide-r
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authFetch } from '@/lib/api-client';
+import { useSites } from '@/lib/site-list';
 import { useMCUStore } from '@/lib/store';
 
 interface ItemSarana {
@@ -63,6 +64,7 @@ const STATUS_META: Record<ItemSarana['status'], { label: string; warna: string }
 
 export default function SaranaKlinik() {
   const store = useMCUStore();
+  const { sites: daftarSite } = useSites();
   const [site, setSite] = useState('Head Office');
   const [items, setItems] = useState<ItemSarana[]>([]);
   const [ringkasan, setRingkasan] = useState<Ringkasan | null>(null);
@@ -137,7 +139,8 @@ export default function SaranaKlinik() {
       <div className="kunjungan-top-bar" style={{ flexShrink: 0 }}>
         <div className="kunjungan-filter-bar">
           <select className="admin-filter-select" value={site} onChange={(e) => setSite(e.target.value)}>
-            {SITES.map((s) => <option key={s} value={s}>{s}</option>)}
+            <option value="">All Site</option>
+            {daftarSite.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
           <select className="admin-filter-select" value={filter} onChange={(e) => setFilter(e.target.value)}>
             <option value="semua">Semua Status</option>
@@ -302,17 +305,6 @@ export default function SaranaKlinik() {
     </div>
   );
 }
-
-const SITES = [
-  'Head Office', 'Satui', 'Angsana', 'Tanjung Tabalong', 'Rantau', 'Binuang', 'Senakin',
-  'Kota Baru', 'Batu Kajang', 'Ketapang', 'Kapuas Tengah', 'Murung Raya', 'Muara Teweh',
-  'Tuhup', 'Gunung Mas', 'Banjar Baru', 'Bontang', 'Samarinda', 'Tenggarong', 'Tabang',
-  'Gunung Sari', 'Bukit Pinang', 'Sangatta', 'Bengalon', 'Kaliorang', 'Kaubun',
-  'Balikpapan', 'Melak', 'Muara Enim', 'Lahat', 'Muara Bungo', 'Banyuwangi', 'Wetar',
-  'Kotamobagu', 'Konawe', 'Halmahera Timur', 'Gorontalo', 'Aceh', 'Palu', 'Malinau',
-  'Kelubir', 'Tanjung Redeb', 'Labanan', 'Binungan', 'Bunyu', 'Sebakis', 'Morowali',
-  'Luwu', 'Soroako', 'Kayong Utara',
-];
 
 /** Form menambah item katalog di luar daftar SOP — sesuai kondisi lapangan. */
 function FormTambah({ onSelesai }: { onSelesai: () => void }) {

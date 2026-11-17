@@ -21,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { authFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
+import { useSites } from '@/lib/site-list';
 import { useMCUStore } from '@/lib/store';
 import { usePopup, Popup } from '@/lib/popup';
 import {
@@ -87,6 +88,7 @@ export default function PicaRegister() {
   const { popup, popupState, closePopup } = usePopup();
 
   const [data, setData] = useState<Data | null>(null);
+  const { sites: daftarSite } = useSites();
   const [loading, setLoading] = useState(false);
   const [bekerja, setBekerja] = useState(false);
   const [error, setError] = useState('');
@@ -261,7 +263,7 @@ export default function PicaRegister() {
               style={{ height: 28, minWidth: 120, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 6px' }}
             >
               <option value="">Semua site</option>
-              {(data?.daftarSite ?? []).map(s => <option key={s} value={s}>{s}</option>)}
+              {daftarSite.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
             <button type="button" className="mcu-dashboard-refresh" onClick={() => void load()} disabled={loading}>
               <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
@@ -415,7 +417,7 @@ export default function PicaRegister() {
                 list="pica-daftar-site"
               />
               <datalist id="pica-daftar-site">
-                {(data?.daftarSite ?? []).map(s => <option key={s} value={s} />)}
+                {daftarSite.map(s => <option key={s} value={s} />)}
               </datalist>
             </label>
             <label className="text-xs font-medium">

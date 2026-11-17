@@ -27,10 +27,8 @@ const MonitoringKaryawanSakit = lazy(() => import('@/components/administrator/Mo
 const InspeksiSanitasi = lazy(() => import('@/components/administrator/InspeksiSanitasi'));
 const InspeksiLingkungan = lazy(() => import('@/components/administrator/InspeksiLingkungan'));
 const GiziKerja = lazy(() => import('@/components/administrator/GiziKerja'));
-const SaranaKlinik = lazy(() => import('@/components/administrator/SaranaKlinik'));
-const ProgramInspeksi = lazy(() => import('@/components/administrator/ProgramInspeksi'));
-const PicaRegister = lazy(() => import('@/components/administrator/PicaRegister'));
-const ChecklistFasilitasTabs = lazy(() => import('@/components/administrator/ChecklistFasilitasTabs'));
+const ProgramInspeksiAdminTabs = lazy(() => import('@/components/administrator/ProgramInspeksiAdminTabs'));
+const SaranaKlinikWithChecklist = lazy(() => import('@/components/administrator/SaranaKlinikWithChecklist'));
 const InputJadwalMCU = lazy(() => import('@/components/administrator/InputJadwalMCUModern'));
 const GangguanTidurPage = lazy(() => import('@/components/administrator/GangguanTidurPage'));
 const InputMentalHealthPage = lazy(() => import('@/components/administrator/InputMentalHealthPage'));
@@ -428,13 +426,15 @@ const ADMIN_SIDEBAR: SidebarItem[] = [
   { key: 'higiene-industri-admin', label: 'Higiene Industri', icon: <IconHigiene /> },
   { key: 'health-campaign', label: 'Health Campaign', icon: <IconCampaignAdmin /> },
   { key: 'pak-register', label: 'Register PAK', icon: <IconPakRegister /> },
+  // Sarana & Prasarana = satu menu bertab: Sarana Klinik + Checklist Kelaikan
+  // (P3K, Ambulans, Sarana Ergonomi). Keduanya satu keluarga: kelengkapan
+  // & kelayakan aset kesehatan kerja. Checklist kelaikan TIDAK jadi menu
+  // terpisah lagi karena pekerjaannya sama.
   { key: 'sarana-klinik', label: 'Sarana & Prasarana', icon: <IconSarana /> },
-  // P3K, Ambulans & Ergonomi = satu kelompok: checklist kelaikan aset.
-  // Digabung jadi satu menu bertab agar tidak tiga menu untuk satu pekerjaan.
-  { key: 'checklist-fasilitas', label: 'Checklist Kelaikan', icon: <IconSarana /> },
-  // Program inspeksi = sumber angka dashboard (rencana, realisasi, PICA).
-  { key: 'program-inspeksi', label: 'Program Inspeksi', icon: <IconChecklist /> },
-  { key: 'pica', label: 'Register PICA', icon: <IconChecklist /> },
+  // Program Inspeksi & Register PICA = satu alur kerja: rencana inspeksi →
+  // temuan → penutupan. Digabung jadi satu menu bertab (layout rapi ala
+  // Review MCU), bukan dua menu untuk satu pekerjaan.
+  { key: 'program-inspeksi', label: 'Program Inspeksi & PICA', icon: <IconChecklist /> },
   // Kelola Pengguna dipindah ke menu Pengaturan (tab "Kelola Pengguna").
   { key: 'pengaturan', label: 'Pengaturan', icon: <IconSetting />, superuserOnly: true },
 ];
@@ -745,32 +745,36 @@ function AdminContent() {
   }
 
   if (activeAdminSidebar === 'sarana-klinik') {
-    return <SaranaKlinik />;
+    return <SaranaKlinikWithChecklist />;
   }
 
   if (activeAdminSidebar === 'program-inspeksi') {
-    return <ProgramInspeksi />;
+    return <ProgramInspeksiAdminTabs />;
   }
 
+  // Rute lama "pica" tetap hidup agar tautan yang sudah ada tidak rusak —
+  // kini mengarah ke tab Register PICA pada menu gabungan.
   if (activeAdminSidebar === 'pica') {
-    return <PicaRegister />;
+    return <ProgramInspeksiAdminTabs initialTab="pica" />;
   }
 
+  // Rute lama "checklist-fasilitas" tetap hidup sebagai alias menu gabungan
+  // Sarana & Prasarana (tab Checklist Kelaikan).
   if (activeAdminSidebar === 'checklist-fasilitas') {
-    return <ChecklistFasilitasTabs />;
+    return <SaranaKlinikWithChecklist initialTab="checklist" />;
   }
 
   // Rute lama dipertahankan agar tautan yang sudah ada tidak rusak.
   if (activeAdminSidebar === 'checklist-p3k') {
-    return <ChecklistFasilitasTabs initialTab="p3k" />;
+    return <SaranaKlinikWithChecklist initialTab="checklist" checklistTab="p3k" />;
   }
 
   if (activeAdminSidebar === 'checklist-ambulans') {
-    return <ChecklistFasilitasTabs initialTab="ambulans" />;
+    return <SaranaKlinikWithChecklist initialTab="checklist" checklistTab="ambulans" />;
   }
 
   if (activeAdminSidebar === 'checklist-ergonomi') {
-    return <ChecklistFasilitasTabs initialTab="ergonomi" />;
+    return <SaranaKlinikWithChecklist initialTab="checklist" checklistTab="ergonomi" />;
   }
 
   const panels: Record<string, { form: React.ReactNode; tables: React.ReactNode[]; hasTable: boolean; labels?: string[] }> = {

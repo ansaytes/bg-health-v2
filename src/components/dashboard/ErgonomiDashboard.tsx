@@ -6,9 +6,11 @@ import type { ChartOptions } from 'chart.js';
 import { ChartJS } from '@/lib/chart-register';
 import { authFetch } from '@/lib/api-client';
 import { KLAS_COLOR, type Klasifikasi } from '@/lib/hc-ergo';
-import { Chip, SITES, fmtDate, tableStyle, tdStyle, thStyle } from '@/components/administrator/hc-ergo-ui';
+import { Chip, fmtDate, tableStyle, tdStyle, thStyle } from '@/components/administrator/hc-ergo-ui';
+import { useSites } from '@/lib/site-list';
 import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, gradientBatangArray, useAnimationReady } from '@/lib/chart-standard';
 import PageLoading from '@/components/ui/page-loading';
+import { MCUChartCard, MCURefreshButton } from '@/components/dashboard/MCUDashboardShared';
 
 type D = Record<string, any>;
 const KLAS: Klasifikasi[] = ['RENDAH', 'SEDANG', 'TINGGI', 'SANGAT_TINGGI'];
@@ -16,29 +18,8 @@ const KLAS_SHORT = ['Rendah', 'Sedang', 'Tinggi', 'Sgt Tinggi'];
 const BLN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
-function ChartCard({ title, sub, accent = '#ff4d00', empty, tall, children }: { title: string; sub?: string; accent?: string; empty?: boolean; tall?: boolean; children: React.ReactNode }) {
-  return (
-    <div className="card" style={{ padding: '10px 12px', minHeight: 0 }}>
-      <div className="card-head">
-        <span style={{ width: 4, height: 26, borderRadius: 2, background: accent, flexShrink: 0 }} />
-        <div style={{ minWidth: 0 }}>
-          <h2>{title}</h2>
-          {sub && <p>{sub}</p>}
-        </div>
-      </div>
-      <div style={{ position: 'relative', flex: 1, minHeight: tall ? 220 : 190 }}>
-        {empty ? (
-          <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--muted-foreground)' }}>
-            <span style={{ width: 38, height: 38, borderRadius: '50%', border: `2px dashed ${accent}55`, display: 'grid', placeItems: 'center', fontSize: 15, fontWeight: 800, color: `${accent}99` }}>–</span>
-            <span style={{ fontSize: 11.5, fontWeight: 600 }}>Belum ada data</span>
-          </div>
-        ) : children}
-      </div>
-    </div>
-  );
-}
-
 export default function ErgonomiDashboard() {
+  const { sites: daftarSite } = useSites();
   const [d, setD] = useState<D | null>(null);
   const [site, setSite] = useState('');
   const [err, setErr] = useState('');
@@ -253,8 +234,20 @@ export default function ErgonomiDashboard() {
 
   return (
     <div className="dashboard" style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div className="kunjungan-filter-bar" style={{ flexShrink: 0, flexWrap: 'wrap' }}>
-        <select className="admin-filter-select" value={site} onChange={(e) => { setErr(''); setSite(e.target.value); }}><option value="">All Site</option>{SITES.map((s) => <option key={s}>{s}</option>)}</select>
+      {/* Top bar — mengikuti pola Monitoring MCU */}
+      <div className="mcu-live-top-bar" style={{ flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <select className="admin-filter-select" value={site} onChange={(e) => { setErr(''); setSite(e.target.value); }}>
+            <option value="">All Site</option>
+            {daftarSite.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <MCURefreshButton loading={false} onClick={() => {
+            setErr('');
+            authFetch(`/api/ergo?resource=dashboard&site=${encodeURIComponent(site)}`)
+              .then((r) => setD(r.data))
+              .catch((e) => setErr(e instanceof Error ? e.message : 'Gagal refresh'));
+          }} />
+        </div>
         <span className="kunjungan-total-right" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <span>Ergonomi RULA / ROSA / WERA · 12 bulan</span>
           <span>Disetujui <b>{d.totalDisetujui}</b></span>
@@ -266,12 +259,12 @@ export default function ErgonomiDashboard() {
       </div>
 
       {/* Grafik utama — jumlah dan jenis diagram sama di desktop maupun mobile. */}
-      <div className="ergonomi-chart-grid">
-        <ChartCard title="Distribusi Klasifikasi Risiko" sub="Seluruh survei disetujui, semua metode" accent="#E63946" empty={!grandTotal}><canvas ref={klasRef} /></ChartCard>
-        <ChartCard title="Klasifikasi per Metode" sub="RULA · ROSA · WERA" accent="#F5A623" empty={!grandTotal}><canvas ref={metodeRef} /></ChartCard>
-        <ChartCard title="Status Rekomendasi" sub="Open · progress · closed · lewat tempo" accent="#00B894" empty={!rekomTotal}><canvas ref={rekomRef} /></ChartCard>
-        <ChartCard title="Tren Survei per Bulan" sub="Batang: total survei · garis: perlu PICA" accent="#2E86DE" empty={!trendTotal}><canvas ref={trendRef} /></ChartCard>
-        <ChartCard title="Kepatuhan Frekuensi Survei" sub="Internal bulan ini & pihak ketiga 12 bulan" accent="#778899" empty={!patuhTotal}><canvas ref={patuhRef} /></ChartCard>
+      <div className="mcu-live-chart-row mcu-live-chart-row--two-rows" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+        <MCUChartCard title="Distribusi Klasifikasi Risiko" subtitle="Seluruh survei disetujui, semua metode" className="glow-coral"><canvas ref={klasRef} /></MCUChartCard>
+        <MCUChartCard title="Klasifikasi per Metode" subtitle="RULA · ROSA · WERA" className="glow-amber"><canvas ref={metodeRef} /></MCUChartCard>
+        <MCUChartCard title="Status Rekomendasi" subtitle="Open · progress · closed · lewat tempo" className="glow-teal"><canvas ref={rekomRef} /></MCUChartCard>
+        <MCUChartCard title="Tren Survei per Bulan" subtitle="Batang: total survei · garis: perlu PICA" className="glow-steel"><canvas ref={trendRef} /></MCUChartCard>
+        <MCUChartCard title="Kepatuhan Frekuensi Survei" subtitle="Internal bulan ini & pihak ketiga 12 bulan" className="glow-orange"><canvas ref={patuhRef} /></MCUChartCard>
         <div className="card" style={{ padding: '6px 10px', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <div className="card-head" style={{ flexShrink: 0 }}>
             <span style={{ width: 4, height: 20, borderRadius: 2, background: '#E63946', flexShrink: 0 }} />
