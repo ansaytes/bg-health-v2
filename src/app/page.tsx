@@ -30,7 +30,7 @@ const GiziKerja = lazy(() => import('@/components/administrator/GiziKerja'));
 const SaranaKlinik = lazy(() => import('@/components/administrator/SaranaKlinik'));
 const ProgramInspeksi = lazy(() => import('@/components/administrator/ProgramInspeksi'));
 const PicaRegister = lazy(() => import('@/components/administrator/PicaRegister'));
-const ChecklistFasilitas = lazy(() => import('@/components/administrator/ChecklistFasilitas'));
+const ChecklistFasilitasTabs = lazy(() => import('@/components/administrator/ChecklistFasilitasTabs'));
 const InputJadwalMCU = lazy(() => import('@/components/administrator/InputJadwalMCUModern'));
 const GangguanTidurPage = lazy(() => import('@/components/administrator/GangguanTidurPage'));
 const InputMentalHealthPage = lazy(() => import('@/components/administrator/InputMentalHealthPage'));
@@ -429,10 +429,9 @@ const ADMIN_SIDEBAR: SidebarItem[] = [
   { key: 'health-campaign', label: 'Health Campaign', icon: <IconCampaignAdmin /> },
   { key: 'pak-register', label: 'Register PAK', icon: <IconPakRegister /> },
   { key: 'sarana-klinik', label: 'Sarana & Prasarana', icon: <IconSarana /> },
-  // Checklist kelaikan yang belum punya halaman sendiri.
-  { key: 'checklist-p3k', label: 'Checklist P3K', icon: <IconSarana /> },
-  { key: 'checklist-ambulans', label: 'Checklist Ambulans', icon: <IconSarana /> },
-  { key: 'checklist-ergonomi', label: 'Checklist Sarana Ergonomi', icon: <IconSarana /> },
+  // P3K, Ambulans & Ergonomi = satu kelompok: checklist kelaikan aset.
+  // Digabung jadi satu menu bertab agar tidak tiga menu untuk satu pekerjaan.
+  { key: 'checklist-fasilitas', label: 'Checklist Kelaikan', icon: <IconSarana /> },
   // Program inspeksi = sumber angka dashboard (rencana, realisasi, PICA).
   { key: 'program-inspeksi', label: 'Program Inspeksi', icon: <IconChecklist /> },
   { key: 'pica', label: 'Register PICA', icon: <IconChecklist /> },
@@ -757,16 +756,21 @@ function AdminContent() {
     return <PicaRegister />;
   }
 
+  if (activeAdminSidebar === 'checklist-fasilitas') {
+    return <ChecklistFasilitasTabs />;
+  }
+
+  // Rute lama dipertahankan agar tautan yang sudah ada tidak rusak.
   if (activeAdminSidebar === 'checklist-p3k') {
-    return <ChecklistFasilitas jenis="p3k" />;
+    return <ChecklistFasilitasTabs initialTab="p3k" />;
   }
 
   if (activeAdminSidebar === 'checklist-ambulans') {
-    return <ChecklistFasilitas jenis="ambulans" />;
+    return <ChecklistFasilitasTabs initialTab="ambulans" />;
   }
 
   if (activeAdminSidebar === 'checklist-ergonomi') {
-    return <ChecklistFasilitas jenis="ergonomi" />;
+    return <ChecklistFasilitasTabs initialTab="ergonomi" />;
   }
 
   const panels: Record<string, { form: React.ReactNode; tables: React.ReactNode[]; hasTable: boolean; labels?: string[] }> = {

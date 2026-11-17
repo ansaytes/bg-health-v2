@@ -4,27 +4,29 @@
 // Administrator > Checklist Kelaikan Fasilitas & Aset
 // ============================================================
 //
-// Satu komponen untuk tiga checklist yang bentuknya sama:
-//   • p3k       — isi kotak P3K, ED obat, kondisi kotak, buku catatan
-//   • ambulans  — kelengkapan alat medis, kondisi kendaraan, sanitasi kabin
-//   • ergonomi  — jumlah unit layak vs rusak sarana ergonomi
+// Halaman tunggal untuk tiga kelompok checklist yang sama bentuknya:
+//   Kotak P3K · Ambulans · Sarana Ergonomi
 //
-// Perbedaan antarketiganya hanya pada kolom yang ditampilkan; semuanya
-// memakai status yang sama (ada / rusak / tidak ada / tidak diperlukan)
-// sehingga dashboard bisa menghitung persen siap pakai dengan satu rumus.
+// TAMPILAN mengikuti Sarana & Prasarana (SaranaKlinik), karena keduanya
+// satu keluarga pekerjaan: daftar item per kategori, status berupa dropdown
+// berwarna, dan perubahan langsung tersimpan per sel tanpa tombol simpan.
+// Pengelompokan yang dipakai:
+//   • P3K       → per LOKASI kotak (Workshop A, Mess Blok 1, …)
+//   • Ambulans  → per UNIT ambulans (AMB-01, …) + status kesiapan unit
+//   • Ergonomi  → per KATEGORI sarana (Operator, Kantor, Manual Handling)
 //
-// Untuk ambulans, status kesiapan unit (Ready / Standby / Breakdown)
-// dicatat terpisah — itu menilai KENDARAAN, bukan kelengkapan itemnya.
+// Tiga kelompok ini satu tab/halaman karena pekerjaannya sama: memeriksa
+// kelengkapan & kelayakan aset. Memisahkannya jadi tiga menu membuat
+// pengguna berpindah menu hanya untuk satu laporan inspeksi yang sama.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { RefreshCw, Save } from 'lucide-react';
+import { AlertTriangle, Check, Loader2, Plus, RefreshCw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { useMCUStore } from '@/lib/store';
-import { usePopup, Popup } from '@/lib/popup';
 
 export type JenisChecklist = 'p3k' | 'ambulans' | 'ergonomi';
 
@@ -32,11 +34,12 @@ interface KatalogItem {
   id: number | string;
   nama: string;
   kategori?: string | null;
+  satuan?: string | null;
   jumlah_standar?: number | null;
   wajib?: boolean;
 }
 
-interface KondisiItem {
+interface KondisiRow {
   id?: number;
   katalog_id: number | string;
   lokasi?: string | null;
@@ -51,7 +54,6 @@ interface KondisiItem {
   kondisi?: string | null;
   catatan?: string | null;
   tanggal_inspeksi?: string | null;
-  /** Kolom pengelompok dinamis (`lokasi` / `unit`) dibaca lewat indeks. */
   [kunci: string]: unknown;
 }
 
@@ -62,88 +64,125 @@ interface Data {
   pengelompok: string | null;
   site: string;
   katalog: KatalogItem[];
-  kondisi: KondisiItem[];
+  kondisi: KondisiRow[];
   grup: string[];
   daftarSite: string[];
+  ringkas: { total: number; ada: number; rusak: number; tidakAda: number; persenSiap: number };
 }
 
-interface BarisEdit {
-  katalog_id: number | string;
+type Status = 'ada' | 'rusak' | 'tidak_ada' | 'tidak_diperlukan';
+
+const STATUS_META: Record<Status, { label: string; warna: string }> = {
+  ada: { label: 'Ada', warna: '#00B894' },
+  rusak: { label: 'Rusak', warna: '#FF7A00' },
+  tidak_ada: { label: 'Tidak ada', warna: '#FF2D2D' },
+  tidak_diperlukan: { label: 'Tidak diperlukan', warna: '#778899' },
+};
+
+const KATEGORI_P3K: Record<string, string> = {
+  isi: 'Isi Kotak',
+  obat: 'Obat & Cairan',
+  alat: 'Alat',
+  administrasi: 'Administrasi',
+};
+
+const KATEGORI_AMBULANS: Record<string, string> = {
+  medis: 'Peralatan Medis',
+  kendaraan: 'Kondisi Kendaraan',
+  sanitasi: 'Sanitasi Kabin',
+};
+
+/** Satu baris gabungan katalog + kondisi tersimpan. */
+interface Baris {
+  katalogId: number | string;
   nama: string;
-  status: string;
-  jumlah: string;
-  layak: string;
-  rusak: string;
-  tanggal_expired: string;
-  kondisi_kotak: string;
-  ada_buku_catatan: boolean;
+  kategori: string;
+  satuan: string | null;
+  wajib: boolean;
+  status: Status;
+  jumlah: number | null;
+  layak: number | null;
+  rusak: number | null;
+  tanggalExpired: string | null;
+  kondisiKotak: string;
+  adaBukuCatatan: boolean;
+  kondisi: string;
   catatan: string;
+  grup: string;
 }
 
-/** Baris edit awal: gabungan katalog + kondisi tersimpan. */
-function susunBaris(katalog: KatalogItem[], kondisi: KondisiItem[], grup: string, kolomGrup: string | null): BarisEdit[] {
-  return katalog.map(k => {
-    const c = kondisi.find(x => String(x.katalog_id) === String(k.id)
-      && (!kolomGrup || String(x[kolomGrup] ?? '') === grup));
+/** Kunci baris pada tabel kondisi (lokasi/unit), kosong untuk ergonomi. */
+
+function gabungBaris(
+  katalog: KatalogItem[],
+  kondisi: KondisiRow[],
+  grup: string,
+  pengelompok: string | null,
+): Baris[] {
+  return katalog.map((k) => {
+    const c = kondisi.find((x) =>
+      String(x.katalog_id) === String(k.id)
+      && (!pengelompok || String(x[pengelompok] ?? '') === grup));
+
     return {
-      katalog_id: k.id,
+      katalogId: k.id,
       nama: k.nama,
-      status: String(c?.status ?? 'tidak_ada'),
-      jumlah: c?.jumlah == null ? (k.jumlah_standar == null ? '' : String(k.jumlah_standar)) : String(c.jumlah),
-      layak: c?.layak == null ? '' : String(c.layak),
-      rusak: c?.rusak == null ? '' : String(c.rusak),
-      tanggal_expired: c?.tanggal_expired ? String(c.tanggal_expired).slice(0, 10) : '',
-      kondisi_kotak: String(c?.kondisi_kotak ?? ''),
-      ada_buku_catatan: c?.ada_buku_catatan ?? true,
+      kategori: String(k.kategori ?? ''),
+      satuan: k.satuan ?? null,
+      wajib: Boolean(k.wajib),
+      status: (String(c?.status ?? 'tidak_ada') as Status),
+      jumlah: c?.jumlah ?? k.jumlah_standar ?? null,
+      layak: c?.layak ?? null,
+      rusak: c?.rusak ?? null,
+      tanggalExpired: c?.tanggal_expired ? String(c.tanggal_expired).slice(0, 10) : '',
+      kondisiKotak: String(c?.kondisi_kotak ?? ''),
+      adaBukuCatatan: c?.ada_buku_catatan ?? true,
+      kondisi: String(c?.kondisi ?? ''),
       catatan: String(c?.catatan ?? ''),
+      grup,
     };
   });
 }
 
-const STATUS_OPTIONS = [
-  { value: 'ada', label: 'Ada / Layak' },
-  { value: 'rusak', label: 'Rusak' },
-  { value: 'tidak_ada', label: 'Tidak ada' },
-  { value: 'tidak_diperlukan', label: 'Tidak diperlukan' },
-];
-
-const STATUS_WARNA: Record<string, string> = {
-  ada: '#00B894',
-  rusak: '#FF7A00',
-  tidak_ada: '#FF2D2D',
-  tidak_diperlukan: '#778899',
-};
-
-export default function ChecklistFasilitas({ jenis }: { jenis: JenisChecklist }) {
+export default function ChecklistFasilitas({ jenis, initialGrup }: {
+  jenis: JenisChecklist;
+  initialGrup?: string;
+}) {
   const { isAdmin } = useAuth();
   const store = useMCUStore();
-  const { popup, popupState, closePopup } = usePopup();
 
   const [site, setSite] = useState('');
-  const [grup, setGrup] = useState('');
+  const [grup, setGrup] = useState(initialGrup ?? '');
   const [grupBaru, setGrupBaru] = useState('');
+  const [tambahGrup, setTambahGrup] = useState(false);
   const [data, setData] = useState<Data | null>(null);
-  const [baris, setBaris] = useState<BarisEdit[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [menyimpan, setMenyimpan] = useState(false);
+  const [baris, setBaris] = useState<Baris[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [menyimpan, setMenyimpan] = useState<string | number | null>(null);
   const [error, setError] = useState('');
   const [unitStatus, setUnitStatus] = useState<Record<string, string>>({});
 
-  const labelGrup = data?.pengelompok === 'unit' ? 'Unit ambulans' : data?.pengelompok === 'lokasi' ? 'Lokasi / area' : '';
+  const labelGrup = data?.pengelompok === 'unit'
+    ? 'unit'
+    : data?.pengelompok === 'lokasi'
+      ? 'lokasi'
+      : '';
 
+  /* ── Muat ─────────────────────────────────────────────────────────────── */
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       const qs = new URLSearchParams({ jenis });
       if (site) qs.set('site', site);
-      const hasil = await authFetch(`/api/inspeksi/checklist?${qs.toString()}`) as unknown as Data;
-      setData(hasil);
-      setSite(hasil.site || site);
-      const grupTersedia = hasil.grup ?? [];
-      setGrup(prev => (prev && grupTersedia.includes(prev) ? prev : grupTersedia[0] ?? ''));
+      const r = await authFetch(`/api/inspeksi/checklist?${qs.toString()}`) as unknown as Data;
+      setData(r);
+      setSite(r.site || site);
+      const tersedia = r.grup ?? [];
+      setGrup((prev) => (prev && tersedia.includes(prev) ? prev : tersedia[0] ?? ''));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal memuat checklist');
+      setData(null);
     } finally {
       setLoading(false);
     }
@@ -151,299 +190,497 @@ export default function ChecklistFasilitas({ jenis }: { jenis: JenisChecklist })
 
   useEffect(() => { void load(); }, [jenis]);
 
-  // Susun ulang baris edit setiap kali katalog / grup / data berubah.
-  const kolomGrup = data?.pengelompok ?? null;
+  const pengelompok = data?.pengelompok ?? null;
+
   useEffect(() => {
-    if (!data) return;
-    setBaris(susunBaris(data.katalog, data.kondisi, grup, kolomGrup));
-  }, [data, grup, kolomGrup]);
+    if (!data) { setBaris([]); return; }
+    setBaris(gabungBaris(data.katalog, data.kondisi, grup, pengelompok));
+  }, [data, grup, pengelompok]);
 
-  const ubah = (katalogId: number | string, patch: Partial<BarisEdit>) => {
-    setBaris(prev => prev.map(b => (String(b.katalog_id) === String(katalogId) ? { ...b, ...patch } : b)));
-  };
-
-  const ringkas = useMemo(() => {
-    const total = baris.length;
-    const ada = baris.filter(b => b.status === 'ada').length;
-    return {
-      total,
-      ada,
-      rusak: baris.filter(b => b.status === 'rusak').length,
-      tidakAda: baris.filter(b => b.status === 'tidak_ada').length,
-      persen: total ? Math.round((ada / total) * 1000) / 10 : 0,
-    };
-  }, [baris]);
-
-  const simpan = async () => {
-    if (kolomGrup && !grup.trim()) {
-      popup({ type: 'info', title: `${labelGrup} wajib diisi`, message: `Isi ${labelGrup.toLowerCase()} terlebih dahulu.` });
-      return;
-    }
-    setMenyimpan(true);
+  /* ── Simpan per sel (pola SaranaKlinik: tanpa tombol simpan) ──────────── */
+  const simpan = useCallback(async (satu: Baris, patch: Partial<Baris>) => {
+    const baru = { ...satu, ...patch };
+    setMenyimpan(`${satu.grup}|${satu.katalogId}`);
+    // Optimistis: tampilan langsung berubah, dikembalikan bila gagal.
+    setBaris((prev) => prev.map((b) => (
+      String(b.katalogId) === String(satu.katalogId) && b.grup === satu.grup ? baru : b
+    )));
     try {
       await authFetch('/api/inspeksi/checklist', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           aksi: 'simpan',
           jenis,
           site,
-          grup,
-          item: baris.map(b => ({
-            katalog_id: b.katalog_id,
-            status: b.status,
-            jumlah: b.jumlah,
-            layak: b.layak,
-            rusak: b.rusak,
-            tanggal_expired: b.tanggal_expired,
-            kondisi_kotak: b.kondisi_kotak || null,
-            ada_buku_catatan: b.ada_buku_catatan,
-            catatan: b.catatan,
-          })),
+          grup: satu.grup,
+          item: [{
+            katalog_id: satu.katalogId,
+            status: baru.status,
+            jumlah: baru.jumlah,
+            layak: baru.layak,
+            rusak: baru.rusak,
+            tanggal_expired: baru.tanggalExpired,
+            kondisi_kotak: baru.kondisiKotak || null,
+            ada_buku_catatan: baru.adaBukuCatatan,
+            kondisi: baru.kondisi || null,
+            catatan: baru.catatan,
+          }],
         }),
       });
-      store.showToast('Checklist tersimpan', 'success');
-      await load();
+      // Ringkasan di top bar ikut diperbarui tanpa memuat ulang tabel.
+      setData((d) => d ? {
+        ...d,
+        ringkas: hitungRingkas(baris.map((b) => (
+          String(b.katalogId) === String(satu.katalogId) && b.grup === satu.grup ? baru : b
+        ))),
+      } : d);
     } catch (e) {
-      popup({ type: 'error', title: 'Gagal menyimpan', message: e instanceof Error ? e.message : 'Coba lagi.' });
+      setBaris((prev) => prev.map((b) => (
+        String(b.katalogId) === String(satu.katalogId) && b.grup === satu.grup ? satu : b
+      )));
+      store.showToast(e instanceof Error ? e.message : 'Gagal menyimpan', 'error');
     } finally {
-      setMenyimpan(false);
+      setMenyimpan(null);
     }
-  };
+  }, [jenis, site, baris]);
 
-  const simpanUnit = async (unit: string) => {
+  const simpanUnit = useCallback(async (unit: string) => {
     try {
       await authFetch('/api/inspeksi/checklist', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ aksi: 'unit', jenis: 'ambulans', site, unit, status_kesiapan: unitStatus[unit] ?? 'standby' }),
+        body: JSON.stringify({
+          aksi: 'unit',
+          jenis: 'ambulans',
+          site,
+          unit,
+          status_kesiapan: unitStatus[unit] ?? 'standby',
+        }),
       });
       store.showToast(`Status unit ${unit} tersimpan`, 'success');
-      await load();
     } catch (e) {
-      popup({ type: 'error', title: 'Gagal menyimpan status unit', message: e instanceof Error ? e.message : 'Coba lagi.' });
+      store.showToast(e instanceof Error ? e.message : 'Gagal menyimpan status unit', 'error');
     }
+  }, [site, unitStatus, store]);
+
+  /* ── Kelompokkan per kategori (seperti SaranaKlinik) ──────────────────── */
+  const LABEL_KATEGORI = jenis === 'p3k'
+    ? KATEGORI_P3K
+    : jenis === 'ambulans'
+      ? KATEGORI_AMBULANS
+      : { operator: 'Operator / Alat Berat', kantor: 'Kantor', manual_handling: 'Manual Handling' };
+
+  const perKategori = useMemo(() => {
+    const map = new Map<string, Baris[]>();
+    for (const b of baris) {
+      const list = map.get(b.kategori) ?? [];
+      list.push(b);
+      map.set(b.kategori, list);
+    }
+    return map;
+  }, [baris]);
+
+  const ringkas = useMemo(() => hitungRingkas(baris), [baris]);
+  const judul = { p3k: 'Kotak P3K', ambulans: 'Ambulans', ergonomi: 'Sarana Ergonomi' }[jenis];
+
+  /* ── Gaya sel: rapat, sama dengan Sarana & Prasarana ──────────────────── */
+  const th: React.CSSProperties = {
+    padding: '5px 7px', borderBottom: '1px solid var(--border)', fontSize: 9,
+    textTransform: 'uppercase', letterSpacing: '0.03em', color: 'var(--muted-foreground)',
+    fontWeight: 700, textAlign: 'left', whiteSpace: 'nowrap',
+  };
+  const td: React.CSSProperties = {
+    padding: '4px 7px', borderBottom: '1px solid var(--border)', fontSize: 10.5,
+  };
+  const inputKecil: React.CSSProperties = {
+    fontSize: 10.5, padding: '2px 5px', borderRadius: 6,
+    border: '1px solid var(--border)', background: 'var(--background)',
   };
 
-  const judul = { p3k: 'Kotak P3K', ambulans: 'Ambulans & Tanggap Darurat', ergonomi: 'Sarana Ergonomi' }[jenis];
-  const sub = {
-    p3k: 'Standar Permenaker 15/2008 — isi, ED obat, kondisi kotak, buku catatan',
-    ambulans: 'Kelengkapan alat medis, kondisi kendaraan, sanitasi kabin',
-    ergonomi: 'Kelayakan sarana ergonomi operasional (unit layak vs rusak)',
-  }[jenis];
-
   return (
-    <div className="admin-form-container" style={{ padding: 16, overflow: 'auto' }}>
-      <div className="mcu-records-card">
-        <div className="mcu-records-header">
-          <div>
-            <div className="mcu-records-kicker">CHECKLIST KELAIKAN</div>
-            <h3>{judul}</h3>
-            <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '2px 0 0' }}>{sub}</p>
-          </div>
-          <div className="mcu-records-actions">
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
-              <span>Site</span>
-              <select
-                value={site}
-                onChange={e => setSite(e.target.value)}
-                style={{ height: 28, minWidth: 130, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 6px' }}
-              >
-                {(data?.daftarSite ?? []).map(s => <option key={s} value={s}>{s}</option>)}
-                {!data?.daftarSite?.length && <option value="">{site || '—'}</option>}
-              </select>
-            </label>
-            {kolomGrup && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
-                <span>{labelGrup}</span>
-                <select
-                  value={grup}
-                  onChange={e => setGrup(e.target.value)}
-                  style={{ height: 28, minWidth: 150, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 6px' }}
-                >
-                  {(data?.grup ?? []).map(g => <option key={g} value={g}>{g}</option>)}
-                  {grupBaru && !(data?.grup ?? []).includes(grupBaru) && <option value={grupBaru}>{grupBaru}</option>}
-                  {!(data?.grup ?? []).length && <option value="">— belum ada —</option>}
-                </select>
-              </label>
-            )}
-            {kolomGrup && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
-                <span>+ {labelGrup.toLowerCase()} baru</span>
-                <Input
-                  className="h-7 w-36 text-xs"
-                  value={grupBaru}
-                  onChange={e => setGrupBaru(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && grupBaru.trim()) setGrup(grupBaru.trim()); }}
-                  placeholder={jenis === 'ambulans' ? 'mis. AMB-01' : 'mis. Mess Blok 1'}
-                />
-              </label>
-            )}
-            <button type="button" className="mcu-dashboard-refresh" onClick={() => void load()} disabled={loading}>
-              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
+    <div className="dashboard" style={{ overflowY: 'auto', overflowX: 'hidden' }}>
+      {/* Toolbar */}
+      <div className="kunjungan-top-bar" style={{ flexShrink: 0 }}>
+        <div className="kunjungan-filter-bar">
+          <select className="admin-filter-select" value={site} onChange={(e) => setSite(e.target.value)}>
+            {(data?.daftarSite ?? []).map((s) => <option key={s} value={s}>{s}</option>)}
+            {!data?.daftarSite?.length && <option value={site}>{site || '—'}</option>}
+          </select>
+
+          {/* Pemilih kelompok: lokasi kotak / unit ambulans */}
+          {pengelompok && (data?.grup ?? []).length > 0 && (
+            <select className="admin-filter-select" value={grup} onChange={(e) => setGrup(e.target.value)}>
+              {(data?.grup ?? []).map((g) => <option key={g} value={g}>{g}</option>)}
+            </select>
+          )}
+
+          <button type="button" onClick={() => void load()} disabled={loading} className="mcu-dashboard-refresh">
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
+          </button>
+
+          {pengelompok && isAdmin && (
+            <button type="button" onClick={() => setTambahGrup((v) => !v)} className="mcu-dashboard-refresh">
+              <Plus size={13} /> Tambah {labelGrup}
             </button>
-            {isAdmin && (
-              <Button size="sm" onClick={simpan} disabled={menyimpan || loading}>
-                <Save size={14} className="mr-1" /> {menyimpan ? 'Menyimpan…' : 'Simpan'}
-              </Button>
-            )}
-          </div>
+          )}
         </div>
 
-        {error && <div style={{ padding: '8px 12px', fontSize: 11, color: '#b3261e' }}>{error}</div>}
+        <div className="kunjungan-total-right">
+          <span>
+            Siap pakai{' '}
+            <b style={{ color: ringkas.persenSiap >= 90 ? '#00B894' : ringkas.persenSiap >= 70 ? '#C99A00' : '#FF2D2D' }}>
+              {ringkas.ada}/{ringkas.total} ({ringkas.persenSiap.toFixed(0)}%)
+            </b>
+          </span>
+          <span>Rusak <b style={{ color: ringkas.rusak ? '#FF7A00' : 'inherit' }}>{ringkas.rusak}</b></span>
+          <span>Tidak ada <b style={{ color: ringkas.tidakAda ? '#FF2D2D' : 'inherit' }}>{ringkas.tidakAda}</b></span>
+        </div>
+      </div>
 
-        {data && !data.tabelSiap ? (
-          <div style={{ padding: 16, fontSize: 12, color: '#9a6b00' }}>{data.catatan}</div>
-        ) : (
-          <>
-            <div className="mcu-records-toolbar" style={{ gap: 18 }}>
-              <span style={{ fontSize: 11 }}>Item <b>{ringkas.total}</b></span>
-              <span style={{ fontSize: 11 }}>Siap <b style={{ color: STATUS_WARNA.ada }}>{ringkas.ada}</b></span>
-              <span style={{ fontSize: 11 }}>Rusak <b style={{ color: STATUS_WARNA.rusak }}>{ringkas.rusak}</b></span>
-              <span style={{ fontSize: 11 }}>Tidak ada <b style={{ color: STATUS_WARNA.tidak_ada }}>{ringkas.tidakAda}</b></span>
-              <span style={{ fontSize: 11 }}>
-                Siap pakai <b style={{ color: ringkas.persen >= 90 ? STATUS_WARNA.ada : ringkas.persen >= 70 ? '#C99A00' : STATUS_WARNA.tidak_ada }}>{ringkas.persen}%</b>
+      <div style={{ flexShrink: 0, fontSize: 10, color: 'var(--muted-foreground)', display: 'flex', gap: 5, alignItems: 'center' }}>
+        <AlertTriangle size={11} />
+        Perubahan langsung tersimpan saat kolom diisi.
+        {pengelompok && ` Satu ${labelGrup} = satu kotak/unit yang diperiksa.`}
+      </div>
+
+      {error && (
+        <div style={{ padding: '8px 12px', borderRadius: 8, background: 'rgba(255,45,45,0.08)', color: '#b3261e', fontSize: 11.5, flexShrink: 0 }}>
+          {error}
+        </div>
+      )}
+
+      {data && !data.tabelSiap && (
+        <div className="card" style={{ padding: '10px 12px', fontSize: 11.5, color: '#9a6b00', flexShrink: 0 }}>
+          {data.catatan}
+        </div>
+      )}
+
+      {/* Tambah lokasi/unit baru */}
+      {tambahGrup && pengelompok && (
+        <div className="card" style={{ padding: '10px 12px', flexShrink: 0 }}>
+          <div className="card-head" style={{ marginBottom: 8 }}>
+            <span style={{ width: 3, height: 16, borderRadius: 2, background: '#00B894', flexShrink: 0 }} />
+            <div><h2 style={{ fontSize: 12 }}>Tambah {labelGrup}</h2></div>
+          </div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <label className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold text-muted-foreground">
+                Nama {labelGrup}
               </span>
+              <Input
+                value={grupBaru}
+                onChange={(e) => setGrupBaru(e.target.value)}
+                placeholder={jenis === 'ambulans' ? 'mis. AMB-01' : 'mis. Mess Blok 1'}
+                className="h-8 w-52 rounded-lg text-sm"
+              />
+            </label>
+            <Button
+              size="sm"
+              disabled={!grupBaru.trim()}
+              onClick={() => {
+                const nama = grupBaru.trim();
+                if (!nama) return;
+                setGrup(nama);
+                setGrupBaru('');
+                setTambahGrup(false);
+                // Baris baru muncul setelah item pertama disimpan.
+                setBaris(gabungBaris(data?.katalog ?? [], [], nama, pengelompok));
+              }}
+              style={{ gap: 5 }}
+            >
+              <Check size={13} /> Pakai {labelGrup} ini
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setTambahGrup(false)}>Batal</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Status kesiapan unit (khusus ambulans) */}
+      {jenis === 'ambulans' && (data?.grup ?? []).length > 0 && (
+        <div className="card" style={{ padding: '8px 10px', flexShrink: 0 }}>
+          <div className="card-head" style={{ marginBottom: 6 }}>
+            <span style={{ width: 3, height: 16, borderRadius: 2, background: '#3498DB', flexShrink: 0 }} />
+            <div>
+              <h2 style={{ fontSize: 12 }}>Status Kesiapan Unit</h2>
+              <p style={{ fontSize: 9 }}>Menilai kendaraan, bukan kelengkapan itemnya</p>
             </div>
-
-            {/* Status kesiapan unit (khusus ambulans). */}
-            {jenis === 'ambulans' && (data?.grup ?? []).length > 0 && (
-              <div className="mcu-records-toolbar" style={{ gap: 10, flexWrap: 'wrap' }}>
-                <div className="mcu-records-toolbar-title">Status kesiapan unit</div>
-                {(data?.grup ?? []).map(u => (
-                  <span key={u} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
-                    <b>{u}</b>
-                    <select
-                      value={unitStatus[u] ?? 'standby'}
-                      onChange={e => setUnitStatus(s => ({ ...s, [u]: e.target.value }))}
-                      style={{ height: 26, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 5px' }}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            {(data?.grup ?? []).map((u) => {
+              const nilai = unitStatus[u] ?? 'standby';
+              const warna = nilai === 'ready' ? '#00B894' : nilai === 'breakdown' ? '#FF2D2D' : '#F1C40F';
+              return (
+                <span key={u} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5 }}>
+                  <b>{u}</b>
+                  <select
+                    value={nilai}
+                    disabled={!isAdmin}
+                    onChange={(e) => setUnitStatus((s) => ({ ...s, [u]: e.target.value }))}
+                    style={{
+                      fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 999,
+                      border: `1px solid ${warna}55`, background: `${warna}14`, color: warna,
+                    }}
+                  >
+                    <option value="ready">Ready</option>
+                    <option value="standby">Standby with Note</option>
+                    <option value="breakdown">Breakdown</option>
+                  </select>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => void simpanUnit(u)}
+                      className="mcu-dashboard-refresh"
+                      style={{ height: 24, padding: '0 6px' }}
+                      title="Simpan status unit ini"
                     >
-                      <option value="ready">Ready</option>
-                      <option value="standby">Standby with Note</option>
-                      <option value="breakdown">Breakdown</option>
-                    </select>
-                    {isAdmin && (
-                      <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => void simpanUnit(u)}>
-                        Simpan
-                      </Button>
-                    )}
-                  </span>
-                ))}
-              </div>
-            )}
+                      <Check size={11} /> Simpan
+                    </button>
+                  )}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
-            <div className="mcu-records-table-wrap">
-              <table className="mcu-records-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: 52 }}>No</th>
-                    <th>Item</th>
-                    <th style={{ width: 140 }}>Status</th>
-                    {jenis === 'ergonomi' ? (
-                      <>
-                        <th style={{ width: 80 }}>Jumlah</th>
-                        <th style={{ width: 80 }}>Layak</th>
-                        <th style={{ width: 80 }}>Rusak</th>
-                      </>
-                    ) : (
-                      <th style={{ width: 80 }}>Jumlah</th>
-                    )}
-                    {jenis === 'p3k' && <th style={{ width: 140 }}>Kedaluwarsa</th>}
-                    {jenis === 'p3k' && <th style={{ width: 110 }}>Kondisi kotak</th>}
-                    {jenis === 'p3k' && <th style={{ width: 90 }}>Buku catatan</th>}
-                    <th style={{ width: 200 }}>Catatan</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading && !data ? (
-                    <tr><td colSpan={8} style={{ padding: 30, textAlign: 'center' }}>Memuat…</td></tr>
-                  ) : baris.length === 0 ? (
-                    <tr><td colSpan={8} style={{ padding: 30, textAlign: 'center', fontSize: 12 }}>Katalog kosong.</td></tr>
-                  ) : baris.map((b, i) => (
-                    <tr key={String(b.katalog_id)}>
-                      <td className="mcu-records-index">{i + 1}</td>
-                      <td>{b.nama}</td>
-                      <td>
-                        <select
-                          value={b.status}
-                          disabled={!isAdmin}
-                          onChange={e => ubah(b.katalog_id, { status: e.target.value })}
-                          style={{
-                            height: 26, width: '100%', borderRadius: 6, fontSize: 11, padding: '0 4px',
-                            border: `1px solid ${STATUS_WARNA[b.status] ?? 'var(--border)'}`,
-                            background: 'var(--background)',
-                            color: STATUS_WARNA[b.status] ?? 'inherit',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
-                      </td>
+      {loading && !baris.length && (
+        <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 11 }}>
+          <Loader2 className="size-4 animate-spin inline mr-1" /> Memuat checklist…
+        </div>
+      )}
+
+          {/* Kartu per kategori — pola Sarana & Prasarana */}
+          {[...perKategori.entries()].map(([kategori, list]) => (
+            <div key={kategori} className="card" style={{ padding: '8px 10px', flexShrink: 0 }}>
+              <div className="card-head" style={{ marginBottom: 6 }}>
+                <span style={{ width: 3, height: 16, borderRadius: 2, background: '#3498DB', flexShrink: 0 }} />
+                <div style={{ minWidth: 0 }}>
+                  <h2 style={{ fontSize: 12 }}>{LABEL_KATEGORI[kategori] ?? (kategori || 'Item')}</h2>
+                  <p style={{ fontSize: 9 }}>
+                    {list.filter((i) => i.status === 'ada').length} siap · {list.length} item
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={th}>Item</th>
+                      <th style={th}>Status</th>
                       {jenis === 'ergonomi' ? (
                         <>
-                          <td>
-                            <Input className="h-7 w-16 text-xs" type="number" min={0} value={b.jumlah} disabled={!isAdmin}
-                              onChange={e => ubah(b.katalog_id, { jumlah: e.target.value })} />
-                          </td>
-                          <td>
-                            <Input className="h-7 w-16 text-xs" type="number" min={0} value={b.layak} disabled={!isAdmin}
-                              onChange={e => ubah(b.katalog_id, { layak: e.target.value })} />
-                          </td>
-                          <td>
-                            <Input className="h-7 w-16 text-xs" type="number" min={0} value={b.rusak} disabled={!isAdmin}
-                              onChange={e => ubah(b.katalog_id, { rusak: e.target.value })} />
-                          </td>
+                          <th style={th}>Jumlah</th>
+                          <th style={th}>Layak</th>
+                          <th style={th}>Rusak</th>
                         </>
                       ) : (
-                        <td>
-                          <Input className="h-7 w-16 text-xs" type="number" min={0} value={b.jumlah} disabled={!isAdmin}
-                            onChange={e => ubah(b.katalog_id, { jumlah: e.target.value })} />
-                        </td>
+                        <th style={th}>Jumlah</th>
                       )}
-                      {jenis === 'p3k' && (
-                        <td>
-                          <Input className="h-7 w-full text-xs" type="date" value={b.tanggal_expired} disabled={!isAdmin}
-                            onChange={e => ubah(b.katalog_id, { tanggal_expired: e.target.value })} />
-                        </td>
-                      )}
-                      {jenis === 'p3k' && (
-                        <td>
-                          <select
-                            value={b.kondisi_kotak}
-                            disabled={!isAdmin}
-                            onChange={e => ubah(b.katalog_id, { kondisi_kotak: e.target.value })}
-                            style={{ height: 26, width: '100%', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 4px' }}
-                          >
-                            <option value="">—</option>
-                            <option value="bersih">Bersih</option>
-                            <option value="kotor">Kotor</option>
-                            <option value="rusak">Rusak</option>
-                          </select>
-                        </td>
-                      )}
-                      {jenis === 'p3k' && (
-                        <td style={{ textAlign: 'center' }}>
-                          <input
-                            type="checkbox"
-                            checked={b.ada_buku_catatan}
-                            disabled={!isAdmin}
-                            onChange={e => ubah(b.katalog_id, { ada_buku_catatan: e.target.checked })}
-                          />
-                        </td>
-                      )}
-                      <td>
-                        <Input className="h-7 w-full text-xs" value={b.catatan} disabled={!isAdmin}
-                          onChange={e => ubah(b.katalog_id, { catatan: e.target.value })} />
-                      </td>
+                      {jenis === 'p3k' && <th style={th}>Kedaluwarsa</th>}
+                      {jenis === 'p3k' && <th style={th}>Kondisi Kotak</th>}
+                      {jenis === 'p3k' && <th style={th}>Buku Catatan</th>}
+                      {jenis === 'ambulans' && <th style={th}>Kondisi</th>}
+                      <th style={th}>Tanggal Periksa</th>
+                      <th style={th}>Catatan</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {list.map((b) => {
+                      const kunci = `${b.grup}|${b.katalogId}`;
+                      const sibuk = menyimpan === kunci;
+                      const meta = STATUS_META[b.status];
+                      const expired = b.tanggalExpired
+                        ? Math.round((new Date(`${b.tanggalExpired}T00:00:00`).getTime() - Date.now()) / 86_400_000)
+                        : null;
+                      const expiredLewat = expired !== null && expired < 0;
+                      const expiredDekat = expired !== null && expired >= 0 && expired <= 30;
+
+                      return (
+                        <tr key={kunci} style={{ opacity: sibuk ? 0.55 : 1 }}>
+                          <td style={td}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                              {b.nama}
+                              {!b.wajib && (
+                                <span style={{ fontSize: 8, padding: '1px 4px', borderRadius: 4, background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
+                                  tambahan
+                                </span>
+                              )}
+                              {b.satuan && <span style={{ fontSize: 8, color: 'var(--muted-foreground)' }}>{b.satuan}</span>}
+                            </div>
+                          </td>
+
+                          <td style={td}>
+                            <select
+                              value={b.status}
+                              disabled={!isAdmin || sibuk}
+                              onChange={(e) => void simpan(b, { status: e.target.value as Status })}
+                              style={{
+                                fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 999,
+                                border: `1px solid ${meta.warna}55`, background: `${meta.warna}14`, color: meta.warna,
+                              }}
+                            >
+                              {(Object.keys(STATUS_META) as Status[]).map((s) => (
+                                <option key={s} value={s}>{STATUS_META[s].label}</option>
+                              ))}
+                            </select>
+                          </td>
+
+                          {/* Jumlah / layak / rusak */}
+                          {jenis === 'ergonomi' ? (
+                            <>
+                              <td style={td}>
+                                <input
+                                  type="number" min={0} defaultValue={b.jumlah ?? ''}
+                                  disabled={!isAdmin || sibuk}
+                                  onBlur={(e) => {
+                                    const v = e.target.value === '' ? null : Number(e.target.value);
+                                    if (v !== b.jumlah) void simpan(b, { jumlah: v });
+                                  }}
+                                  style={{ ...inputKecil, width: 58 }}
+                                />
+                              </td>
+                              <td style={td}>
+                                <input
+                                  type="number" min={0} defaultValue={b.layak ?? ''}
+                                  disabled={!isAdmin || sibuk}
+                                  onBlur={(e) => {
+                                    const v = e.target.value === '' ? null : Number(e.target.value);
+                                    if (v !== b.layak) void simpan(b, { layak: v });
+                                  }}
+                                  style={{ ...inputKecil, width: 58 }}
+                                />
+                              </td>
+                              <td style={td}>
+                                <input
+                                  type="number" min={0} defaultValue={b.rusak ?? ''}
+                                  disabled={!isAdmin || sibuk}
+                                  onBlur={(e) => {
+                                    const v = e.target.value === '' ? null : Number(e.target.value);
+                                    if (v !== b.rusak) void simpan(b, { rusak: v });
+                                  }}
+                                  style={{ ...inputKecil, width: 58, color: Number(b.rusak ?? 0) > 0 ? '#FF2D2D' : 'inherit' }}
+                                />
+                              </td>
+                            </>
+                          ) : (
+                            <td style={td}>
+                              <input
+                                type="number" min={0} defaultValue={b.jumlah ?? ''}
+                                disabled={!isAdmin || sibuk}
+                                onBlur={(e) => {
+                                  const v = e.target.value === '' ? null : Number(e.target.value);
+                                  if (v !== b.jumlah) void simpan(b, { jumlah: v });
+                                }}
+                                style={{ ...inputKecil, width: 58 }}
+                              />
+                            </td>
+                          )}
+
+                          {/* Kolom khusus P3K */}
+                          {jenis === 'p3k' && (
+                            <td style={td}>
+                              <input
+                                type="date"
+                                defaultValue={b.tanggalExpired ?? ''}
+                                disabled={!isAdmin || sibuk}
+                                onChange={(e) => void simpan(b, { tanggalExpired: e.target.value })}
+                                style={{
+                                  ...inputKecil,
+                                  border: `1px solid ${expiredLewat ? '#FF2D2D' : expiredDekat ? '#F1C40F' : 'var(--border)'}`,
+                                  color: expiredLewat ? '#FF2D2D' : 'inherit',
+                                }}
+                                title={expired === null ? 'Tanggal kedaluwarsa' : expiredLewat ? `Sudah lewat ${Math.abs(expired)} hari` : `${expired} hari lagi`}
+                              />
+                              {expiredLewat && <div style={{ fontSize: 8.5, color: '#FF2D2D', marginTop: 1 }}>kedaluwarsa</div>}
+                              {expiredDekat && <div style={{ fontSize: 8.5, color: '#C99A00', marginTop: 1 }}>{expired} hari lagi</div>}
+                            </td>
+                          )}
+                          {jenis === 'p3k' && (
+                            <td style={td}>
+                              <select
+                                value={b.kondisiKotak}
+                                disabled={!isAdmin || sibuk}
+                                onChange={(e) => void simpan(b, { kondisiKotak: e.target.value })}
+                                style={{ ...inputKecil, padding: '2px 4px' }}
+                              >
+                                <option value="">—</option>
+                                <option value="bersih">Bersih</option>
+                                <option value="kotor">Kotor</option>
+                                <option value="rusak">Rusak</option>
+                              </select>
+                            </td>
+                          )}
+                          {jenis === 'p3k' && (
+                            <td style={{ ...td, textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={b.adaBukuCatatan}
+                                disabled={!isAdmin || sibuk}
+                                onChange={(e) => void simpan(b, { adaBukuCatatan: e.target.checked })}
+                                title="Buku catatan penggunaan P3K tersedia"
+                              />
+                            </td>
+                          )}
+
+                          {/* Kondisi khusus ambulans */}
+                          {jenis === 'ambulans' && (
+                            <td style={td}>
+                              <input
+                                defaultValue={b.kondisi}
+                                disabled={!isAdmin || sibuk}
+                                onBlur={(e) => { if (e.target.value !== b.kondisi) void simpan(b, { kondisi: e.target.value }); }}
+                                placeholder="—"
+                                style={{ ...inputKecil, width: 130 }}
+                              />
+                            </td>
+                          )}
+
+                          <td style={td}>
+                            <span style={{ fontSize: 9.5, color: 'var(--muted-foreground)' }}>
+                              {b.katalogId && data?.kondisi.find((k) => String(k.katalog_id) === String(b.katalogId)
+                                && (!pengelompok || String(k[pengelompok] ?? '') === b.grup))?.tanggal_inspeksi
+                                ? String(data.kondisi.find((k) => String(k.katalog_id) === String(b.katalogId)
+                                  && (!pengelompok || String(k[pengelompok] ?? '') === b.grup))?.tanggal_inspeksi).slice(0, 10)
+                                : '—'}
+                            </span>
+                          </td>
+
+                          <td style={td}>
+                            <input
+                              defaultValue={b.catatan}
+                              disabled={!isAdmin || sibuk}
+                              onBlur={(e) => { if (e.target.value !== b.catatan) void simpan(b, { catatan: e.target.value }); }}
+                              placeholder="—"
+                              style={{ ...inputKecil, width: 150 }}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </>
-        )}
-      </div>
-      <Popup state={popupState} closePopup={closePopup} />
-    </div>
-  );
+          ))}
+
+          {!loading && !baris.length && !error && data?.tabelSiap && (
+            <div className="card" style={{ padding: 24, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 11.5 }}>
+              Belum ada katalog {judul.toLowerCase()}.
+            </div>
+          )}
+        </div>
+      );
+}
+
+      /** Ringkasan status dari baris yang sedang ditampilkan. */
+      function hitungRingkas(baris: Baris[]) {
+  const total = baris.length;
+  const ada = baris.filter((b) => b.status === 'ada').length;
+      return {
+        total,
+        ada,
+        rusak: baris.filter((b) => b.status === 'rusak').length,
+    tidakAda: baris.filter((b) => b.status === 'tidak_ada').length,
+      persenSiap: total ? Math.round((ada / total) * 1000) / 10 : 0,
+  };
 }
