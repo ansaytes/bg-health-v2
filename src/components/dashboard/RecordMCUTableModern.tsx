@@ -6,7 +6,8 @@ import { ChevronLeft, ChevronRight, Search, Eye, Pin, SlidersHorizontal, Edit, T
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/lib/supabase';
-import { MCU_FIELDS } from '@/lib/mcu-fields';
+import { MCU_FIELDS, MCU_SECTIONS, getFieldsBySection } from '@/lib/mcu-fields';
+import { FieldRenderer } from '@/components/review-mcu/ReviewMCU';
 import { useAuth } from '@/lib/auth-context';
 import { useMCUStore } from '@/lib/store';
 import FormTindakLanjut from '@/components/followup/FormTindakLanjut';
@@ -16,6 +17,13 @@ type RecordRow = Record<string, any>;
 
 // Ciphertext AES-256-GCM (hex panjang) tidak boleh pernah tampil di tabel.
 const CIPHERTEXT_PATTERN = /^[0-9a-f]{58,}$/i;
+
+// Field identitas dikunci saat edit: mengubah NIK/nama/tanggal MCU akan membuat
+// record tidak lagi cocok dengan data karyawan dan kunci hash penyimpanan.
+const LOCKED_EDIT_FIELDS = new Set([
+  'nationalId', 'nikKaryawan', 'nama', 'jenisKelamin', 'usia',
+  'jabatan', 'site', 'tglMCU',
+]);
 
 function short(val: any) {
   if (val == null || val === '') return '-';
@@ -257,7 +265,18 @@ export default function RecordMCUTableModern() {
       const json = await response.json();
       if (!response.ok || !json.success) throw new Error(json.error || 'Gagal menyimpan perubahan');
       setEditingRow(null);
-      store.showToast('Data MCU berhasil diperbarui', 'success');
+      // Kolom yang tidak ada di skema database dilaporkan supaya jelas parameter
+      // mana yang belum benar-benar tersimpan (bukan gagal senyap).
+      const dilewati: string[] = Array.isArray(json.dilewati) ? json.dilewati : [];
+      if (dilewati.length) {
+        popup({
+          type: 'info',
+          title: 'Sebagian parameter tidak tersimpan',
+          message: `Kolom berikut belum ada di database sehingga dilewati: ${dilewati.join(', ')}. Hubungi administrator untuk menambahkan kolom tersebut.`,
+        });
+      } else {
+        store.showToast('Data MCU berhasil diperbarui', 'success');
+      }
       await load();
     } catch (err) {
       store.showToast(err instanceof Error ? err.message : 'Gagal menyimpan perubahan', 'error');
@@ -328,6 +347,52 @@ export default function RecordMCUTableModern() {
       loadMonitor();
     }
   }, [activeTab]);
+
+  // ── Permintaan "buka baris ini" dari notifikasi ───────────────────────────
+  // Notifikasi MCU mengirim target ke store; di sini tabel pindah ke tab
+  // Record MCU, menyaring NIK tersebut, melompat ke halaman yang memuatnya,
+  // lalu menyorot barisnya. Tanpa ini, klik notifikasi hanya membuka menu.
+  const focusRequest = useMCUStore(s => s.mcuFocusRequest);
+  const clearMcuFocus = useMCUStore(s => s.clearMcuFocus);
+  const [focusNik, setFocusNik] = useState<string | null>(null);
+  const [focusRowId, setFocusRowId] = useState<string | null>(null);
+  const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
+
+  useEffect(() => {
+    if (!focusRequest) return;
+    const nik = focusRequest.nikKaryawan.trim();
+    setActiveTab('record');
+    setRecordFilters({});
+    setSearch(nik || '');
+    setPage(1);
+    setFocusNik(nik || null);
+    if (!recordLoaded) void load();
+    clearMcuFocus();
+  }, [focusRequest?.requestId]);
+
+  // Setelah data tersedia: pilih record yang tepat (tanggal MCU bila ada),
+  // lompat ke halaman tempat baris itu berada, dan gulirkan ke tampilan.
+  useEffect(() => {
+    if (!focusNik || !recordLoaded) return;
+    const nik = focusNik.toLowerCase();
+    const cocok = rows.filter(r =>
+      String(r.nik_karyawan ?? '').toLowerCase() === nik
+      || String(r.nama ?? '').toLowerCase() === nik);
+    if (cocok.length === 0) {
+      setFocusRowId(null);
+      return;
+    }
+
+    const tgl = focusRequest?.tglMCU?.slice(0, 10) ?? null;
+    const pilihan = (tgl && cocok.find(r => String(r.tgl_mcu ?? '').slice(0, 10) === tgl)) || cocok[0];
+    const id = String(pilihan.id ?? '');
+    setFocusRowId(id || null);
+
+    // Dihitung dari `rows` (bukan hasil filter) karena filter baru saja
+    // dikosongkan dan nilainya bisa belum ter-render di effect ini.
+    const posisi = rows.findIndex(r => String(r.id ?? '') === id);
+    if (posisi >= 0) setPage(Math.floor(posisi / pageSize) + 1);
+  }, [focusNik, recordLoaded, rows]);
 
   const EXCLUDED_COLUMNS = useMemo(() => new Set([
     'id', 'created_at', 'updated_at',
@@ -490,6 +555,14 @@ export default function RecordMCUTableModern() {
   const displayLoading = activeTab === 'record' ? loading : monitorLoading;
   const setDisplayPage = (value: number) => (activeTab === 'record' ? setPage(value) : setMonitorPage(value));
 
+  // Gulirkan ke baris yang dibuka dari notifikasi setelah halaman yang tepat
+  // tampil (posisinya baru diketahui setelah currentPage dihitung).
+  useEffect(() => {
+    if (!focusRowId) return;
+    const el = rowRefs.current.get(focusRowId);
+    if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [focusRowId, currentPage]);
+
   return (
     <div className="mcu-records-modern">
       <div className="mcu-records-card">
@@ -555,6 +628,25 @@ export default function RecordMCUTableModern() {
             </div>
           </div>
         </div>
+
+        {/* Baris yang dibuka dari notifikasi — jelaskan kenapa tabel tersaring. */}
+        {focusNik && activeTab === 'record' && (
+          <div className="flex items-center gap-2 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs">
+            <span className="flex-1">
+              Menampilkan baris dari notifikasi
+              {focusRequest?.sumber ? ` (${focusRequest.sumber.replace(/-/g, ' ')})` : ''}: <b>{focusNik}</b>
+              {focusRowId ? ' — baris disorot di bawah.' : ' — data tidak ditemukan di tabel.'}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs"
+              onClick={() => { setFocusNik(null); setFocusRowId(null); setSearch(''); setPage(1); }}
+            >
+              Tampilkan semua
+            </Button>
+          </div>
+        )}
 
         {/* Freeze toolbar */}
         <div className="mcu-records-toolbar">
@@ -643,7 +735,13 @@ export default function RecordMCUTableModern() {
                 const zoneKey = activeTab === 'record' ? row.zonasi : row.zona_status_kesehatan;
                 return (
                   <Fragment key={id}>
-                    <tr className={`mcu-zone-${String(zoneKey || 'belum-lengkap').toLowerCase().replace(/\s+/g, '-')}`}>
+                    <tr
+                      ref={el => {
+                        if (el) rowRefs.current.set(id, el);
+                        else rowRefs.current.delete(id);
+                      }}
+                      className={`mcu-zone-${String(zoneKey || 'belum-lengkap').toLowerCase().replace(/\s+/g, '-')}${focusRowId === String(row.id ?? '') ? ' is-focused-row' : ''}`}
+                    >
                       <td className="mcu-records-index">{(currentPage - 1) * pageSize + idx + 1}</td>
                       {columns.map(c => {
                         const isFrozen = activeFrozenColumns.includes(c.key);
@@ -774,26 +872,45 @@ export default function RecordMCUTableModern() {
           </DialogContent>
         </Dialog>
 
-        {/* Edit dialog */}
+        {/* Edit dialog — field & tipe input mengikuti form input Review MCU */}
         <Dialog open={!!editingRow} onOpenChange={open => !open && setEditingRow(null)}>
-          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>Edit MCU</DialogTitle></DialogHeader>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {MCU_FIELDS.map(field => {
-                const key = field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase();
+          <DialogContent className="max-w-5xl max-h-[88vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit MCU — {editingRow?.nama || '-'}</DialogTitle>
+            </DialogHeader>
+            <p className="text-[11px] text-muted-foreground">
+              Field identitas dan hasil perhitungan otomatis dikunci. Parameter lain memakai input yang sama dengan form Review MCU.
+            </p>
+            <div className="space-y-4">
+              {MCU_SECTIONS.map(section => {
+                const fields = getFieldsBySection(section.id);
+                if (fields.length === 0) return null;
                 return (
-                  <label key={field.id} className="text-xs font-medium">
-                    <span>{field.label}</span>
-                    <input
-                      className="admin-input w-full mt-1"
-                      value={editingRow?.[key] == null ? '' : String(editingRow[key])}
-                      onChange={e => setEditingRow(cur => cur ? { ...cur, [key]: e.target.value } : cur)}
-                    />
-                  </label>
+                  <section key={section.id} className="rounded-xl border border-border/60 p-3">
+                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{section.label}</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {fields.map(field => {
+                        const key = field.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase();
+                        return (
+                          <FieldRenderer
+                            key={field.id}
+                            field={field}
+                            value={editingRow?.[key] == null ? '' : String(editingRow[key])}
+                            gender={String(editingRow?.jenis_kelamin ?? '')}
+                            age={String(editingRow?.usia ?? '')}
+                            creatinine={editingRow?.kreatinin == null ? '' : String(editingRow.kreatinin)}
+                            isSingleCol={field.type === 'textarea'}
+                            readOnly={LOCKED_EDIT_FIELDS.has(field.id) || field.locked === true}
+                            onChange={val => setEditingRow(cur => cur ? { ...cur, [key]: val } : cur)}
+                          />
+                        );
+                      })}
+                    </div>
+                  </section>
                 );
               })}
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 pt-2 border-t">
               <Button variant="outline" onClick={() => setEditingRow(null)}>Batal</Button>
               <Button onClick={saveEdit} disabled={saving}>{saving ? 'Menyimpan…' : 'Simpan'}</Button>
             </div>

@@ -125,14 +125,23 @@ export async function GET(req: NextRequest) {
 
   /* ── 2 & 3. MCU expired / akan expired ─────────────────────────────── */
   try {
+    // Diurutkan dari MCU TERBARU, lalu per karyawan hanya dipakai record
+    // pertama yang terlihat.
+    //
+    // Sebelumnya urutannya dari tgl_expired TERLAMA, sehingga yang terbaca
+    // justru record MCU lama milik karyawan tersebut. Akibatnya notifikasi
+    // "MCU expired" tetap muncul dengan tanggal lama walaupun tanggal di
+    // record terbaru sudah diperbaiki — perbaikan input tidak pernah
+    // menghapus notifikasi lama.
     const { data: mcu } = await client
       .from('mcu_records')
-      .select('nik_karyawan,nama,site,tgl_expired,zonasi')
+      .select('id,nik_karyawan,nama,site,tgl_mcu,tgl_expired,zonasi')
       .not('tgl_expired', 'is', null)
-      .order('tgl_expired', { ascending: true })
+      .order('tgl_mcu', { ascending: false })
+      .order('id', { ascending: false })
       .limit(3000);
 
-    // Satu baris per karyawan (expired terbaru).
+    // Satu baris per karyawan = MCU terbaru (lihat pengurutan di atas).
     const terlihat = new Set<string>();
     for (const r of (mcu ?? []) as Record<string, unknown>[]) {
       const nik = String(r.nik_karyawan ?? '').trim();
@@ -152,6 +161,8 @@ export async function GET(req: NextRequest) {
       const janggal = sisa < -AMBANG_TANGGAL_JANGGAL;
 
       daftar.push({
+        // Kunci ikut tanggal expired, sehingga nilai "sudah dibaca" untuk
+        // tanggal lama tidak menutupi notifikasi setelah tanggal diperbaiki.
         id: `mcu:${nik}:${String(r.tgl_expired).slice(0, 10)}`,
         jenis: expired ? 'mcu-expired' : 'mcu-akan-expired',
         prioritas: expired ? 'kritis' : 'penting',
@@ -166,6 +177,11 @@ export async function GET(req: NextRequest) {
         sisaHari: sisa,
         tautan: JENIS_META[expired ? 'mcu-expired' : 'mcu-akan-expired'].tautanDefault,
         aksi: janggal ? 'Periksa tanggal MCU' : 'Jadwalkan MCU',
+        // Membuka baris record MCU ini di tabel Record MCU.
+        fokusBaris: {
+          nikKaryawan: nik,
+          tglMCU: r.tgl_mcu ? String(r.tgl_mcu).slice(0, 10) : null,
+        },
       });
     }
   } catch {

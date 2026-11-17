@@ -23,6 +23,7 @@ import { decryptEmployee, decryptMCURecord, encryptMCURecord, hashField } from '
 import { MCU_FIELDS } from '@/lib/mcu-fields';
 import { applyMCUCalculations } from '@/lib/mcu-calculations';
 import { integrationAdminClient } from '@/lib/integration-settings';
+import { tulisMcuRecordTahanSkema } from '@/lib/mcu-record-write';
 import { sanitizeSearchTerm, containsPattern } from '@/lib/sql-safety';
 
 export function adminClient() {
@@ -295,11 +296,12 @@ export async function refreshQuestionnaireSnapshot(
       kuesioner_tgl: snapshotDate,
     };
 
-    const { error: updateError } = await client
-      .from('mcu_records')
-      .update(patch)
-      .eq('id', record.id);
-    if (updateError) throw new Error(updateError.message);
+    // Patch di sini hanya menyentuh kolom kuesioner, tetapi tetap ditulis lewat
+    // helper yang tahan kolom hilang: bila `kuesioner_tgl` atau salah satu skor
+    // belum ada di database, hanya kolom itu yang dilewati dan snapshot lain
+    // tetap tersimpan — bukan menggagalkan seluruh penyimpanan kuesioner.
+    await tulisMcuRecordTahanSkema(patch, payload =>
+      client.from('mcu_records').update(payload).eq('id', record.id));
 
     const zonasi = await recomputeMCU(record.id as string);
     updated += 1;
@@ -369,11 +371,10 @@ export async function recomputeMCU(recordId: string): Promise<string | null> {
     patch[snake] = value === null || value === '' ? null : value;
   }
 
-  const { error: updateError } = await client
-    .from('mcu_records')
-    .update(patch)
-    .eq('id', recordId);
-  if (updateError) throw new Error(updateError.message);
+  // `patch` berisi seluruh kolom autoCalc; bila satu kolom belum ada di
+  // database, kolom itu dilewati dan kolom lainnya tetap diperbarui.
+  await tulisMcuRecordTahanSkema(patch, payload =>
+    client.from('mcu_records').update(payload).eq('id', recordId));
 
   return calculated.zonasi ?? null;
 }

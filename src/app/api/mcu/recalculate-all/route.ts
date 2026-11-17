@@ -4,6 +4,7 @@ import { applyMCUCalculations } from '@/lib/mcu-calculations';
 import { MCU_FIELDS } from '@/lib/mcu-fields';
 import { getServerCaller, requireServerRole, SYSTEM_ROLES } from '@/lib/server-auth';
 import { integrationAdminClient } from '@/lib/integration-settings';
+import { tulisMcuRecordTahanSkema } from '@/lib/mcu-record-write';
 
 const client = () => integrationAdminClient();
 
@@ -70,12 +71,10 @@ export async function POST(req: NextRequest) {
         
         const encryptedData = encryptMCURecord(dbData);
         
-        const { error: updateError } = await client()
-          .from('mcu_records')
-          .update(encryptedData)
-          .eq('id', record.id);
-          
-        if (updateError) throw updateError;
+        // Kolom yang belum ada di database (mis. `anti_hav`) dilewati, bukan
+        // menggagalkan rekalkulasi seluruh record — lihat mcu-record-write.ts.
+        await tulisMcuRecordTahanSkema(encryptedData, payload =>
+          client().from('mcu_records').update(payload).eq('id', record.id));
         updatedCount++;
       } catch (err) {
         failedCount++;

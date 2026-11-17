@@ -6,11 +6,27 @@ import { applyMCUCalculations, buildAutomaticFollowUpRecommendations, suggestRek
 import { AUTO_INTERPRETATION_FIELDS } from './clinical-classification';
 
 export type PageTab = 'home' | 'dashboard' | 'data-entry' | 'administrator';
-export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan' | 'layanan-kuratif' | 'inventory-dashboard' | 'hearing-dashboard' | 'ergonomi-dashboard' | 'mental-health-dashboard' | 'pemetaan-psikologis' | 'higiene-industri' | 'persetujuan-ergonomi' | 'prokawan-dashboard' | 'spip';
-export type AdminSidebar = 'lagging-indicator' | 'review-mcu' | 'input-jadwal-mcu' | 'kunjungan-admin' | 'health-campaign' | 'kelola-pengguna' | 'hearing-conservation' | 'ergonomi' | 'layanan-kuratif-admin' | 'higiene-industri-admin' | 'pak-register' | 'prokawan-admin' | 'karyawan-sakit' | 'sarana-klinik' | 'inspeksi-sanitasi' | 'pengaturan';
+export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan' | 'layanan-kuratif' | 'inventory-dashboard' | 'hearing-dashboard' | 'ergonomi-dashboard' | 'mental-health-dashboard' | 'pemetaan-psikologis' | 'higiene-industri' | 'persetujuan-ergonomi' | 'prokawan-dashboard' | 'spip' | 'inspeksi-dashboard';
+export type AdminSidebar = 'lagging-indicator' | 'review-mcu' | 'input-jadwal-mcu' | 'kunjungan-admin' | 'health-campaign' | 'kelola-pengguna' | 'hearing-conservation' | 'ergonomi' | 'layanan-kuratif-admin' | 'higiene-industri-admin' | 'pak-register' | 'prokawan-admin' | 'karyawan-sakit' | 'sarana-klinik' | 'inspeksi-sanitasi' | 'program-inspeksi' | 'pica' | 'checklist-p3k' | 'checklist-ambulans' | 'checklist-ergonomi' | 'pengaturan';
 export type DataEntrySidebar = 'gangguan-tidur' | 'kesehatan-mental' | 'psikologi-lingkungan' | 'input-jadwal-mcu' | 'persetujuan-ergonomi';
 export type HomeSidebar = 'semua-feed' | 'health-campaign' | 'health-talk' | 'podcast' | 'news';
 export type ReviewStep = 'search' | 'ocr' | 'form';
+
+/**
+ * Permintaan dari luar tabel (mis. notifikasi) untuk membuka satu baris
+ * tertentu di Record MCU. `requestId` berubah setiap permintaan sehingga
+ * permintaan yang sama tetap dijalankan ulang (mis. klik notifikasi dua kali).
+ *
+ * `nikKaryawan` dipakai untuk memilih baris; `tglMCU` (YYYY-MM-DD) memilih
+ * record yang tepat bila satu karyawan punya beberapa MCU.
+ */
+export interface MCUFocusRequest {
+  requestId: number;
+  nikKaryawan: string;
+  tglMCU?: string | null;
+  /** Sumber permintaan, hanya untuk keterangan di layar. */
+  sumber?: string;
+}
 
 export interface EmployeeData {
   nikKaryawan: string;
@@ -91,6 +107,16 @@ interface MCUStore {
   saving: boolean;
   setSaving: (v: boolean) => void;
 
+  /**
+   * Permintaan membuka satu baris di tabel Record MCU, dikirim oleh notifikasi.
+   * Tabel yang membaca nilai ini akan pindah ke tab Record MCU, membuka baris
+   * yang dimaksud, lalu mengosongkannya kembali (lihat konsumsi di tabel).
+   */
+  mcuFocusRequest: MCUFocusRequest | null;
+  mcuFocusCounter: number;
+  requestMcuFocus: (target: Omit<MCUFocusRequest, 'requestId'>) => void;
+  clearMcuFocus: () => void;
+
   // Toast
   showToast: (message: string, type: 'success' | 'error' | 'info') => void;
 
@@ -119,6 +145,14 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
   // backward compat
   activeTab: 'home',
   setActiveTab: (tab) => set({ activePage: tab, activeTab: tab }),
+
+  mcuFocusRequest: null,
+  mcuFocusCounter: 0,
+  requestMcuFocus: (target) => set(state => ({
+    mcuFocusCounter: state.mcuFocusCounter + 1,
+    mcuFocusRequest: { ...target, requestId: state.mcuFocusCounter + 1 },
+  })),
+  clearMcuFocus: () => set({ mcuFocusRequest: null }),
 
   reviewStep: 'search',
   setReviewStep: (step) => set({ reviewStep: step }),

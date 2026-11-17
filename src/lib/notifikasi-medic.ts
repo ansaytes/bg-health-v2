@@ -57,6 +57,17 @@ export interface Notifikasi {
   tautan: string;
   /** Label tombol tindakan. */
   aksi: string;
+  /**
+   * Bila diisi, notifikasi ini ditindaklanjuti dengan MEMBUKA satu baris
+   * tertentu di tabel Record MCU, bukan hanya membuka halamannya.
+   * Hanya diisi untuk notifikasi yang berhubungan langsung dengan satu record
+   * MCU (MCU expired / akan expired).
+   */
+  fokusBaris?: {
+    nikKaryawan: string;
+    /** Tanggal MCU record yang dimaksud (YYYY-MM-DD). */
+    tglMCU?: string | null;
+  };
 }
 
 export interface RingkasanNotifikasi {
@@ -81,6 +92,8 @@ export const AMBANG = {
   pakSebelum: 1,
 } as const;
 
+// Notifikasi MCU mengarah ke menu Review MCU; tabel Record MCU berada di menu
+// yang sama dan akan langsung memilih baris yang dimaksud (lihat fokusBaris).
 export const JENIS_META: Record<JenisNotifikasi, { label: string; ikon: string; tautanDefault: string }> = {
   'kontrol-prokawan': { label: 'Kontrol ProKawan', ikon: 'heart', tautanDefault: '/?page=administrator&menu=prokawan-admin' },
   'mcu-expired': { label: 'MCU Expired', ikon: 'alert', tautanDefault: '/?page=administrator&menu=review-mcu' },

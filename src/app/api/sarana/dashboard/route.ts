@@ -28,7 +28,14 @@ const KATEGORI_LABEL: Record<string, string> = {
 
 /** Batas usia kalibrasi (bulan) sebelum dinyatakan tidak patuh. */
 const BATAS_KALIBRASI_BULAN = 12;
-/** Peringatan dini: kalibrasi mendekati batas. */
+/**
+ * Peringatan dini: kalibrasi mendekati batas.
+ *
+ * 10 dari 12 bulan = ±60 hari sebelum jatuh tempo, sama dengan ambang H-60
+ * yang dipakai dashboard Program Inspeksi. Dua dashboard yang memakai ambang
+ * berbeda akan menampilkan jumlah "perlu kalibrasi" yang tidak sama untuk
+ * data yang sama.
+ */
 const PERINGATAN_KALIBRASI_BULAN = 10;
 
 export async function GET(req: NextRequest) {

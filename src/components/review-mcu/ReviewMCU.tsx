@@ -918,7 +918,10 @@ export default function ReviewMCU() {
 }
 
 // ─── Field Renderer Component ───
-function FieldRenderer({
+// Dipakai juga oleh popup "Edit MCU" di tabel record, supaya tipe input
+// (teks / angka / dropdown / multi-pilih / tanggal) selalu sama dengan form
+// input Review MCU dan tidak perlu didefinisikan dua kali.
+export function FieldRenderer({
   field,
   value,
   gender,
@@ -926,6 +929,7 @@ function FieldRenderer({
   creatinine,
   onChange,
   isSingleCol,
+  readOnly,
 }: {
   field: MCUFieldDef;
   value: string;
@@ -934,7 +938,10 @@ function FieldRenderer({
   creatinine: string;
   onChange: (val: string) => void;
   isSingleCol: boolean;
+  /** Field tidak bisa diubah — mis. identitas dan hasil autoCalc di popup Edit. */
+  readOnly?: boolean;
 }) {
+  const disabled = readOnly === true;
   const abnormal = isAbnormal(field, value, gender);
   const normalRange = getNormalRangeText(field, gender);
   const selectValue = field.type === 'select' ? normalizeSelectValue(field, value) : value;
@@ -985,7 +992,9 @@ function FieldRenderer({
           placeholder={field.placeholder || (field.autoCalc ? 'Terisi otomatis dari hasil pemeriksaan; boleh ditulis manual' : '')}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="min-h-[60px] text-sm rounded-xl bg-background"
+          readOnly={disabled}
+          disabled={disabled}
+          className="min-h-[60px] text-sm rounded-xl bg-background disabled:cursor-not-allowed disabled:opacity-70 read-only:cursor-not-allowed"
         />
       ) : visus ? (
         <div className="grid grid-cols-2 gap-2">
@@ -1008,7 +1017,8 @@ function FieldRenderer({
                   ].filter(Boolean).join(' | '));
                 }}
                 placeholder="6/6"
-                className="h-9 rounded-lg bg-background text-sm"
+                disabled={disabled}
+                className="h-9 rounded-lg bg-background text-sm disabled:cursor-not-allowed disabled:opacity-70"
               />
             </label>
           ))}
@@ -1021,11 +1031,12 @@ function FieldRenderer({
             onChange={onChange}
             allowCustom={field.allowCustom}
             invalid={abnormal}
+            disabled={disabled}
           />
         ) : (
           <>
           <select
-            disabled={field.locked}
+            disabled={field.locked || disabled}
             value={selectMenampilkanNilai(opsiSelect, selectValue, modeManual)}
             onChange={(e) => {
               const picked = e.target.value;
@@ -1054,7 +1065,8 @@ function FieldRenderer({
               value={selectValue}
               onChange={(e) => onChange(e.target.value)}
               placeholder="Tulis hasil bacaan, mis. Sinus Rythm dg Peaked T Waves"
-              className="mt-2 h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground"
+              disabled={disabled}
+              className="mt-2 h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-70"
             />
           )}
           </>
@@ -1064,8 +1076,9 @@ function FieldRenderer({
           type="date"
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
           className={
-            'h-9 text-sm rounded-xl bg-background ' +
+            'h-9 text-sm rounded-xl bg-background disabled:cursor-not-allowed disabled:opacity-70 ' +
             (abnormal ? 'border-red-500/60 dark:border-red-500/50' : '')
           }
         />
@@ -1076,8 +1089,9 @@ function FieldRenderer({
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
           className={
-            'h-9 text-sm rounded-xl bg-background ' +
+            'h-9 text-sm rounded-xl bg-background disabled:cursor-not-allowed disabled:opacity-70 ' +
             (abnormal ? 'border-red-500/60 dark:border-red-500/50' : '')
           }
         />

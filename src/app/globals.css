@@ -2414,6 +2414,21 @@ select.admin-input.compact-input {
 .dark .mcu-records-table tbody tr:hover td.is-frozen,
 .dark .mcu-records-table tbody tr:hover .mcu-records-index { background: #352a27; }
 .dark .mcu-record-link { color: #ff9a67; }
+
+/* Baris yang dibuka dari notifikasi: sorotan tetap terlihat di atas warna zona
+   dan warna hover, supaya QSHE Medic langsung tahu baris mana yang dimaksud. */
+.mcu-records-table tbody tr.is-focused-row td,
+.mcu-records-table tbody tr.is-focused-row td.is-frozen,
+.mcu-records-table tbody tr.is-focused-row .mcu-records-index {
+  background: #fff4cc !important;
+  box-shadow: inset 0 0 0 2px #f5a623;
+}
+.dark .mcu-records-table tbody tr.is-focused-row td,
+.dark .mcu-records-table tbody tr.is-focused-row td.is-frozen,
+.dark .mcu-records-table tbody tr.is-focused-row .mcu-records-index {
+  background: #4a3b12 !important;
+  box-shadow: inset 0 0 0 2px #f5a623;
+}
 .mcu-entry-modern-shell {
   /* Jangan `overflow: auto`: ancestor yang scroll mematikan `position: sticky`
      pada thead tabel jadwal, sehingga header ikut tergulung. */

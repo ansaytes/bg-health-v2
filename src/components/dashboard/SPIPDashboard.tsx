@@ -11,9 +11,18 @@
 // ISI (yang dibutuhkan untuk pelaporan):
 //   1. Kelengkapan     — tersedia vs belum tersedia
 //   2. Kelayakan       — alat layak pakai vs rusak
-//   3. Kalibrasi       — patuh / mendekati / lewat 12 bulan
-//   4. Top 10 item rusak & top 10 item belum tersedia
-//   5. Peringkat kelengkapan per site
+//   3. Top 10 item rusak & top 10 item belum tersedia
+//   4. Peringkat kelengkapan per site
+//
+// KALIBRASI TIDAK LAGI DITAMPILKAN DI SINI.
+// Kalibrasi sebelumnya muncul di dua dashboard dengan bentuk berbeda: di sini
+// sebagai "patuh/mendekati/lewat (12 bulan)", di Program Inspeksi sebagai
+// countdown H-60 + daftar jatuh tempo per alat. Dua tampilan untuk satu data
+// membuat angkanya mudah dipersoalkan. Sekarang satu sumber: tab
+// "Kondisi Aset" pada menu Program Inspeksi.
+//
+// Angka kalibrasi tetap DIHITUNG di API (sarana/dashboard) karena dipakai
+// sebagai kelengkapan data, tetapi tidak dirender lagi di halaman ini.
 //
 // TEMPLATE mengikuti Monitoring MCU: kartu `.mcu-dashboard-card`, donut dengan
 // total di tengah, bar horizontal, satu layar tanpa scroll.
@@ -92,7 +101,6 @@ export default function SPIPDashboard() {
 
   const r = data.ringkasan;
   const k = data.kelengkapan;
-  const kl = data.kalibrasi;
   const adaData = r.itemWajib > 0;
 
   if (!adaData) {
@@ -121,7 +129,10 @@ export default function SPIPDashboard() {
           </label>
           <label><span>Kelengkapan</span><b style={{ fontSize: 11, color: r.persenLengkap >= 90 ? '#00B894' : r.persenLengkap >= 70 ? '#C99A00' : '#FF2D2D' }}>{r.persenLengkap}%</b></label>
           <label><span>Kelayakan</span><b style={{ fontSize: 11, color: r.persenLayak >= 90 ? '#00B894' : '#FF7A00' }}>{r.persenLayak}%</b></label>
-          <label><span>Kalibrasi patuh</span><b style={{ fontSize: 11, color: r.persenKalibrasiPatuh >= 90 ? '#00B894' : '#FF2D2D' }}>{r.persenKalibrasiPatuh}%</b></label>
+          <label title="Rincian kalibrasi (countdown H-60) ada di Program Inspeksi → tab Kondisi Aset">
+            <span>Kalibrasi patuh</span>
+            <b style={{ fontSize: 11, color: r.persenKalibrasiPatuh >= 90 ? '#00B894' : '#FF2D2D' }}>{r.persenKalibrasiPatuh}%</b>
+          </label>
           <button type="button" onClick={() => void load()} disabled={loading} className="mcu-dashboard-refresh">
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
@@ -161,20 +172,25 @@ export default function SPIPDashboard() {
           </div>
         </div>
 
-        <div className="card mcu-dashboard-card">
-          <div className="card-head"><div><h2>Kalibrasi</h2><p>Batas {kl.batasBulan} bulan</p></div></div>
-          <div className="mcu-dashboard-chart">
-            <MCUChart
-              type="doughnut"
-              labels={['Patuh', `Mendekati (≥${kl.peringatanBulan} bln)`, 'Lewat', 'Belum pernah']}
-              values={[kl.patuh, kl.mendekati, kl.lewat, kl.belumAda]}
-              colors={['#00B894', '#F1C40F', '#FF2D2D', '#778899']}
-              legendLabel="Alat"
-              centerText={`${r.persenKalibrasiPatuh}%`}
-              percentLabels
-            />
-          </div>
-        </div>
+        {/* Kalibrasi dipindah ke Program Inspeksi (countdown H-60, lebih
+            lengkap). Kartu ketiga di baris ini menampilkan item wajib yang
+            belum tercatat — informasi yang tidak ada di dashboard lain. */}
+        <KartuChart
+          judul="Item Wajib Belum Tercatat"
+          sub="Belum pernah diisi untuk site ini"
+          kosong={r.belumDicatat === 0}
+          pesanKosong="Semua item wajib sudah tercatat"
+        >
+          <MCUChart
+            type="doughnut"
+            labels={['Sudah tercatat', 'Belum tercatat']}
+            values={[r.itemWajib, r.belumDicatat]}
+            colors={['#00B894', '#FF7A00']}
+            legendLabel="Item"
+            centerText={String(r.belumDicatat)}
+            percentLabels
+          />
+        </KartuChart>
       </div>
 
       {/* Baris 2 — top 10 rusak, top 10 belum, per kategori */}
@@ -216,7 +232,7 @@ export default function SPIPDashboard() {
         </div>
       </div>
 
-      {/* Baris 3 — per site + kalibrasi lewat */}
+      {/* Baris 3 — per site + kelayakan per kategori */}
       <div className="mcu-live-chart-row mcu-live-chart-row--two">
         <div className="card mcu-dashboard-card">
           <div className="card-head"><div><h2>Kelengkapan per Site</h2><p>10 site terendah (%)</p></div></div>
@@ -232,14 +248,21 @@ export default function SPIPDashboard() {
           </div>
         </div>
 
-        <KartuChart judul="Kalibrasi Perlu Tindakan" sub="Bulan sejak kalibrasi terakhir" kosong={!data.alatKalibrasi.length} pesanKosong="Semua alat dalam masa kalibrasi">
+        {/* Kalibrasi → Program Inspeksi (tab Kondisi Aset). Di sini diganti
+            kelayakan per kategori, agar tidak ada kartu yang menganggur. */}
+        <KartuChart
+          judul="Kelayakan per Kategori"
+          sub="Jumlah item rusak pada tiap kategori"
+          kosong={!data.perKategori.some((x) => x.rusak > 0)}
+          pesanKosong="Tidak ada item rusak"
+        >
           <MCUChart
             type="bar"
-            labels={data.alatKalibrasi.map((a) => `${a.nama} · ${a.site}`)}
-            values={data.alatKalibrasi.map((a) => a.bulan ?? kl.batasBulan)}
-            colors={data.alatKalibrasi.map((a) => (a.bulan ?? 99) >= kl.batasBulan ? '#FF2D2D' : '#F1C40F')}
+            labels={data.perKategori.map((x) => x.kategori)}
+            values={data.perKategori.map((x) => x.rusak)}
+            colors={data.perKategori.map((x) => (x.rusak > 0 ? '#FF2D2D' : '#00B894'))}
             horizontal
-            legendLabel="Bulan"
+            legendLabel="Item rusak"
           />
         </KartuChart>
       </div>

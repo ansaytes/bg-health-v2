@@ -5,6 +5,7 @@ import { applyMCUCalculations } from '@/lib/mcu-calculations';
 import { refreshQuestionnaireSnapshot } from '@/lib/questionnaire-store';
 import { getServerCaller, requireServerRole, STAFF_ROLES } from '@/lib/server-auth';
 import { integrationAdminClient } from '@/lib/integration-settings';
+import { tulisMcuRecordTahanSkema } from '@/lib/mcu-record-write';
 
 const supabase = () => integrationAdminClient();
 
@@ -33,6 +34,19 @@ async function syncQuestionnaireForMCU(recordId: string): Promise<void> {
   } catch (err) {
     console.error('Gagal menyegarkan salinan kuesioner pada MCU:', err);
   }
+}
+
+/**
+ * Update satu record dengan membuang kolom yang tidak ada di skema database,
+ * lalu melaporkan kolom mana saja yang dilewati. Lihat mcu-record-write.ts.
+ *
+ * Tanpa ini, satu field MCU yang kolomnya belum ditambahkan di database
+ * (mis. `anti_hav`) menggagalkan SELURUH penyimpanan — termasuk field lain
+ * yang kolomnya sudah ada.
+ */
+async function updateMcuRecord(recordId: string, data: Record<string, any>) {
+  return tulisMcuRecordTahanSkema(data, payload =>
+    supabase().from('mcu_records').update(payload).eq('id', recordId));
 }
 
 export async function POST(req: NextRequest) {
@@ -87,14 +101,9 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ success: false, error: 'Rekaman MCU tidak ditemukan pada site Anda' }, { status: 404 });
         }
       }
-      const { error } = await supabase()
-        .from('mcu_records')
-        .update(encryptedData)
-        .eq('id', recordId);
-
-      if (error) throw error;
+      const { dilewati } = await updateMcuRecord(recordId, encryptedData);
       await syncQuestionnaireForMCU(recordId);
-      return NextResponse.json({ success: true, action: 'updated' });
+      return NextResponse.json({ success: true, action: 'updated', dilewati: dilewati.length ? dilewati : undefined });
     }
 
     // Otherwise, check if one exists for the same tgl_mcu
@@ -108,27 +117,27 @@ export async function POST(req: NextRequest) {
     let savedId: string;
     if (existing && existing.id) {
       // Update
-      const { error } = await supabase()
-        .from('mcu_records')
-        .update(encryptedData)
-        .eq('id', existing.id);
-
-      if (error) throw error;
+      const { dilewati } = await updateMcuRecord(existing.id, encryptedData);
       savedId = existing.id;
       await syncQuestionnaireForMCU(savedId);
-      return NextResponse.json({ success: true, action: 'updated' });
+      return NextResponse.json({ success: true, action: 'updated', dilewati: dilewati.length ? dilewati : undefined });
     } else {
-      // Insert
-      const { data, error } = await supabase()
-        .from('mcu_records')
-        .insert(encryptedData)
-        .select('id')
-        .single();
+      // Insert — sama seperti update, satu kolom yang belum ada di database
+      // tidak boleh menggagalkan penyimpanan record baru.
+      let insertedId = '';
+      const { dilewati } = await tulisMcuRecordTahanSkema(encryptedData, async payload => {
+        const { data, error } = await supabase()
+          .from('mcu_records')
+          .insert(payload)
+          .select('id')
+          .single();
+        if (!error && data?.id) insertedId = String(data.id);
+        return { error };
+      });
 
-      if (error) throw error;
-      savedId = data.id;
+      savedId = insertedId;
       await syncQuestionnaireForMCU(savedId);
-      return NextResponse.json({ success: true, action: 'inserted' });
+      return NextResponse.json({ success: true, action: 'inserted', dilewati: dilewati.length ? dilewati : undefined });
     }
 
   } catch (err: any) {

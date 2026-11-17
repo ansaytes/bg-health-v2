@@ -27,6 +27,7 @@ export default function MultiSelectField({
   onChange,
   allowCustom,
   invalid,
+  disabled,
   placeholder = 'Pilih satu atau lebih...',
 }: {
   options: string[];
@@ -35,6 +36,8 @@ export default function MultiSelectField({
   onChange: (value: string) => void;
   allowCustom?: boolean;
   invalid?: boolean;
+  /** Field terkunci: hanya bisa dibaca, dropdown tidak dapat dibuka. */
+  disabled?: boolean;
   placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -70,13 +73,16 @@ export default function MultiSelectField({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <Popover open={open && !disabled} onOpenChange={(next) => !disabled && setOpen(next)}>
+      <PopoverTrigger asChild disabled={disabled}>
         <button
           type="button"
           aria-haspopup="listbox"
-          aria-expanded={open}
-          className={`flex min-h-9 w-full cursor-pointer items-center gap-2 rounded-lg border bg-background px-3 py-1.5 text-left text-xs text-foreground ${
+          aria-expanded={open && !disabled}
+          disabled={disabled}
+          className={`flex min-h-9 w-full items-center gap-2 rounded-lg border bg-background px-3 py-1.5 text-left text-xs text-foreground ${
+            disabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'
+          } ${
             invalid ? 'border-red-500/60 dark:border-red-500/50' : 'border-input'
           }`}
         >

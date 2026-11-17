@@ -105,11 +105,11 @@ export default function NotificationBell({ isSuperuser, canMedic = false }: {
     }
   };
 
-  const fetchMedic = async () => {
+  const fetchMedic = async (force = false) => {
     if (!canMedic) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/notifikasi', {
+      const res = await fetch(`/api/notifikasi${force ? '?refresh=true' : ''}`, {
         headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
       });
       if (!res.ok) return;
@@ -118,6 +118,26 @@ export default function NotificationBell({ isSuperuser, canMedic = false }: {
     } catch {
       // silent fail
     }
+  };
+
+  /**
+   * Klik notifikasi → buka halaman tujuan, dan bila notifikasi itu menunjuk
+   * satu record MCU, tabel Record MCU langsung memilih baris tersebut.
+   *
+   * Notifikasi MCU selalu dihitung ulang lebih dulu (refresh=true) supaya
+   * data yang baru diperbaiki tidak lagi menampilkan peringatan lama.
+   */
+  const bukaNotifikasi = (n: Notifikasi) => {
+    setOpen(false);
+    if (n.fokusBaris) {
+      useMCUStore.getState().requestMcuFocus({
+        nikKaryawan: n.fokusBaris.nikKaryawan,
+        tglMCU: n.fokusBaris.tglMCU ?? null,
+        sumber: n.jenis,
+      });
+    }
+    navigasiKe(n.tautan, bukaMenu);
+    if (n.fokusBaris) void fetchMedic(true);
   };
 
   const fetchSemua = async () => {
@@ -323,10 +343,7 @@ export default function NotificationBell({ isSuperuser, canMedic = false }: {
                       {items.map((n) => (
                         <button
                           key={n.id}
-                          onClick={() => {
-                            setOpen(false);
-                            navigasiKe(n.tautan, bukaMenu);
-                          }}
+                          onClick={() => bukaNotifikasi(n)}
                           style={{
                             display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
                             padding: '9px 16px', borderBottom: '1px solid var(--border)',

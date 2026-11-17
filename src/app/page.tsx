@@ -28,6 +28,9 @@ const InspeksiSanitasi = lazy(() => import('@/components/administrator/InspeksiS
 const InspeksiLingkungan = lazy(() => import('@/components/administrator/InspeksiLingkungan'));
 const GiziKerja = lazy(() => import('@/components/administrator/GiziKerja'));
 const SaranaKlinik = lazy(() => import('@/components/administrator/SaranaKlinik'));
+const ProgramInspeksi = lazy(() => import('@/components/administrator/ProgramInspeksi'));
+const PicaRegister = lazy(() => import('@/components/administrator/PicaRegister'));
+const ChecklistFasilitas = lazy(() => import('@/components/administrator/ChecklistFasilitas'));
 const InputJadwalMCU = lazy(() => import('@/components/administrator/InputJadwalMCUModern'));
 const GangguanTidurPage = lazy(() => import('@/components/administrator/GangguanTidurPage'));
 const InputMentalHealthPage = lazy(() => import('@/components/administrator/InputMentalHealthPage'));
@@ -41,7 +44,7 @@ const MentalHealthDashboard = lazy(() => import('@/components/dashboard/MentalHe
 const HigieneIndustriTabs = lazy(() => import('@/components/dashboard/HigieneIndustriTabs'));
 const LayananKuratifTabs = lazy(() => import('@/components/dashboard/LayananKuratifTabs'));
 const ProKawanDashboard = lazy(() => import('@/components/dashboard/ProKawanDashboard'));
-const SPIPDashboard = lazy(() => import('@/components/dashboard/SPIPDashboard'));
+const ProgramInspeksiTabs = lazy(() => import('@/components/dashboard/ProgramInspeksiTabs'));
 const ErgoApproval = lazy(() => import('@/components/dashboard/ErgoApproval'));
 const HcInputPage = lazy(() => import('@/components/administrator/HcInputPage'));
 const HcAudiometriEval = lazy(() => import('@/components/administrator/HcAudiometriEval'));
@@ -290,9 +293,11 @@ const DASH_SIDEBAR: SidebarItem[] = [
   { key: 'monitoring', label: 'Monitoring MCU', icon: <IconMonitoring /> },
   { key: 'prokawan-dashboard', label: 'ProKawan', icon: <IconProkawan />, adminOnly: true },
   { key: 'layanan-kuratif', label: 'Layanan Kuratif', icon: <IconKuratif /> },
-  // SPIP = Sarana, Prasarana, Instalasi, Peralatan (SOP/028 poin 5.5).
-  // Menu sendiri karena bukan faktor lingkungan kerja (Higiene Industri).
-  { key: 'spip', label: 'SPIP', icon: <IconSarana />, adminOnly: true },
+  // Program Inspeksi menggantikan menu SPIP: satu menu, dua tab —
+  // "Eksekusi & PICA" (jadwal, PICA, petugas) dan "Kondisi Aset" (isi SPIP:
+  // kelengkapan, kelayakan, item rusak/belum tersedia). Keduanya mengukur hal
+  // berbeda sehingga tidak boleh saling menggantikan.
+  { key: 'inspeksi-dashboard', label: 'Program Inspeksi', icon: <IconSarana />, adminOnly: true },
   { key: 'higiene-industri', label: 'Higiene Industri', icon: <IconHigiene />, adminOnly: true },
   { key: 'mental-health-dashboard', label: 'Kesehatan Mental', icon: <IconBrain />, adminOnly: true },
 ];
@@ -424,6 +429,13 @@ const ADMIN_SIDEBAR: SidebarItem[] = [
   { key: 'health-campaign', label: 'Health Campaign', icon: <IconCampaignAdmin /> },
   { key: 'pak-register', label: 'Register PAK', icon: <IconPakRegister /> },
   { key: 'sarana-klinik', label: 'Sarana & Prasarana', icon: <IconSarana /> },
+  // Checklist kelaikan yang belum punya halaman sendiri.
+  { key: 'checklist-p3k', label: 'Checklist P3K', icon: <IconSarana /> },
+  { key: 'checklist-ambulans', label: 'Checklist Ambulans', icon: <IconSarana /> },
+  { key: 'checklist-ergonomi', label: 'Checklist Sarana Ergonomi', icon: <IconSarana /> },
+  // Program inspeksi = sumber angka dashboard (rencana, realisasi, PICA).
+  { key: 'program-inspeksi', label: 'Program Inspeksi', icon: <IconChecklist /> },
+  { key: 'pica', label: 'Register PICA', icon: <IconChecklist /> },
   // Kelola Pengguna dipindah ke menu Pengaturan (tab "Kelola Pengguna").
   { key: 'pengaturan', label: 'Pengaturan', icon: <IconSetting />, superuserOnly: true },
 ];
@@ -547,7 +559,7 @@ function DashContent() {
         import('@/components/dashboard/LayananKuratifTabs'),
         import('@/components/dashboard/HigieneIndustriTabs'),
         import('@/components/dashboard/ProKawanDashboard'),
-        import('@/components/dashboard/SPIPDashboard'),
+        import('@/components/dashboard/ProgramInspeksiTabs'),
         import('@/components/dashboard/MentalHealthDashboard'),
         import('@/components/administrator/LaggingIndicatorPage'),
         import('@/components/review-mcu/ReviewMCU'),
@@ -591,7 +603,10 @@ function DashContent() {
     case 'kunjungan': return <LayananKuratifTabs initialTab="kunjungan" />;
     case 'inventory-dashboard': return <LayananKuratifTabs initialTab="inventory" />;
     case 'prokawan-dashboard': return <ProKawanDashboard />;
-    case 'spip': return <SPIPDashboard />;
+    // Menu lama "SPIP" dipertahankan sebagai rute agar tautan/bookmark lama
+    // tidak rusak; sekarang SPIP tampil sebagai tab "Kondisi Aset".
+    case 'spip': return <ProgramInspeksiTabs initialTab="kondisi-aset" />;
+    case 'inspeksi-dashboard': return <ProgramInspeksiTabs />;
     case 'higiene-industri': return <HigieneIndustriTabs />;
     case 'hearing-dashboard': return <HigieneIndustriTabs initialTab="hearing" />;
     case 'ergonomi-dashboard': return <HigieneIndustriTabs initialTab="ergonomi" />;
@@ -612,6 +627,8 @@ function DashContent() {
  * tindak lanjut tidak terpisah di dua sumber.
  */
 function ReviewMCUWithTabs() {
+  // Panel form adalah satu-satunya isi di sini; tabel Record MCU ada di panel
+  // "DATABASE" milik AdminTogglePanel.
   return (
     <div
       className="admin-form-container"
@@ -628,8 +645,24 @@ function AdminTogglePanel({ formContent, tableContents, hasTable, stepLabels }: 
   hasTable: boolean;
   stepLabels?: string[];
 }) {
-  const [step, setStep] = useState(0);
+  const [step, setStepState] = useState(0);
   const [rotation, setRotation] = useState(0);
+  const mcuFocusRequest = useMCUStore(s => s.mcuFocusRequest);
+
+  // Klik notifikasi MCU membawa target baris ke tabel "DATABASE". Tanpa ini,
+  // panel tetap menampilkan form input dan baris yang diminta tidak terlihat
+  // walaupun tabel sudah menyorotnya.
+  //
+  // Diturunkan (derived) saat render, bukan lewat effect + setState: effect
+  // akan merender form lebih dulu baru berpindah panel, dan permintaan baru
+  // langsung menimpa langkah yang sedang dilihat tanpa kedip.
+  const adaTargetBaris = !!mcuFocusRequest?.nikKaryawan;
+  const [targetTerakhir, setTargetTerakhir] = useState<number | null>(null);
+  if (hasTable && adaTargetBaris && targetTerakhir !== mcuFocusRequest!.requestId) {
+    setTargetTerakhir(mcuFocusRequest!.requestId);
+    setStepState(1);
+    setRotation(r => (r % 360 === 180 ? r : 180));
+  }
 
   if (!hasTable) {
     return <>{formContent}</>;
@@ -642,7 +675,7 @@ function AdminTogglePanel({ formContent, tableContents, hasTable, stepLabels }: 
 
   const handleClick = () => {
     setRotation(r => r + 180);
-    setStep(s => s + 1);
+    setStepState(s => s + 1);
   };
 
   return (
@@ -714,6 +747,26 @@ function AdminContent() {
 
   if (activeAdminSidebar === 'sarana-klinik') {
     return <SaranaKlinik />;
+  }
+
+  if (activeAdminSidebar === 'program-inspeksi') {
+    return <ProgramInspeksi />;
+  }
+
+  if (activeAdminSidebar === 'pica') {
+    return <PicaRegister />;
+  }
+
+  if (activeAdminSidebar === 'checklist-p3k') {
+    return <ChecklistFasilitas jenis="p3k" />;
+  }
+
+  if (activeAdminSidebar === 'checklist-ambulans') {
+    return <ChecklistFasilitas jenis="ambulans" />;
+  }
+
+  if (activeAdminSidebar === 'checklist-ergonomi') {
+    return <ChecklistFasilitas jenis="ergonomi" />;
   }
 
   const panels: Record<string, { form: React.ReactNode; tables: React.ReactNode[]; hasTable: boolean; labels?: string[] }> = {
