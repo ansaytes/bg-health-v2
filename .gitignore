@@ -42,6 +42,12 @@ yarn-error.log*
 dev.db
 dev.db-journal
 
+# Skrip SQL untuk membuat/memperbaiki tabel di Supabase. Dijalankan sekali di
+# SQL Editor, bukan bagian dari kode aplikasi. Semua SQL dikumpulkan di
+# local-only/archive/supabase-migration-snapshots/ agar tidak ter-push.
+/database/
+supabase/migrations/
+
 # vercel
 .vercel
 
