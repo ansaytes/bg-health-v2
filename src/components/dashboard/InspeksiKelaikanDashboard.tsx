@@ -157,6 +157,9 @@ export default function InspeksiKelaikanDashboard() {
               }}
             >
               <option value="">Semua Site</option>
+              {site && !daftarSite.includes(site) && (
+                <option key={site} value={site}>{site}</option>
+              )}
               {daftarSite.map((s) => (
                 <option key={s} value={s}>
                   {s}

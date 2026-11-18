@@ -145,6 +145,9 @@ export default function InspeksiDashboard() {
               }}
             >
               <option value="">Semua Site</option>
+              {site && !daftarSite.includes(site) && (
+                <option key={site} value={site}>{site}</option>
+              )}
               {daftarSite.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -259,7 +262,7 @@ export default function InspeksiDashboard() {
         >
           <MCUChart
             type="doughnut"
-            labels={['Closed (Selesai)', 'Aktif Berjalan', 'Overdue (Lewat Tenggat)']}
+            labels={['Closed', 'Aktif', 'Overdue']}
             values={[p.closed, Math.max(0, p.aktif - p.overdue), p.overdue]}
             colors={['#00B894', '#3498DB', '#FF2D2D']}
             centerText={String(p.total)}
