@@ -622,9 +622,9 @@ export default function ChecklistFasilitas({
         {/* Modal Tambah Grup / Lokasi / Unit */}
         {tambahGrup && pengelompok && (
           <div className="admin-form-card" style={{ padding: '12px 16px', flexShrink: 0, marginBottom: 14 }}>
-            <div className="admin-section-header" style={{ marginBottom: 10 }}>
-              <h3 className="admin-section-title" style={{ fontSize: 13, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 3, height: 16, borderRadius: 2, background: '#00B894', display: 'inline-block' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <span style={{ width: 3, height: 16, borderRadius: 2, background: '#00B894', display: 'inline-block', flexShrink: 0 }} />
+              <h3 className="admin-section-title" style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>
                 Tambah {labelGrup} Baru
               </h3>
             </div>
@@ -682,12 +682,14 @@ export default function ChecklistFasilitas({
 
           return (
             <div key={kategori} className="admin-form-card" style={{ overflow: 'auto', marginBottom: 18, padding: '14px 18px' }}>
-              {/* Header Kartu Kategori */}
-              <div className="admin-section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-                <h3 className="admin-section-title" style={{ fontSize: 13.5, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 3, height: 16, borderRadius: 2, background: 'var(--brand-primary, #ff4d00)', display: 'inline-block' }} />
-                  {kategoriMap[kategori] ?? kategori}
-                </h3>
+              {/* Header Kartu Kategori: Rata Kiri & Rapi */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 3, height: 16, borderRadius: 2, background: 'var(--brand-primary, #ff4d00)', display: 'inline-block', flexShrink: 0 }} />
+                  <h3 className="admin-section-title" style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>
+                    {kategoriMap[kategori] ?? kategori}
+                  </h3>
+                </div>
                 <div style={{ fontSize: 11.5, color: 'var(--muted-foreground)' }}>
                   <b style={{ color: '#00B894' }}>{siapCount}</b> siap · Total {list.length} item
                   {rusakCount > 0 && <span style={{ marginLeft: 8, color: '#FF7A00', fontWeight: 600 }}>({rusakCount} rusak)</span>}
@@ -880,9 +882,9 @@ function FormTambahItem({
 
   return (
     <div className="admin-form-card" style={{ padding: '14px 18px', flexShrink: 0, marginBottom: 14 }}>
-      <div className="admin-section-header" style={{ marginBottom: 12 }}>
-        <h3 className="admin-section-title" style={{ fontSize: 13.5, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ width: 3, height: 16, borderRadius: 2, background: '#00B894', display: 'inline-block' }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <span style={{ width: 3, height: 16, borderRadius: 2, background: '#00B894', display: 'inline-block', flexShrink: 0 }} />
+        <h3 className="admin-section-title" style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>
           Tambah Item Checklist Baru
         </h3>
       </div>

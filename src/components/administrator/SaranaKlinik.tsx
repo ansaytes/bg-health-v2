@@ -262,11 +262,13 @@ export default function SaranaKlinik({ onBukaPica }: { onBukaPica?: () => void }
 
         {[...perKategori.entries()].map(([kategori, list]) => (
           <div key={kategori} className="admin-form-card" style={{ overflow: 'auto', marginBottom: 18, padding: '14px 18px' }}>
-            <div className="admin-section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-              <h3 className="admin-section-title" style={{ fontSize: 13.5, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 3, height: 16, borderRadius: 2, background: 'var(--brand-primary, #ff4d00)', display: 'inline-block' }} />
-                {KATEGORI_LABEL[kategori] ?? kategori}
-              </h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 3, height: 16, borderRadius: 2, background: 'var(--brand-primary, #ff4d00)', display: 'inline-block', flexShrink: 0 }} />
+                <h3 className="admin-section-title" style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>
+                  {KATEGORI_LABEL[kategori] ?? kategori}
+                </h3>
+              </div>
               <div style={{ fontSize: 11.5, color: 'var(--muted-foreground)' }}>
                 {list.filter((i) => i.status === 'ada').length} tersedia · {list.length} item
               </div>
@@ -419,9 +421,9 @@ function FormTambah({ onSelesai }: { onSelesai: () => void }) {
 
   return (
     <div className="admin-form-card" style={{ padding: '14px 18px', flexShrink: 0, marginBottom: 14 }}>
-      <div className="admin-section-header" style={{ marginBottom: 12 }}>
-        <h3 className="admin-section-title" style={{ fontSize: 13.5, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ width: 3, height: 16, borderRadius: 2, background: '#00B894', display: 'inline-block' }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <span style={{ width: 3, height: 16, borderRadius: 2, background: '#00B894', display: 'inline-block', flexShrink: 0 }} />
+        <h3 className="admin-section-title" style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>
           Tambah Item Sarana
         </h3>
       </div>

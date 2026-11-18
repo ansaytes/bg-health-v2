@@ -700,12 +700,35 @@ select {
   transition: border 0.2s;
 }
 select:hover { border-color: rgba(255,77,0,0.3); }
-select:focus { border-color: #ff4d00; box-shadow: 0 0 0 2px rgba(255,77,0,0.15); }
-select option { background: var(--background, #fff); color: var(--foreground); }
-select option:checked,
-select option:active,
-select option:hover { background: rgba(255,77,0,0.14) !important; color: var(--foreground) !important; }
-select::selection { background: rgba(255,77,0,0.18); color: var(--foreground); }
+select:focus { border-color: #ff4d00; outline: none; box-shadow: 0 0 0 2px rgba(255,77,0,0.2); }
+select option {
+  background-color: var(--background, #fff);
+  color: var(--foreground);
+}
+select option:checked {
+  background: #ff4d00 linear-gradient(0deg, #ff4d00, #ff4d00) !important;
+  background-color: #ff4d00 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 10px 100px #ff4d00 inset !important;
+}
+select option:hover,
+select option:focus,
+select option:active {
+  background: #ff4d00 linear-gradient(0deg, #ff4d00, #ff4d00) !important;
+  background-color: #ff4d00 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 10px 100px #ff4d00 inset !important;
+}
+
+/* Global Selection Highlight — selalu oranye tema (#ff4d00), tidak pernah biru sistem */
+::selection {
+  background-color: #ff4d00 !important;
+  color: #ffffff !important;
+}
+::-moz-selection {
+  background-color: #ff4d00 !important;
+  color: #ffffff !important;
+}
 
 /* ═══════════════════════════════════
    MCU Total Bar
@@ -2938,12 +2961,14 @@ select optgroup {
   background-color: var(--popover);
   color: var(--popover-foreground);
 }
-select option:checked {
-  background-color: #ff4d00;
-  color: #ffffff;
-}
-select option:hover {
-  background-color: var(--secondary);
+select option:checked,
+select option:hover,
+select option:focus,
+select option:active {
+  background: #ff4d00 linear-gradient(0deg, #ff4d00, #ff4d00) !important;
+  background-color: #ff4d00 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 10px 100px #ff4d00 inset !important;
 }
 
 
