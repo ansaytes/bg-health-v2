@@ -1,30 +1,36 @@
 'use client';
 
 // ============================================================
-// Dashboard > Program Inspeksi
+// Dashboard > Program Inspeksi (SMKP Minerba & QSHE Executive)
 // ============================================================
 //
-// Lima kelompok metrik, mengikuti template dashboard Monitoring MCU:
-//   • top bar dengan filter site/periode + tombol refresh
-//   • kartu `.mcu-dashboard-card` berisi `MCUChart` (doughnut / bar)
-//   • kartu dengan penanganan kondisi kosong (tidak menggambar sumbu palsu)
+// Standar template Dashboard Monitoring MCU / Pelayanan Kuratif:
+//   • Top bar dengan filter Periode/Site + MCU Total Bar (Key KPI Badges)
+//   • 2 Baris Chart (mcu-grid-3 mcu-live-chart-row), total maksimal 6 kartu
+//   • Menggunakan MCUChartCard & MCUChart dengan standar animasi & palet warna K3
 //
-// 1. Eksekusi      — completion rate (Hijau ≥95, Kuning 85–94, Merah <85),
-//                    on-time vs late, inspeksi terlewat (H+1)
-// 2. Cakupan aset  — % aset terdaftar tersampling, blindspot 30–90 hari
-// 3. Kelaikan      — ambulans, P3K, sanitasi, ergonomi, kalibrasi H-60
-// 4. PICA          — MTTR, overdue, per departemen, top 5 berulang
-// 5. Produktivitas — beban per petugas, reporting lead time
+// BARIS 1: Kepatuhan Pelaksanaan & Kesiapan Tanggap Darurat
+//   1. Capaian Jadwal Inspeksi (Plan vs Realisasi Bulanan)
+//   2. Kesiapan Tanggap Darurat (Ambulans & Kotak P3K Palang Hijau)
+//   3. Kelaikan Fasilitas & Sarana Kerja (Sarana Klinik & Ergonomi)
+//
+// BARIS 2: Kelaikan Teknis, Kalibrasi & Pengendalian Temuan
+//   4. Kepatuhan Kalibrasi Alat Medis (Alat Kesehatan & Diagnostik)
+//   5. Kinerja Penanganan PICA (Tindak Lanjut & MTTR Penutupan)
+//   6. Cakupan Pengawasan & Deteksi Blindspot Area (>30 Hari)
 
 import { useCallback, useEffect, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 
 import { authFetch } from '@/lib/api-client';
-import { MCUChart } from '@/components/dashboard/MCUDashboardShared';
+import {
+  MCUChart,
+  MCUChartCard,
+  MCURefreshButton,
+} from '@/components/dashboard/MCUDashboardShared';
 import { useSites } from '@/lib/site-list';
 import PageLoading from '@/components/ui/page-loading';
-import { PALET_BAR } from '@/lib/chart-standard';
-import { periodeBulan, labelPeriode } from '@/lib/inspeksi-program';
+import { periodeBulan } from '@/lib/inspeksi-program';
 
 interface Data {
   success: boolean;
@@ -33,26 +39,82 @@ interface Data {
   tabelSiap: Record<string, boolean>;
   catatan: string | null;
   eksekusi: {
-    target: number; selesai: number; terlewat: number; belum: number;
-    persenSelesai: number; warnaSelesai: 'hijau' | 'kuning' | 'merah';
-    tepatWaktu: number; terlambat: number; persenTepatWaktu: number;
+    target: number;
+    selesai: number;
+    terlewat: number;
+    belum: number;
+    persenSelesai: number;
+    warnaSelesai: 'hijau' | 'kuning' | 'merah';
+    tepatWaktu: number;
+    terlambat: number;
+    persenTepatWaktu: number;
     terlewatPerJenis: { jenis: string; label: string; jumlah: number }[];
     tren: { periode: string; target: number; selesai: number; persen: number }[];
     daftarTerlewat: { id: number; label: string; site: string | null; objek: string | null; tanggal_rencana: string | null; hariTerlambat: number }[];
   };
   cakupan: {
-    terdaftar: number; tersampling: number; persen: number; ambangHari: number;
+    terdaftar: number;
+    tersampling: number;
+    persen: number;
+    ambangHari: number;
     blindspot: { site: string; label: string; hariTerakhir: number | null; terakhir: string | null; jumlahObjek: number }[];
   };
   kelaikan: {
-    ambulans: { totalUnit: number; ready: number; standby: number; breakdown: number; itemTotal: number; itemAda: number; itemRusak: number };
-    p3k: { total: number; ada: number; rusak: number; tidakAda: number; persenSiap: number; kedaluwarsa: { nama: string; site: string; tanggal: string; sisaHari: number | null }[]; hilang: { nama: string; site: string; lokasi: string }[] };
-    sanitasi: { jumlahArea: number; diBawahStandar: number; rataRata: number | null; ambang: number; area: { site: string; tanggal: string; skor: number }[] };
-    ergonomi: { total: number; layak: number; rusak: number; persenLayak: number; perItem: { nama: string; rusak: number; layak: number }[] };
-    kalibrasi: { total: number; patuh: number; kuning: number; merah: number; belum: number; peringatanHari: number; jatuhTempo: { nama: string; site: string; tanggal: string | null; sisaHari: number | null; status: string }[] };
+    ambulans: {
+      totalUnit: number;
+      ready: number;
+      standby: number;
+      breakdown: number;
+      itemTotal: number;
+      itemAda: number;
+      itemRusak: number;
+    };
+    p3k: {
+      total: number;
+      ada: number;
+      rusak: number;
+      tidakAda: number;
+      persenSiap: number;
+      kedaluwarsa: { nama: string; site: string; tanggal: string; sisaHari: number | null }[];
+      hilang: { nama: string; site: string; lokasi: string }[];
+    };
+    klinik?: {
+      total: number;
+      ada: number;
+      rusak: number;
+      tidakAda: number;
+      persen: number;
+    };
+    sanitasi: {
+      jumlahArea: number;
+      diBawahStandar: number;
+      rataRata: number | null;
+      ambang: number;
+      area: { site: string; tanggal: string; skor: number }[];
+    };
+    ergonomi: {
+      total: number;
+      layak: number;
+      rusak: number;
+      persenLayak: number;
+      perItem: { nama: string; rusak: number; layak: number }[];
+    };
+    kalibrasi: {
+      total: number;
+      patuh: number;
+      kuning: number;
+      merah: number;
+      belum: number;
+      peringatanHari: number;
+      jatuhTempo: { nama: string; site: string; tanggal: string | null; sisaHari: number | null; status: string }[];
+    };
   };
   pica: {
-    total: number; aktif: number; closed: number; overdue: number; mttr: number | null;
+    total: number;
+    aktif: number;
+    closed: number;
+    overdue: number;
+    mttr: number | null;
     perDepartemen: { departemen: string; aktif: number; overdue: number; closed: number }[];
     terulang: { objek: string; jumlah: number; picaIds: string[] }[];
   };
@@ -61,9 +123,6 @@ interface Data {
     leadTime: { jumlah: number; rataHari: number | null };
   };
 }
-
-const WARNA = { hijau: '#00B894', kuning: '#F1C40F', merah: '#FF2D2D' };
-const WARNA_SELESAI: Record<string, string> = WARNA;
 
 export default function InspeksiDashboard() {
   const { sites: daftarSite } = useSites();
@@ -79,7 +138,7 @@ export default function InspeksiDashboard() {
     try {
       const qs = new URLSearchParams({ periode });
       if (site) qs.set('site', site);
-      const hasil = await authFetch(`/api/inspeksi/dashboard?${qs.toString()}`) as unknown as Data;
+      const hasil = (await authFetch(`/api/inspeksi/dashboard?${qs.toString()}`)) as unknown as Data;
       setData(hasil);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal memuat dashboard inspeksi');
@@ -88,15 +147,17 @@ export default function InspeksiDashboard() {
     }
   }, [site, periode]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-  if (loading && !data) return <PageLoading label="Memuat dashboard inspeksi" />;
+  if (loading && !data) return <PageLoading label="Memuat dashboard program inspeksi" />;
 
   if (!data) {
     return (
       <div className="dashboard mcu-live-dashboard" style={{ alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(255,45,45,0.08)', color: '#b3261e', fontSize: 12 }}>
-          {error || 'Data inspeksi tidak tersedia.'}
+          {error || 'Data program inspeksi tidak tersedia.'}
         </div>
       </div>
     );
@@ -106,51 +167,73 @@ export default function InspeksiDashboard() {
   const c = data.cakupan;
   const k = data.kelaikan;
   const p = data.pica;
-  const pr = data.produktivitas;
-  const warnaE = WARNA_SELESAI[e.warnaSelesai];
 
   return (
-    <div className="dashboard mcu-live-dashboard" style={{ overflow: 'hidden', gap: 8 }}>
-      {/* Top bar — filter & indikator utama */}
-      <div className="mcu-live-top-bar" style={{ flexShrink: 0 }}>
+    <div className="dashboard mcu-live-dashboard">
+      {/* ── Top Bar: Filter & Executive KPI Indicators ─────────────────── */}
+      <div className="dashboard-top-bar mcu-live-top-bar">
         <div className="mcu-dashboard-filters">
           <label>
             <span>Periode</span>
             <input
               type="month"
               value={periode}
-              onChange={ev => setPeriode(ev.target.value || periodeBulan())}
-              style={{ height: 28, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 10, fontWeight: 700, padding: '0 6px' }}
+              onChange={(ev) => setPeriode(ev.target.value || periodeBulan())}
+              style={{
+                height: 28,
+                borderRadius: 7,
+                border: '1px solid var(--border)',
+                background: 'var(--background)',
+                fontSize: 10,
+                fontWeight: 700,
+                padding: '0 6px',
+              }}
             />
           </label>
           <label>
             <span>Site</span>
             <select
               value={site}
-              onChange={ev => setSite(ev.target.value)}
-              style={{ height: 28, width: 150, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 10, fontWeight: 700, padding: '0 6px' }}
+              onChange={(ev) => setSite(ev.target.value)}
+              style={{
+                height: 28,
+                width: 140,
+                borderRadius: 7,
+                border: '1px solid var(--border)',
+                background: 'var(--background)',
+                fontSize: 10,
+                fontWeight: 700,
+                padding: '0 6px',
+              }}
             >
-              <option value="">Semua site</option>
-              {daftarSite.map(s => <option key={s} value={s}>{s}</option>)}
+              <option value="">Semua Site</option>
+              {daftarSite.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
             </select>
           </label>
-          <label>
-            <span>Penyelesaian</span>
-            <b style={{ fontSize: 11, color: warnaE }}>{e.persenSelesai}%</b>
-          </label>
-          <label>
-            <span>PICA overdue</span>
-            <b style={{ fontSize: 11, color: p.overdue ? WARNA.merah : 'inherit' }}>{p.overdue}</b>
-          </label>
-          <label>
-            <span>Inspeksi terlewat</span>
-            <b style={{ fontSize: 11, color: e.terlewat ? WARNA.merah : 'inherit' }}>{e.terlewat}</b>
-          </label>
-          <button type="button" onClick={() => void load()} disabled={loading} className="mcu-dashboard-refresh">
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
-          </button>
         </div>
-        {error && <span style={{ fontSize: 10, color: '#b3261e' }}>{error}</span>}
+
+        {/* Executive Scorecard Badges */}
+        <div className="mcu-total-bar">
+          <span className="mcu-total-label">Target:</span>
+          <span className="mcu-total-num">{e.target}</span>
+          <span style={{ fontWeight: 700, color: e.persenSelesai >= 90 ? '#00B894' : e.persenSelesai >= 70 ? '#E67E22' : '#FF2D2D' }}>
+            Selesai: {e.selesai} ({e.persenSelesai}%)
+          </span>
+          <span style={{ fontWeight: 700, color: e.terlewat ? '#FF2D2D' : 'inherit' }}>
+            Terlewat: {e.terlewat}
+          </span>
+          <span style={{ fontWeight: 700, color: p.overdue ? '#FF2D2D' : 'inherit' }}>
+            PICA Overdue: {p.overdue}
+          </span>
+          <span style={{ fontWeight: 700, color: k.kalibrasi.merah ? '#FF2D2D' : 'inherit' }}>
+            Kalibrasi Lewat: {k.kalibrasi.merah}
+          </span>
+          <MCURefreshButton loading={loading} onClick={() => void load()} />
+        </div>
       </div>
 
       {data.catatan && (
@@ -159,352 +242,139 @@ export default function InspeksiDashboard() {
         </div>
       )}
 
-      {/* ── 1. EKSEKUSI ─────────────────────────────────────────────────── */}
-      <div className="mcu-live-chart-row">
-        <div className="card mcu-dashboard-card">
-          <div className="card-head"><div><h2>Penyelesaian Inspeksi</h2><p>{labelPeriode(data.periode)} · Hijau ≥95% · Kuning 85–94% · Merah &lt;85%</p></div></div>
-          <div className="mcu-dashboard-chart">
-            <KartuAngka
-              utama={`${e.persenSelesai}%`}
-              warna={warnaE}
-              bawah={[
-                { label: 'Target', nilai: e.target },
-                { label: 'Selesai', nilai: e.selesai },
-                { label: 'Belum', nilai: e.belum },
-                { label: 'Terlewat', nilai: e.terlewat, warna: e.terlewat ? WARNA.merah : undefined },
-              ]}
-            />
-          </div>
-        </div>
-
-        <div className="card mcu-dashboard-card">
-          <div className="card-head"><div><h2>Ketepatan Waktu</h2><p>Tepat jadwal vs molor</p></div></div>
-          <div className="mcu-dashboard-chart">
-            <MCUChart
-              type="doughnut"
-              labels={['Tepat waktu', 'Terlambat']}
-              values={[e.tepatWaktu, e.terlambat]}
-              colors={[WARNA.hijau, WARNA.merah]}
-              legendLabel="Inspeksi"
-              centerText={`${e.persenTepatWaktu}%`}
-              percentLabels
-            />
-          </div>
-        </div>
-
-        <KartuChart judul="Inspeksi Terlewat" sub="Lewat tanggal rencana (H+1), per jenis" kosong={!e.terlewatPerJenis.length} pesanKosong="Tidak ada inspeksi terlewat">
-          <MCUChart
-            type="bar"
-            labels={e.terlewatPerJenis.map(x => x.label)}
-            values={e.terlewatPerJenis.map(x => x.jumlah)}
-            colors={e.terlewatPerJenis.map(() => WARNA.merah)}
-            horizontal
-            legendLabel="Terlewat"
-          />
-        </KartuChart>
-      </div>
-
-      {/* ── 2. CAKUPAN ASET ─────────────────────────────────────────────── */}
-      <div className="mcu-live-chart-row mcu-live-chart-row--two">
-        <div className="card mcu-dashboard-card">
-          <div className="card-head"><div><h2>Cakupan Pengawasan Aset</h2><p>Aset terdaftar yang tersampling periode ini</p></div></div>
-          <div className="mcu-dashboard-chart">
-            <MCUChart
-              type="doughnut"
-              labels={['Tersampling', 'Belum tersampling']}
-              values={[c.tersampling, Math.max(0, c.terdaftar - c.tersampling)]}
-              colors={[WARNA.hijau, '#B0B7C3']}
-              legendLabel="Aset"
-              centerText={`${c.persen}%`}
-              percentLabels
-            />
-          </div>
-        </div>
-
-        <KartuChart
-          judul="Blindspot Area"
-          sub={`Lokasi dengan keterpaparan inspeksi > ${c.ambangHari} hari`}
-          kosong={!c.blindspot.length}
-          pesanKosong="Semua area terpantau dalam 30 hari terakhir"
-        >
-          <MCUChart
-            type="bar"
-            labels={c.blindspot.map(b => `${b.site} · ${b.label}`)}
-            values={c.blindspot.map(b => b.hariTerakhir ?? 365)}
-            colors={c.blindspot.map(b => (b.hariTerakhir === null ? WARNA.merah : b.hariTerakhir > 90 ? WARNA.merah : '#FF7A00'))}
-            horizontal
-            legendLabel="Hari sejak inspeksi"
-          />
-        </KartuChart>
-      </div>
-
-      {/* ── 3. KELAIKAN FISIK ───────────────────────────────────────────── */}
-      <div className="mcu-live-chart-row">
-        <KartuChart
-          judul="Kesiapan Ambulans"
-          sub="Ready · Standby with Note · Breakdown"
-          kosong={k.ambulans.totalUnit === 0}
-          pesanKosong="Belum ada unit ambulans tercatat"
+      {/* ── BARIS 1: Kepatuhan Pelaksanaan & Tanggap Darurat (3 Kartu) ──── */}
+      <div className="mcu-grid-3 mcu-live-chart-row">
+        {/* CARD 1: Capaian & Kepatuhan Jadwal Inspeksi */}
+        <MCUChartCard
+          title="Capaian Jadwal Inspeksi"
+          subtitle={`Target: ${e.target} · Selesai: ${e.selesai} · Terlewat: ${e.terlewat}`}
+          className="glow-coral"
         >
           <MCUChart
             type="doughnut"
-            labels={['Ready', 'Standby with Note', 'Breakdown']}
-            values={[k.ambulans.ready, k.ambulans.standby, k.ambulans.breakdown]}
-            colors={[WARNA.hijau, WARNA.kuning, WARNA.merah]}
-            legendLabel="Unit"
-            centerText={String(k.ambulans.totalUnit)}
+            labels={['Tepat Waktu', 'Terlambat', 'Terlewat']}
+            values={[e.tepatWaktu, e.terlambat, e.terlewat]}
+            colors={['#00B894', '#F39C12', '#FF2D2D']}
+            centerText={`${e.persenSelesai}%`}
             percentLabels
           />
-        </KartuChart>
+        </MCUChartCard>
 
-        <div className="card mcu-dashboard-card">
-          <div className="card-head"><div><h2>Kotak P3K Siap Pakai</h2><p>Standar Permenaker 15/2008</p></div></div>
-          <div className="mcu-dashboard-chart">
-            <KartuAngka
-              utama={`${k.p3k.persenSiap}%`}
-              warna={k.p3k.persenSiap >= 90 ? WARNA.hijau : k.p3k.persenSiap >= 70 ? WARNA.kuning : WARNA.merah}
-              bawah={[
-                { label: 'Item tercatat', nilai: k.p3k.total },
-                { label: 'Siap', nilai: k.p3k.ada },
-                { label: 'Rusak', nilai: k.p3k.rusak, warna: k.p3k.rusak ? WARNA.merah : undefined },
-                { label: 'Tidak ada', nilai: k.p3k.tidakAda, warna: k.p3k.tidakAda ? WARNA.merah : undefined },
-              ]}
-            />
-          </div>
-        </div>
-
-        <KartuChart
-          judul="Sanitasi Area"
-          sub={`Skor 0–100 · merah bila < ${k.sanitasi.ambang}%`}
-          kosong={!k.sanitasi.area.length}
-          pesanKosong="Belum ada inspeksi sanitasi"
-        >
-          <MCUChart
-            type="bar"
-            labels={k.sanitasi.area.map(a => a.site)}
-            values={k.sanitasi.area.map(a => a.skor)}
-            colors={k.sanitasi.area.map(a => (a.skor < k.sanitasi.ambang ? WARNA.merah : a.skor >= 90 ? WARNA.hijau : WARNA.kuning))}
-            horizontal
-            legendLabel="Skor"
-          />
-        </KartuChart>
-      </div>
-
-      <div className="mcu-live-chart-row">
-        <KartuChart
-          judul="Sarana Ergonomi"
-          sub="Layak vs rusak"
-          kosong={k.ergonomi.total === 0}
-          pesanKosong="Belum ada data sarana ergonomi"
+        {/* CARD 2: Kesiapan Tanggap Darurat (Ambulans & P3K Palang Hijau) */}
+        <MCUChartCard
+          title="Kesiapan Tanggap Darurat"
+          subtitle={`Ambulans: ${k.ambulans.ready}/${k.ambulans.totalUnit || 1} Ready · P3K: ${k.p3k.persenSiap}% Siap`}
+          className="glow-teal"
         >
           <MCUChart
             type="doughnut"
-            labels={['Layak', 'Rusak']}
-            values={[k.ergonomi.layak, k.ergonomi.rusak]}
-            colors={[WARNA.hijau, WARNA.merah]}
-            legendLabel="Unit"
-            centerText={`${k.ergonomi.persenLayak}%`}
+            labels={['Ambulans Siap (Ready)', 'P3K Siap Lengkap', 'P3K Rusak / Kurang', 'Ambulans Standby/Perbaikan']}
+            values={[
+              k.ambulans.ready,
+              k.p3k.ada,
+              k.p3k.rusak + k.p3k.tidakAda,
+              k.ambulans.standby + k.ambulans.breakdown,
+            ]}
+            colors={['#00B894', '#2ECC71', '#FF2D2D', '#F39C12']}
+            centerText={`${k.p3k.persenSiap}%`}
             percentLabels
           />
-        </KartuChart>
+        </MCUChartCard>
 
-        <KartuChart
-          judul="Kalibrasi Jatuh Tempo"
-          sub={`Kuning H-${k.kalibrasi.peringatanHari} · Merah overdue`}
-          kosong={!k.kalibrasi.jatuhTempo.length}
-          pesanKosong="Semua alat dalam masa kalibrasi"
+        {/* CARD 3: Kelaikan Fasilitas & Sarana Kerja */}
+        <MCUChartCard
+          title="Kelaikan Fasilitas & Sarana Kerja"
+          subtitle={`Klinik: ${k.klinik?.persen ?? 0}% · Ergonomi: ${k.ergonomi.persenLayak}% Layak`}
+          className="glow-amber"
         >
           <MCUChart
             type="bar"
-            labels={k.kalibrasi.jatuhTempo.map(a => `${a.nama} · ${a.site}`)}
-            values={k.kalibrasi.jatuhTempo.map(a => Math.abs(a.sisaHari ?? 0))}
-            colors={k.kalibrasi.jatuhTempo.map(a => (a.status === 'merah' ? WARNA.merah : WARNA.kuning))}
             horizontal
-            legendLabel="Hari"
+            labels={['Klinik Siap', 'Klinik Rusak/Kurang', 'Ergonomi Layak', 'Ergonomi Rusak']}
+            values={[
+              k.klinik?.ada ?? 0,
+              (k.klinik?.rusak ?? 0) + (k.klinik?.tidakAda ?? 0),
+              k.ergonomi.layak,
+              k.ergonomi.rusak,
+            ]}
+            colors={['#00B894', '#FF2D2D', '#3498DB', '#E74C3C']}
+            legendLabel="Item Fasilitas"
           />
-        </KartuChart>
+        </MCUChartCard>
+      </div>
 
-        <div className="card mcu-dashboard-card">
-          <div className="card-head"><div><h2>Status Kalibrasi</h2><p>Patuh · kuning · lewat · belum pernah</p></div></div>
-          <div className="mcu-dashboard-chart">
+      {/* ── BARIS 2: Kalibrasi, PICA & Deteksi Blindspot (3 Kartu) ───────── */}
+      <div className="mcu-grid-3 mcu-live-chart-row">
+        {/* CARD 4: Kepatuhan Kalibrasi Alat Medis */}
+        <MCUChartCard
+          title="Kepatuhan Kalibrasi Alat Medis"
+          subtitle={`${k.kalibrasi.patuh}/${k.kalibrasi.total} Terkalibrasi (${k.kalibrasi.merah ? `${k.kalibrasi.merah} Lewat Tempo!` : 'Semua Valid'})`}
+          className="glow-steel"
+        >
+          <MCUChart
+            type="doughnut"
+            labels={['Patuh / Aktif', 'Mendekati (H-60)', 'Lewat Masa Berlaku', 'Belum Kalibrasi']}
+            values={[k.kalibrasi.patuh, k.kalibrasi.kuning, k.kalibrasi.merah, k.kalibrasi.belum]}
+            colors={['#00B894', '#F1C40F', '#FF2D2D', '#778899']}
+            centerText={`${k.kalibrasi.total}`}
+            percentLabels
+          />
+        </MCUChartCard>
+
+        {/* CARD 5: Kinerja Penanganan PICA */}
+        <MCUChartCard
+          title="Kinerja Penanganan PICA"
+          subtitle={`MTTR: ${p.mttr !== null ? `${p.mttr} Hari` : '—'} · Closed: ${p.closed} · Overdue: ${p.overdue}`}
+          className="glow-orange"
+        >
+          <MCUChart
+            type="doughnut"
+            labels={['Closed (Selesai)', 'Aktif Berjalan', 'Overdue (Lewat Tenggat)']}
+            values={[p.closed, Math.max(0, p.aktif - p.overdue), p.overdue]}
+            colors={['#00B894', '#3498DB', '#FF2D2D']}
+            centerText={p.mttr !== null ? `${p.mttr}h` : `${p.total}`}
+            percentLabels
+          />
+        </MCUChartCard>
+
+        {/* CARD 6: Cakupan Pengawasan & Blindspot Area */}
+        <MCUChartCard
+          title="Cakupan Pengawasan & Blindspot"
+          subtitle={`Cakupan Aset: ${c.persen}% · Ambang: >${c.ambangHari} Hari`}
+          className="glow-teal"
+        >
+          {c.blindspot.length === 0 ? (
+            <div
+              style={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#00B894',
+                gap: 6,
+                padding: 20,
+              }}
+            >
+              <CheckCircle2 size={32} />
+              <span style={{ fontSize: 12, fontWeight: 700 }}>Seluruh Area Terpantau Rutin</span>
+              <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>
+                Tidak ada blindspot inspeksi &gt; {c.ambangHari} hari
+              </span>
+            </div>
+          ) : (
             <MCUChart
-              type="doughnut"
-              labels={['Patuh', 'Mendekati', 'Lewat', 'Belum pernah']}
-              values={[k.kalibrasi.patuh, k.kalibrasi.kuning, k.kalibrasi.merah, k.kalibrasi.belum]}
-              colors={[WARNA.hijau, WARNA.kuning, WARNA.merah, '#778899']}
-              legendLabel="Alat"
-              centerText={String(k.kalibrasi.total)}
-              percentLabels
+              type="bar"
+              horizontal
+              labels={c.blindspot.slice(0, 5).map((b) => `${b.site} · ${b.label}`)}
+              values={c.blindspot.slice(0, 5).map((b) => b.hariTerakhir ?? 365)}
+              colors={c.blindspot.slice(0, 5).map((b) =>
+                b.hariTerakhir === null || b.hariTerakhir > 90 ? '#FF2D2D' : '#FF7A00'
+              )}
+              legendLabel="Hari sejak inspeksi"
             />
-          </div>
-        </div>
-      </div>
-
-      {/* ── 4. PICA ─────────────────────────────────────────────────────── */}
-      <div className="mcu-live-chart-row">
-        <div className="card mcu-dashboard-card">
-          <div className="card-head"><div><h2>Kinerja Penanganan PICA</h2><p>MTTR · overdue · status</p></div></div>
-          <div className="mcu-dashboard-chart">
-            <KartuAngka
-              utama={p.mttr === null ? '—' : `${p.mttr} hari`}
-              label="Rata-rata penutupan (MTTR)"
-              warna={p.overdue ? WARNA.merah : WARNA.hijau}
-              bawah={[
-                { label: 'Aktif', nilai: p.aktif },
-                { label: 'Overdue', nilai: p.overdue, warna: p.overdue ? WARNA.merah : undefined },
-                { label: 'Closed', nilai: p.closed, warna: WARNA.hijau },
-                { label: 'Total', nilai: p.total },
-              ]}
-            />
-          </div>
-        </div>
-
-        <KartuChart
-          judul="PICA per Departemen"
-          sub="Aktif dan lewat tenggat"
-          kosong={!p.perDepartemen.length}
-          pesanKosong="Belum ada PICA"
-        >
-          <MCUChart
-            type="bar"
-            labels={p.perDepartemen.slice(0, 8).map(d => d.departemen)}
-            values={p.perDepartemen.slice(0, 8).map(d => d.aktif)}
-            colors={p.perDepartemen.slice(0, 8).map(d => (d.overdue ? WARNA.merah : '#FF7A00'))}
-            horizontal
-            legendLabel="PICA aktif"
-          />
-        </KartuChart>
-
-        <KartuChart
-          judul="Top 5 Temuan Berulang"
-          sub="Objek yang PICA-nya berulang"
-          kosong={!p.terulang.length}
-          pesanKosong="Belum ada temuan berulang"
-        >
-          <MCUChart
-            type="bar"
-            labels={p.terulang.map(t => t.objek)}
-            values={p.terulang.map(t => t.jumlah)}
-            colors={p.terulang.map((_, i) => PALET_BAR[i % PALET_BAR.length])}
-            horizontal
-            legendLabel="Jumlah PICA"
-          />
-        </KartuChart>
-      </div>
-
-      {/* ── 5. PRODUKTIVITAS PETUGAS ────────────────────────────────────── */}
-      <div className="mcu-live-chart-row mcu-live-chart-row--two">
-        <KartuChart
-          judul="Beban Inspeksi per Petugas"
-          sub="Inspeksi selesai pada periode ini"
-          kosong={!pr.perPetugas.length}
-          pesanKosong="Belum ada petugas yang mencatat inspeksi"
-        >
-          <MCUChart
-            type="bar"
-            labels={pr.perPetugas.slice(0, 10).map(x => x.petugas)}
-            values={pr.perPetugas.slice(0, 10).map(x => x.selesai)}
-            colors={pr.perPetugas.slice(0, 10).map(() => '#3498DB')}
-            horizontal
-            legendLabel="Selesai"
-          />
-        </KartuChart>
-
-        <div className="card mcu-dashboard-card">
-          <div className="card-head"><div><h2>Reporting Lead Time</h2><p>Pemeriksaan selesai → laporan diterbitkan</p></div></div>
-          <div className="mcu-dashboard-chart">
-            <KartuAngka
-              utama={pr.leadTime.rataHari === null ? '—' : `${pr.leadTime.rataHari} hari`}
-              label="Rata-rata"
-              warna={pr.leadTime.rataHari !== null && pr.leadTime.rataHari <= 1 ? WARNA.hijau : WARNA.kuning}
-              bawah={[{ label: 'Laporan terukur', nilai: pr.leadTime.jumlah }]}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Rincian inspeksi terlewat — daftar, bukan grafik */}
-      {e.daftarTerlewat.length > 0 && (
-        <div className="card mcu-dashboard-card" style={{ flexShrink: 0 }}>
-          <div className="card-head"><div><h2>Rincian Inspeksi Terlewat</h2><p>Paling lama terlambat di atas</p></div></div>
-          <div style={{ maxHeight: 190, overflowY: 'auto', padding: '0 10px 8px' }}>
-            <table style={{ width: '100%', fontSize: 10.5, borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ color: 'var(--muted-foreground)', textAlign: 'left' }}>
-                  <th style={{ padding: '3px 4px' }}>Jenis</th>
-                  <th style={{ padding: '3px 4px' }}>Site</th>
-                  <th style={{ padding: '3px 4px' }}>Objek</th>
-                  <th style={{ padding: '3px 4px' }}>Rencana</th>
-                  <th style={{ padding: '3px 4px' }}>Terlambat</th>
-                </tr>
-              </thead>
-              <tbody>
-                {e.daftarTerlewat.slice(0, 40).map((d, i) => (
-                  <tr key={`${d.id}-${i}`} style={{ borderTop: '1px solid var(--border)' }}>
-                    <td style={{ padding: '3px 4px' }}>{d.label}</td>
-                    <td style={{ padding: '3px 4px' }}>{d.site ?? '—'}</td>
-                    <td style={{ padding: '3px 4px' }}>{d.objek ?? '—'}</td>
-                    <td style={{ padding: '3px 4px' }}>{d.tanggal_rencana ?? '—'}</td>
-                    <td style={{ padding: '3px 4px', color: WARNA.merah, fontWeight: 700 }}>{d.hariTerlambat} hari</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * Kartu angka besar — untuk metrik yang lebih jelas dibaca sebagai satu angka
- * (persentase penyelesaian, MTTR, lead time) daripada sebagai diagram.
- */
-function KartuAngka({
-  utama,
-  label,
-  warna,
-  bawah,
-}: {
-  utama: string;
-  label?: string;
-  warna: string;
-  bawah: { label: string; nilai: number | string; warna?: string }[];
-}) {
-  return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-      <div style={{ fontSize: 40, fontWeight: 800, color: warna, lineHeight: 1 }}>{utama}</div>
-      {label && <div style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>{label}</div>}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', justifyContent: 'center', marginTop: 4 }}>
-        {bawah.map(b => (
-          <span key={b.label} style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>
-            {b.label}{' '}
-            <b style={{ color: b.warna ?? 'var(--foreground)' }}>{b.nilai}</b>
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/** Kartu chart dengan penanganan kondisi kosong (pola sama dengan SPIP). */
-function KartuChart({ judul, sub, kosong, pesanKosong, children }: {
-  judul: string;
-  sub: string;
-  kosong: boolean;
-  pesanKosong: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="card mcu-dashboard-card">
-      <div className="card-head"><div><h2>{judul}</h2><p>{sub}</p></div></div>
-      <div className="mcu-dashboard-chart">
-        {kosong ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--muted-foreground)', textAlign: 'center', padding: 8 }}>
-            {pesanKosong}
-          </div>
-        ) : children}
+          )}
+        </MCUChartCard>
       </div>
     </div>
   );

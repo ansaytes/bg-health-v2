@@ -330,6 +330,19 @@ export async function GET(req: NextRequest) {
       .slice(0, 20),
   };
 
+  // Sarana & Prasarana Klinik: status ketersediaan fasilitas klinik
+  const klinikTotal = sarana.filter(s => String(s.status ?? '') !== 'tidak_diperlukan').length;
+  const klinikAda = sarana.filter(s => String(s.status ?? '') === 'ada').length;
+  const klinikRusak = sarana.filter(s => String(s.status ?? '') === 'rusak').length;
+  const klinikTidakAda = sarana.filter(s => String(s.status ?? '') === 'tidak_ada').length;
+  const klinikRingkas = {
+    total: klinikTotal,
+    ada: klinikAda,
+    rusak: klinikRusak,
+    tidakAda: klinikTidakAda,
+    persen: klinikTotal ? Math.round((klinikAda / klinikTotal) * 1000) / 10 : 0,
+  };
+
   /* ── 4. PICA ───────────────────────────────────────────────────────────── */
   const picaRingkas = ringkasPica(pica as BarisPica[], sekarang);
 
@@ -408,6 +421,7 @@ export async function GET(req: NextRequest) {
     kelaikan: {
       ambulans: ambulansRingkas,
       p3k: { ...p3kRingkas, persenSiap: p3kPersenSiap, kedaluwarsa: p3kKedaluwarsa, hilang: p3kHilang },
+      klinik: klinikRingkas,
       sanitasi: { ...sanitasiRingkas, ambang: AMBANG_SANITASI },
       ergonomi: ergonomiRingkas,
       kalibrasi: kalibrasiRingkas,

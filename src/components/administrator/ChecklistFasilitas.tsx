@@ -676,7 +676,7 @@ export default function ChecklistFasilitas({
                     <th style={th}>Status</th>
                     <th style={th}>Jumlah</th>
                     <th style={th}>Kondisi Detail</th>
-                    <th style={th}>Tgl Periksa / Expired</th>
+                    <th style={th}>Tanggal Inspeksi</th>
                     <th style={th}>Catatan / Tindak Lanjut</th>
                   </tr>
                 </thead>
@@ -763,44 +763,21 @@ export default function ChecklistFasilitas({
                             onBlur={(e) => {
                               if (e.target.value !== b.kondisi) void simpan(b, { kondisi: e.target.value });
                             }}
-                            placeholder="mis. Baik / Busa sobek / Isi kurang"
+                            placeholder="mis. Baik / Rusak"
                             style={{ ...inputKecil, width: 140 }}
                           />
                         </td>
 
-                        {/* 5. Tanggal Inspeksi / Kedaluwarsa */}
+                        {/* 5. Tanggal Inspeksi */}
                         <td style={td}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            {/* Jika jenis P3K: ada expired date untuk alkes/obat */}
-                            {jenis === 'p3k' && (b.kategori === 'obat' || b.kategori === 'isi') ? (
-                              <div>
-                                <input
-                                  type="date"
-                                  defaultValue={b.tanggalExpired ?? ''}
-                                  disabled={!isAdmin || sibuk}
-                                  onChange={(e) => void simpan(b, { tanggalExpired: e.target.value })}
-                                  style={{
-                                    ...inputKecil,
-                                    fontSize: 9.5,
-                                    border: `1px solid ${isExpired ? '#FF2D2D' : isNearExpired ? '#F1C40F' : 'var(--border)'}`,
-                                    color: isExpired ? '#FF2D2D' : 'inherit',
-                                  }}
-                                  title="Tanggal Kedaluwarsa"
-                                />
-                                {isExpired && <div style={{ fontSize: 8, color: '#FF2D2D' }}>Kedaluwarsa!</div>}
-                                {isNearExpired && <div style={{ fontSize: 8, color: '#C99A00' }}>{expDiff} hari lagi</div>}
-                              </div>
-                            ) : (
-                              <input
-                                type="date"
-                                defaultValue={b.tanggalInspeksi ?? ''}
-                                disabled={!isAdmin || sibuk}
-                                onChange={(e) => void simpan(b, { tanggalInspeksi: e.target.value })}
-                                style={{ ...inputKecil, fontSize: 9.5 }}
-                                title="Tanggal Inspeksi Terakhir"
-                              />
-                            )}
-                          </div>
+                          <input
+                            type="date"
+                            defaultValue={b.tanggalInspeksi ?? ''}
+                            disabled={!isAdmin || sibuk}
+                            onChange={(e) => void simpan(b, { tanggalInspeksi: e.target.value })}
+                            style={{ ...inputKecil, fontSize: 9.5 }}
+                            title="Tanggal Inspeksi"
+                          />
                         </td>
 
                         {/* 6. Catatan */}
