@@ -67,7 +67,7 @@ export default function InspeksiDashboard() {
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [site, setSite] = useState('');
+  const [site, setSite] = useState('Head Office');
   const [periode, setPeriode] = useState(periodeBulan());
 
   const load = useCallback(async () => {
@@ -193,7 +193,7 @@ export default function InspeksiDashboard() {
             labels={['Selesai', 'Belum Terlaksana', 'Terlewat']}
             values={[e.selesai, Math.max(0, e.target - e.selesai - e.terlewat), e.terlewat]}
             colors={['#00B894', '#B0B7C3', '#FF2D2D']}
-            centerText={`${e.persenSelesai}%`}
+            centerText={String(e.target)}
             percentLabels
           />
         </MCUChartCard>
@@ -209,7 +209,7 @@ export default function InspeksiDashboard() {
             labels={['Tepat Waktu', 'Terlambat']}
             values={[e.tepatWaktu, e.terlambat]}
             colors={['#00B894', '#F39C12']}
-            centerText={`${e.persenTepatWaktu}%`}
+            centerText={String(e.selesai)}
             percentLabels
           />
         </MCUChartCard>
@@ -262,7 +262,7 @@ export default function InspeksiDashboard() {
             labels={['Closed (Selesai)', 'Aktif Berjalan', 'Overdue (Lewat Tenggat)']}
             values={[p.closed, Math.max(0, p.aktif - p.overdue), p.overdue]}
             colors={['#00B894', '#3498DB', '#FF2D2D']}
-            centerText={p.mttr !== null ? `${p.mttr}h` : `${p.total}`}
+            centerText={String(p.total)}
             percentLabels
           />
         </MCUChartCard>

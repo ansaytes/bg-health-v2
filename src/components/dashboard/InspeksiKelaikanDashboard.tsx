@@ -81,7 +81,7 @@ export default function InspeksiKelaikanDashboard() {
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [site, setSite] = useState('');
+  const [site, setSite] = useState('Head Office');
   const [periode, setPeriode] = useState(periodeBulan());
 
   const load = useCallback(async () => {
@@ -204,10 +204,10 @@ export default function InspeksiKelaikanDashboard() {
         >
           <MCUChart
             type="doughnut"
-            labels={['Ready (Siap Operasi)', 'Standby with Note', 'Breakdown (Perbaikan)']}
+            labels={['Ready', 'Standby With Note', 'Breakdown']}
             values={[k.ambulans.ready, k.ambulans.standby, k.ambulans.breakdown]}
             colors={['#00B894', '#F1C40F', '#FF2D2D']}
-            centerText={`${k.ambulans.totalUnit || 1} Unit`}
+            centerText={String(k.ambulans.totalUnit || 1)}
             percentLabels
           />
         </MCUChartCard>
@@ -223,7 +223,7 @@ export default function InspeksiKelaikanDashboard() {
             labels={['Lengkap & Siap', 'Rusak', 'Hilang / Kosong']}
             values={[k.p3k.ada, k.p3k.rusak, k.p3k.tidakAda]}
             colors={['#00B894', '#F39C12', '#FF2D2D']}
-            centerText={`${k.p3k.persenSiap}%`}
+            centerText={String(k.p3k.total)}
             percentLabels
           />
         </MCUChartCard>
@@ -239,7 +239,7 @@ export default function InspeksiKelaikanDashboard() {
             labels={['Tersedia & Siap', 'Rusak', 'Belum Ada']}
             values={[k.klinik?.ada ?? 0, k.klinik?.rusak ?? 0, k.klinik?.tidakAda ?? 0]}
             colors={['#00B894', '#F39C12', '#FF2D2D']}
-            centerText={`${k.klinik?.persen ?? 0}%`}
+            centerText={String(k.klinik?.total ?? 0)}
             percentLabels
           />
         </MCUChartCard>
@@ -247,19 +247,19 @@ export default function InspeksiKelaikanDashboard() {
 
       {/* ── BARIS 2: Kalibrasi, Ergonomi & Temuan Berulang (3 Kartu) ─────── */}
       <div className="mcu-grid-3 mcu-live-chart-row">
-        {/* CARD 4: Kepatuhan Kalibrasi Alat Medis */}
+        {/* CARD 4: Kepatuhan Kalibrasi Alat Medis (Diagram Bar untuk > 3 Kategori) */}
         <MCUChartCard
           title="Kepatuhan Kalibrasi Alat Medis"
           subtitle={`${k.kalibrasi.patuh}/${k.kalibrasi.total} Terkalibrasi (${k.kalibrasi.merah ? `${k.kalibrasi.merah} Lewat Tempo!` : 'Semua Valid'})`}
           className="glow-steel"
         >
           <MCUChart
-            type="doughnut"
-            labels={['Patuh / Valid', 'Mendekati (H-60)', 'Lewat Masa Berlaku', 'Belum Kalibrasi']}
+            type="bar"
+            horizontal
+            labels={['Patuh / Valid', 'Mendekati (H-60)', 'Lewat Tempo', 'Belum Kalibrasi']}
             values={[k.kalibrasi.patuh, k.kalibrasi.kuning, k.kalibrasi.merah, k.kalibrasi.belum]}
             colors={['#00B894', '#F1C40F', '#FF2D2D', '#778899']}
-            centerText={`${k.kalibrasi.total}`}
-            percentLabels
+            legendLabel="Alat Medis"
           />
         </MCUChartCard>
 
@@ -271,10 +271,10 @@ export default function InspeksiKelaikanDashboard() {
         >
           <MCUChart
             type="doughnut"
-            labels={['Layak Pakai', 'Rusak / Perlu Diganti']}
+            labels={['Layak Pakai', 'Rusak']}
             values={[k.ergonomi.layak, k.ergonomi.rusak]}
             colors={['#00B894', '#FF2D2D']}
-            centerText={`${k.ergonomi.persenLayak}%`}
+            centerText={String(k.ergonomi.total)}
             percentLabels
           />
         </MCUChartCard>

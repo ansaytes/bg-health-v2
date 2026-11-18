@@ -140,6 +140,23 @@ export default function AdminProKawan() {
 
   useEffect(() => { void load(); }, [load]);
 
+  const mcuFocusRequest = useMCUStore((s) => s.mcuFocusRequest);
+  useEffect(() => {
+    if (!mcuFocusRequest) return;
+    const query = (mcuFocusRequest.nikKaryawan || mcuFocusRequest.nama || '').trim();
+    if (query) {
+      setSearch(query);
+      setFilterZona('semua');
+      setFilterSite('semua');
+      const match = peserta.find(
+        (p) =>
+          (p.nik && p.nik.toLowerCase() === query.toLowerCase()) ||
+          (p.nama && p.nama.toLowerCase().includes(query.toLowerCase())),
+      );
+      if (match) setSelectedNik(match.nik);
+    }
+  }, [mcuFocusRequest?.requestId, peserta]);
+
   const sites = useMemo(
     () => [...new Set(peserta.map((p) => p.site).filter(Boolean))].sort(),
     [peserta],

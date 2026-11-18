@@ -129,13 +129,14 @@ export default function NotificationBell({ isSuperuser, canMedic = false }: {
    */
   const bukaNotifikasi = (n: Notifikasi) => {
     setOpen(false);
-    if (n.fokusBaris) {
-      useMCUStore.getState().requestMcuFocus({
-        nikKaryawan: n.fokusBaris.nikKaryawan,
-        tglMCU: n.fokusBaris.tglMCU ?? null,
-        sumber: n.jenis,
-      });
-    }
+    const nik = n.fokusBaris?.nikKaryawan || '';
+    const nama = n.fokusBaris?.nama || n.subjek || '';
+    useMCUStore.getState().requestMcuFocus({
+      nikKaryawan: nik,
+      nama: nama || null,
+      tglMCU: n.fokusBaris?.tglMCU ?? null,
+      sumber: n.jenis,
+    });
     navigasiKe(n.tautan, bukaMenu);
     if (n.fokusBaris) void fetchMedic(true);
   };

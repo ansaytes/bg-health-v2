@@ -649,7 +649,7 @@ function AdminTogglePanel({ formContent, tableContents, hasTable, stepLabels }: 
   // Diturunkan (derived) saat render, bukan lewat effect + setState: effect
   // akan merender form lebih dulu baru berpindah panel, dan permintaan baru
   // langsung menimpa langkah yang sedang dilihat tanpa kedip.
-  const adaTargetBaris = !!mcuFocusRequest?.nikKaryawan;
+  const adaTargetBaris = !!mcuFocusRequest?.nikKaryawan || !!mcuFocusRequest?.nama;
   const [targetTerakhir, setTargetTerakhir] = useState<number | null>(null);
   if (hasTable && adaTargetBaris && targetTerakhir !== mcuFocusRequest!.requestId) {
     setTargetTerakhir(mcuFocusRequest!.requestId);

@@ -133,6 +133,16 @@ export default function PakRegister() {
 
   useEffect(() => { void load(); }, [load]);
 
+  const mcuFocusRequest = useMCUStore((s) => s.mcuFocusRequest);
+  useEffect(() => {
+    if (!mcuFocusRequest) return;
+    const query = (mcuFocusRequest.nama || mcuFocusRequest.nikKaryawan || '').trim();
+    if (query) {
+      setSearch(query);
+      setFilterStatus('semua');
+    }
+  }, [mcuFocusRequest?.requestId]);
+
   const filtered = useMemo(() => cases.filter((c) => {
     if (filterStatus !== 'semua' && c.status !== filterStatus) return false;
     const term = search.trim().toLowerCase();

@@ -107,6 +107,23 @@ export default function MonitoringKaryawanSakit() {
 
   useEffect(() => { void load(); }, [load]);
 
+  const mcuFocusRequest = useMCUStore((s) => s.mcuFocusRequest);
+  useEffect(() => {
+    if (!mcuFocusRequest) return;
+    const query = (mcuFocusRequest.nama || mcuFocusRequest.nikKaryawan || '').trim();
+    if (query) {
+      setSearch(query);
+      setFilterStatus('semua');
+      setFilterFase('semua');
+      const match = episodes.find(
+        (e) =>
+          (e.nama && e.nama.toLowerCase().includes(query.toLowerCase())) ||
+          (e.nik && e.nik.toLowerCase() === query.toLowerCase()),
+      );
+      if (match) setSelected(match.id);
+    }
+  }, [mcuFocusRequest?.requestId, episodes]);
+
   const filtered = useMemo(() => episodes.filter((e) => {
     if (filterStatus !== 'semua' && e.status !== filterStatus) return false;
     if (filterFase !== 'semua' && e.fase !== filterFase) return false;

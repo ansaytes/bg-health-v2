@@ -64,7 +64,8 @@ export interface Notifikasi {
    * MCU (MCU expired / akan expired).
    */
   fokusBaris?: {
-    nikKaryawan: string;
+    nikKaryawan?: string;
+    nama?: string | null;
     /** Tanggal MCU record yang dimaksud (YYYY-MM-DD). */
     tglMCU?: string | null;
   };

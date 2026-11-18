@@ -22,7 +22,8 @@ export type ReviewStep = 'search' | 'ocr' | 'form';
  */
 export interface MCUFocusRequest {
   requestId: number;
-  nikKaryawan: string;
+  nikKaryawan?: string;
+  nama?: string | null;
   tglMCU?: string | null;
   /** Sumber permintaan, hanya untuk keterangan di layar. */
   sumber?: string;

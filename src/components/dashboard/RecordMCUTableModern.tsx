@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -360,12 +360,12 @@ export default function RecordMCUTableModern() {
 
   useEffect(() => {
     if (!focusRequest) return;
-    const nik = focusRequest.nikKaryawan.trim();
+    const query = (focusRequest.nikKaryawan || focusRequest.nama || '').trim();
     setActiveTab('record');
     setRecordFilters({});
-    setSearch(nik || '');
+    setSearch(query || '');
     setPage(1);
-    setFocusNik(nik || null);
+    setFocusNik(query || null);
     if (!recordLoaded) void load();
     clearMcuFocus();
   }, [focusRequest?.requestId]);
@@ -374,10 +374,13 @@ export default function RecordMCUTableModern() {
   // lompat ke halaman tempat baris itu berada, dan gulirkan ke tampilan.
   useEffect(() => {
     if (!focusNik || !recordLoaded) return;
-    const nik = focusNik.toLowerCase();
+    const term = focusNik.toLowerCase();
     const cocok = rows.filter(r =>
-      String(r.nik_karyawan ?? '').toLowerCase() === nik
-      || String(r.nama ?? '').toLowerCase() === nik);
+      String(r.nik_karyawan ?? '').toLowerCase() === term
+      || String(r.nama ?? '').toLowerCase() === term
+      || (r.nama && String(r.nama).toLowerCase().includes(term))
+      || (r.nik_karyawan && String(r.nik_karyawan).toLowerCase().includes(term)),
+    );
     if (cocok.length === 0) {
       setFocusRowId(null);
       return;

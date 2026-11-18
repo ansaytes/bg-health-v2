@@ -117,6 +117,10 @@ export async function GET(req: NextRequest) {
         sisaHari: p.sisaHari,
         tautan: JENIS_META['kontrol-prokawan'].tautanDefault,
         aksi: 'Hubungi peserta',
+        fokusBaris: {
+          nikKaryawan: p.nik,
+          nama: p.nama,
+        },
       });
     }
   } catch {
@@ -225,6 +229,9 @@ export async function GET(req: NextRequest) {
         sisaHari: sisa,
         tautan: JENIS_META['surat-kelayakan'].tautanDefault,
         aksi: 'Penilaian ulang',
+        fokusBaris: {
+          nama: ep?.nama ?? null,
+        },
       });
     }
   } catch {
@@ -265,6 +272,10 @@ export async function GET(req: NextRequest) {
           sisaHari: sisa,
           tautan: JENIS_META['pak-batas-waktu'].tautanDefault,
           aksi: 'Buka Register PAK',
+          fokusBaris: {
+            nikKaryawan: String(p.id_register ?? ''),
+            nama: namaTerbaca(p.nama_enc),
+          },
         });
       }
     }
@@ -323,6 +334,9 @@ export async function GET(req: NextRequest) {
         sisaHari: sisa,
         tautan: JENIS_META['karyawan-sakit'].tautanDefault,
         aksi: 'Catat kontak',
+        fokusBaris: {
+          nama: namaTerbaca(e.nama_enc),
+        },
       });
     }
   } catch {
