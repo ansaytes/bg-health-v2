@@ -248,26 +248,14 @@ export async function POST(req: NextRequest) {
     // ── Otomatis Sinkronisasi Realisasi ke inspeksi_jadwal ────────────────
     const tglInspeksi = baris[0]?.tanggal_inspeksi ? String(baris[0].tanggal_inspeksi).slice(0, 10) : hariIni;
     const periode = tglInspeksi.slice(0, 7);
-    const katalogIds = barisValid.map(b => String(b.katalog_id));
 
     try {
-      // 1. Update baris jadwal rencana objek katalog terkait
-      await client
-        .from('inspeksi_jadwal')
-        .update({
-          status: 'selesai',
-          tanggal_selesai: tglInspeksi,
-          petugas: caller.userId ?? null,
-          waktu_lapor: sekarang,
-          updated_at: sekarang,
-        })
-        .eq('site', site)
-        .eq('jenis', jenisKey)
-        .eq('periode', periode)
-        .in('objek_id', katalogIds)
-        .neq('status', 'selesai');
+      const matchObjekId = jenisKey === 'p3k'
+        ? `p3k:${grup}`
+        : jenisKey === 'ambulans'
+          ? `amb:${grup}`
+          : 'ergonomi';
 
-      // 2. Update jadwal level site/area yang masih berstatus rencana
       await client
         .from('inspeksi_jadwal')
         .update({
@@ -280,7 +268,7 @@ export async function POST(req: NextRequest) {
         .eq('site', site)
         .eq('jenis', jenisKey)
         .eq('periode', periode)
-        .eq('status', 'rencana');
+        .or(`objek_id.eq.${matchObjekId},objek_id.ilike.%${grup}%,status.eq.rencana`);
     } catch (jErr) {
       console.warn(`[inspeksi/checklist:${jenisKey}] Gagal auto-update jadwal:`, jErr);
     }

@@ -141,27 +141,63 @@ export async function POST(req: NextRequest) {
 
       for (const jenis of jenisList) {
         if (!JENIS_META[jenis]) continue;
-        const sumber = SUMBER_OBJEK[jenis];
 
-        // Objek untuk jenis tanpa katalog (sanitasi) memakai satu baris per site.
         let objek: { id: string; nama: string }[] = [];
-        if (sumber) {
-          const { data: katalog, error } = await client.from(sumber.tabel).select('*').order('urutan');
-          if (error) continue;
-          objek = (katalog ?? [])
-            .filter((k: Record<string, unknown>) => (sumber.jenisKolom ? Boolean(k[sumber.jenisKolom]) : true))
-            .map((k: Record<string, unknown>) => ({ id: String(k.id), nama: String(k.nama ?? '') }));
-        } else {
-          objek = [{ id: `area:${siteTarget}`, nama: `Inspeksi area ${siteTarget}` }];
+
+        if (jenis === 'sarana_klinik') {
+          objek = [{ id: 'klinik', nama: 'Inspeksi Sarana & Prasarana Klinik' }];
+        } else if (jenis === 'p3k') {
+          // Jadwal Kotak P3K dibuat per lokasi kotak di site tersebut
+          const { data: p3kRows } = await client
+            .from('p3k_site')
+            .select('lokasi')
+            .eq('site', siteTarget);
+          const lokasiSet = new Set(
+            (p3kRows ?? [])
+              .map(r => String(r.lokasi ?? '').trim())
+              .filter(Boolean),
+          );
+          const daftarLokasi = lokasiSet.size > 0
+            ? [...lokasiSet]
+            : ['Workshop', 'Kantor Utama', 'Mess', 'Warehouse'];
+          objek = daftarLokasi.map(lok => ({
+            id: `p3k:${lok}`,
+            nama: `Inspeksi Kotak P3K - ${lok}`,
+          }));
+        } else if (jenis === 'ambulans') {
+          // Jadwal Ambulans dibuat per unit ambulans di site tersebut
+          const { data: ambRows } = await client
+            .from('ambulans_unit')
+            .select('unit')
+            .eq('site', siteTarget);
+          const unitSet = new Set(
+            (ambRows ?? [])
+              .map(r => String(r.unit ?? '').trim())
+              .filter(Boolean),
+          );
+          const daftarUnit = unitSet.size > 0 ? [...unitSet] : ['AMB-01'];
+          objek = daftarUnit.map(u => ({
+            id: `amb:${u}`,
+            nama: `Inspeksi Kelaikan Ambulans - ${u}`,
+          }));
+        } else if (jenis === 'ergonomi') {
+          objek = [{ id: 'ergonomi', nama: 'Inspeksi Sarana Ergonomi Kerja' }];
+        } else if (jenis === 'sanitasi') {
+          objek = [{ id: 'sanitasi', nama: 'Inspeksi Higiene & Sanitasi (Kantin & Mess)' }];
+        } else if (jenis === 'kalibrasi') {
+          // Hanya alat medis utama yang wajib dikalibrasi berkala (tahunan)
+          const { data: kalibrasiItems } = await client
+            .from('sarana_katalog')
+            .select('id,nama')
+            .eq('perlu_kalibrasi', true);
+          objek = (kalibrasiItems ?? []).map((k: Record<string, unknown>) => ({
+            id: `kalibrasi:${k.id}`,
+            nama: `Uji Kalibrasi - ${k.nama}`,
+          }));
         }
+
         if (objek.length === 0) continue;
 
-        // Frekuensi menentukan BERAPA KALI objek ini diperiksa dalam sebulan.
-        //  30 hari → 1× (tanggal terakhir bulan)
-        //  14 hari → 2× (pertengahan & akhir)
-        //   7 hari → 4× (tiap minggu)
-        //  90 hari → tiap 3 bulan (bulan ke-1, 4, 7, 10)
-        // 365 hari → sekali setahun (bulan yang sama dengan periode mulai)
         const frekuensi = frekuensiUntukJenis(jenis, body?.frekuensi_hari);
         const tanggalRencana = tanggalRencanaPeriode(periode, frekuensi);
         if (tanggalRencana.length === 0) continue;
@@ -174,7 +210,6 @@ export async function POST(req: NextRequest) {
               objek_id: o.id,
               objek_nama: o.nama,
               periode,
-              // H+0 masih boleh diselesaikan; terlewat mulai H+1.
               tanggal_rencana: tanggal,
               status: 'rencana',
               frekuensi_hari: frekuensi,

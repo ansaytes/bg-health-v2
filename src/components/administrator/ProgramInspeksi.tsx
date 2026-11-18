@@ -152,22 +152,22 @@ export default function ProgramInspeksi() {
   };
 
   return (
-    <div className="admin-form-container" style={{ padding: 16, overflow: 'auto' }}>
-      <div className="mcu-records-card">
+    <div className="mcu-records-modern" style={{ flex: 1, minHeight: 0, padding: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="mcu-records-card" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Header Toolbar Perencanaan */}
-        <div className="mcu-records-header" style={{ flexWrap: 'wrap', gap: 10 }}>
-          <div>
-            <div className="mcu-records-kicker">FORM ADMINISTRASI OPERASIONAL</div>
-            <h3 style={{ fontSize: 15, margin: 0 }}>Perencanaan Jadwal Inspeksi Lapangan</h3>
+        <div className="mcu-records-header" style={{ flexShrink: 0, marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ flexShrink: 0 }}>
+            <div className="mcu-records-kicker">FORM PERENCANAAN OPERASIONAL</div>
+            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>Perencanaan Target Jadwal Inspeksi Lapangan</h3>
           </div>
-          <div className="mcu-records-actions" style={{ flexWrap: 'wrap', gap: 6 }}>
+          <div className="mcu-records-actions" style={{ flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
               <span>Periode</span>
               <input
                 type="month"
                 value={periode}
                 onChange={e => setPeriode(e.target.value || periodeBulan())}
-                style={{ height: 28, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 6px' }}
+                style={{ height: 32, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 8px' }}
               />
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
@@ -175,7 +175,7 @@ export default function ProgramInspeksi() {
               <select
                 value={site}
                 onChange={e => setSite(e.target.value)}
-                style={{ height: 28, minWidth: 120, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 6px' }}
+                style={{ height: 32, minWidth: 120, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 8px' }}
               >
                 <option value="">Semua site</option>
                 {daftarSite.map(s => <option key={s} value={s}>{s}</option>)}
@@ -186,22 +186,22 @@ export default function ProgramInspeksi() {
               <select
                 value={jenis}
                 onChange={e => setJenis(e.target.value as JenisInspeksi | '')}
-                style={{ height: 28, minWidth: 140, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 6px' }}
+                style={{ height: 32, minWidth: 150, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 8px' }}
               >
                 <option value="">Semua jenis</option>
                 {JENIS_INSPEKSI_LIST.map(j => <option key={j} value={j}>{JENIS_META[j].label}</option>)}
               </select>
             </label>
-            <button type="button" className="mcu-dashboard-refresh" onClick={() => void load()} disabled={loading}>
+            <button type="button" className="mcu-dashboard-refresh" onClick={() => void load()} disabled={loading} style={{ height: 32 }}>
               <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
             </button>
             {isAdmin && (
               <>
-                <Button size="sm" onClick={buatRencana} disabled={bekerja}>
-                  <Plus size={14} className="mr-1" /> Buat Rencana Periode
+                <Button size="sm" onClick={buatRencana} disabled={bekerja} style={{ height: 32, fontSize: 11 }}>
+                  <Plus size={13} className="mr-1" /> Buat Rencana Periode
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => { setTambahSite(site || daftarSite[0] || ''); setModalBuka(true); }} disabled={bekerja}>
-                  <Plus size={14} className="mr-1" /> Jadwal Khusus
+                <Button size="sm" variant="outline" onClick={() => { setTambahSite(site || daftarSite[0] || ''); setModalBuka(true); }} disabled={bekerja} style={{ height: 32, fontSize: 11 }}>
+                  <Plus size={13} className="mr-1" /> Jadwal Khusus
                 </Button>
               </>
             )}
@@ -209,21 +209,21 @@ export default function ProgramInspeksi() {
         </div>
 
         {/* Banner Penjelasan Alur Digitalisasi */}
-        <div style={{ margin: '8px 0 12px', padding: '8px 12px', fontSize: 10.5, color: 'var(--muted-foreground)', display: 'flex', gap: 8, alignItems: 'center', background: 'var(--muted)/25', borderRadius: 8, borderLeft: '3px solid #00B894' }}>
+        <div style={{ margin: '0 0 10px', padding: '8px 12px', fontSize: 10.5, color: 'var(--muted-foreground)', display: 'flex', gap: 8, alignItems: 'center', background: 'var(--muted)/25', borderRadius: 8, borderLeft: '3px solid #00B894', flexShrink: 0 }}>
           <Check size={14} color="#00B894" style={{ flexShrink: 0 }} />
           <div>
-            <b>Realisasi Otomatis dari Checklist:</b> Saat petugas mengisi tanggal pelaksanaan pada tab <i>Sarana Klinik</i>, <i>Kotak P3K</i>, <i>Ambulans</i>, atau <i>Sarana Ergonomi</i>, jadwal terkait langsung ditandai <b>Selesai</b> bersama identitas pemeriksa tanpa perlu dicatat ulang.
+            <b>Target per Program/Fasilitas:</b> Jadwal dibuat per kelompok inspeksi (Sarana Klinik, Kotak P3K per Lokasi, Ambulans per Unit, Ergonomi). Saat checklist digital diisi di lapangan, jadwal langsung <b>Otomatis Selesai</b> tercatat.
             <div style={{ marginTop: 2, color: 'var(--primary)', fontSize: 10 }}>
-              💡 Untuk melihat grafik capaian KPI, kepatuhan on-time, MTTR, dan tren inspeksi, silakan buka <b>Menu Dashboard → Program Inspeksi</b>.
+              💡 Untuk analisis grafik KPI &amp; tren kepatuhan eksekusi, silakan buka <b>Menu Dashboard → Program Inspeksi</b>.
             </div>
           </div>
         </div>
 
-        {error && <div style={{ padding: '8px 12px', fontSize: 11, color: '#b3261e' }}>{error}</div>}
+        {error && <div style={{ padding: '8px 12px', fontSize: 11, color: '#b3261e', marginBottom: 8 }}>{error}</div>}
 
         {/* Modal Dialog Tambah Jadwal Khusus */}
         {modalBuka && (
-          <div className="card" style={{ padding: '12px 14px', marginBottom: 12, border: '1px solid var(--primary)', background: 'var(--card)' }}>
+          <div className="card" style={{ padding: '12px 14px', marginBottom: 12, border: '1px solid var(--primary)', background: 'var(--card)', flexShrink: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <h4 style={{ margin: 0, fontSize: 12, fontWeight: 700 }}>Tambah Jadwal Rencana Inspeksi Khusus</h4>
               <button type="button" onClick={() => setModalBuka(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={15} /></button>
@@ -259,7 +259,7 @@ export default function ProgramInspeksi() {
                 />
               </label>
               <label className="flex flex-col gap-1">
-                <span className="text-[10px] font-semibold text-muted-foreground">Nama Objek / Lokasi</span>
+                <span className="text-[10px] font-semibold text-muted-foreground">Nama Objek / Lokasi / Unit</span>
                 <Input
                   value={tambahObjek}
                   onChange={e => setTambahObjek(e.target.value)}
@@ -278,19 +278,19 @@ export default function ProgramInspeksi() {
         )}
 
         {/* Tabel Daftar Rencana & Realisasi */}
-        <div className="mcu-records-table-wrap">
-          <table className="mcu-records-table">
+        <div className="mcu-records-table-wrap" style={{ flex: 1, minHeight: 0, overflow: 'auto', borderRadius: 10, border: '1px solid var(--border)' }}>
+          <table className="mcu-records-table" style={{ width: '100%', minWidth: 1050 }}>
             <thead>
               <tr>
-                <th style={{ width: 44 }}>No</th>
-                <th style={{ width: 170 }}>Jenis Fasilitas</th>
+                <th style={{ width: 44, textAlign: 'center' }}>No</th>
+                <th style={{ width: 180 }}>Jenis Inspeksi</th>
                 <th style={{ width: 120 }}>Site</th>
-                <th>Objek / Sarana</th>
-                <th style={{ width: 105 }}>Target Rencana</th>
-                <th style={{ width: 105 }}>Tgl Realisasi</th>
+                <th>Program / Objek Fasilitas</th>
+                <th style={{ width: 110 }}>Target Rencana</th>
+                <th style={{ width: 110 }}>Tgl Realisasi</th>
                 <th style={{ width: 100 }}>Status</th>
                 <th style={{ width: 140 }}>Petugas Pemeriksa</th>
-                {isAdmin && <th style={{ width: 110 }}>Aksi Cadangan</th>}
+                {isAdmin && <th style={{ width: 110, textAlign: 'center' }}>Aksi Cadangan</th>}
               </tr>
             </thead>
             <tbody>

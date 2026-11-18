@@ -230,26 +230,27 @@ export default function PicaRegister() {
   };
 
   return (
-    <div className="admin-form-container" style={{ padding: 16, overflow: 'auto' }}>
-      <div className="mcu-records-card">
-        <div className="mcu-records-header">
-          <div>
-            <div className="mcu-records-kicker">PICA</div>
-            <h3>Register Temuan Ketidaksesuaian</h3>
+    <div className="mcu-records-modern" style={{ flex: 1, minHeight: 0, padding: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="mcu-records-card" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className="mcu-records-header" style={{ flexShrink: 0, marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ flexShrink: 0 }}>
+            <div className="mcu-records-kicker">FORM REGISTER DEVIASI</div>
+            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>Register PICA (Problem Identification &amp; Corrective Action)</h3>
           </div>
-          <div className="mcu-records-actions">
-            <div className="mcu-records-search">
+          <div className="mcu-records-actions" style={{ flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+            <div className="mcu-records-search" style={{ height: 32, minWidth: 220 }}>
               <input
                 aria-label="Cari PICA"
                 placeholder="Cari temuan, objek, departemen…"
                 value={cari}
                 onChange={e => setCari(e.target.value)}
+                style={{ fontSize: 11 }}
               />
             </div>
             <select
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
-              style={{ height: 28, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 6px' }}
+              style={{ height: 32, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 8px' }}
             >
               <option value="">Semua status</option>
               <option value="open">Open</option>
@@ -260,12 +261,12 @@ export default function PicaRegister() {
             <select
               value={filterSite}
               onChange={e => setFilterSite(e.target.value)}
-              style={{ height: 28, minWidth: 120, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 6px' }}
+              style={{ height: 32, minWidth: 120, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 8px' }}
             >
               <option value="">Semua site</option>
               {daftarSite.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
-            <button type="button" className="mcu-dashboard-refresh" onClick={() => void load()} disabled={loading}>
+            <button type="button" className="mcu-dashboard-refresh" onClick={() => void load()} disabled={loading} style={{ height: 32 }}>
               <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
             </button>
             {isAdmin && (
@@ -275,52 +276,53 @@ export default function PicaRegister() {
                   variant="outline"
                   onClick={buatOtomatis}
                   disabled={bekerja}
+                  style={{ height: 32, fontSize: 11 }}
                   title="Tarik otomatis dari temuan inspeksi P3K, ambulans, ergonomi, dan sarana klinik"
                 >
-                  <Wand2 size={14} className="mr-1" />
-                  Buat dari temuan{pratinjau?.total ? ` (${pratinjau.total})` : ''}
+                  <Wand2 size={13} className="mr-1" />
+                  Tarik Temuan Otomatis{pratinjau?.total ? ` (${pratinjau.total})` : ''}
                 </Button>
-                <Button size="sm" onClick={() => setFormBuka(true)} disabled={bekerja}>
-                  <Plus size={14} className="mr-1" /> Catat PICA
+                <Button size="sm" onClick={() => setFormBuka(true)} disabled={bekerja} style={{ height: 32, fontSize: 11 }}>
+                  <Plus size={13} className="mr-1" /> Catat PICA Manual
                 </Button>
               </>
             )}
           </div>
         </div>
 
-        {error && <div style={{ padding: '8px 12px', fontSize: 11, color: '#b3261e' }}>{error}</div>}
+        {error && <div style={{ padding: '8px 12px', fontSize: 11, color: '#b3261e', marginBottom: 8 }}>{error}</div>}
 
         {data && !data.tabelSiap ? (
           <div style={{ padding: 16, fontSize: 12, color: '#9a6b00' }}>{data.catatan}</div>
         ) : (
           <>
-            <div className="mcu-records-toolbar" style={{ gap: 18 }}>
-              <div className="mcu-records-toolbar-title">Ringkasan</div>
+            <div className="mcu-records-toolbar" style={{ gap: 16, flexShrink: 0, marginBottom: 8, padding: '6px 12px' }}>
+              <div className="mcu-records-toolbar-title" style={{ fontSize: 11, fontWeight: 700 }}>Ringkasan Status:</div>
               <span style={{ fontSize: 11 }}>Total <b>{ringkas.total}</b></span>
-              <span style={{ fontSize: 11 }}>Aktif <b>{ringkas.aktif}</b></span>
-              <span style={{ fontSize: 11 }}>Closed <b>{ringkas.closed}</b></span>
+              <span style={{ fontSize: 11 }}>Aktif <b style={{ color: '#E67E22' }}>{ringkas.aktif}</b></span>
+              <span style={{ fontSize: 11 }}>Closed <b style={{ color: '#00B894' }}>{ringkas.closed}</b></span>
               <span style={{ fontSize: 11 }}>
                 Overdue <b style={{ color: ringkas.overdue ? '#FF2D2D' : 'inherit' }}>{ringkas.overdue}</b>
               </span>
               <span style={{ fontSize: 11 }}>
-                MTTR <b>{ringkas.mttr === null ? '—' : `${ringkas.mttr} hari`}</b>
+                Rata-rata Penyelesaian (MTTR): <b>{ringkas.mttr === null ? '—' : `${ringkas.mttr} hari`}</b>
               </span>
             </div>
 
-            <div className="mcu-records-table-wrap">
-              <table className="mcu-records-table">
+            <div className="mcu-records-table-wrap" style={{ flex: 1, minHeight: 0, overflow: 'auto', borderRadius: 10, border: '1px solid var(--border)' }}>
+              <table className="mcu-records-table" style={{ width: '100%', minWidth: 1050 }}>
                 <thead>
                   <tr>
-                    <th style={{ width: 52 }}>No</th>
-                    <th style={{ width: 190 }}>Objek / Sumber</th>
-                    <th>Deskripsi temuan</th>
-                    <th style={{ width: 85 }}>Tingkat</th>
-                    <th style={{ width: 140 }}>Departemen</th>
-                    <th style={{ width: 95 }}>Dibuat</th>
-                    <th style={{ width: 95 }}>Tenggat</th>
-                    <th style={{ width: 95 }}>Sisa</th>
-                    <th style={{ width: 105 }}>Status</th>
-                    {isAdmin && <th style={{ width: 100 }}>Aksi</th>}
+                    <th style={{ width: 44, textAlign: 'center' }}>No</th>
+                    <th style={{ width: 180 }}>Objek / Sumber Temuan</th>
+                    <th>Deskripsi Penyimpangan (Deviasi)</th>
+                    <th style={{ width: 90 }}>Tingkat</th>
+                    <th style={{ width: 130 }}>Departemen</th>
+                    <th style={{ width: 95 }}>Tgl Dibuat</th>
+                    <th style={{ width: 95 }}>Batas Waktu</th>
+                    <th style={{ width: 85 }}>Sisa Waktu</th>
+                    <th style={{ width: 100 }}>Status</th>
+                    {isAdmin && <th style={{ width: 90, textAlign: 'center' }}>Tindakan</th>}
                   </tr>
                 </thead>
                 <tbody>
