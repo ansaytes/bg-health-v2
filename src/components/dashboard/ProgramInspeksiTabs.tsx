@@ -1,52 +1,50 @@
 'use client';
 
 // ============================================================
-// Dashboard > Program Inspeksi (dua sudut pandang, satu menu)
+// Dashboard > Program Inspeksi (Dua Tab Strategis QSHE)
 // ============================================================
 //
-// Menu ini menggabungkan dua dashboard yang sebelumnya terpisah, karena
-// keduanya sama-sama soal inspeksi aset kesehatan kerja tetapi mengukur hal
-// yang BERBEDA dan saling melengkapi:
+// 1. Tab "Kinerja Tim Inspeksi":
+//    Memantau kedisiplinan, produktivitas, ketepatan waktu tim,
+//    kecepatan penutupan temuan PICA (MTTR), serta deteksi blindspot.
 //
-//   Tab 1 — EKSEKUSI
-//     Apakah tim sudah memeriksa tepat waktu?
-//     Sumber: inspeksi_jadwal + pica.
-//     Completion rate, on-time vs late, blindspot, MTTR PICA, beban petugas.
-//
-//   Tab 2 — KONDISI ASET  (dulu menu "SPIP")
-//     Apakah barangnya ada dan layak?
-//     Sumber: sarana_katalog + sarana_site.
-//     Kelengkapan, kelayakan, item rusak/belum tersedia, peringkat per site.
-//
-// Keduanya bisa berbeda arah: jadwal kontrol bisa 100% tepat waktu sementara
-// banyak alat rusak — atau sebaliknya. Karena itu tidak saling menggantikan.
-//
-// KALIBRASI hanya muncul di tab Eksekusi (countdown H-60 + daftar jatuh tempo
-// per alat). Versi di SPIP sudah dihapus agar tidak ada dua angka untuk satu
-// data yang sama.
+// 2. Tab "Kelaikan Fasilitas":
+//    Memantau kondisi riil fasilitas di lapangan (Ambulans, Kotak P3K,
+//    Sarana Klinik, Kalibrasi Alkes, Ergonomi, dan Kerusakan Berulang).
+//    Setiap diagram donut murni 100% homogen per jenis fasilitas.
 
 import { useState } from 'react';
 
 import InspeksiDashboard from '@/components/dashboard/InspeksiDashboard';
-import SPIPDashboard from '@/components/dashboard/SPIPDashboard';
+import InspeksiKelaikanDashboard from '@/components/dashboard/InspeksiKelaikanDashboard';
 import CenteredTabs from '@/components/ui/centered-tabs';
 
-type Tab = 'eksekusi' | 'kondisi-aset';
+export type ProgramInspeksiTab = 'kinerja' | 'kelaikan';
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'eksekusi', label: 'Eksekusi & PICA' },
-  { key: 'kondisi-aset', label: 'Kondisi Aset' },
+const TABS: { key: ProgramInspeksiTab; label: string }[] = [
+  { key: 'kinerja', label: 'Kinerja Tim Inspeksi' },
+  { key: 'kelaikan', label: 'Kelaikan Fasilitas' },
 ];
 
-export default function ProgramInspeksiTabs({ initialTab = 'eksekusi' }: { initialTab?: Tab }) {
-  const [tab, setTab] = useState<Tab>(initialTab);
+export default function ProgramInspeksiTabs({
+  initialTab = 'kinerja',
+}: {
+  initialTab?: string;
+}) {
+  // Mapping backwards-compatible alias (eksekusi -> kinerja, kondisi-aset -> kelaikan)
+  const normTab: ProgramInspeksiTab =
+    initialTab === 'kondisi-aset' || initialTab === 'kelaikan'
+      ? 'kelaikan'
+      : 'kinerja';
+
+  const [tab, setTab] = useState<ProgramInspeksiTab>(normTab);
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <CenteredTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Program Inspeksi" />
 
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {tab === 'eksekusi' ? <InspeksiDashboard /> : <SPIPDashboard />}
+        {tab === 'kinerja' ? <InspeksiDashboard /> : <InspeksiKelaikanDashboard />}
       </div>
     </div>
   );

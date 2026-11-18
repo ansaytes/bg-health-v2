@@ -1,26 +1,19 @@
 'use client';
 
 // ============================================================
-// Dashboard > Program Inspeksi (SMKP Minerba & QSHE Executive)
+// Dashboard > Program Inspeksi > Tab 1: Kinerja Tim Inspeksi
 // ============================================================
 //
-// Standar template Dashboard Monitoring MCU / Pelayanan Kuratif:
-//   • Top bar dengan filter Periode/Site + MCU Total Bar (Key KPI Badges)
-//   • 2 Baris Chart (mcu-grid-3 mcu-live-chart-row), total maksimal 6 kartu
-//   • Menggunakan MCUChartCard & MCUChart dengan standar animasi & palet warna K3
+// Khusus memantau akuntabilitas, kedisiplinan & kinerja operasional petugas:
+//   • Capaian jadwal bulanan (Plan vs Actual) & ketepatan waktu inspektur
+//   • Distribusi beban & produktivitas inspeksi per petugas
+//   • Kecepatan resolusi PICA (MTTR) & temuan overdue per departemen
+//   • Deteksi blindspot (area yang diabaikan/lama tidak diperiksa >30 hari)
 //
-// BARIS 1: Kepatuhan Pelaksanaan & Kesiapan Tanggap Darurat
-//   1. Capaian Jadwal Inspeksi (Plan vs Realisasi Bulanan)
-//   2. Kesiapan Tanggap Darurat (Ambulans & Kotak P3K Palang Hijau)
-//   3. Kelaikan Fasilitas & Sarana Kerja (Sarana Klinik & Ergonomi)
-//
-// BARIS 2: Kelaikan Teknis, Kalibrasi & Pengendalian Temuan
-//   4. Kepatuhan Kalibrasi Alat Medis (Alat Kesehatan & Diagnostik)
-//   5. Kinerja Penanganan PICA (Tindak Lanjut & MTTR Penutupan)
-//   6. Cakupan Pengawasan & Deteksi Blindspot Area (>30 Hari)
+// Mengikuti standar template MCU: Top bar + 2 Baris (mcu-grid-3), total 6 kartu.
 
 import { useCallback, useEffect, useState } from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, UserCheck } from 'lucide-react';
 
 import { authFetch } from '@/lib/api-client';
 import {
@@ -36,7 +29,6 @@ interface Data {
   success: boolean;
   periode: string;
   site: string | null;
-  tabelSiap: Record<string, boolean>;
   catatan: string | null;
   eksekusi: {
     target: number;
@@ -48,9 +40,6 @@ interface Data {
     tepatWaktu: number;
     terlambat: number;
     persenTepatWaktu: number;
-    terlewatPerJenis: { jenis: string; label: string; jumlah: number }[];
-    tren: { periode: string; target: number; selesai: number; persen: number }[];
-    daftarTerlewat: { id: number; label: string; site: string | null; objek: string | null; tanggal_rencana: string | null; hariTerlambat: number }[];
   };
   cakupan: {
     terdaftar: number;
@@ -59,56 +48,6 @@ interface Data {
     ambangHari: number;
     blindspot: { site: string; label: string; hariTerakhir: number | null; terakhir: string | null; jumlahObjek: number }[];
   };
-  kelaikan: {
-    ambulans: {
-      totalUnit: number;
-      ready: number;
-      standby: number;
-      breakdown: number;
-      itemTotal: number;
-      itemAda: number;
-      itemRusak: number;
-    };
-    p3k: {
-      total: number;
-      ada: number;
-      rusak: number;
-      tidakAda: number;
-      persenSiap: number;
-      kedaluwarsa: { nama: string; site: string; tanggal: string; sisaHari: number | null }[];
-      hilang: { nama: string; site: string; lokasi: string }[];
-    };
-    klinik?: {
-      total: number;
-      ada: number;
-      rusak: number;
-      tidakAda: number;
-      persen: number;
-    };
-    sanitasi: {
-      jumlahArea: number;
-      diBawahStandar: number;
-      rataRata: number | null;
-      ambang: number;
-      area: { site: string; tanggal: string; skor: number }[];
-    };
-    ergonomi: {
-      total: number;
-      layak: number;
-      rusak: number;
-      persenLayak: number;
-      perItem: { nama: string; rusak: number; layak: number }[];
-    };
-    kalibrasi: {
-      total: number;
-      patuh: number;
-      kuning: number;
-      merah: number;
-      belum: number;
-      peringatanHari: number;
-      jatuhTempo: { nama: string; site: string; tanggal: string | null; sisaHari: number | null; status: string }[];
-    };
-  };
   pica: {
     total: number;
     aktif: number;
@@ -116,7 +55,6 @@ interface Data {
     overdue: number;
     mttr: number | null;
     perDepartemen: { departemen: string; aktif: number; overdue: number; closed: number }[];
-    terulang: { objek: string; jumlah: number; picaIds: string[] }[];
   };
   produktivitas: {
     perPetugas: { petugas: string; selesai: number; tepat: number; terlambat: number; terlewat: number }[];
@@ -141,7 +79,7 @@ export default function InspeksiDashboard() {
       const hasil = (await authFetch(`/api/inspeksi/dashboard?${qs.toString()}`)) as unknown as Data;
       setData(hasil);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal memuat dashboard inspeksi');
+      setError(e instanceof Error ? e.message : 'Gagal memuat kinerja inspeksi');
     } finally {
       setLoading(false);
     }
@@ -151,13 +89,13 @@ export default function InspeksiDashboard() {
     void load();
   }, [load]);
 
-  if (loading && !data) return <PageLoading label="Memuat dashboard program inspeksi" />;
+  if (loading && !data) return <PageLoading label="Memuat kinerja tim inspeksi" />;
 
   if (!data) {
     return (
       <div className="dashboard mcu-live-dashboard" style={{ alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(255,45,45,0.08)', color: '#b3261e', fontSize: 12 }}>
-          {error || 'Data program inspeksi tidak tersedia.'}
+          {error || 'Data kinerja tim inspeksi tidak tersedia.'}
         </div>
       </div>
     );
@@ -165,12 +103,12 @@ export default function InspeksiDashboard() {
 
   const e = data.eksekusi;
   const c = data.cakupan;
-  const k = data.kelaikan;
   const p = data.pica;
+  const pr = data.produktivitas;
 
   return (
     <div className="dashboard mcu-live-dashboard">
-      {/* ── Top Bar: Filter & Executive KPI Indicators ─────────────────── */}
+      {/* ── Top Bar: Filter & Team Performance Badges ─────────────────── */}
       <div className="dashboard-top-bar mcu-live-top-bar">
         <div className="mcu-dashboard-filters">
           <label>
@@ -216,21 +154,21 @@ export default function InspeksiDashboard() {
           </label>
         </div>
 
-        {/* Executive Scorecard Badges */}
+        {/* Accountability KPI Chips */}
         <div className="mcu-total-bar">
-          <span className="mcu-total-label">Target:</span>
+          <span className="mcu-total-label">Target Inspeksi:</span>
           <span className="mcu-total-num">{e.target}</span>
           <span style={{ fontWeight: 700, color: e.persenSelesai >= 90 ? '#00B894' : e.persenSelesai >= 70 ? '#E67E22' : '#FF2D2D' }}>
             Selesai: {e.selesai} ({e.persenSelesai}%)
           </span>
-          <span style={{ fontWeight: 700, color: e.terlewat ? '#FF2D2D' : 'inherit' }}>
+          <span style={{ fontWeight: 700, color: e.terlewat > 0 ? '#FF2D2D' : 'inherit' }}>
             Terlewat: {e.terlewat}
           </span>
-          <span style={{ fontWeight: 700, color: p.overdue ? '#FF2D2D' : 'inherit' }}>
+          <span style={{ fontWeight: 700, color: p.overdue > 0 ? '#FF2D2D' : 'inherit' }}>
             PICA Overdue: {p.overdue}
           </span>
-          <span style={{ fontWeight: 700, color: k.kalibrasi.merah ? '#FF2D2D' : 'inherit' }}>
-            Kalibrasi Lewat: {k.kalibrasi.merah}
+          <span style={{ fontWeight: 700, color: '#3498DB' }}>
+            MTTR: {p.mttr !== null ? `${p.mttr} Hari` : '—'}
           </span>
           <MCURefreshButton loading={loading} onClick={() => void load()} />
         </div>
@@ -242,9 +180,9 @@ export default function InspeksiDashboard() {
         </div>
       )}
 
-      {/* ── BARIS 1: Kepatuhan Pelaksanaan & Tanggap Darurat (3 Kartu) ──── */}
+      {/* ── BARIS 1: Eksekusi Jadwal & Produktivitas Tim (3 Kartu) ──────── */}
       <div className="mcu-grid-3 mcu-live-chart-row">
-        {/* CARD 1: Capaian & Kepatuhan Jadwal Inspeksi */}
+        {/* CARD 1: Capaian Target Jadwal Inspeksi */}
         <MCUChartCard
           title="Capaian Jadwal Inspeksi"
           subtitle={`Target: ${e.target} · Selesai: ${e.selesai} · Terlewat: ${e.terlewat}`}
@@ -252,78 +190,70 @@ export default function InspeksiDashboard() {
         >
           <MCUChart
             type="doughnut"
-            labels={['Tepat Waktu', 'Terlambat', 'Terlewat']}
-            values={[e.tepatWaktu, e.terlambat, e.terlewat]}
-            colors={['#00B894', '#F39C12', '#FF2D2D']}
+            labels={['Selesai', 'Belum Terlaksana', 'Terlewat']}
+            values={[e.selesai, Math.max(0, e.target - e.selesai - e.terlewat), e.terlewat]}
+            colors={['#00B894', '#B0B7C3', '#FF2D2D']}
             centerText={`${e.persenSelesai}%`}
             percentLabels
           />
         </MCUChartCard>
 
-        {/* CARD 2: Kesiapan Tanggap Darurat (Ambulans & P3K Palang Hijau) */}
+        {/* CARD 2: Ketepatan Waktu Pelaksanaan */}
         <MCUChartCard
-          title="Kesiapan Tanggap Darurat"
-          subtitle={`Ambulans: ${k.ambulans.ready}/${k.ambulans.totalUnit || 1} Ready · P3K: ${k.p3k.persenSiap}% Siap`}
+          title="Ketepatan Waktu Pelaksanaan"
+          subtitle={`${e.tepatWaktu} Tepat Jadwal · ${e.terlambat} Terlambat`}
           className="glow-teal"
         >
           <MCUChart
             type="doughnut"
-            labels={['Ambulans Siap (Ready)', 'P3K Siap Lengkap', 'P3K Rusak / Kurang', 'Ambulans Standby/Perbaikan']}
-            values={[
-              k.ambulans.ready,
-              k.p3k.ada,
-              k.p3k.rusak + k.p3k.tidakAda,
-              k.ambulans.standby + k.ambulans.breakdown,
-            ]}
-            colors={['#00B894', '#2ECC71', '#FF2D2D', '#F39C12']}
-            centerText={`${k.p3k.persenSiap}%`}
+            labels={['Tepat Waktu', 'Terlambat']}
+            values={[e.tepatWaktu, e.terlambat]}
+            colors={['#00B894', '#F39C12']}
+            centerText={`${e.persenTepatWaktu}%`}
             percentLabels
           />
         </MCUChartCard>
 
-        {/* CARD 3: Kelaikan Fasilitas & Sarana Kerja */}
+        {/* CARD 3: Beban & Produktivitas Petugas Pelaksana */}
         <MCUChartCard
-          title="Kelaikan Fasilitas & Sarana Kerja"
-          subtitle={`Klinik: ${k.klinik?.persen ?? 0}% · Ergonomi: ${k.ergonomi.persenLayak}% Layak`}
-          className="glow-amber"
+          title="Produktivitas Petugas Pelaksana"
+          subtitle="Distribusi inspeksi selesai per PIC/inspektur"
+          className="glow-steel"
         >
-          <MCUChart
-            type="bar"
-            horizontal
-            labels={['Klinik Siap', 'Klinik Rusak/Kurang', 'Ergonomi Layak', 'Ergonomi Rusak']}
-            values={[
-              k.klinik?.ada ?? 0,
-              (k.klinik?.rusak ?? 0) + (k.klinik?.tidakAda ?? 0),
-              k.ergonomi.layak,
-              k.ergonomi.rusak,
-            ]}
-            colors={['#00B894', '#FF2D2D', '#3498DB', '#E74C3C']}
-            legendLabel="Item Fasilitas"
-          />
+          {pr.perPetugas.length === 0 ? (
+            <div
+              style={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--muted-foreground)',
+                gap: 6,
+                padding: 20,
+              }}
+            >
+              <UserCheck size={32} />
+              <span style={{ fontSize: 12 }}>Belum ada pencatatan nama petugas</span>
+            </div>
+          ) : (
+            <MCUChart
+              type="bar"
+              horizontal
+              labels={pr.perPetugas.slice(0, 6).map((x) => x.petugas)}
+              values={pr.perPetugas.slice(0, 6).map((x) => x.selesai)}
+              colors={pr.perPetugas.slice(0, 6).map(() => '#3498DB')}
+              legendLabel="Inspeksi Selesai"
+            />
+          )}
         </MCUChartCard>
       </div>
 
-      {/* ── BARIS 2: Kalibrasi, PICA & Deteksi Blindspot (3 Kartu) ───────── */}
+      {/* ── BARIS 2: Kinerja PICA & Cakupan Pengawasan (3 Kartu) ────────── */}
       <div className="mcu-grid-3 mcu-live-chart-row">
-        {/* CARD 4: Kepatuhan Kalibrasi Alat Medis */}
+        {/* CARD 4: Kinerja Resolusi PICA (MTTR) */}
         <MCUChartCard
-          title="Kepatuhan Kalibrasi Alat Medis"
-          subtitle={`${k.kalibrasi.patuh}/${k.kalibrasi.total} Terkalibrasi (${k.kalibrasi.merah ? `${k.kalibrasi.merah} Lewat Tempo!` : 'Semua Valid'})`}
-          className="glow-steel"
-        >
-          <MCUChart
-            type="doughnut"
-            labels={['Patuh / Aktif', 'Mendekati (H-60)', 'Lewat Masa Berlaku', 'Belum Kalibrasi']}
-            values={[k.kalibrasi.patuh, k.kalibrasi.kuning, k.kalibrasi.merah, k.kalibrasi.belum]}
-            colors={['#00B894', '#F1C40F', '#FF2D2D', '#778899']}
-            centerText={`${k.kalibrasi.total}`}
-            percentLabels
-          />
-        </MCUChartCard>
-
-        {/* CARD 5: Kinerja Penanganan PICA */}
-        <MCUChartCard
-          title="Kinerja Penanganan PICA"
+          title="Kecepatan Resolusi PICA"
           subtitle={`MTTR: ${p.mttr !== null ? `${p.mttr} Hari` : '—'} · Closed: ${p.closed} · Overdue: ${p.overdue}`}
           className="glow-orange"
         >
@@ -337,7 +267,42 @@ export default function InspeksiDashboard() {
           />
         </MCUChartCard>
 
-        {/* CARD 6: Cakupan Pengawasan & Blindspot Area */}
+        {/* CARD 5: PICA per Departemen Penanggung Jawab */}
+        <MCUChartCard
+          title="PICA per Departemen"
+          subtitle="Departemen penanggung jawab temuan aktif"
+          className="glow-amber"
+        >
+          {p.perDepartemen.length === 0 ? (
+            <div
+              style={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--muted-foreground)',
+                gap: 6,
+                padding: 20,
+              }}
+            >
+              <CheckCircle2 size={32} color="#00B894" />
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#00B894' }}>Zero PICA Finding</span>
+              <span style={{ fontSize: 10 }}>Tidak ada temuan PICA aktif pada periode ini</span>
+            </div>
+          ) : (
+            <MCUChart
+              type="bar"
+              horizontal
+              labels={p.perDepartemen.slice(0, 6).map((d) => d.departemen)}
+              values={p.perDepartemen.slice(0, 6).map((d) => d.aktif)}
+              colors={p.perDepartemen.slice(0, 6).map((d) => (d.overdue > 0 ? '#FF2D2D' : '#FF7A00'))}
+              legendLabel="PICA Aktif"
+            />
+          )}
+        </MCUChartCard>
+
+        {/* CARD 6: Deteksi Blindspot Area (>30 Hari Tidak Diperiksa) */}
         <MCUChartCard
           title="Cakupan Pengawasan & Blindspot"
           subtitle={`Cakupan Aset: ${c.persen}% · Ambang: >${c.ambangHari} Hari`}
@@ -357,7 +322,7 @@ export default function InspeksiDashboard() {
               }}
             >
               <CheckCircle2 size={32} />
-              <span style={{ fontSize: 12, fontWeight: 700 }}>Seluruh Area Terpantau Rutin</span>
+              <span style={{ fontSize: 12, fontWeight: 700 }}>Semua Area Terpantau Rutin</span>
               <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>
                 Tidak ada blindspot inspeksi &gt; {c.ambangHari} hari
               </span>
