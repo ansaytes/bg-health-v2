@@ -1,54 +1,99 @@
 'use client';
 
 // ============================================================
-// Administrator > Sarana & Prasarana (dua tab: Sarana Klinik + Checklist)
+// Administrator > Sarana & Program Inspeksi (Halaman Tunggal Terintegrasi)
 // ============================================================
+// Menggabungkan seluruh alur digitalisasi inspeksi fasilitas & aset:
+//   1. Sarana Klinik   — Ruangan, alkes, APD, evakuasi klinik (SOP/028)
+//   2. Kotak P3K       — Checklist kelaikan kotak P3K per lokasi (Permenaker 15/2008)
+//   3. Ambulans        — Checklist kelaikan kendaraan & alkes evakuasi per unit
+//   4. Sarana Ergonomi — Checklist kelaikan fasilitas ergonomi (Permenaker 5/2018)
+//   5. Register PICA   — Penutupan temuan ketidaksesuaian (BG-QSHE-FORM-039)
+//   6. Jadwal & Realisasi — Pemantauan rencana vs realisasi bulanan
 //
-// Sarana Klinik (katalog SOP/028) dan Checklist Kelaikan (P3K, Ambulans,
-// Sarana Ergonomi) adalah SATU keluarga kerja: memeriksa kelengkapan &
-// kelayakan aset kesehatan kerja. Karena itu digabung jadi satu menu
-// bertab, bukan dua menu terpisah — pengguna tidak perlu berpindah menu
-// hanya untuk satu laporan inspeksi.
-//
-// Tab 1 — Sarana Klinik (ruangan, alat medis, kalibrasi, kondisi aset).
-// Tab 2 — Checklist Kelaikan (ChecklistFasilitasTabs dengan sub-tab
-//          P3K / Ambulans / Sarana Ergonomi).
-//
-// `checklistTab` dipakai oleh rute lama `checklist-p3k` dsb. agar mendarat
-// langsung di sub-tab yang sesuai.
+// Alur kerja terpadu:
+//   Checklist digital diisi di lapangan → Item rusak/tidak ada langsung terpantau
+//   → Tombol pintas "Buka PICA" membawa inspektur/admin ke Register PICA
+//   → Jadwal inspeksi bulan tersebut otomatis tercapai.
 
 import { useState } from 'react';
 
 import CenteredTabs from '@/components/ui/centered-tabs';
 import SaranaKlinik from './SaranaKlinik';
-import ChecklistFasilitasTabs from './ChecklistFasilitasTabs';
+import ChecklistFasilitas, { type JenisChecklist } from './ChecklistFasilitas';
+import PicaRegister from './PicaRegister';
+import ProgramInspeksi from './ProgramInspeksi';
 
-type SaranaTab = 'saranaklinik' | 'checklist';
+export type UnifiedInspeksiTab =
+  | 'sarana-klinik'
+  | 'p3k'
+  | 'ambulans'
+  | 'ergonomi'
+  | 'pica'
+  | 'jadwal';
 
-const TABS: { key: SaranaTab; label: string }[] = [
-  { key: 'saranaklinik', label: 'Sarana Klinik' },
-  { key: 'checklist', label: 'Checklist Kelaikan' },
+const TABS: { key: UnifiedInspeksiTab; label: string }[] = [
+  { key: 'sarana-klinik', label: 'Sarana Klinik' },
+  { key: 'p3k', label: 'Kotak P3K' },
+  { key: 'ambulans', label: 'Ambulans' },
+  { key: 'ergonomi', label: 'Sarana Ergonomi' },
+  { key: 'pica', label: 'Register PICA' },
+  { key: 'jadwal', label: 'Perencanaan Jadwal' },
 ];
 
 export default function SaranaKlinikWithChecklist({
-  initialTab = 'saranaklinik',
+  initialTab = 'sarana-klinik',
   checklistTab,
 }: {
-  initialTab?: SaranaTab;
-  checklistTab?: Parameters<typeof ChecklistFasilitasTabs>[0]['initialTab'];
+  initialTab?: string;
+  checklistTab?: JenisChecklist;
 }) {
-  const [tab, setTab] = useState<SaranaTab>(initialTab);
+  const normalisasiTab = (): UnifiedInspeksiTab => {
+    if (initialTab === 'pica') return 'pica';
+    if (initialTab === 'jadwal' || initialTab === 'program' || initialTab === 'program-inspeksi') return 'jadwal';
+    if (initialTab === 'checklist-p3k' || initialTab === 'p3k') return 'p3k';
+    if (initialTab === 'checklist-ambulans' || initialTab === 'ambulans') return 'ambulans';
+    if (initialTab === 'checklist-ergonomi' || initialTab === 'ergonomi') return 'ergonomi';
+    if (initialTab === 'checklist' || initialTab === 'checklist-fasilitas') {
+      if (checklistTab === 'ambulans') return 'ambulans';
+      if (checklistTab === 'ergonomi') return 'ergonomi';
+      return 'p3k';
+    }
+    return 'sarana-klinik';
+  };
+
+  const [tab, setTab] = useState<UnifiedInspeksiTab>(normalisasiTab());
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ padding: '8px 16px 0', flexShrink: 0 }}>
-        <CenteredTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Sarana & Prasarana" compact />
+        <CenteredTabs
+          tabs={TABS}
+          active={tab}
+          onChange={(k) => setTab(k as UnifiedInspeksiTab)}
+          ariaLabel="Sarana & Program Inspeksi"
+          compact
+        />
       </div>
+
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {tab === 'saranaklinik' ? (
-          <SaranaKlinik />
-        ) : (
-          <ChecklistFasilitasTabs key={tab} initialTab={checklistTab} />
+        {tab === 'sarana-klinik' && (
+          <SaranaKlinik key="sarana-klinik" onBukaPica={() => setTab('pica')} />
+        )}
+        {tab === 'p3k' && (
+          <ChecklistFasilitas key="p3k" jenis="p3k" onBukaPica={() => setTab('pica')} />
+        )}
+        {tab === 'ambulans' && (
+          <ChecklistFasilitas key="ambulans" jenis="ambulans" onBukaPica={() => setTab('pica')} />
+        )}
+        {tab === 'ergonomi' && (
+          <ChecklistFasilitas key="ergonomi" jenis="ergonomi" onBukaPica={() => setTab('pica')} />
+        )}
+        {tab === 'pica' && (
+          <PicaRegister key="pica" />
+        )}
+        {tab === 'jadwal' && (
+          <ProgramInspeksi key="jadwal" />
         )}
       </div>
     </div>

@@ -162,6 +162,32 @@ export async function POST(req: NextRequest) {
     console.error('[Sarana] Failed to save site condition:', error.code);
     return NextResponse.json({ error: 'Gagal menyimpan data sarana.' }, { status: 500 });
   }
+
+  // ── Otomatis Sinkronisasi Realisasi ke inspeksi_jadwal ──────────────────
+  const tglInspeksi = body.tanggalInspeksi
+    ? String(body.tanggalInspeksi).slice(0, 10)
+    : new Date().toISOString().slice(0, 10);
+  const periode = tglInspeksi.slice(0, 7);
+  const sekarang = new Date().toISOString();
+
+  try {
+    await adminClient()
+      .from('inspeksi_jadwal')
+      .update({
+        status: 'selesai',
+        tanggal_selesai: tglInspeksi,
+        petugas: caller.userId ?? null,
+        waktu_lapor: sekarang,
+        updated_at: sekarang,
+      })
+      .eq('site', site)
+      .eq('jenis', 'sarana_klinik')
+      .eq('periode', periode)
+      .eq('status', 'rencana');
+  } catch (jErr) {
+    console.warn('[Sarana] Gagal auto-update jadwal realisasi:', jErr);
+  }
+
   return NextResponse.json({ success: true });
 }
 

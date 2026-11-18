@@ -14,6 +14,11 @@ import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, gradientBatangA
 import PageLoading from '@/components/ui/page-loading';
 import { MCUChart, MCUChartCard, MCURefreshButton } from '@/components/dashboard/MCUDashboardShared';
 
+const GREEN = '#00B894';
+const AMBER = '#E67E22';
+const RED = '#E74C3C';
+const STEEL = '#778899';
+
 type D = Record<string, any>;
 const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 

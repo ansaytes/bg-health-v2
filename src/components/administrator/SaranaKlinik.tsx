@@ -62,7 +62,7 @@ const STATUS_META: Record<ItemSarana['status'], { label: string; warna: string }
   tidak_diperlukan: { label: 'Tidak diperlukan', warna: '#778899' },
 };
 
-export default function SaranaKlinik() {
+export default function SaranaKlinik({ onBukaPica }: { onBukaPica?: () => void } = {}) {
   const store = useMCUStore();
   const { sites: daftarSite } = useSites();
   const [site, setSite] = useState('Head Office');
@@ -164,6 +164,25 @@ export default function SaranaKlinik() {
             <span>Rusak <b style={{ color: ringkasan.rusak ? '#FF7A00' : 'inherit' }}>{ringkasan.rusak}</b></span>
             <span>Belum dicatat <b style={{ color: ringkasan.belumDicatat ? '#FF7A00' : 'inherit' }}>{ringkasan.belumDicatat}</b></span>
             <span>Kalibrasi &gt;1 thn <b style={{ color: ringkasan.kalibrasiKedaluwarsa ? '#FF2D2D' : 'inherit' }}>{ringkasan.kalibrasiKedaluwarsa}</b></span>
+            {ringkasan.rusak > 0 && onBukaPica && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onBukaPica}
+                style={{
+                  height: 24,
+                  fontSize: 10,
+                  padding: '0 8px',
+                  borderColor: '#FF7A00',
+                  color: '#FF7A00',
+                  background: 'rgba(255,122,0,0.08)',
+                  gap: 4,
+                }}
+                title="Buka Register PICA untuk menindaklanjuti temuan ini"
+              >
+                {ringkasan.rusak} Temuan Rusak → PICA
+              </Button>
+            )}
           </div>
         )}
       </div>

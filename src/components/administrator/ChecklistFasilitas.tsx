@@ -2,25 +2,18 @@
 
 // ============================================================
 // Administrator > Checklist Kelaikan Fasilitas & Aset
+// (Kotak P3K · Ambulans · Sarana Ergonomi)
 // ============================================================
-//
-// Halaman tunggal untuk tiga kelompok checklist yang sama bentuknya:
-//   Kotak P3K · Ambulans · Sarana Ergonomi
-//
-// TAMPILAN mengikuti Sarana & Prasarana (SaranaKlinik), karena keduanya
-// satu keluarga pekerjaan: daftar item per kategori, status berupa dropdown
-// berwarna, dan perubahan langsung tersimpan per sel tanpa tombol simpan.
-// Pengelompokan yang dipakai:
-//   • P3K       → per LOKASI kotak (Workshop A, Mess Blok 1, …)
-//   • Ambulans  → per UNIT ambulans (AMB-01, …) + status kesiapan unit
-//   • Ergonomi  → per KATEGORI sarana (Operator, Kantor, Manual Handling)
-//
-// Tiga kelompok ini satu tab/halaman karena pekerjaannya sama: memeriksa
-// kelengkapan & kelayakan aset. Memisahkannya jadi tiga menu membuat
-// pengguna berpindah menu hanya untuk satu laporan inspeksi yang sama.
+// Mengikuti model checklist "Sarana Klinik":
+//   • Tampilan kartu per kategori yang rapi & terorganisir
+//   • Kolom seragam: Item, Status (Pill dropdown), Jumlah, Kondisi, Tanggal Periksa/Expired, Catatan
+//   • Auto-save per sel tanpa tombol simpan terpisah
+//   • Filter Status, Site, dan Lokasi/Unit
+//   • Tombol Tambah Item katalog lapangan
+//   • Tautan langsung ke Register PICA jika ditemukan item rusak / tidak ada
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Check, Loader2, Plus, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Check, ExternalLink, Loader2, Plus, RefreshCw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,14 +44,20 @@ interface KondisiRow {
   rusak?: number | null;
   tanggal_expired?: string | null;
   kondisi_kotak?: string | null;
-  ada_buku_catatan?: boolean | null;
   kondisi?: string | null;
   catatan?: string | null;
   tanggal_inspeksi?: string | null;
   [kunci: string]: unknown;
 }
 
-interface Data {
+interface AmbulansUnitRow {
+  unit: string;
+  status_kesiapan?: string;
+  bbm_persen?: number | null;
+  catatan?: string | null;
+}
+
+interface DataResponse {
   tabelSiap: boolean;
   catatan?: string;
   label: string;
@@ -67,6 +66,7 @@ interface Data {
   katalog: KatalogItem[];
   kondisi: KondisiRow[];
   grup: string[];
+  unitList?: AmbulansUnitRow[];
   daftarSite: string[];
   ringkas: { total: number; ada: number; rusak: number; tidakAda: number; persenSiap: number };
 }
@@ -80,85 +80,32 @@ const STATUS_META: Record<Status, { label: string; warna: string }> = {
   tidak_diperlukan: { label: 'Tidak diperlukan', warna: '#778899' },
 };
 
-const KATEGORI_P3K: Record<string, string> = {
-  isi: 'Isi Kotak',
-  obat: 'Obat & Cairan',
-  alat: 'Alat',
-  administrasi: 'Administrasi',
+const KATEGORI_LABEL_MAP: Record<JenisChecklist, Record<string, string>> = {
+  p3k: {
+    administrasi: 'Perlengkapan Kotak & Administrasi',
+    isi: 'Bahan Pembalut & Perban',
+    obat: 'Cairan, Salep & Antiseptik',
+    alat: 'Alat & Perlengkapan Medis',
+  },
+  ambulans: {
+    kendaraan: 'Kelaikan Kendaraan & Kemudi',
+    medis: 'Peralatan Medis & Resusitasi',
+    evakuasi: 'Peralatan Evakuasi & Imobilisasi',
+    sanitasi: 'Kabin Pasien, Sanitasi & BHP',
+  },
+  ergonomi: {
+    operator: 'Operator Alat Berat & Kendaraan Tambang',
+    kantor: 'Perkantoran & Ruang Kontrol',
+    manual_handling: 'Workshop, Gudang & Manual Handling',
+  },
 };
 
-const KATEGORI_AMBULANS: Record<string, string> = {
-  medis: 'Peralatan Medis',
-  kendaraan: 'Kondisi Kendaraan',
-  sanitasi: 'Sanitasi Kabin',
+const DEFAULT_GRUP: Record<JenisChecklist, string[]> = {
+  p3k: ['Workshop', 'Kantor Utama', 'Mess', 'Warehouse'],
+  ambulans: ['AMB-01'],
+  ergonomi: [],
 };
 
-/* ── REFERENSI STANDAR (checklist "sudah ada standarnya") ─────────────────── */
-// Pengguna sering mengira checklist "suruh isi sendiri" padahal isinya sudah
-// baku. Di sini tiap item katalog diberi referensi aturan + standar kuantitatif
-// (di luar kolom jumlah_standar di database) sehingga halamannya terbaca sebagai
-// checklist kelaikan: centang "ada/sebaiknya" + catat kondisi, bukan bikin daftar.
-//
-// Sumber: Permenaker 15/2008 Lampiran (P3K), standar ambulans & tanggap darurat
-// medis (K3), dan kebutuhan ergonomi operasional (Permenaker 5/2018).
-
-interface Rujukan {
-  aturan: string;      // rujukan peraturan
-  standar: string;     // standar kuantitatif / ketetapan
-  acuan?: string;      // penjelasan singkat kenapa item ini wajib
-}
-
-const REFERENSI: Record<string, Rujukan> = {
-  /* ── Kotak P3K (Permenaker 15/2008) ── */
-  'Kasa steril terbungkus': { aturan: 'Permenaker 15/2008 Lampiran', standar: '5 pak', acuan: 'P3K pertama untuk menutup luka' },
-  'Perban (lebar 5 cm)': { aturan: 'Permenaker 15/2008 Lampiran', standar: '2 buah' },
-  'Perban (lebar 10 cm)': { aturan: 'Permenaker 15/2008 Lampiran', standar: '2 buah' },
-  'Plester (lebar 1,25 cm)': { aturan: 'Permenaker 15/2008 Lampiran', standar: '2 buah' },
-  'Plester cepat': { aturan: 'Permenaker 15/2008 Lampiran', standar: '10 buah' },
-  'Kapas (25 gram)': { aturan: 'Permenaker 15/2008 Lampiran', standar: '1 bungkus' },
-  'Pembalut segitiga': { aturan: 'Permenaker 15/2008 Lampiran', standar: '2 buah', acuan: 'Pembidaian & tampon' },
-  'Sarung tangan sekali pakai': { aturan: 'Permenaker 15/2008 Lampiran', standar: '4 pasang' },
-  'Masker': { aturan: 'Permenaker 15/2008 Lampiran', standar: '2 buah' },
-  'Pinset': { aturan: 'Permenaker 15/2008 Lampiran', standar: '1 buah' },
-  'Gunting pembalut': { aturan: 'Permenaker 15/2008 Lampiran', standar: '1 buah' },
-  'Peniti': { aturan: 'Permenaker 15/2008 Lampiran', standar: '12 buah', acuan: 'Menggantungkan pembalut segitiga' },
-  'Larutan antiseptik (povidone iodine)': { aturan: 'Permenaker 15/2008 Lampiran', standar: '1 botol' },
-  'Alkohol 70%': { aturan: 'Permenaker 15/2008 Lampiran', standar: '1 botol' },
-  'Obat luka bakar': { aturan: 'Permenaker 15/2008 Lampiran', standar: '1 tube' },
-  'Salep / krim antiseptik': { aturan: 'Permenaker 15/2008 Lampiran', standar: '1 tube' },
-  'Buku catatan penggunaan P3K': { aturan: 'Permenaker 15/2008', standar: '1 buku', acuan: 'Administrasi: mencatat kejadian & pemakaian' },
-  'Daftar isi kotak P3K': { aturan: 'Permenaker 15/2008', standar: '1 lembar', acuan: 'Kartu isi agar cepat dilengkapi' },
-
-  /* ── Ambulans & tanggap darurat medis ── */
-  'AED (Automated External Defibrillator)': { aturan: 'Standar tanggap darurat medis', standar: '1 unit', acuan: 'Penyelamatan henti jantung (CPR + AED)' },
-  'Tabung oksigen + regulator/tekanan': { aturan: 'Standar ambulans medis', standar: '1 tabung', acuan: 'Dukungan napas' },
-  'Suction pump': { aturan: 'Standar ambulans medis', standar: '1 unit', acuan: 'Kebersihan jalan napas' },
-  'Stretcher / tandu': { aturan: 'Standar ambulans medis', standar: '1 unit' },
-  'Spinal board': { aturan: 'Standar ambulans medis', standar: '1 buah', acuan: 'Imobilisasi trauma tulang belakang' },
-  'Kotak P3K dalam ambulans': { aturan: 'Standar ambulans medis', standar: '1 kotak' },
-  'Rem (fungsi dan kebocoran)': { aturan: 'K3 kendaraan / tanggap darurat', standar: 'Fungsi & bebas kebocoran' },
-  'Ban (tebal bunga & tekanan)': { aturan: 'K3 kendaraan / tanggap darurat', standar: 'Bunga minimal & tekanan sesuai' },
-  'Sirine dan lampu rotator': { aturan: 'K3 kendaraan / tanggap darurat', standar: 'Fungsi', acuan: 'Prioritas lalu lintas evakuasi' },
-  'BBM minimal 3/4 tangki': { aturan: 'K3 kendaraan / tanggap darurat', standar: '≥ 75% tangki', acuan: 'Siap berangkat tanpa jeda' },
-  'Sanitasi kabin pasien': { aturan: 'K3 sanitasi kendaraan', standar: 'Bersih & bebas kontaminasi' },
-  'Tabung oksigen portabel': { aturan: 'Standar ambulans medis', standar: '1 tabung' },
-
-  /* ── Sarana ergonomi operasional ── */
-  'Suspension seat alat berat / unit tambang': { aturan: 'Permenaker 5/2018 (ergonomi)', standar: 'Suspensi efektif & terawat' },
-  'Stasiun kerja kantor (kursi & meja ergonomis)': { aturan: 'Permenaker 5/2018 (ergonomi)', standar: 'Sesuai postur kerja' },
-  'Alat bantu manual handling (trolley, lift)': { aturan: 'Permenaker 5/2018 (ergonomi)', standar: 'Fungsi & aman', acuan: 'Mengurangi angkat manual' },
-  'Penopang kaki (footrest) area kerja': { aturan: 'Permenaker 5/2018 (ergonomi)', standar: 'Tersedia & sesuai' },
-  'Alat bantu angkat vakum / crane kecil': { aturan: 'Permenaker 5/2018 (ergonomi)', standar: 'Fungsi & aman' },
-};
-
-/** Label kategori ergonomi (dipakai saat DB belum memberi kategori). */
-const KATEGORI_ERGONOMI: Record<string, string> = {
-  operator: 'Operator / Alat Berat',
-  kantor: 'Kantor',
-  manual_handling: 'Manual Handling',
-};
-
-/** Satu baris gabungan katalog + kondisi tersimpan. */
 interface Baris {
   katalogId: number | string;
   nama: string;
@@ -168,87 +115,70 @@ interface Baris {
   status: Status;
   jumlah: number | null;
   jumlahStandar: number | null;
-  layak: number | null;
-  rusak: number | null;
-  tanggalExpired: string | null;
-  kondisiKotak: string;
-  adaBukuCatatan: boolean;
   kondisi: string;
+  tanggalInspeksi: string | null;
+  tanggalExpired: string | null;
   catatan: string;
   grup: string;
 }
 
-/** Kunci baris pada tabel kondisi (lokasi/unit), kosong untuk ergonomi. */
-
-function gabungBaris(
-  katalog: KatalogItem[],
-  kondisi: KondisiRow[],
-  grup: string,
-  pengelompok: string | null,
-): Baris[] {
-  return katalog.map((k) => {
-    const c = kondisi.find((x) =>
-      String(x.katalog_id) === String(k.id)
-      && (!pengelompok || String(x[pengelompok] ?? '') === grup));
-
-    return {
-      katalogId: k.id,
-      nama: k.nama,
-      kategori: String(k.kategori ?? ''),
-      satuan: k.satuan ?? null,
-      wajib: Boolean(k.wajib),
-      status: (String(c?.status ?? 'tidak_ada') as Status),
-      jumlah: c?.jumlah ?? k.jumlah_standar ?? null,
-      jumlahStandar: k.jumlah_standar ?? null,
-      layak: c?.layak ?? null,
-      rusak: c?.rusak ?? null,
-      tanggalExpired: c?.tanggal_expired ? String(c.tanggal_expired).slice(0, 10) : '',
-      kondisiKotak: String(c?.kondisi_kotak ?? ''),
-      adaBukuCatatan: c?.ada_buku_catatan ?? true,
-      kondisi: String(c?.kondisi ?? ''),
-      catatan: String(c?.catatan ?? ''),
-      grup,
-    };
-  });
-}
-
-export default function ChecklistFasilitas({ jenis, initialGrup }: {
+export default function ChecklistFasilitas({
+  jenis,
+  initialGrup,
+  onBukaPica,
+}: {
   jenis: JenisChecklist;
   initialGrup?: string;
+  onBukaPica?: () => void;
 }) {
   const { isAdmin } = useAuth();
   const store = useMCUStore();
   const { sites: daftarSite } = useSites();
 
-  const [site, setSite] = useState('');
+  const [site, setSite] = useState('Head Office');
   const [grup, setGrup] = useState(initialGrup ?? '');
   const [grupBaru, setGrupBaru] = useState('');
   const [tambahGrup, setTambahGrup] = useState(false);
-  const [data, setData] = useState<Data | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string>('semua');
+  const [tambahItem, setTambahItem] = useState(false);
+
+  const [data, setData] = useState<DataResponse | null>(null);
   const [baris, setBaris] = useState<Baris[]>([]);
   const [loading, setLoading] = useState(true);
-  const [menyimpan, setMenyimpan] = useState<string | number | null>(null);
+  const [menyimpan, setMenyimpan] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [unitStatus, setUnitStatus] = useState<Record<string, string>>({});
+  const [unitStatus, setUnitStatus] = useState<Record<string, { kesiapan: string; bbm: number | null }>>({});
 
-  const labelGrup = data?.pengelompok === 'unit'
-    ? 'unit'
-    : data?.pengelompok === 'lokasi'
-      ? 'lokasi'
-      : '';
+  const pengelompok = data?.pengelompok ?? (jenis === 'p3k' ? 'lokasi' : jenis === 'ambulans' ? 'unit' : null);
+  const labelGrup = jenis === 'p3k' ? 'Lokasi Kotak' : jenis === 'ambulans' ? 'Unit Ambulans' : '';
 
-  /* ── Muat ─────────────────────────────────────────────────────────────── */
+  /* ── Muat Data ─────────────────────────────────────────────────────────── */
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       const qs = new URLSearchParams({ jenis });
       if (site) qs.set('site', site);
-      const r = await authFetch(`/api/inspeksi/checklist?${qs.toString()}`) as unknown as Data;
+      const r = await authFetch(`/api/inspeksi/checklist?${qs.toString()}`) as unknown as DataResponse;
       setData(r);
-      setSite(r.site || site);
-      const tersedia = r.grup ?? [];
-      setGrup((prev) => (prev && tersedia.includes(prev) ? prev : tersedia[0] ?? ''));
+
+      const grupTersedia = (r.grup && r.grup.length > 0)
+        ? r.grup
+        : DEFAULT_GRUP[jenis];
+
+      setGrup((prev) => (prev && grupTersedia.includes(prev) ? prev : grupTersedia[0] ?? ''));
+
+      // Status unit ambulans
+      if (r.unitList) {
+        const mapUnit: Record<string, { kesiapan: string; bbm: number | null }> = {};
+        for (const u of r.unitList) {
+          mapUnit[u.unit] = {
+            kesiapan: u.status_kesiapan || 'standby',
+            bbm: u.bbm_persen ?? null,
+          };
+        }
+        setUnitStatus(mapUnit);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal memuat checklist');
       setData(null);
@@ -257,23 +187,52 @@ export default function ChecklistFasilitas({ jenis, initialGrup }: {
     }
   }, [jenis, site]);
 
-  useEffect(() => { void load(); }, [jenis]);
+  useEffect(() => { void load(); }, [load]);
 
-  const pengelompok = data?.pengelompok ?? null;
-
+  /* ── Gabungkan Katalog + Kondisi Tersimpan ──────────────────────────────── */
   useEffect(() => {
-    if (!data) { setBaris([]); return; }
-    setBaris(gabungBaris(data.katalog, data.kondisi, grup, pengelompok));
+    if (!data?.katalog) {
+      setBaris([]);
+      return;
+    }
+
+    const daftar = data.katalog.map((k) => {
+      const c = data.kondisi.find((x) =>
+        String(x.katalog_id) === String(k.id)
+        && (!pengelompok || String(x[pengelompok] ?? '') === grup)
+      );
+
+      return {
+        katalogId: k.id,
+        nama: k.nama,
+        kategori: String(k.kategori ?? 'umum'),
+        satuan: k.satuan ?? null,
+        wajib: k.wajib !== undefined ? Boolean(k.wajib) : true,
+        status: (String(c?.status ?? 'tidak_ada') as Status),
+        jumlah: c?.jumlah !== undefined && c?.jumlah !== null ? Number(c.jumlah) : (k.jumlah_standar ?? null),
+        jumlahStandar: k.jumlah_standar ?? null,
+        kondisi: String(c?.kondisi ?? c?.kondisi_kotak ?? ''),
+        tanggalInspeksi: c?.tanggal_inspeksi ? String(c.tanggal_inspeksi).slice(0, 10) : '',
+        tanggalExpired: c?.tanggal_expired ? String(c.tanggal_expired).slice(0, 10) : '',
+        catatan: String(c?.catatan ?? ''),
+        grup,
+      };
+    });
+
+    setBaris(daftar);
   }, [data, grup, pengelompok]);
 
-  /* ── Simpan per sel (pola SaranaKlinik: tanpa tombol simpan) ──────────── */
+  /* ── Simpan Per Sel (Optimistis, Pola Sarana Klinik) ───────────────────── */
   const simpan = useCallback(async (satu: Baris, patch: Partial<Baris>) => {
-    const baru = { ...satu, ...patch };
-    setMenyimpan(`${satu.grup}|${satu.katalogId}`);
-    // Optimistis: tampilan langsung berubah, dikembalikan bila gagal.
+    const baru: Baris = { ...satu, ...patch };
+    const kunci = `${satu.grup}|${satu.katalogId}`;
+    setMenyimpan(kunci);
+
+    // Update UI seketika
     setBaris((prev) => prev.map((b) => (
       String(b.katalogId) === String(satu.katalogId) && b.grup === satu.grup ? baru : b
     )));
+
     try {
       await authFetch('/api/inspeksi/checklist', {
         method: 'POST',
@@ -286,24 +245,44 @@ export default function ChecklistFasilitas({ jenis, initialGrup }: {
             katalog_id: satu.katalogId,
             status: baru.status,
             jumlah: baru.jumlah,
-            layak: baru.layak,
-            rusak: baru.rusak,
-            tanggal_expired: baru.tanggalExpired,
-            kondisi_kotak: baru.kondisiKotak || null,
-            ada_buku_catatan: baru.adaBukuCatatan,
             kondisi: baru.kondisi || null,
-            catatan: baru.catatan,
+            tanggal_expired: baru.tanggalExpired || null,
+            tanggal_inspeksi: baru.tanggalInspeksi || new Date().toISOString().slice(0, 10),
+            catatan: baru.catatan || null,
           }],
         }),
       });
-      // Ringkasan di top bar ikut diperbarui tanpa memuat ulang tabel.
-      setData((d) => d ? {
-        ...d,
-        ringkas: hitungRingkas(baris.map((b) => (
-          String(b.katalogId) === String(satu.katalogId) && b.grup === satu.grup ? baru : b
-        ))),
-      } : d);
+
+      // Update ringkasan di memori
+      setData((d) => {
+        if (!d) return d;
+        const updatedKondisi = [...d.kondisi];
+        const idx = updatedKondisi.findIndex(
+          (x) => String(x.katalog_id) === String(satu.katalogId)
+            && (!pengelompok || String(x[pengelompok] ?? '') === satu.grup)
+        );
+        const itemPayload: KondisiRow = {
+          katalog_id: satu.katalogId,
+          status: baru.status,
+          jumlah: baru.jumlah,
+          kondisi: baru.kondisi,
+          tanggal_expired: baru.tanggalExpired,
+          tanggal_inspeksi: baru.tanggalInspeksi,
+          catatan: baru.catatan,
+          ...(pengelompok ? { [pengelompok]: satu.grup } : {}),
+        };
+        if (idx >= 0) {
+          updatedKondisi[idx] = { ...updatedKondisi[idx], ...itemPayload };
+        } else {
+          updatedKondisi.push(itemPayload);
+        }
+        return {
+          ...d,
+          kondisi: updatedKondisi,
+        };
+      });
     } catch (e) {
+      // Rollback jika gagal
       setBaris((prev) => prev.map((b) => (
         String(b.katalogId) === String(satu.katalogId) && b.grup === satu.grup ? satu : b
       )));
@@ -311,9 +290,10 @@ export default function ChecklistFasilitas({ jenis, initialGrup }: {
     } finally {
       setMenyimpan(null);
     }
-  }, [jenis, site, baris]);
+  }, [jenis, site, pengelompok, store]);
 
-  const simpanUnit = useCallback(async (unit: string) => {
+  /* ── Simpan Status Unit Ambulans ────────────────────────────────────────── */
+  const simpanStatusUnit = useCallback(async (unitNama: string, kesiapan: string, bbm: number | null) => {
     try {
       await authFetch('/api/inspeksi/checklist', {
         method: 'POST',
@@ -321,94 +301,290 @@ export default function ChecklistFasilitas({ jenis, initialGrup }: {
           aksi: 'unit',
           jenis: 'ambulans',
           site,
-          unit,
-          status_kesiapan: unitStatus[unit] ?? 'standby',
+          unit: unitNama,
+          status_kesiapan: kesiapan,
+          bbm_persen: bbm,
         }),
       });
-      store.showToast(`Status unit ${unit} tersimpan`, 'success');
+      store.showToast(`Status unit ${unitNama} diperbarui`, 'success');
     } catch (e) {
       store.showToast(e instanceof Error ? e.message : 'Gagal menyimpan status unit', 'error');
     }
-  }, [site, unitStatus, store]);
+  }, [site, store]);
 
-  /* ── Kelompokkan per kategori (seperti SaranaKlinik) ──────────────────── */
-  const LABEL_KATEGORI = jenis === 'p3k'
-    ? KATEGORI_P3K
-    : jenis === 'ambulans'
-      ? KATEGORI_AMBULANS
-      : KATEGORI_ERGONOMI;
+  /* ── Filter & Kelompokkan Per Kategori (Pola Sarana Klinik) ─────────────── */
+  const kategoriMap = KATEGORI_LABEL_MAP[jenis] ?? {};
+
+  const barisFiltered = useMemo(() => {
+    if (filterStatus === 'semua') return baris;
+    return baris.filter((b) => b.status === filterStatus);
+  }, [baris, filterStatus]);
 
   const perKategori = useMemo(() => {
     const map = new Map<string, Baris[]>();
-    for (const b of baris) {
+    for (const b of barisFiltered) {
       const list = map.get(b.kategori) ?? [];
       list.push(b);
       map.set(b.kategori, list);
     }
     return map;
+  }, [barisFiltered]);
+
+  /* ── Ringkasan Kepatuhan & Temuan ───────────────────────────────────────── */
+  const ringkas = useMemo(() => {
+    const total = baris.length;
+    const ada = baris.filter((b) => b.status === 'ada').length;
+    const rusak = baris.filter((b) => b.status === 'rusak').length;
+    const tidakAda = baris.filter((b) => b.status === 'tidak_ada').length;
+    const tidakDiperlukan = baris.filter((b) => b.status === 'tidak_diperlukan').length;
+    const wajib = baris.filter((b) => b.wajib && b.status !== 'tidak_diperlukan');
+    const wajibAda = wajib.filter((b) => b.status === 'ada').length;
+    const persen = wajib.length ? Math.round((wajibAda / wajib.length) * 100) : (total ? Math.round((ada / total) * 100) : 0);
+
+    const expiredCount = baris.filter((b) => {
+      if (!b.tanggalExpired) return false;
+      const t = new Date(`${b.tanggalExpired}T00:00:00`).getTime();
+      return !Number.isNaN(t) && t < Date.now();
+    }).length;
+
+    return {
+      total,
+      ada,
+      rusak,
+      tidakAda,
+      tidakDiperlukan,
+      wajibTotal: wajib.length,
+      wajibAda,
+      persen,
+      expiredCount,
+      totalTemuan: rusak + tidakAda,
+    };
   }, [baris]);
 
-  const ringkas = useMemo(() => hitungRingkas(baris), [baris]);
-  const judul = { p3k: 'Kotak P3K', ambulans: 'Ambulans', ergonomi: 'Sarana Ergonomi' }[jenis];
+  const daftarGrup = useMemo(() => {
+    const dariServer = data?.grup ?? [];
+    if (dariServer.length > 0) return dariServer;
+    return DEFAULT_GRUP[jenis];
+  }, [data?.grup, jenis]);
 
-  /* ── Gaya sel: rapat, sama dengan Sarana & Prasarana ──────────────────── */
+  /* ── Gaya Tabel Bersih ala Sarana Klinik ───────────────────────────────── */
   const th: React.CSSProperties = {
-    padding: '5px 7px', borderBottom: '1px solid var(--border)', fontSize: 9,
-    textTransform: 'uppercase', letterSpacing: '0.03em', color: 'var(--muted-foreground)',
-    fontWeight: 700, textAlign: 'left', whiteSpace: 'nowrap',
+    padding: '5px 7px',
+    borderBottom: '1px solid var(--border)',
+    fontSize: 9,
+    textTransform: 'uppercase',
+    letterSpacing: '0.03em',
+    color: 'var(--muted-foreground)',
+    fontWeight: 700,
+    textAlign: 'left',
+    whiteSpace: 'nowrap',
   };
   const td: React.CSSProperties = {
-    padding: '4px 7px', borderBottom: '1px solid var(--border)', fontSize: 10.5,
+    padding: '4px 7px',
+    borderBottom: '1px solid var(--border)',
+    fontSize: 10.5,
   };
   const inputKecil: React.CSSProperties = {
-    fontSize: 10.5, padding: '2px 5px', borderRadius: 6,
-    border: '1px solid var(--border)', background: 'var(--background)',
+    fontSize: 10.5,
+    padding: '2px 5px',
+    borderRadius: 6,
+    border: '1px solid var(--border)',
+    background: 'var(--background)',
   };
+
+  const judulChecklist = {
+    p3k: 'Kotak P3K',
+    ambulans: 'Ambulans',
+    ergonomi: 'Sarana Ergonomi',
+  }[jenis];
 
   return (
     <div className="dashboard" style={{ overflowY: 'auto', overflowX: 'hidden' }}>
-      {/* Toolbar */}
-      <div className="kunjungan-top-bar" style={{ flexShrink: 0 }}>
-        <div className="kunjungan-filter-bar">
-          <select className="admin-filter-select" value={site} onChange={(e) => setSite(e.target.value)}>
+      {/* ── Toolbar Atas ── */}
+      <div className="kunjungan-top-bar" style={{ flexShrink: 0, gap: 8, flexWrap: 'wrap' }}>
+        <div className="kunjungan-filter-bar" style={{ flexWrap: 'wrap', gap: 6 }}>
+          {/* Site Selector */}
+          <select
+            className="admin-filter-select"
+            value={site}
+            onChange={(e) => setSite(e.target.value)}
+            title="Pilih Site"
+          >
             {daftarSite.map((s) => <option key={s} value={s}>{s}</option>)}
-            {!daftarSite.length && <option value={site}>{site || '—'}</option>}
+            {!daftarSite.length && <option value={site}>{site || 'Head Office'}</option>}
           </select>
 
-          {/* Pemilih kelompok: lokasi kotak / unit ambulans */}
-          {pengelompok && (data?.grup ?? []).length > 0 && (
-            <select className="admin-filter-select" value={grup} onChange={(e) => setGrup(e.target.value)}>
-              {(data?.grup ?? []).map((g) => <option key={g} value={g}>{g}</option>)}
-            </select>
+          {/* Lokasi / Unit Selector */}
+          {pengelompok && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <select
+                className="admin-filter-select"
+                value={grup}
+                onChange={(e) => setGrup(e.target.value)}
+                style={{ fontWeight: 600, color: 'var(--primary)' }}
+                title={`Pilih ${labelGrup}`}
+              >
+                {daftarGrup.map((g) => <option key={g} value={g}>{labelGrup}: {g}</option>)}
+              </select>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setTambahGrup((v) => !v)}
+                  className="mcu-dashboard-refresh"
+                  title={`Tambah ${labelGrup} baru`}
+                >
+                  <Plus size={13} />
+                </button>
+              )}
+            </div>
           )}
 
-          <button type="button" onClick={() => void load()} disabled={loading} className="mcu-dashboard-refresh">
+          {/* Filter Status */}
+          <select
+            className="admin-filter-select"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            title="Filter Status"
+          >
+            <option value="semua">Semua Status</option>
+            <option value="ada">Ada / Siap</option>
+            <option value="rusak">Rusak</option>
+            <option value="tidak_ada">Tidak Ada</option>
+            <option value="tidak_diperlukan">Tidak Diperlukan</option>
+          </select>
+
+          {/* Refresh & Tambah Item */}
+          <button
+            type="button"
+            onClick={() => void load()}
+            disabled={loading}
+            className="mcu-dashboard-refresh"
+            title="Muat ulang data"
+          >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
 
-          {pengelompok && isAdmin && (
-            <button type="button" onClick={() => setTambahGrup((v) => !v)} className="mcu-dashboard-refresh">
-              <Plus size={13} /> Tambah {labelGrup}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setTambahItem((v) => !v)}
+              className="mcu-dashboard-refresh"
+              title="Tambah item katalog checklist"
+            >
+              <Plus size={13} /> Tambah Item
             </button>
           )}
         </div>
 
-        <div className="kunjungan-total-right">
+        {/* Ringkasan Status di Sebelah Kanan */}
+        <div className="kunjungan-total-right" style={{ flexWrap: 'wrap', gap: 8 }}>
           <span>
-            Siap pakai{' '}
-            <b style={{ color: ringkas.persenSiap >= 90 ? '#00B894' : ringkas.persenSiap >= 70 ? '#C99A00' : '#FF2D2D' }}>
-              {ringkas.ada}/{ringkas.total} ({ringkas.persenSiap.toFixed(0)}%)
+            Kesiapan{' '}
+            <b style={{ color: ringkas.persen >= 90 ? '#00B894' : ringkas.persen >= 70 ? '#C99A00' : '#FF2D2D' }}>
+              {ringkas.wajibAda}/{ringkas.wajibTotal || ringkas.total} ({ringkas.persen}%)
             </b>
           </span>
-          <span>Rusak <b style={{ color: ringkas.rusak ? '#FF7A00' : 'inherit' }}>{ringkas.rusak}</b></span>
-          <span>Tidak ada <b style={{ color: ringkas.tidakAda ? '#FF2D2D' : 'inherit' }}>{ringkas.tidakAda}</b></span>
+          <span>
+            Rusak <b style={{ color: ringkas.rusak ? '#FF7A00' : 'inherit' }}>{ringkas.rusak}</b>
+          </span>
+          <span>
+            Tidak ada <b style={{ color: ringkas.tidakAda ? '#FF2D2D' : 'inherit' }}>{ringkas.tidakAda}</b>
+          </span>
+          {ringkas.expiredCount > 0 && (
+            <span>
+              Kedaluwarsa <b style={{ color: '#FF2D2D' }}>{ringkas.expiredCount}</b>
+            </span>
+          )}
+
+          {/* Tombol Pintas ke PICA jika ada temuan */}
+          {ringkas.totalTemuan > 0 && onBukaPica && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onBukaPica}
+              style={{
+                height: 24,
+                fontSize: 10,
+                padding: '0 8px',
+                borderColor: '#FF7A00',
+                color: '#FF7A00',
+                background: 'rgba(255,122,0,0.08)',
+                gap: 4,
+              }}
+              title="Buka Register PICA untuk menindaklanjuti temuan ini"
+            >
+              <ExternalLink size={11} /> {ringkas.totalTemuan} Temuan → PICA
+            </Button>
+          )}
         </div>
       </div>
 
+      {/* Baris Status Kesiapan Khusus Ambulans */}
+      {jenis === 'ambulans' && grup && (
+        <div className="card" style={{ padding: '8px 12px', flexShrink: 0, background: 'var(--muted)/30' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11 }}>
+              <span style={{ fontWeight: 700, color: 'var(--primary)' }}>Status Unit {grup}:</span>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5 }}>
+                <span>Kesiapan Operasional:</span>
+                <select
+                  value={unitStatus[grup]?.kesiapan ?? 'ready'}
+                  disabled={!isAdmin}
+                  onChange={(e) => {
+                    const baru = e.target.value;
+                    const bbm = unitStatus[grup]?.bbm ?? null;
+                    setUnitStatus((s) => ({ ...s, [grup]: { kesiapan: baru, bbm } }));
+                    void simpanStatusUnit(grup, baru, bbm);
+                  }}
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: 999,
+                    border: '1px solid var(--border)',
+                    background: (unitStatus[grup]?.kesiapan ?? 'ready') === 'ready' ? 'rgba(0,184,148,0.15)' : (unitStatus[grup]?.kesiapan ?? 'ready') === 'breakdown' ? 'rgba(255,45,45,0.15)' : 'rgba(241,196,15,0.15)',
+                    color: (unitStatus[grup]?.kesiapan ?? 'ready') === 'ready' ? '#00B894' : (unitStatus[grup]?.kesiapan ?? 'ready') === 'breakdown' ? '#FF2D2D' : '#C99A00',
+                  }}
+                >
+                  <option value="ready">Ready (Siap Operasi)</option>
+                  <option value="standby">Standby with Note</option>
+                  <option value="breakdown">Breakdown (Dalam Perbaikan)</option>
+                </select>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5 }}>
+                <span>BBM Tangki:</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  defaultValue={unitStatus[grup]?.bbm ?? 80}
+                  disabled={!isAdmin}
+                  onBlur={(e) => {
+                    const v = e.target.value === '' ? null : Number(e.target.value);
+                    const k = unitStatus[grup]?.kesiapan ?? 'ready';
+                    setUnitStatus((s) => ({ ...s, [grup]: { kesiapan: k, bbm: v } }));
+                    void simpanStatusUnit(grup, k, v);
+                  }}
+                  style={{ ...inputKecil, width: 48, textAlign: 'center' }}
+                />
+                <span style={{ fontSize: 9.5, color: Number(unitStatus[grup]?.bbm ?? 80) < 75 ? '#FF2D2D' : 'var(--muted-foreground)' }}>
+                  % (Standar &ge; 75%)
+                </span>
+              </label>
+            </div>
+
+            <div style={{ fontSize: 9.5, color: 'var(--muted-foreground)' }}>
+              Kendaraan & perlengkapan evakuasi tanggap darurat
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Info Panduan Singkat */}
       <div style={{ flexShrink: 0, fontSize: 10, color: 'var(--muted-foreground)', display: 'flex', gap: 5, alignItems: 'center' }}>
         <AlertTriangle size={11} />
-        Perubahan langsung tersimpan saat kolom diisi.
-        {pengelompok && ` Satu ${labelGrup} = satu kotak/unit yang diperiksa.`}
+        Perubahan langsung tersimpan per baris. {pengelompok && `Sedang memeriksa ${labelGrup}: ${grup}.`}
       </div>
 
       {error && (
@@ -417,18 +593,12 @@ export default function ChecklistFasilitas({ jenis, initialGrup }: {
         </div>
       )}
 
-      {data && !data.tabelSiap && (
-        <div className="card" style={{ padding: '10px 12px', fontSize: 11.5, color: '#9a6b00', flexShrink: 0 }}>
-          {data.catatan}
-        </div>
-      )}
-
-      {/* Tambah lokasi/unit baru */}
+      {/* Modal Tambah Grup / Lokasi / Unit */}
       {tambahGrup && pengelompok && (
         <div className="card" style={{ padding: '10px 12px', flexShrink: 0 }}>
           <div className="card-head" style={{ marginBottom: 8 }}>
             <span style={{ width: 3, height: 16, borderRadius: 2, background: '#00B894', flexShrink: 0 }} />
-            <div><h2 style={{ fontSize: 12 }}>Tambah {labelGrup}</h2></div>
+            <div><h2 style={{ fontSize: 12 }}>Tambah {labelGrup} Baru</h2></div>
           </div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <label className="flex flex-col gap-1">
@@ -438,8 +608,8 @@ export default function ChecklistFasilitas({ jenis, initialGrup }: {
               <Input
                 value={grupBaru}
                 onChange={(e) => setGrupBaru(e.target.value)}
-                placeholder={jenis === 'ambulans' ? 'mis. AMB-01' : 'mis. Mess Blok 1'}
-                className="h-8 w-52 rounded-lg text-sm"
+                placeholder={jenis === 'ambulans' ? 'mis. AMB-02' : 'mis. Ruang Lab / Batching Plant'}
+                className="h-8 w-60 rounded-lg text-sm"
               />
             </label>
             <Button
@@ -451,332 +621,301 @@ export default function ChecklistFasilitas({ jenis, initialGrup }: {
                 setGrup(nama);
                 setGrupBaru('');
                 setTambahGrup(false);
-                // Baris baru muncul setelah item pertama disimpan.
-                setBaris(gabungBaris(data?.katalog ?? [], [], nama, pengelompok));
               }}
               style={{ gap: 5 }}
             >
-              <Check size={13} /> Pakai {labelGrup} ini
+              <Check size={13} /> Gunakan {labelGrup} Ini
             </Button>
             <Button variant="outline" size="sm" onClick={() => setTambahGrup(false)}>Batal</Button>
           </div>
         </div>
       )}
 
-      {/* Status kesiapan unit (khusus ambulans) */}
-      {jenis === 'ambulans' && (data?.grup ?? []).length > 0 && (
-        <div className="card" style={{ padding: '8px 10px', flexShrink: 0 }}>
-          <div className="card-head" style={{ marginBottom: 6 }}>
-            <span style={{ width: 3, height: 16, borderRadius: 2, background: '#3498DB', flexShrink: 0 }} />
-            <div>
-              <h2 style={{ fontSize: 12 }}>Status Kesiapan Unit</h2>
-              <p style={{ fontSize: 9 }}>Menilai kendaraan, bukan kelengkapan itemnya</p>
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            {(data?.grup ?? []).map((u) => {
-              const nilai = unitStatus[u] ?? 'standby';
-              const warna = nilai === 'ready' ? '#00B894' : nilai === 'breakdown' ? '#FF2D2D' : '#F1C40F';
-              return (
-                <span key={u} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5 }}>
-                  <b>{u}</b>
-                  <select
-                    value={nilai}
-                    disabled={!isAdmin}
-                    onChange={(e) => setUnitStatus((s) => ({ ...s, [u]: e.target.value }))}
-                    style={{
-                      fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 999,
-                      border: `1px solid ${warna}55`, background: `${warna}14`, color: warna,
-                    }}
-                  >
-                    <option value="ready">Ready</option>
-                    <option value="standby">Standby with Note</option>
-                    <option value="breakdown">Breakdown</option>
-                  </select>
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => void simpanUnit(u)}
-                      className="mcu-dashboard-refresh"
-                      style={{ height: 24, padding: '0 6px' }}
-                      title="Simpan status unit ini"
-                    >
-                      <Check size={11} /> Simpan
-                    </button>
-                  )}
-                </span>
-              );
-            })}
-          </div>
-        </div>
+      {/* Modal Tambah Item Katalog */}
+      {tambahItem && (
+        <FormTambahItem
+          jenis={jenis}
+          kategoriOptions={kategoriMap}
+          onSelesai={() => { setTambahItem(false); void load(); }}
+        />
       )}
 
       {loading && !baris.length && (
         <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 11 }}>
-          <Loader2 className="size-4 animate-spin inline mr-1" /> Memuat checklist…
+          <Loader2 className="size-4 animate-spin inline mr-1" /> Memuat checklist {judulChecklist}…
         </div>
       )}
 
-          {/* Kartu per kategori — pola Sarana & Prasarana */}
-          {[...perKategori.entries()].map(([kategori, list]) => (
-            <div key={kategori} className="card" style={{ padding: '8px 10px', flexShrink: 0 }}>
-              <div className="card-head" style={{ marginBottom: 6 }}>
-                <span style={{ width: 3, height: 16, borderRadius: 2, background: '#3498DB', flexShrink: 0 }} />
-                <div style={{ minWidth: 0 }}>
-                  <h2 style={{ fontSize: 12 }}>{LABEL_KATEGORI[kategori] ?? (kategori || 'Item')}</h2>
-                  <p style={{ fontSize: 9 }}>
-                    {list.filter((i) => i.status === 'ada').length} siap · {list.length} item
-                    {(() => {
-                      // Persentase sesuai standar: item yang status "ada" dan
-                      // jumlah memenuhi standar (jika ada) dari total item.
-                      const sesuai = list.filter((i) => {
-                        if (i.status !== 'ada') return false;
-                        const rujukan = REFERENSI[i.nama];
-                        if (!rujukan || i.jumlahStandar == null) return true;
-                        return i.jumlah !== null && i.jumlah >= i.jumlahStandar;
-                      }).length;
-                      const persen = list.length ? Math.round((sesuai / list.length) * 100) : 0;
-                      return (
-                        <span style={{ marginLeft: 8, color: persen >= 90 ? '#00B894' : persen >= 70 ? '#C99A00' : '#FF2D2D' }}>
-                          {sesuai}/{list.length} sesuai standar ({persen}%)
-                        </span>
-                      );
-                    })()}
-                  </p>
-                </div>
+      {/* ── KELOMPOK KARTU PER KATEGORI (POLA SARANA KLINIK) ── */}
+      {[...perKategori.entries()].map(([kategori, list]) => {
+        const siapCount = list.filter((i) => i.status === 'ada').length;
+        const rusakCount = list.filter((i) => i.status === 'rusak').length;
+        const tidakAdaCount = list.filter((i) => i.status === 'tidak_ada').length;
+
+        return (
+          <div key={kategori} className="card" style={{ padding: '8px 10px', flexShrink: 0 }}>
+            {/* Header Kartu Kategori */}
+            <div className="card-head" style={{ marginBottom: 6 }}>
+              <span style={{ width: 3, height: 16, borderRadius: 2, background: '#3498DB', flexShrink: 0 }} />
+              <div style={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                <h2 style={{ fontSize: 12 }}>{kategoriMap[kategori] ?? kategori}</h2>
+                <p style={{ fontSize: 9, color: 'var(--muted-foreground)' }}>
+                  <b style={{ color: '#00B894' }}>{siapCount}</b> siap · Total {list.length} item
+                  {rusakCount > 0 && <span style={{ marginLeft: 6, color: '#FF7A00' }}>({rusakCount} rusak)</span>}
+                  {tidakAdaCount > 0 && <span style={{ marginLeft: 6, color: '#FF2D2D' }}>({tidakAdaCount} tidak ada)</span>}
+                </p>
               </div>
+            </div>
 
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={th}>Item</th>
-                      <th style={th}>Status</th>
-                      {jenis === 'ergonomi' ? (
-                        <>
-                          <th style={th}>Jumlah</th>
-                          <th style={th}>Layak</th>
-                          <th style={th}>Rusak</th>
-                        </>
-                      ) : (
-                        <th style={th}>Jumlah</th>
-                      )}
-                      {jenis === 'p3k' && <th style={th}>Kedaluwarsa</th>}
-                      {jenis === 'p3k' && <th style={th}>Kondisi Kotak</th>}
-                      {jenis === 'p3k' && <th style={th}>Buku Catatan</th>}
-                      {jenis === 'ambulans' && <th style={th}>Kondisi</th>}
-                      <th style={th}>Tanggal Periksa</th>
-                      <th style={th}>Catatan</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {list.map((b) => {
-                      const kunci = `${b.grup}|${b.katalogId}`;
-                      const sibuk = menyimpan === kunci;
-                      const meta = STATUS_META[b.status];
-                      const expired = b.tanggalExpired
-                        ? Math.round((new Date(`${b.tanggalExpired}T00:00:00`).getTime() - Date.now()) / 86_400_000)
-                        : null;
-                      const expiredLewat = expired !== null && expired < 0;
-                      const expiredDekat = expired !== null && expired >= 0 && expired <= 30;
+            {/* Tabel Detail Item */}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={th}>Item Pemeriksaan</th>
+                    <th style={th}>Status</th>
+                    <th style={th}>Jumlah</th>
+                    <th style={th}>Kondisi Detail</th>
+                    <th style={th}>Tgl Periksa / Expired</th>
+                    <th style={th}>Catatan / Tindak Lanjut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.map((b) => {
+                    const kunci = `${b.grup}|${b.katalogId}`;
+                    const sibuk = menyimpan === kunci;
+                    const meta = STATUS_META[b.status];
 
-                      return (
-                        <tr key={kunci} style={{ opacity: sibuk ? 0.55 : 1 }}>
-                          <td style={td}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                              {b.nama}
-                              {!b.wajib && (
-                                <span style={{ fontSize: 8, padding: '1px 4px', borderRadius: 4, background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
-                                  tambahan
-                                </span>
-                              )}
-                              {b.satuan && <span style={{ fontSize: 8, color: 'var(--muted-foreground)' }}>{b.satuan}</span>}
+                    // Peringatan expired
+                    const expDiff = b.tanggalExpired
+                      ? Math.round((new Date(`${b.tanggalExpired}T00:00:00`).getTime() - Date.now()) / 86_400_000)
+                      : null;
+                    const isExpired = expDiff !== null && expDiff < 0;
+                    const isNearExpired = expDiff !== null && expDiff >= 0 && expDiff <= 30;
+
+                    return (
+                      <tr key={kunci} style={{ opacity: sibuk ? 0.55 : 1 }}>
+                        {/* 1. Item Nama & Standar */}
+                        <td style={td}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <span style={{ fontWeight: 500 }}>{b.nama}</span>
+                            {!b.wajib && (
+                              <span style={{ fontSize: 8, padding: '1px 4px', borderRadius: 4, background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
+                                opsional
+                              </span>
+                            )}
+                            {b.satuan && (
+                              <span style={{ fontSize: 8, color: 'var(--muted-foreground)' }}>
+                                ({b.satuan})
+                              </span>
+                            )}
+                          </div>
+                          {b.jumlahStandar !== null && (
+                            <div style={{ fontSize: 8.5, color: '#1f5f9b', marginTop: 1 }}>
+                              Standar: {b.jumlahStandar} {b.satuan ?? 'unit'}
                             </div>
-                            {/* Referensi standar: isi checklist ini sudah baku, bukan diisi manual. */}
-                            {(() => {
-                              const rujukan = REFERENSI[b.nama];
-                              if (!rujukan) return null;
-                              return (
-                                <div style={{ fontSize: 8.5, color: 'var(--muted-foreground)', marginTop: 2, lineHeight: 1.35 }} title={rujukan.acuan}>
-                                  <span style={{ color: '#1f5f9b', fontWeight: 600 }}>{rujukan.standar}</span>
-                                  {' · '}{rujukan.aturan}
-                                </div>
-                              );
-                            })()}
-                          </td>
-
-                          <td style={td}>
-                            <select
-                              value={b.status}
-                              disabled={!isAdmin || sibuk}
-                              onChange={(e) => void simpan(b, { status: e.target.value as Status })}
-                              style={{
-                                fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 999,
-                                border: `1px solid ${meta.warna}55`, background: `${meta.warna}14`, color: meta.warna,
-                              }}
-                            >
-                              {(Object.keys(STATUS_META) as Status[]).map((s) => (
-                                <option key={s} value={s}>{STATUS_META[s].label}</option>
-                              ))}
-                            </select>
-                          </td>
-
-                          {/* Jumlah / layak / rusak */}
-                          {jenis === 'ergonomi' ? (
-                            <>
-                              <td style={td}>
-                                <input
-                                  type="number" min={0} defaultValue={b.jumlah ?? ''}
-                                  disabled={!isAdmin || sibuk}
-                                  onBlur={(e) => {
-                                    const v = e.target.value === '' ? null : Number(e.target.value);
-                                    if (v !== b.jumlah) void simpan(b, { jumlah: v });
-                                  }}
-                                  style={{ ...inputKecil, width: 58 }}
-                                />
-                              </td>
-                              <td style={td}>
-                                <input
-                                  type="number" min={0} defaultValue={b.layak ?? ''}
-                                  disabled={!isAdmin || sibuk}
-                                  onBlur={(e) => {
-                                    const v = e.target.value === '' ? null : Number(e.target.value);
-                                    if (v !== b.layak) void simpan(b, { layak: v });
-                                  }}
-                                  style={{ ...inputKecil, width: 58 }}
-                                />
-                              </td>
-                              <td style={td}>
-                                <input
-                                  type="number" min={0} defaultValue={b.rusak ?? ''}
-                                  disabled={!isAdmin || sibuk}
-                                  onBlur={(e) => {
-                                    const v = e.target.value === '' ? null : Number(e.target.value);
-                                    if (v !== b.rusak) void simpan(b, { rusak: v });
-                                  }}
-                                  style={{ ...inputKecil, width: 58, color: Number(b.rusak ?? 0) > 0 ? '#FF2D2D' : 'inherit' }}
-                                />
-                              </td>
-                            </>
-                          ) : (
-                            <td style={td}>
-                              <input
-                                type="number" min={0} defaultValue={b.jumlah ?? ''}
-                                disabled={!isAdmin || sibuk}
-                                onBlur={(e) => {
-                                  const v = e.target.value === '' ? null : Number(e.target.value);
-                                  if (v !== b.jumlah) void simpan(b, { jumlah: v });
-                                }}
-                                style={{ ...inputKecil, width: 58 }}
-                              />
-                            </td>
                           )}
+                        </td>
 
-                          {/* Kolom khusus P3K */}
-                          {jenis === 'p3k' && (
-                            <td style={td}>
+                        {/* 2. Status Badge Dropdown */}
+                        <td style={td}>
+                          <select
+                            value={b.status}
+                            disabled={!isAdmin || sibuk}
+                            onChange={(e) => void simpan(b, { status: e.target.value as Status })}
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              padding: '2px 6px',
+                              borderRadius: 999,
+                              border: `1px solid ${meta.warna}55`,
+                              background: `${meta.warna}14`,
+                              color: meta.warna,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {(Object.keys(STATUS_META) as Status[]).map((s) => (
+                              <option key={s} value={s}>{STATUS_META[s].label}</option>
+                            ))}
+                          </select>
+                        </td>
+
+                        {/* 3. Jumlah Input */}
+                        <td style={td}>
+                          <input
+                            type="number"
+                            min={0}
+                            defaultValue={b.jumlah ?? ''}
+                            disabled={!isAdmin || sibuk}
+                            onBlur={(e) => {
+                              const v = e.target.value === '' ? null : Number(e.target.value);
+                              if (v !== b.jumlah) void simpan(b, { jumlah: v });
+                            }}
+                            style={{ ...inputKecil, width: 56, textAlign: 'center' }}
+                          />
+                        </td>
+
+                        {/* 4. Kondisi Detail */}
+                        <td style={td}>
+                          <input
+                            defaultValue={b.kondisi}
+                            disabled={!isAdmin || sibuk}
+                            onBlur={(e) => {
+                              if (e.target.value !== b.kondisi) void simpan(b, { kondisi: e.target.value });
+                            }}
+                            placeholder="mis. Baik / Busa sobek / Isi kurang"
+                            style={{ ...inputKecil, width: 140 }}
+                          />
+                        </td>
+
+                        {/* 5. Tanggal Inspeksi / Kedaluwarsa */}
+                        <td style={td}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {/* Jika jenis P3K: ada expired date untuk alkes/obat */}
+                            {jenis === 'p3k' && (b.kategori === 'obat' || b.kategori === 'isi') ? (
+                              <div>
+                                <input
+                                  type="date"
+                                  defaultValue={b.tanggalExpired ?? ''}
+                                  disabled={!isAdmin || sibuk}
+                                  onChange={(e) => void simpan(b, { tanggalExpired: e.target.value })}
+                                  style={{
+                                    ...inputKecil,
+                                    fontSize: 9.5,
+                                    border: `1px solid ${isExpired ? '#FF2D2D' : isNearExpired ? '#F1C40F' : 'var(--border)'}`,
+                                    color: isExpired ? '#FF2D2D' : 'inherit',
+                                  }}
+                                  title="Tanggal Kedaluwarsa"
+                                />
+                                {isExpired && <div style={{ fontSize: 8, color: '#FF2D2D' }}>Kedaluwarsa!</div>}
+                                {isNearExpired && <div style={{ fontSize: 8, color: '#C99A00' }}>{expDiff} hari lagi</div>}
+                              </div>
+                            ) : (
                               <input
                                 type="date"
-                                defaultValue={b.tanggalExpired ?? ''}
+                                defaultValue={b.tanggalInspeksi ?? ''}
                                 disabled={!isAdmin || sibuk}
-                                onChange={(e) => void simpan(b, { tanggalExpired: e.target.value })}
-                                style={{
-                                  ...inputKecil,
-                                  border: `1px solid ${expiredLewat ? '#FF2D2D' : expiredDekat ? '#F1C40F' : 'var(--border)'}`,
-                                  color: expiredLewat ? '#FF2D2D' : 'inherit',
-                                }}
-                                title={expired === null ? 'Tanggal kedaluwarsa' : expiredLewat ? `Sudah lewat ${Math.abs(expired)} hari` : `${expired} hari lagi`}
+                                onChange={(e) => void simpan(b, { tanggalInspeksi: e.target.value })}
+                                style={{ ...inputKecil, fontSize: 9.5 }}
+                                title="Tanggal Inspeksi Terakhir"
                               />
-                              {expiredLewat && <div style={{ fontSize: 8.5, color: '#FF2D2D', marginTop: 1 }}>kedaluwarsa</div>}
-                              {expiredDekat && <div style={{ fontSize: 8.5, color: '#C99A00', marginTop: 1 }}>{expired} hari lagi</div>}
-                            </td>
-                          )}
-                          {jenis === 'p3k' && (
-                            <td style={td}>
-                              <select
-                                value={b.kondisiKotak}
-                                disabled={!isAdmin || sibuk}
-                                onChange={(e) => void simpan(b, { kondisiKotak: e.target.value })}
-                                style={{ ...inputKecil, padding: '2px 4px' }}
-                              >
-                                <option value="">—</option>
-                                <option value="bersih">Bersih</option>
-                                <option value="kotor">Kotor</option>
-                                <option value="rusak">Rusak</option>
-                              </select>
-                            </td>
-                          )}
-                          {jenis === 'p3k' && (
-                            <td style={{ ...td, textAlign: 'center' }}>
-                              <input
-                                type="checkbox"
-                                checked={b.adaBukuCatatan}
-                                disabled={!isAdmin || sibuk}
-                                onChange={(e) => void simpan(b, { adaBukuCatatan: e.target.checked })}
-                                title="Buku catatan penggunaan P3K tersedia"
-                              />
-                            </td>
-                          )}
+                            )}
+                          </div>
+                        </td>
 
-                          {/* Kondisi khusus ambulans */}
-                          {jenis === 'ambulans' && (
-                            <td style={td}>
-                              <input
-                                defaultValue={b.kondisi}
-                                disabled={!isAdmin || sibuk}
-                                onBlur={(e) => { if (e.target.value !== b.kondisi) void simpan(b, { kondisi: e.target.value }); }}
-                                placeholder="—"
-                                style={{ ...inputKecil, width: 130 }}
-                              />
-                            </td>
-                          )}
-
-                          <td style={td}>
-                            <span style={{ fontSize: 9.5, color: 'var(--muted-foreground)' }}>
-                              {b.katalogId && data?.kondisi.find((k) => String(k.katalog_id) === String(b.katalogId)
-                                && (!pengelompok || String(k[pengelompok] ?? '') === b.grup))?.tanggal_inspeksi
-                                ? String(data.kondisi.find((k) => String(k.katalog_id) === String(b.katalogId)
-                                  && (!pengelompok || String(k[pengelompok] ?? '') === b.grup))?.tanggal_inspeksi).slice(0, 10)
-                                : '—'}
-                            </span>
-                          </td>
-
-                          <td style={td}>
-                            <input
-                              defaultValue={b.catatan}
-                              disabled={!isAdmin || sibuk}
-                              onBlur={(e) => { if (e.target.value !== b.catatan) void simpan(b, { catatan: e.target.value }); }}
-                              placeholder="—"
-                              style={{ ...inputKecil, width: 150 }}
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                        {/* 6. Catatan */}
+                        <td style={td}>
+                          <input
+                            defaultValue={b.catatan}
+                            disabled={!isAdmin || sibuk}
+                            onBlur={(e) => {
+                              if (e.target.value !== b.catatan) void simpan(b, { catatan: e.target.value });
+                            }}
+                            placeholder="—"
+                            style={{ ...inputKecil, width: 160 }}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          ))}
+          </div>
+        );
+      })}
 
-          {!loading && !baris.length && !error && data?.tabelSiap && (
-            <div className="card" style={{ padding: 24, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 11.5 }}>
-              Belum ada katalog {judul.toLowerCase()}.
-            </div>
-          )}
+      {!loading && !baris.length && !error && (
+        <div className="card" style={{ padding: 24, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 11.5 }}>
+          Belum ada katalog {judulChecklist.toLowerCase()} untuk site ini.
         </div>
-      );
+      )}
+    </div>
+  );
 }
 
-      /** Ringkasan status dari baris yang sedang ditampilkan. */
-      function hitungRingkas(baris: Baris[]) {
-  const total = baris.length;
-  const ada = baris.filter((b) => b.status === 'ada').length;
-      return {
-        total,
-        ada,
-        rusak: baris.filter((b) => b.status === 'rusak').length,
-    tidakAda: baris.filter((b) => b.status === 'tidak_ada').length,
-      persenSiap: total ? Math.round((ada / total) * 1000) / 10 : 0,
-  };
+/** Form Menambah Item Katalog Checklist Baru */
+function FormTambahItem({
+  jenis,
+  kategoriOptions,
+  onSelesai,
+}: {
+  jenis: JenisChecklist;
+  kategoriOptions: Record<string, string>;
+  onSelesai: () => void;
+}) {
+  const store = useMCUStore();
+  const [nama, setNama] = useState('');
+  const [kategori, setKategori] = useState(Object.keys(kategoriOptions)[0] ?? 'umum');
+  const [satuan, setSatuan] = useState(jenis === 'p3k' ? 'buah' : 'unit');
+  const [jumlahStandar, setJumlahStandar] = useState(1);
+  const [wajib, setWajib] = useState(true);
+  const [simpan, setSimpan] = useState(false);
+
+  async function kirim() {
+    if (!nama.trim()) return;
+    setSimpan(true);
+    try {
+      await authFetch('/api/inspeksi/checklist', {
+        method: 'PUT',
+        body: JSON.stringify({
+          jenis,
+          nama: nama.trim(),
+          kategori,
+          satuan,
+          jumlah_standar: jumlahStandar,
+          wajib,
+        }),
+      });
+      store.showToast('Item checklist berhasil ditambahkan ke katalog', 'success');
+      onSelesai();
+    } catch (e) {
+      store.showToast(e instanceof Error ? e.message : 'Gagal menambah item', 'error');
+    } finally {
+      setSimpan(false);
+    }
+  }
+
+  return (
+    <div className="card" style={{ padding: '10px 12px', flexShrink: 0 }}>
+      <div className="card-head" style={{ marginBottom: 8 }}>
+        <span style={{ width: 3, height: 16, borderRadius: 2, background: '#00B894', flexShrink: 0 }} />
+        <div>
+          <h2 style={{ fontSize: 12 }}>Tambah Item Checklist Baru</h2>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2" style={{ marginBottom: 8 }}>
+        <label className="flex flex-col gap-1 sm:col-span-2">
+          <span className="text-[10px] font-semibold text-muted-foreground">Nama Item</span>
+          <Input
+            value={nama}
+            onChange={(e) => setNama(e.target.value)}
+            placeholder="mis. Tabung Oksigen Cadangan 2m3"
+            className="h-8 rounded-lg text-sm"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[10px] font-semibold text-muted-foreground">Kategori</span>
+          <select
+            value={kategori}
+            onChange={(e) => setKategori(e.target.value)}
+            className="h-8 rounded-lg border-input bg-background px-2 text-sm"
+          >
+            {Object.entries(kategoriOptions).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+        </label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'center', fontSize: 10.5 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <input type="checkbox" checked={wajib} onChange={(e) => setWajib(e.target.checked)} /> Wajib Sesuai Standar
+          </label>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+        <Button variant="outline" size="sm" onClick={onSelesai}>Batal</Button>
+        <Button size="sm" disabled={simpan || !nama.trim()} onClick={() => void kirim()} style={{ gap: 5 }}>
+          {simpan ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Simpan Item
+        </Button>
+      </div>
+    </div>
+  );
 }

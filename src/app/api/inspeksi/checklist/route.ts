@@ -59,9 +59,12 @@ export async function GET(req: NextRequest) {
   if (!site) return NextResponse.json({ error: 'Parameter site wajib diisi' }, { status: 400 });
 
   const client = adminClient();
-  const [katalogRes, kondisiRes] = await Promise.all([
+  const [katalogRes, kondisiRes, unitRes] = await Promise.all([
     client.from(konfig.katalog).select('*').order('urutan'),
     client.from(konfig.kondisi).select('*').eq('site', site),
+    jenisKey === 'ambulans'
+      ? client.from('ambulans_unit').select('*').eq('site', site)
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (katalogRes.error) {
@@ -73,7 +76,32 @@ export async function GET(req: NextRequest) {
   if (kondisiRes.error) return NextResponse.json({ error: 'Gagal membaca kondisi.' }, { status: 500 });
 
   const katalog = (katalogRes.data ?? []) as Record<string, unknown>[];
-  const kondisi = (kondisiRes.data ?? []) as Record<string, unknown>[];
+  const rawKondisi = (kondisiRes.data ?? []) as Record<string, unknown>[];
+  const kondisi = rawKondisi.map((k) => {
+    if (jenisKey === 'ergonomi') {
+      const rusak = Number(k.rusak ?? 0);
+      const layak = Number(k.layak ?? 0);
+      const jml = Number(k.jumlah ?? 0);
+      let status = String(k.status ?? '');
+      if (!status || status === 'tidak_ada') {
+        if (rusak > 0) status = 'rusak';
+        else if (layak > 0 || jml > 0) status = 'ada';
+        else status = 'tidak_ada';
+      }
+      return {
+        ...k,
+        status,
+        kondisi: k.kondisi ?? (rusak > 0 ? `${rusak} rusak` : layak > 0 ? 'Baik' : null),
+      };
+    }
+    if (jenisKey === 'p3k') {
+      return {
+        ...k,
+        kondisi: k.kondisi ?? k.kondisi_kotak ?? null,
+      };
+    }
+    return k;
+  });
 
   // Grup = lokasi/unit yang sudah punya data; bila belum ada, satu grup default.
   const kolomKelompok: string | null = konfig.pengelompok;
@@ -91,6 +119,7 @@ export async function GET(req: NextRequest) {
     katalog,
     kondisi,
     grup,
+    unitList: unitRes.data ?? [],
     daftarSite: [...new Set(kondisi.map(k => String(k.site ?? '')))].sort(),
     ringkas: ringkas(kondisi),
   });
@@ -183,16 +212,26 @@ export async function POST(req: NextRequest) {
         dasar.tanggal_expired = it.tanggal_expired
           ? String(it.tanggal_expired).slice(0, 10)
           : null;
-        dasar.kondisi_kotak = it.kondisi_kotak ?? null;
+        dasar.kondisi_kotak = it.kondisi ?? it.kondisi_kotak ?? null;
         dasar.ada_buku_catatan = it.ada_buku_catatan ?? null;
       }
       if (jenisKey === 'ambulans') {
         dasar.kondisi = it.kondisi ?? null;
       }
       if (jenisKey === 'ergonomi') {
-        dasar.jumlah = angka(it.jumlah);
-        dasar.layak = angka(it.layak);
-        dasar.rusak = angka(it.rusak);
+        const jml = angka(it.jumlah) ?? 1;
+        const st = String(it.status ?? 'tidak_ada');
+        dasar.jumlah = jml;
+        if (st === 'rusak') {
+          dasar.rusak = angka(it.rusak) ?? 1;
+          dasar.layak = Math.max(0, jml - Number(dasar.rusak));
+        } else if (st === 'ada') {
+          dasar.layak = jml;
+          dasar.rusak = 0;
+        } else {
+          dasar.layak = 0;
+          dasar.rusak = 0;
+        }
       }
       return dasar;
     });
@@ -206,6 +245,46 @@ export async function POST(req: NextRequest) {
     const { error } = await client.from(konfig.kondisi).upsert(barisValid, { onConflict });
     if (error) throw error;
 
+    // ── Otomatis Sinkronisasi Realisasi ke inspeksi_jadwal ────────────────
+    const tglInspeksi = baris[0]?.tanggal_inspeksi ? String(baris[0].tanggal_inspeksi).slice(0, 10) : hariIni;
+    const periode = tglInspeksi.slice(0, 7);
+    const katalogIds = barisValid.map(b => String(b.katalog_id));
+
+    try {
+      // 1. Update baris jadwal rencana objek katalog terkait
+      await client
+        .from('inspeksi_jadwal')
+        .update({
+          status: 'selesai',
+          tanggal_selesai: tglInspeksi,
+          petugas: caller.userId ?? null,
+          waktu_lapor: sekarang,
+          updated_at: sekarang,
+        })
+        .eq('site', site)
+        .eq('jenis', jenisKey)
+        .eq('periode', periode)
+        .in('objek_id', katalogIds)
+        .neq('status', 'selesai');
+
+      // 2. Update jadwal level site/area yang masih berstatus rencana
+      await client
+        .from('inspeksi_jadwal')
+        .update({
+          status: 'selesai',
+          tanggal_selesai: tglInspeksi,
+          petugas: caller.userId ?? null,
+          waktu_lapor: sekarang,
+          updated_at: sekarang,
+        })
+        .eq('site', site)
+        .eq('jenis', jenisKey)
+        .eq('periode', periode)
+        .eq('status', 'rencana');
+    } catch (jErr) {
+      console.warn(`[inspeksi/checklist:${jenisKey}] Gagal auto-update jadwal:`, jErr);
+    }
+
     return NextResponse.json({ success: true, tersimpan: barisValid.length });
   } catch (err) {
     const pesan = err instanceof Error ? err.message : 'Gagal menyimpan checklist';
@@ -213,4 +292,34 @@ export async function POST(req: NextRequest) {
     console.error(`[inspeksi/checklist:${jenisKey}]`, err);
     return NextResponse.json({ error: pesan }, { status: 500 });
   }
+}
+
+/** PUT /api/inspeksi/checklist — tambah item baru ke katalog checklist */
+export async function PUT(req: NextRequest) {
+  const caller = await getCaller(req);
+  if (!caller || !ROLES_TULIS.includes(String(caller.role))) {
+    return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
+  }
+
+  const body = await req.json().catch(() => ({}));
+  const nama = String(body?.nama ?? '').trim();
+  const jenisKey = String(body?.jenis ?? '').trim();
+  const konfig = JENIS[jenisKey];
+  if (!konfig) return NextResponse.json({ error: 'Jenis tidak dikenal' }, { status: 400 });
+  if (!nama) return NextResponse.json({ error: 'Nama item wajib diisi' }, { status: 400 });
+
+  const client = adminClient();
+  const payload: Record<string, unknown> = {
+    nama,
+    kategori: String(body?.kategori ?? '').trim() || (jenisKey === 'p3k' ? 'isi' : jenisKey === 'ambulans' ? 'medis' : 'operator'),
+    wajib: body?.wajib !== undefined ? Boolean(body.wajib) : true,
+  };
+  if (jenisKey === 'p3k') {
+    payload.satuan = String(body?.satuan ?? '').trim() || 'buah';
+    payload.jumlah_standar = Number(body?.jumlah_standar) || 1;
+  }
+
+  const { data, error } = await client.from(konfig.katalog).insert(payload).select().single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ success: true, item: data });
 }

@@ -426,15 +426,9 @@ const ADMIN_SIDEBAR: SidebarItem[] = [
   { key: 'higiene-industri-admin', label: 'Higiene Industri', icon: <IconHigiene /> },
   { key: 'health-campaign', label: 'Health Campaign', icon: <IconCampaignAdmin /> },
   { key: 'pak-register', label: 'Register PAK', icon: <IconPakRegister /> },
-  // Sarana & Prasarana = satu menu bertab: Sarana Klinik + Checklist Kelaikan
-  // (P3K, Ambulans, Sarana Ergonomi). Keduanya satu keluarga: kelengkapan
-  // & kelayakan aset kesehatan kerja. Checklist kelaikan TIDAK jadi menu
-  // terpisah lagi karena pekerjaannya sama.
+  // Sarana & Prasarana = seluruh inspeksi digital & kelayakan aset kesehatan kerja:
+  // Sarana Klinik, Kotak P3K, Ambulans, Sarana Ergonomi, Register PICA, dan Jadwal Realisasi.
   { key: 'sarana-klinik', label: 'Sarana & Prasarana', icon: <IconSarana /> },
-  // Program Inspeksi & Register PICA = satu alur kerja: rencana inspeksi →
-  // temuan → penutupan. Digabung jadi satu menu bertab (layout rapi ala
-  // Review MCU), bukan dua menu untuk satu pekerjaan.
-  { key: 'program-inspeksi', label: 'Program Inspeksi & PICA', icon: <IconChecklist /> },
   // Kelola Pengguna dipindah ke menu Pengaturan (tab "Kelola Pengguna").
   { key: 'pengaturan', label: 'Pengaturan', icon: <IconSetting />, superuserOnly: true },
 ];
@@ -745,36 +739,27 @@ function AdminContent() {
   }
 
   if (activeAdminSidebar === 'sarana-klinik') {
-    return <SaranaKlinikWithChecklist />;
+    return <SaranaKlinikWithChecklist initialTab="sarana-klinik" />;
   }
 
   if (activeAdminSidebar === 'program-inspeksi') {
-    return <ProgramInspeksiAdminTabs />;
+    return <SaranaKlinikWithChecklist initialTab="jadwal" />;
   }
 
-  // Rute lama "pica" tetap hidup agar tautan yang sudah ada tidak rusak —
-  // kini mengarah ke tab Register PICA pada menu gabungan.
   if (activeAdminSidebar === 'pica') {
-    return <ProgramInspeksiAdminTabs initialTab="pica" />;
+    return <SaranaKlinikWithChecklist initialTab="pica" />;
   }
 
-  // Rute lama "checklist-fasilitas" tetap hidup sebagai alias menu gabungan
-  // Sarana & Prasarana (tab Checklist Kelaikan).
-  if (activeAdminSidebar === 'checklist-fasilitas') {
-    return <SaranaKlinikWithChecklist initialTab="checklist" />;
-  }
-
-  // Rute lama dipertahankan agar tautan yang sudah ada tidak rusak.
-  if (activeAdminSidebar === 'checklist-p3k') {
-    return <SaranaKlinikWithChecklist initialTab="checklist" checklistTab="p3k" />;
+  if (activeAdminSidebar === 'checklist-fasilitas' || activeAdminSidebar === 'checklist-p3k') {
+    return <SaranaKlinikWithChecklist initialTab="p3k" />;
   }
 
   if (activeAdminSidebar === 'checklist-ambulans') {
-    return <SaranaKlinikWithChecklist initialTab="checklist" checklistTab="ambulans" />;
+    return <SaranaKlinikWithChecklist initialTab="ambulans" />;
   }
 
   if (activeAdminSidebar === 'checklist-ergonomi') {
-    return <SaranaKlinikWithChecklist initialTab="checklist" checklistTab="ergonomi" />;
+    return <SaranaKlinikWithChecklist initialTab="ergonomi" />;
   }
 
   const panels: Record<string, { form: React.ReactNode; tables: React.ReactNode[]; hasTable: boolean; labels?: string[] }> = {

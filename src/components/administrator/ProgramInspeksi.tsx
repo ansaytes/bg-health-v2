@@ -1,25 +1,21 @@
 'use client';
 
 // ============================================================
-// Administrator > Program Inspeksi — RENCANA inspeksi
+// Administrator > Perencanaan Jadwal Inspeksi
 // ============================================================
+// Halaman operasional untuk MENETAPKAN TARGET & TANGGAL RENCANA inspeksi:
+//   • Buat rencana periode bulanan per site secara otomatis
+//   • Tambah jadwal inspeksi khusus / ad-hoc dengan tanggal rencana tertentu
+//   • Realisasi tercatat 100% otomatis saat checklist lapangan diisi
 //
-// Halaman ini adalah sumber data untuk tiga metrik di dashboard:
-//   • Completion rate  (selesai ÷ target)
-//   • On-time vs late  (tanggal selesai vs tanggal rencana)
-//   • Missed alert     (rencana lewat tanpa laporan)
-//
-// Alurnya sengaja sederhana: pilih site & periode → "Buat rencana periode"
-// menghasilkan satu baris per objek (dari katalog modul masing-masing) →
-// petugas menandai "Selesai" saat pemeriksaan benar-benar dilakukan.
-//
-// Status "terlewat" TIDAK disimpan; dihitung dari tanggal rencana, sehingga
-// daftar selalu akurat tanpa proses latar belakang.
+// Catatan: Grafik, metrik kepatuhan, MTTR, dan analisis KPI makro
+//          berada di Menu Dashboard → Program Inspeksi.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarClock, Check, Plus, RefreshCw, RotateCcw } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { CalendarClock, Check, Info, Plus, RefreshCw, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { authFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { useSites } from '@/lib/site-list';
@@ -29,11 +25,9 @@ import {
   FREKUENSI_HARI_BAWAAN,
   JENIS_INSPEKSI_LIST,
   JENIS_META,
-  WARNA_KINERJA,
   labelFrekuensi,
   labelPeriode,
   periodeBulan,
-  ringkasProgram,
   tanggalISO,
   type BarisJadwal,
   type JenisInspeksi,
@@ -68,6 +62,14 @@ export default function ProgramInspeksi() {
   const [bekerja, setBekerja] = useState(false);
   const [error, setError] = useState('');
 
+  // Modal Tambah Jadwal Khusus
+  const [modalBuka, setModalBuka] = useState(false);
+  const [tambahJenis, setTambahJenis] = useState<JenisInspeksi>('p3k');
+  const [tambahSite, setTambahSite] = useState('');
+  const [tambahObjek, setTambahObjek] = useState('');
+  const [tambahTanggal, setTambahTanggal] = useState(tanggalISO(new Date()));
+  const [tambahCatatan, setTambahCatatan] = useState('');
+
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -85,11 +87,6 @@ export default function ProgramInspeksi() {
   }, [periode, site, jenis]);
 
   useEffect(() => { void load(); }, [load]);
-
-  const ringkas = useMemo(
-    () => ringkasProgram((data?.jadwal ?? []) as BarisJadwal[]),
-    [data],
-  );
 
   const aksi = async (body: Record<string, unknown>, pesanSukses: string) => {
     setBekerja(true);
@@ -114,30 +111,56 @@ export default function ProgramInspeksi() {
 
   const buatRencana = () => {
     if (!site) {
-      popup({ type: 'info', title: 'Pilih site', message: 'Pilih site terlebih dahulu agar rencana inspeksi bisa dibuat.' });
+      popup({ type: 'info', title: 'Pilih Site', message: 'Pilih site terlebih dahulu agar target rencana inspeksi bisa dibuat.' });
       return;
     }
     popup({
       type: 'confirm',
-      title: `Buat rencana inspeksi ${labelPeriode(periode)}?`,
-      message: `Satu jadwal akan dibuat untuk setiap objek pada site ${site}. Jadwal yang sudah ada tidak diduplikasi.`,
-      confirmLabel: 'Buat rencana',
+      title: `Buat Target Rencana ${labelPeriode(periode)}?`,
+      message: `Jadwal rencana inspeksi bulanan akan dibuat untuk setiap fasilitas di site ${site}. Rencana yang sudah ada tidak akan diduplikasi.`,
+      confirmLabel: 'Buat Rencana Periode',
       onOk: () => aksi(
         { aksi: 'generate', periode, site, jenis: jenis ? [jenis] : undefined },
-        'Rencana inspeksi dibuat',
+        'Rencana inspeksi periode berhasil dibuat',
       ),
     });
+  };
+
+  const simpanJadwalKhusus = async () => {
+    if (!tambahSite) {
+      store.showToast('Pilih site terlebih dahulu', 'error');
+      return;
+    }
+    if (!tambahTanggal) {
+      store.showToast('Tentukan tanggal rencana', 'error');
+      return;
+    }
+    await aksi(
+      {
+        aksi: 'tambah',
+        jenis: tambahJenis,
+        site: tambahSite,
+        objek_nama: tambahObjek.trim() || JENIS_META[tambahJenis].label,
+        tanggal_rencana: tambahTanggal,
+        catatan: tambahCatatan.trim(),
+      },
+      'Jadwal inspeksi khusus berhasil ditambahkan',
+    );
+    setModalBuka(false);
+    setTambahObjek('');
+    setTambahCatatan('');
   };
 
   return (
     <div className="admin-form-container" style={{ padding: 16, overflow: 'auto' }}>
       <div className="mcu-records-card">
-        <div className="mcu-records-header">
+        {/* Header Toolbar Perencanaan */}
+        <div className="mcu-records-header" style={{ flexWrap: 'wrap', gap: 10 }}>
           <div>
-            <div className="mcu-records-kicker">PROGRAM INSPEKSI</div>
-            <h3>Rencana & Pelaksanaan Inspeksi</h3>
+            <div className="mcu-records-kicker">FORM ADMINISTRASI OPERASIONAL</div>
+            <h3 style={{ fontSize: 15, margin: 0 }}>Perencanaan Jadwal Inspeksi Lapangan</h3>
           </div>
-          <div className="mcu-records-actions">
+          <div className="mcu-records-actions" style={{ flexWrap: 'wrap', gap: 6 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
               <span>Periode</span>
               <input
@@ -152,7 +175,7 @@ export default function ProgramInspeksi() {
               <select
                 value={site}
                 onChange={e => setSite(e.target.value)}
-                style={{ height: 28, minWidth: 130, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 6px' }}
+                style={{ height: 28, minWidth: 120, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 6px' }}
               >
                 <option value="">Semua site</option>
                 {daftarSite.map(s => <option key={s} value={s}>{s}</option>)}
@@ -163,7 +186,7 @@ export default function ProgramInspeksi() {
               <select
                 value={jenis}
                 onChange={e => setJenis(e.target.value as JenisInspeksi | '')}
-                style={{ height: 28, minWidth: 150, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 6px' }}
+                style={{ height: 28, minWidth: 140, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 6px' }}
               >
                 <option value="">Semua jenis</option>
                 {JENIS_INSPEKSI_LIST.map(j => <option key={j} value={j}>{JENIS_META[j].label}</option>)}
@@ -173,142 +196,165 @@ export default function ProgramInspeksi() {
               <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
             </button>
             {isAdmin && (
-              <Button size="sm" onClick={buatRencana} disabled={bekerja}>
-                <Plus size={14} className="mr-1" /> Buat rencana periode
-              </Button>
+              <>
+                <Button size="sm" onClick={buatRencana} disabled={bekerja}>
+                  <Plus size={14} className="mr-1" /> Buat Rencana Periode
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => { setTambahSite(site || daftarSite[0] || ''); setModalBuka(true); }} disabled={bekerja}>
+                  <Plus size={14} className="mr-1" /> Jadwal Khusus
+                </Button>
+              </>
             )}
+          </div>
+        </div>
+
+        {/* Banner Penjelasan Alur Digitalisasi */}
+        <div style={{ margin: '8px 0 12px', padding: '8px 12px', fontSize: 10.5, color: 'var(--muted-foreground)', display: 'flex', gap: 8, alignItems: 'center', background: 'var(--muted)/25', borderRadius: 8, borderLeft: '3px solid #00B894' }}>
+          <Check size={14} color="#00B894" style={{ flexShrink: 0 }} />
+          <div>
+            <b>Realisasi Otomatis dari Checklist:</b> Saat petugas mengisi tanggal pelaksanaan pada tab <i>Sarana Klinik</i>, <i>Kotak P3K</i>, <i>Ambulans</i>, atau <i>Sarana Ergonomi</i>, jadwal terkait langsung ditandai <b>Selesai</b> bersama identitas pemeriksa tanpa perlu dicatat ulang.
+            <div style={{ marginTop: 2, color: 'var(--primary)', fontSize: 10 }}>
+              💡 Untuk melihat grafik capaian KPI, kepatuhan on-time, MTTR, dan tren inspeksi, silakan buka <b>Menu Dashboard → Program Inspeksi</b>.
+            </div>
           </div>
         </div>
 
         {error && <div style={{ padding: '8px 12px', fontSize: 11, color: '#b3261e' }}>{error}</div>}
 
-        {data && !data.tabelSiap ? (
-          <div style={{ padding: 16, fontSize: 12, color: '#9a6b00' }}>
-            {data.catatan}
+        {/* Modal Dialog Tambah Jadwal Khusus */}
+        {modalBuka && (
+          <div className="card" style={{ padding: '12px 14px', marginBottom: 12, border: '1px solid var(--primary)', background: 'var(--card)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <h4 style={{ margin: 0, fontSize: 12, fontWeight: 700 }}>Tambah Jadwal Rencana Inspeksi Khusus</h4>
+              <button type="button" onClick={() => setModalBuka(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={15} /></button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2" style={{ marginBottom: 8 }}>
+              <label className="flex flex-col gap-1">
+                <span className="text-[10px] font-semibold text-muted-foreground">Jenis Inspeksi</span>
+                <select
+                  value={tambahJenis}
+                  onChange={e => setTambahJenis(e.target.value as JenisInspeksi)}
+                  className="h-8 rounded-lg border-input bg-background px-2 text-sm"
+                >
+                  {JENIS_INSPEKSI_LIST.map(j => <option key={j} value={j}>{JENIS_META[j].label}</option>)}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[10px] font-semibold text-muted-foreground">Site</span>
+                <select
+                  value={tambahSite}
+                  onChange={e => setTambahSite(e.target.value)}
+                  className="h-8 rounded-lg border-input bg-background px-2 text-sm"
+                >
+                  {daftarSite.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[10px] font-semibold text-muted-foreground">Target Tanggal Rencana</span>
+                <Input
+                  type="date"
+                  value={tambahTanggal}
+                  onChange={e => setTambahTanggal(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[10px] font-semibold text-muted-foreground">Nama Objek / Lokasi</span>
+                <Input
+                  value={tambahObjek}
+                  onChange={e => setTambahObjek(e.target.value)}
+                  placeholder="mis. Kotak P3K Pit West"
+                  className="h-8 text-sm"
+                />
+              </label>
+            </div>
+            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+              <Button size="sm" variant="outline" onClick={() => setModalBuka(false)}>Batal</Button>
+              <Button size="sm" onClick={() => void simpanJadwalKhusus()} disabled={bekerja}>
+                <Check size={13} className="mr-1" /> Simpan Target Jadwal
+              </Button>
+            </div>
           </div>
-        ) : (
-          <>
-            {/* Ringkasan periode */}
-            <div className="mcu-records-toolbar" style={{ gap: 18 }}>
-              <div className="mcu-records-toolbar-title">
-                <CalendarClock size={14} /> {labelPeriode(periode)}
-              </div>
-              <span style={{ fontSize: 11 }} title="Jumlah kewajiban inspeksi bulan ini = jumlah objek × frekuensinya">
-                Target <b>{ringkas.target}</b>
-              </span>
-              <span style={{ fontSize: 11 }}>
-                Selesai <b style={{ color: WARNA_KINERJA[ringkas.warnaSelesai] }}>{ringkas.selesai}</b>
-              </span>
-              <span style={{ fontSize: 11 }}>
-                Terlewat <b style={{ color: ringkas.terlewat ? WARNA_KINERJA.merah : 'inherit' }}>{ringkas.terlewat}</b>
-              </span>
-              <span style={{ fontSize: 11 }}>
-                Penyelesaian{' '}
-                <b style={{ color: WARNA_KINERJA[ringkas.warnaSelesai] }}>{ringkas.persenSelesai}%</b>
-              </span>
-              <span style={{ fontSize: 11 }}>
-                Tepat waktu <b>{ringkas.persenTepatWaktu}%</b>
-              </span>
-            </div>
-
-            <div className="mcu-records-table-wrap">
-              <table className="mcu-records-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: 52 }}>No</th>
-                    <th style={{ width: 190 }}>Jenis</th>
-                    <th style={{ width: 130 }}>Site</th>
-                    <th>Objek</th>
-                    <th style={{ width: 105 }}>Rencana</th>
-                    <th style={{ width: 105 }}>Selesai</th>
-                    <th style={{ width: 105 }}>Status</th>
-                    <th style={{ width: 140 }}>Petugas</th>
-                    {isAdmin && <th style={{ width: 130 }}>Aksi</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading && !data ? (
-                    <tr><td colSpan={isAdmin ? 9 : 8} style={{ padding: 30, textAlign: 'center' }}>Memuat…</td></tr>
-                  ) : (data?.jadwal ?? []).length === 0 ? (
-                    <tr>
-                      <td colSpan={isAdmin ? 9 : 8} style={{ padding: 30, textAlign: 'center', fontSize: 12 }}>
-                        Belum ada jadwal untuk periode ini.
-                        {isAdmin && ' Pilih site lalu klik “Buat rencana periode”.'}
-                      </td>
-                    </tr>
-                  ) : (data?.jadwal ?? []).map((b, i) => {
-                    const st = STATUS_STYLE[b.status_efektif] ?? STATUS_STYLE.rencana;
-                    return (
-                      <tr key={String(b.id ?? i)}>
-                        <td className="mcu-records-index">{i + 1}</td>
-                        <td>{JENIS_META[b.jenis as JenisInspeksi]?.label ?? b.jenis}</td>
-                        <td>{b.site ?? '—'}</td>
-                        <td title={b.objek_nama ?? ''}>{b.objek_nama ?? '—'}</td>
-                        <td>{b.tanggal_rencana ?? '—'}</td>
-                        <td>{b.tanggal_selesai ?? '—'}</td>
-                        <td>
-                          <span style={{
-                            display: 'inline-block', padding: '2px 7px', borderRadius: 5,
-                            fontSize: 10, fontWeight: 700, color: st.warna, background: st.bg,
-                          }}>
-                            {st.label}
-                          </span>
-                        </td>
-                        <td title={b.petugas ?? ''}>{b.petugas_nama ?? b.petugas ?? '—'}</td>
-                        {isAdmin && (
-                          <td className="mcu-records-action">
-                            {b.status_efektif !== 'selesai' && b.status_efektif !== 'dibatalkan' ? (
-                              <div style={{ display: 'flex', gap: 4 }}>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 px-2 text-xs"
-                                  disabled={bekerja}
-                                  onClick={() => aksi(
-                                    {
-                                      aksi: 'selesai',
-                                      id: b.id,
-                                      tanggal_selesai: tanggalISO(new Date()),
-                                    },
-                                    'Inspeksi ditandai selesai',
-                                  )}
-                                  title="Tandai inspeksi selesai hari ini — petugas otomatis dari akun yang login"
-                                >
-                                  <Check size={13} /> Selesai
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 px-2 text-xs"
-                                  disabled={bekerja}
-                                  onClick={() => aksi({ aksi: 'batal', id: b.id }, 'Jadwal dibatalkan')}
-                                  title="Batalkan jadwal ini"
-                                >
-                                  <RotateCcw size={13} />
-                                </Button>
-                              </div>
-                            ) : null}
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            <p style={{ fontSize: 10, color: 'var(--muted-foreground)', margin: '8px 0 0' }}>
-              Status “Terlewat” dihitung otomatis: jadwal yang belum selesai setelah tanggal rencana
-              (mulai H+1). Jadwal yang dibatalkan tidak dihitung dalam target.
-              Kolom Petugas terisi otomatis dari akun yang menekan “Selesai” dan tidak dapat diubah.
-              <b>Frekuensi</b> menentukan berapa kali objek harus diperiksa dalam sebulan:{' '}
-              {JENIS_INSPEKSI_LIST.map(j => (
-                `${JENIS_META[j].label} ${labelFrekuensi(FREKUENSI_HARI_BAWAAN[j])}`
-              )).join(' · ')}.
-              Contoh: P3K bulanan → 1 jadwal/bulan; kalibrasi tahunan → hanya muncul di bulan Januari.
-            </p>
-          </>
         )}
+
+        {/* Tabel Daftar Rencana & Realisasi */}
+        <div className="mcu-records-table-wrap">
+          <table className="mcu-records-table">
+            <thead>
+              <tr>
+                <th style={{ width: 44 }}>No</th>
+                <th style={{ width: 170 }}>Jenis Fasilitas</th>
+                <th style={{ width: 120 }}>Site</th>
+                <th>Objek / Sarana</th>
+                <th style={{ width: 105 }}>Target Rencana</th>
+                <th style={{ width: 105 }}>Tgl Realisasi</th>
+                <th style={{ width: 100 }}>Status</th>
+                <th style={{ width: 140 }}>Petugas Pemeriksa</th>
+                {isAdmin && <th style={{ width: 110 }}>Aksi Cadangan</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {loading && !data ? (
+                <tr><td colSpan={isAdmin ? 9 : 8} style={{ padding: 30, textAlign: 'center' }}>Memuat jadwal…</td></tr>
+              ) : (data?.jadwal ?? []).length === 0 ? (
+                <tr>
+                  <td colSpan={isAdmin ? 9 : 8} style={{ padding: 30, textAlign: 'center', fontSize: 12, color: 'var(--muted-foreground)' }}>
+                    Belum ada rencana jadwal untuk periode ini.
+                    {isAdmin && ' Klik tombol "Buat Rencana Periode" di atas untuk menetapkan target bulanan.'}
+                  </td>
+                </tr>
+              ) : (data?.jadwal ?? []).map((b, i) => {
+                const st = STATUS_STYLE[b.status_efektif] ?? STATUS_STYLE.rencana;
+                return (
+                  <tr key={String(b.id ?? i)}>
+                    <td className="mcu-records-index">{i + 1}</td>
+                    <td style={{ fontWeight: 500 }}>{JENIS_META[b.jenis as JenisInspeksi]?.label ?? b.jenis}</td>
+                    <td>{b.site ?? '—'}</td>
+                    <td title={b.objek_nama ?? ''}>{b.objek_nama ?? '—'}</td>
+                    <td>{b.tanggal_rencana ?? '—'}</td>
+                    <td style={{ color: b.tanggal_selesai ? '#00B894' : 'inherit', fontWeight: b.tanggal_selesai ? 600 : 'normal' }}>
+                      {b.tanggal_selesai ?? '—'}
+                    </td>
+                    <td>
+                      <span style={{
+                        display: 'inline-block', padding: '2px 7px', borderRadius: 5,
+                        fontSize: 10, fontWeight: 700, color: st.warna, background: st.bg,
+                      }}>
+                        {st.label}
+                      </span>
+                    </td>
+                    <td title={b.petugas ?? ''}>{b.petugas_nama ?? b.petugas ?? '—'}</td>
+                    {isAdmin && (
+                      <td className="mcu-records-action">
+                        {b.status_efektif !== 'selesai' && b.status_efektif !== 'dibatalkan' ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[10px]"
+                            disabled={bekerja}
+                            onClick={() => aksi(
+                              {
+                                aksi: 'selesai',
+                                id: b.id,
+                                tanggal_selesai: tanggalISO(new Date()),
+                              },
+                              'Inspeksi ditandai selesai',
+                            )}
+                            title="Tandai selesai manual jika inspeksi dilakukan di luar checklist digital"
+                          >
+                            <Check size={11} className="mr-1" /> Selesai Manual
+                          </Button>
+                        ) : (
+                          <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>Tercatat</span>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
       <Popup state={popupState} closePopup={closePopup} />
     </div>
