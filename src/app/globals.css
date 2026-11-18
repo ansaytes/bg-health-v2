@@ -701,7 +701,11 @@ select {
 }
 select:hover { border-color: rgba(255,77,0,0.3); }
 select:focus { border-color: #ff4d00; box-shadow: 0 0 0 2px rgba(255,77,0,0.15); }
-select option:checked { background: rgba(255,77,0,0.12); color: var(--foreground); }
+select option { background: var(--background, #fff); color: var(--foreground); }
+select option:checked,
+select option:active,
+select option:hover { background: rgba(255,77,0,0.14) !important; color: var(--foreground) !important; }
+select::selection { background: rgba(255,77,0,0.18); color: var(--foreground); }
 
 /* ═══════════════════════════════════
    MCU Total Bar
