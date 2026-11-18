@@ -39,7 +39,9 @@ function contrastColor(background: unknown, fallback: string): string {
     })
     .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
 
-  return luminance > 0.179 ? '#111827' : '#FFFFFF';
+  // Warna cerah (kuning, krem, putih) memakai teks gelap;
+  // Seluruh warna diagram (merah, biru, hijau/teal, oranye, dsb.) WAJIB putih agar kontras tinggi & terbaca jelas
+  return luminance > 0.48 ? '#0F172A' : '#FFFFFF';
 }
 
 
@@ -444,7 +446,17 @@ export function MCUChart({
                 : backgrounds;
               return contrastColor(background, textColor);
             },
-            font: { size: 10, weight: 'bold', family: fontFamily },
+            font: { size: 11, weight: 'bold', family: fontFamily },
+            textStrokeColor: context => {
+              if (type !== 'doughnut') return 'transparent';
+              const backgrounds = context.dataset.backgroundColor;
+              const background = Array.isArray(backgrounds)
+                ? backgrounds[context.dataIndex]
+                : backgrounds;
+              const c = contrastColor(background, textColor);
+              return c === '#FFFFFF' ? 'rgba(0, 0, 0, 0.45)' : 'rgba(255, 255, 255, 0.7)';
+            },
+            textStrokeWidth: type === 'doughnut' ? 1.5 : 0,
             offset: 4,
             clamp: true,
             clip: false,
