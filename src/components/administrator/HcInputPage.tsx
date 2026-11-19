@@ -8,6 +8,7 @@ import { aptRequirement, jatuhTempoUkur, zonaFromLeq, ZONA_COLOR, type Zona } fr
 import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
 import { Btn, Chip, Field, Notice, Section, SITES, Tabs, fmtDate, grid2, grid3, inputStyle, smallInput, tableStyle, tdStyle, thStyle } from './hc-ergo-ui';
 import { usePopup, Popup } from '@/lib/popup';
+import { useAuth } from '@/lib/auth-context';
 
 type Row = Record<string, any>;
 interface Pt { kode_titik: string; deskripsi: string; leq_dba: string; durasi_menit: string; }
@@ -47,13 +48,21 @@ export default function HcInputPage() {
 
 /* ───────────── NOISE MAPPING ───────────── */
 function NoiseTab({ areas, onMsg, onSaved }: { areas: Row[]; onMsg: (m: any) => void; onSaved: () => void }) {
+  const { profile } = useAuth();
+  const namaPetugas = profile?.full_name || profile?.username || '';
   const [site, setSite] = useState('');
   const { popup, popupState, closePopup } = usePopup();
   const [f, setF] = useState<Row>({
-    area_id: '', tanggal: todayStr(), tipe: 'BERKALA', petugas: '', slm_merk_tipe: '', slm_serial: '', slm_kelas: '2',
+    area_id: '', tanggal: todayStr(), tipe: 'BERKALA', petugas: namaPetugas, slm_merk_tipe: '', slm_serial: '', slm_kelas: '2',
     sertifikat_kalibrasi_sd: '', kalibrasi_sebelum_db: '', kalibrasi_sesudah_db: '', rambu_terpasang: false,
     apt_tersedia: false, apt_nrr_tersedia: '', catatan: '',
   });
+
+  useEffect(() => {
+    if (namaPetugas && !f.petugas) {
+      setF((p) => ({ ...p, petugas: namaPetugas }));
+    }
+  }, [namaPetugas, f.petugas]);
   const [pts, setPts] = useState<Pt[]>([newPt(1)]);
   const [saving, setSaving] = useState(false);
   const [list, setList] = useState<Row[]>([]);
@@ -73,9 +82,9 @@ function NoiseTab({ areas, onMsg, onSaved }: { areas: Row[]; onMsg: (m: any) => 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); onMsg(null); setSaving(true);
     try {
-      await authFetch('/api/hc', { method: 'POST', body: JSON.stringify({ resource: 'noise', ...f, points: pts }) });
+      await authFetch('/api/hc', { method: 'POST', body: JSON.stringify({ resource: 'noise', ...f, petugas: f.petugas || namaPetugas, points: pts }) });
       onMsg({ kind: 'ok', text: 'Noise mapping tersimpan.' });
-      setPts([newPt(1)]); setF((p) => ({ ...p, catatan: '' }));
+      setPts([newPt(1)]); setF((p) => ({ ...p, catatan: '', petugas: namaPetugas }));
       loadList(); onSaved();
     } catch (err) { onMsg({ kind: 'err', text: err instanceof Error ? err.message : 'Gagal menyimpan' }); }
     finally { setSaving(false); }
@@ -110,7 +119,7 @@ function NoiseTab({ areas, onMsg, onSaved }: { areas: Row[]; onMsg: (m: any) => 
             <Field label="Tanggal Pengukuran"><input type="date" className="admin-input" style={inputStyle} required value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
             <Field label="Jenis"><select className="admin-input" style={inputStyle} value={f.tipe} onChange={(e) => set('tipe', e.target.value)}>
               <option value="BERKALA">Berkala</option><option value="PERUBAHAN_PROSES">Perubahan mesin / proses</option></select></Field>
-            <Field label="Petugas Pengukur"><input className="admin-input" style={inputStyle} required placeholder="Nama lengkap petugas pengukur" value={f.petugas} onChange={(e) => set('petugas', e.target.value)} /></Field>
+            <Field label="Petugas Pengukur"><input className="admin-input" style={{ ...inputStyle, background: 'var(--muted)', cursor: 'not-allowed' }} readOnly placeholder="Nama petugas pengukur (otomatis login)" value={f.petugas || namaPetugas} title="Otomatis dari pengguna yang sedang login" /></Field>
           </div>
         </Section>
 

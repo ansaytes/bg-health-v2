@@ -2,7 +2,7 @@
 // Administrator > Ergonomi > Input Survei.
 // Wizard bergambar per metode (RULA FORM/116, ROSA FORM/117, WERA FORM/118): satu pertanyaan per langkah,
 // gambar resmi dari formulir, petunjuk pengisian, skor langkah & skor akhir otomatis.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { authFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { KLAS_COLOR, scoreErgo, type Metode } from '@/lib/hc-ergo';
@@ -35,15 +35,23 @@ const badge = (selected: boolean): React.CSSProperties => ({
 
 export default function ErgoSurveyForm() {
   const { profile } = useAuth();
+  const namaPengukur = profile?.full_name || profile?.username || '';
   const [metode, setMetode] = useState<Metode>('RULA');
   const def = WIZARDS[metode];
   const [step, setStep] = useState(0);                       // 0 = identitas, 1..n = pertanyaan, n+1 = hasil
   const [answers, setAnswers] = useState<Answers>({});
   const [id, setId] = useState<Ident>({
     sumber: 'INTERNAL', site: '', area_kerja: '', tanggal: todayStr(), departemen: '', aktivitas: '',
-    personil_pengukur: profile?.full_name || '', kualifikasi_pengukur: '', pekerja_diamati: '', nik_pekerja: '', foto_url: '',
+    personil_pengukur: namaPengukur, kualifikasi_pengukur: '', pekerja_diamati: '', nik_pekerja: '', foto_url: '',
     ok_personil_kompeten: false, ok_metode_sesuai: false, ok_kondisi_representatif: false, ok_dokumentasi_lengkap: false,
   });
+
+  useEffect(() => {
+    if (namaPengukur && !id.personil_pengukur) {
+      setId((p) => ({ ...p, personil_pengukur: namaPengukur }));
+    }
+  }, [namaPengukur, id.personil_pengukur]);
+
   const [query, setQuery] = useState('');
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err' | 'warn'; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -146,7 +154,7 @@ export default function ErgoSurveyForm() {
                 <Field label="Lokasi / Area Kerja"><input className="admin-input" style={inputStyle} value={id.area_kerja} onChange={(e) => setI('area_kerja', e.target.value)} /></Field>
                 <Field label="Departemen / Bagian"><input className="admin-input" style={inputStyle} value={id.departemen} onChange={(e) => setI('departemen', e.target.value)} /></Field>
                 <Field label={metode === 'ROSA' ? 'Pekerjaan / Jabatan yang Dinilai' : 'Aktivitas / Tugas yang Dinilai'}><input className="admin-input" style={inputStyle} value={id.aktivitas} onChange={(e) => setI('aktivitas', e.target.value)} /></Field>
-                <Field label="Nama Personil Pengukur"><input className="admin-input" style={inputStyle} value={id.personil_pengukur} onChange={(e) => setI('personil_pengukur', e.target.value)} /></Field>
+                <Field label="Nama Personil Pengukur" hint="(Otomatis Login)"><input className="admin-input" style={{ ...inputStyle, background: 'var(--muted)', cursor: 'not-allowed' }} readOnly value={id.personil_pengukur || namaPengukur} title="Otomatis dari pengguna yang sedang login" /></Field>
                 <Field label="Jabatan / Kualifikasi Pengukur"><input className="admin-input" style={inputStyle} value={id.kualifikasi_pengukur} onChange={(e) => setI('kualifikasi_pengukur', e.target.value)} placeholder="mis. Personil QSHE — sertifikat ergonomi" /></Field>
                 <div style={{ gridColumn: '1 / -1' }}>
                   {id.pekerja_diamati ? (

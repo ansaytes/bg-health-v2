@@ -25,6 +25,8 @@ const PakRegister = lazy(() => import('@/components/pak/PakRegister'));
 const AdminProKawan = lazy(() => import('@/components/administrator/AdminProKawan'));
 const MonitoringKaryawanSakit = lazy(() => import('@/components/administrator/MonitoringKaryawanSakit'));
 const InspeksiSanitasi = lazy(() => import('@/components/administrator/InspeksiSanitasi'));
+const InspeksiPencahayaan = lazy(() => import('@/components/administrator/InspeksiPencahayaan'));
+const InspeksiUdaraDebu = lazy(() => import('@/components/administrator/InspeksiUdaraDebu'));
 const InspeksiLingkungan = lazy(() => import('@/components/administrator/InspeksiLingkungan'));
 const GiziKerja = lazy(() => import('@/components/administrator/GiziKerja'));
 const ProgramInspeksiAdminTabs = lazy(() => import('@/components/administrator/ProgramInspeksiAdminTabs'));
@@ -93,7 +95,7 @@ function AdminLayananKuratif() {
  * dalam satu menu bertab (sama seperti sisi dashboard).
  */
 function AdminHigieneIndustri() {
-  const [tab, setTab] = useState<'hearing' | 'ergonomi' | 'sanitasi' | 'lingkungan' | 'gizi'>('hearing');
+  const [tab, setTab] = useState<'hearing' | 'ergonomi' | 'sanitasi' | 'cahaya' | 'udara' | 'gizi'>('hearing');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       <CenteredTabs
@@ -102,9 +104,8 @@ function AdminHigieneIndustri() {
           { key: 'ergonomi', label: 'Ergonomi' },
           // Higiene & Sanitasi (STD/005) + Gizi Kerja (AKG 2019) — SOP/028 poin 5.7
           { key: 'sanitasi', label: 'Higiene & Sanitasi' },
-          // Pencahayaan & kualitas udara dipisah: butuh titik ukur per ruang
-          // dan alat sendiri, tidak bisa satu angka per site.
-          { key: 'lingkungan', label: 'Pencahayaan & Udara' },
+          { key: 'cahaya', label: 'Pencahayaan' },
+          { key: 'udara', label: 'Kualitas Udara & Debu' },
           { key: 'gizi', label: 'Gizi Kerja' },
         ]}
         active={tab}
@@ -115,8 +116,10 @@ function AdminHigieneIndustri() {
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {tab === 'sanitasi' ? (
           <InspeksiSanitasi />
-        ) : tab === 'lingkungan' ? (
-          <InspeksiLingkungan />
+        ) : tab === 'cahaya' ? (
+          <InspeksiPencahayaan />
+        ) : tab === 'udara' ? (
+          <InspeksiUdaraDebu />
         ) : tab === 'gizi' ? (
           <GiziKerja />
         ) : tab === 'hearing' ? (

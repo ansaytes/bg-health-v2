@@ -5,66 +5,61 @@
 // ============================================================
 //
 // DASAR: BG/QSHE/STD/005 Rev.001 via BG/QSHE/SOP/028 poin 5.7.
+// 4 Pilar Sanitasi Industri:
+//   1. Toilet & Fasilitas Sanitasi (Rasio, Kebersihan, Ventilasi, Sabun/Air Mengalir)
+//   2. Penyediaan Air Minum (Kualitas Fisik/Bakteriologi, Aksesibilitas, Higiene Dispenser)
+//   3. Pengendalian Vektor & Binatang Pembawa Penyakit (Lalat, Nyamuk, Tikus, Kecoa)
+//   4. Pengelolaan Sampah & Limbah Padat Domestik (Pilah, Tempat Tertutup, Pengangkutan)
 //
-// Sebagian besar item DIHITUNG otomatis dari isian angka (rasio toilet,
-// kecukupan jamban, kebisingan, pencahayaan, indeks vektor, kualitas udara).
-// Item yang hanya bisa dinilai mata inspektur memakai pilihan Sesuai /
-// Tidak sesuai / Tidak ada. Item yang tidak diisi berstatus BELUM DINILAI —
-// bukan dianggap patuh.
+// CATATAN AUDIT:
+// Kebisingan area dan Pengukuran Pencahayaan/Udara ditangani oleh modul masing-masing
+// (Hearing Conservation, Pencahayaan, Kualitas Udara & Debu) untuk mencegah duplikasi data.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, ClipboardCheck, Loader2, RefreshCw, Save, UserRound, XCircle } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { authFetch } from '@/lib/api-client';
 import { useMCUStore } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
-
-/** Label peruntukan ruang — dipakai panel pencahayaan. */
-const PERUNTUKAN_LABEL: Record<string, string> = {
-  ruang_kerja: 'Ruang kerja', ruang_gambar: 'Ruang gambar', resepsionis: 'Resepsionis',
-  ruang_arsip: 'Ruang arsip', ruang_rapat: 'Ruang rapat', ruang_makan: 'Ruang makan',
-  koridor_lobi: 'Koridor/lobi', lainnya: 'Lainnya',
-};
 import { ITEM_INSPEKSI, KATEGORI_LABEL, type KategoriInspeksi, type NilaiItem } from '@/lib/sanitasi-inspeksi';
-
-const SITES = [
-  'Head Office', 'Satui', 'Angsana', 'Tanjung Tabalong', 'Rantau', 'Binuang', 'Senakin',
-  'Kota Baru', 'Batu Kajang', 'Ketapang', 'Kapuas Tengah', 'Murung Raya', 'Muara Teweh',
-  'Tuhup', 'Gunung Mas', 'Banjar Baru', 'Bontang', 'Samarinda', 'Tenggarong', 'Tabang',
-  'Gunung Sari', 'Bukit Pinang', 'Sangatta', 'Bengalon', 'Kaliorang', 'Kaubun',
-  'Balikpapan', 'Melak', 'Muara Enim', 'Lahat', 'Muara Bungo', 'Banyuwangi', 'Wetar',
-  'Kotamobagu', 'Konawe', 'Halmahera Timur', 'Gorontalo', 'Aceh', 'Palu', 'Malinau',
-  'Kelubir', 'Tanjung Redeb', 'Labanan', 'Binungan', 'Bunyu', 'Sebakis', 'Morowali',
-  'Luwu', 'Soroako', 'Kayong Utara',
-];
+import { Btn, Field, Section, SITES, inputStyle, smallInput, tableStyle, thStyle, tdStyle, fmtDate } from './hc-ergo-ui';
 
 interface Ringkasan {
-  total: number; sesuai: number; tidakSesuai: number; belumDinilai: number; persenSesuai: number;
+  total: number;
+  sesuai: number;
+  tidakSesuai: number;
+  belumDinilai: number;
+  persenSesuai: number;
   perKategori: Record<string, { sesuai: number; tidakSesuai: number; belumDinilai: number }>;
 }
 
 interface HasilItem {
-  key: string; label: string; kategori: KategoriInspeksi;
-  nilai: NilaiItem; status: 'sesuai' | 'tidak_sesuai' | 'belum_dinilai';
-  keterangan: string; sumber: string;
+  key: string;
+  label: string;
+  kategori: KategoriInspeksi;
+  nilai: NilaiItem;
+  status: 'sesuai' | 'tidak_sesuai' | 'belum_dinilai';
+  keterangan: string;
+  sumber: string;
 }
 
 interface Riwayat {
-  id: string; site: string; tanggal: string; inspektur: string | null;
-  ringkasan: Ringkasan | null; catatan: string | null; created_at: string;
+  id: string;
+  site: string;
+  tanggal: string;
+  inspektur: string | null;
+  ringkasan: Ringkasan | null;
+  catatan: string | null;
+  created_at: string;
 }
 
 export default function InspeksiSanitasi() {
   const store = useMCUStore();
   const { profile } = useAuth();
   const namaInspektur = profile?.full_name || profile?.username || '—';
+
   const [site, setSite] = useState('Head Office');
   const [tanggal, setTanggal] = useState(new Date().toISOString().slice(0, 10));
-  // Nama inspektur diambil otomatis dari user yang sedang login dan TIDAK dapat
-  // diubah manual — ini jejak audit siapa yang mengisi inspeksi. Bila nama
-  // profil kosong, dipakai username.
   const [nilai, setNilai] = useState<Record<string, NilaiItem>>({});
   const [riwayat, setRiwayat] = useState<Riwayat[]>([]);
   const [hasil, setHasil] = useState<HasilItem[] | null>(null);
@@ -72,55 +67,13 @@ export default function InspeksiSanitasi() {
   const [loading, setLoading] = useState(true);
   const [menyimpan, setMenyimpan] = useState(false);
   const [tabelSiap, setTabelSiap] = useState(true);
-  // Hasil pengukuran kebisingan yang SUDAH ADA di modul Hearing Conservation.
-  // Diambil otomatis, bukan diinput ulang — lihat /api/sanitasi/kebisingan.
-  const [kebisingan, setKebisingan] = useState<{
-    tersedia: boolean;
-    data: { area: string; tanggal: string | null; leqMax: number; jumlahTitik: number }[];
-    ringkasan?: { jumlahArea: number; leqTertinggi: number | null; areaDiAtasNAB: number };
-  } | null>(null);
-  // Pencahayaan & kualitas udara dari tab "Pencahayaan & Udara" — pola sama
-  // dengan kebisingan: dibaca, bukan diisi ulang di checklist sanitasi.
-  const [lingkungan, setLingkungan] = useState<{
-    tersedia: boolean;
-    data: {
-      id: string;
-      namaRuang: string;
-      peruntukanLabel: string;
-      penilaian: {
-        luxMin: number | null; nabLux: number | null; statusLux: string;
-        jumlahTidakMemenuhi: number;
-      } | null;
-    }[];
-    ringkasan?: { jumlahRuang: number; sudahDiukur: number; luxTidakMemenuhi: number };
-  } | null>(null);
 
   const loadRiwayat = useCallback(async () => {
     setLoading(true);
     try {
-      const [r, kb, lk] = await Promise.all([
-        authFetch(`/api/sanitasi?site=${encodeURIComponent(site)}`),
-        authFetch(`/api/sanitasi/kebisingan?site=${encodeURIComponent(site)}`).catch(() => null),
-        authFetch(`/api/lingkungan?site=${encodeURIComponent(site)}`).catch(() => null),
-      ]);
+      const r = await authFetch(`/api/sanitasi?site=${encodeURIComponent(site)}`);
       setRiwayat((r.data ?? []) as Riwayat[]);
       setTabelSiap(r.tabelSiap !== false);
-      setKebisingan(kb as never);
-
-      if (lk && Array.isArray(lk.data)) {
-        setLingkungan({
-          tersedia: true,
-          data: lk.data.map((x: Record<string, unknown>) => ({
-            id: String(x.id),
-            namaRuang: String(x.namaRuang ?? '—'),
-            peruntukanLabel: PERUNTUKAN_LABEL[String(x.peruntukan)] ?? String(x.peruntukan ?? '—'),
-            penilaian: x.penilaian as never,
-          })),
-          ringkasan: lk.ringkasan as never,
-        });
-      } else {
-        setLingkungan(null);
-      }
     } catch {
       setRiwayat([]);
     } finally {
@@ -128,7 +81,9 @@ export default function InspeksiSanitasi() {
     }
   }, [site]);
 
-  useEffect(() => { void loadRiwayat(); }, [loadRiwayat]);
+  useEffect(() => {
+    void loadRiwayat();
+  }, [loadRiwayat]);
 
   const perKategori = useMemo(() => {
     const map = new Map<KategoriInspeksi, typeof ITEM_INSPEKSI>();
@@ -149,311 +104,224 @@ export default function InspeksiSanitasi() {
       });
       setRingkasan(r.ringkasan as Ringkasan);
       setHasil(r.items as HasilItem[]);
-      store.showToast('Inspeksi tersimpan', 'success');
+      store.showToast('Inspeksi sanitasi berhasil disimpan', 'success');
       await loadRiwayat();
     } catch (e) {
-      store.showToast(e instanceof Error ? e.message : 'Gagal menyimpan inspeksi', 'error');
+      store.showToast(e instanceof Error ? e.message : 'Gagal menyimpan inspeksi sanitasi', 'error');
     } finally {
       setMenyimpan(false);
     }
   }
 
-  function set(k: string, v: NilaiItem) {
+  function setVal(k: string, v: NilaiItem) {
     setNilai((prev) => ({ ...prev, [k]: v }));
   }
 
   const jumlahTerisi = Object.values(nilai).filter((v) => v !== null && v !== undefined).length;
 
   return (
-    <div className="dashboard" style={{ overflowY: 'auto', overflowX: 'hidden' }}>
-      {/* Toolbar */}
-      <div className="kunjungan-top-bar" style={{ flexShrink: 0 }}>
-        <div className="kunjungan-filter-bar">
-          <select className="admin-filter-select" value={site} onChange={(e) => setSite(e.target.value)}>
-            {SITES.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <Input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} className="h-7 w-[150px] rounded-lg text-xs" />
-          <div
-            title="Diisi otomatis dari akun yang sedang login"
-            style={{
-              display: 'flex', alignItems: 'center', gap: 5, height: 28, padding: '0 10px',
-              borderRadius: 7, border: '1px solid var(--border)', background: 'var(--muted)',
-              fontSize: 11, color: 'var(--muted-foreground)', minWidth: 150,
-            }}
-          >
-            <UserRound size={12} />
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {namaInspektur}
-            </span>
-          </div>
-          <button type="button" onClick={() => void loadRiwayat()} disabled={loading} className="mcu-dashboard-refresh">
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
-          </button>
+    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '90%', margin: '0 auto' }}>
+      <div className="admin-form-inner">
+        {/* Header Title */}
+        <div style={{ marginBottom: 16 }}>
+          <h1 className="admin-form-title">Inspeksi Higiene &amp; Sanitasi</h1>
+          <p className="admin-form-subtitle">
+            Standar kepatuhan fasilitas sanitasi industri (toilet, air minum, pengendalian vektor, dan limbah padat) sesuai BG/QSHE/STD/005 Rev.001.
+          </p>
         </div>
-        {ringkasan && (
-          <div className="kunjungan-total-right">
-            <span>Sesuai <b style={{ color: '#00B894' }}>{ringkasan.sesuai}</b></span>
-            <span>Tidak sesuai <b style={{ color: ringkasan.tidakSesuai ? '#FF2D2D' : 'inherit' }}>{ringkasan.tidakSesuai}</b></span>
-            <span>Belum dinilai <b style={{ color: ringkasan.belumDinilai ? '#FF7A00' : 'inherit' }}>{ringkasan.belumDinilai}</b></span>
-            <span>Kepatuhan <b>{ringkasan.persenSesuai.toFixed(0)}%</b></span>
+
+        {/* Warning Tabel Siap */}
+        {!tabelSiap && (
+          <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 8, background: 'rgba(255,196,0,0.10)', border: '1px solid rgba(255,196,0,0.4)', color: '#9a6b00', fontSize: 11 }}>
+            Tabel <b>sanitasi_inspeksi</b> belum dibuat. Jalankan migration <code>20261028_sanitasi_inspeksi.sql</code>.
           </div>
         )}
-      </div>
 
-      {!tabelSiap && (
-        <div style={{ flexShrink: 0, padding: '7px 12px', borderRadius: 8, background: 'rgba(255,196,0,0.10)', border: '1px solid rgba(255,196,0,0.4)', color: '#9a6b00', fontSize: 10.5 }}>
-          Tabel <b>sanitasi_inspeksi</b> belum dibuat. Jalankan migration
-          <code style={{ marginLeft: 3 }}>20261028_sanitasi_inspeksi.sql</code>.
-        </div>
-      )}
+        {/* Section 1: Parameter & Identitas Sesi */}
+        <Section title="Informasi Sesi Inspeksi">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+            <Field label="Job Site">
+              <select className="admin-input" style={smallInput} value={site} onChange={(e) => setSite(e.target.value)}>
+                {SITES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </Field>
 
-      <div style={{ flexShrink: 0, fontSize: 10, color: 'var(--muted-foreground)', display: 'flex', gap: 5, alignItems: 'center' }}>
-        <AlertTriangle size={11} />
-        Item kosong = belum dinilai, <b>tidak</b> dianggap patuh.
-      </div>
+            <Field label="Tanggal Inspeksi">
+              <input type="date" className="admin-input" style={smallInput} value={tanggal} onChange={(e) => setTanggal(e.target.value)} />
+            </Field>
 
-      {/* Kebisingan — OTOMATIS dari Hearing Conservation, tidak diinput ulang.
-          Perluasan ini menjawab pertanyaan: "bukankah kebisingan sudah terbaca
-          dari tab Hearing Conservation?" — ya, dan sekarang ditampilkan di sini. */}
-      {kebisingan?.tersedia && (
-        <div className="card" style={{ padding: '8px 10px', flexShrink: 0 }}>
-          <div className="card-head" style={{ marginBottom: 6 }}>
-            <span style={{ width: 3, height: 16, borderRadius: 2, background: '#3498DB', flexShrink: 0 }} />
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <h2 style={{ fontSize: 12 }}>Kebisingan Area — dari Hearing Conservation</h2>
-              <p style={{ fontSize: 9 }}>
-                Terbaca otomatis dari hasil pengukuran terakhir. Tidak perlu diisi ulang di sini.
-              </p>
-            </div>
-            {kebisingan.ringkasan && (
-              <div style={{ display: 'flex', gap: 10, fontSize: 9.5, flexShrink: 0 }}>
-                <span>{kebisingan.ringkasan.jumlahArea} area</span>
-                <span>Leq tertinggi <b>{kebisingan.ringkasan.leqTertinggi ?? '—'} dB(A)</b></span>
-                <span style={{ color: kebisingan.ringkasan.areaDiAtasNAB ? '#FF2D2D' : '#00B894' }}>
-                  {kebisingan.ringkasan.areaDiAtasNAB} di atas NAB
+            <Field label="Petugas / Inspektur" hint="(Otomatis Login)">
+              <div
+                title="Diisi otomatis dari akun yang sedang login"
+                style={{
+                  ...smallInput,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  background: 'var(--muted)',
+                  color: 'var(--muted-foreground)',
+                  cursor: 'not-allowed',
+                }}
+              >
+                <UserRound size={13} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
+                  {namaInspektur}
                 </span>
               </div>
-            )}
-          </div>
-          {kebisingan.data.length ? (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    {['Area', 'Tanggal ukur', 'Leq maks', 'Titik', 'Status NAB'].map((h) => (
-                      <th key={h} style={{ padding: '4px 7px', borderBottom: '1px solid var(--border)', fontSize: 9, textTransform: 'uppercase', color: 'var(--muted-foreground)', fontWeight: 700, textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {kebisingan.data.slice(0, 8).map((k) => (
-                    <tr key={`${k.area}-${k.tanggal}`}>
-                      <td style={TD}>{k.area}</td>
-                      <td style={TD}>{k.tanggal ? new Date(`${k.tanggal}T00:00:00`).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
-                      <td style={{ ...TD, fontWeight: 700 }}>{k.leqMax} dB(A)</td>
-                      <td style={TD}>{k.jumlahTitik}</td>
-                      <td style={{ ...TD, fontWeight: 700, color: k.leqMax > 85 ? '#FF2D2D' : '#00B894' }}>
-                        {k.leqMax > 85 ? 'Di atas NAB' : 'Aman'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            </Field>
+
+            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+              <Btn type="button" onClick={() => void loadRiwayat()} disabled={loading} style={{ height: 32 }}>
+                <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh Data
+              </Btn>
             </div>
-          ) : (
-            <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: 0 }}>
-              Belum ada pengukuran kebisingan tercatat untuk site ini.
-            </p>
+          </div>
+
+          {/* Ringkasan Skor Kepatuhan */}
+          {ringkasan && (
+            <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 8, background: 'var(--muted)', display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap', fontSize: 12 }}>
+              <span>Tingkat Kepatuhan: <b style={{ fontSize: 14, color: ringkasan.persenSesuai >= 85 ? '#00B894' : '#FF2D2D' }}>{ringkasan.persenSesuai.toFixed(1)}%</b></span>
+              <span>Sesuai: <b style={{ color: '#00B894' }}>{ringkasan.sesuai}</b></span>
+              <span>Tidak Sesuai: <b style={{ color: ringkasan.tidakSesuai ? '#FF2D2D' : 'inherit' }}>{ringkasan.tidakSesuai}</b></span>
+              <span>Belum Dinilai: <b style={{ color: ringkasan.belumDinilai ? '#FF7A00' : 'inherit' }}>{ringkasan.belumDinilai}</b></span>
+            </div>
           )}
-        </div>
-      )}
 
-      {/* Pencahayaan & Kualitas Udara — OTOMATIS dari tab Pencahayaan & Udara.
-          Pola sama dengan kebisingan di atas: angkanya sudah ada di modul
-          pengukuran, jadi tidak diisi ulang di checklist sanitasi. Yang
-          ditampilkan hanya ringkasan hasil terakhir per ruang. */}
-      {lingkungan?.tersedia && (
-        <div className="card" style={{ padding: '8px 10px', flexShrink: 0 }}>
-          <div className="card-head" style={{ marginBottom: 6 }}>
-            <span style={{ width: 3, height: 16, borderRadius: 2, background: '#8E44AD', flexShrink: 0 }} />
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <h2 style={{ fontSize: 12 }}>Pencahayaan &amp; Kualitas Udara — dari Pengukuran Ruang</h2>
-              <p style={{ fontSize: 9 }}>
-                Terbaca otomatis dari pengukuran terakhir per ruang.
-              </p>
-            </div>
-            {lingkungan.ringkasan && (
-              <div style={{ display: 'flex', gap: 10, fontSize: 9.5, flexShrink: 0 }}>
-                <span>{lingkungan.ringkasan.jumlahRuang} ruang</span>
-                <span>Sudah diukur <b>{lingkungan.ringkasan.sudahDiukur}</b></span>
-                <span style={{ color: lingkungan.ringkasan.luxTidakMemenuhi ? '#FF2D2D' : '#00B894' }}>
-                  Lux tidak memenuhi <b>{lingkungan.ringkasan.luxTidakMemenuhi}</b>
-                </span>
-              </div>
-            )}
+          <div style={{ marginTop: 10, fontSize: 11, color: 'var(--muted-foreground)', display: 'flex', gap: 5, alignItems: 'center' }}>
+            <AlertTriangle size={12} color="#FF7A00" />
+            <span>Item yang tidak diisi berstatus <b>Belum Dinilai</b> (tidak otomatis dianggap patuh).</span>
           </div>
-          {lingkungan.data.length ? (
+        </Section>
+
+        {/* Section Checklist 4 Pilar Sanitasi */}
+        {[...perKategori.entries()].map(([kategori, items]) => {
+          const kat = ringkasan?.perKategori?.[kategori];
+          return (
+            <Section key={kategori} title={KATEGORI_LABEL[kategori]}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, fontSize: 11, color: 'var(--muted-foreground)' }}>
+                <span>{items.length} parameter checklist wajib</span>
+                {kat && (
+                  <div style={{ display: 'flex', gap: 10, fontWeight: 600 }}>
+                    <span style={{ color: '#00B894' }}>✓ {kat.sesuai} Sesuai</span>
+                    <span style={{ color: '#FF2D2D' }}>✗ {kat.tidakSesuai} Tidak Sesuai</span>
+                    <span style={{ color: 'var(--muted-foreground)' }}>? {kat.belumDinilai} Belum</span>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
+                {items.map((it) => {
+                  const hasilItem = hasil?.find((h) => h.key === it.key);
+                  const isViolation = hasilItem?.status === 'tidak_sesuai';
+                  const isOk = hasilItem?.status === 'sesuai';
+
+                  return (
+                    <div
+                      key={it.key}
+                      style={{
+                        padding: '8px 10px',
+                        borderRadius: 7,
+                        border: `1px solid ${isViolation ? '#FF2D2D' : isOk ? '#00B894' : 'var(--border)'}`,
+                        background: isViolation ? 'rgba(255,45,45,0.03)' : isOk ? 'rgba(0,184,148,0.03)' : 'var(--background)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 6,
+                      }}
+                      title={it.acuan}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                        <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--foreground)', lineHeight: 1.3 }}>
+                          {it.label}
+                        </span>
+                        {isOk && <CheckCircle2 size={13} color="#00B894" style={{ flexShrink: 0 }} />}
+                        {isViolation && <XCircle size={13} color="#FF2D2D" style={{ flexShrink: 0 }} />}
+                      </div>
+
+                      {it.tipe === 'hitung' ? (
+                        <input
+                          type="number"
+                          step="any"
+                          value={nilai[it.key] == null ? '' : String(nilai[it.key])}
+                          onChange={(e) => setVal(it.key, e.target.value === '' ? null : Number(e.target.value.replace(',', '.')))}
+                          placeholder={it.satuan ? `Acuan ${it.acuan} ${it.satuan}` : `Acuan ${it.acuan}`}
+                          className="admin-input"
+                          style={{ ...smallInput, height: 30 }}
+                        />
+                      ) : (
+                        <select
+                          value={String(nilai[it.key] ?? '')}
+                          onChange={(e) => setVal(it.key, (e.target.value || null) as NilaiItem)}
+                          className="admin-input"
+                          style={{ ...smallInput, height: 30 }}
+                        >
+                          <option value="">— Belum Dinilai —</option>
+                          <option value="SESUAI">Sesuai</option>
+                          <option value="TIDAK_SESUAI">Tidak Sesuai</option>
+                          <option value="TIDAK_ADA">Tidak Ada / N/A</option>
+                        </select>
+                      )}
+
+                      {hasilItem && (
+                        <span style={{ fontSize: 10, color: isViolation ? '#FF2D2D' : 'var(--muted-foreground)', lineHeight: 1.25 }}>
+                          {hasilItem.keterangan}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </Section>
+          );
+        })}
+
+        {/* Action Button: Simpan */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, margin: '18px 0 24px' }}>
+          <span style={{ fontSize: 11.5, color: 'var(--muted-foreground)' }}>
+            {jumlahTerisi} dari {ITEM_INSPEKSI.length} parameter telah diisi
+          </span>
+          <Btn kind="primary" size="md" disabled={menyimpan} onClick={() => void simpan()}>
+            {menyimpan ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Simpan Hasil Inspeksi
+          </Btn>
+        </div>
+
+        {/* Section Riwayat Inspeksi Sanitasi */}
+        <Section title={`Riwayat Inspeksi Sanitasi — ${site}`}>
+          {!riwayat.length ? (
+            <p style={{ fontSize: 11.5, color: 'var(--muted-foreground)', margin: '4px 0' }}>
+              <ClipboardCheck size={13} style={{ verticalAlign: -2, marginRight: 5 }} />
+              Belum ada riwayat inspeksi sanitasi tercatat untuk site ini.
+            </p>
+          ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <table style={tableStyle}>
                 <thead>
                   <tr>
-                    {['Ruang', 'Peruntukan', 'Lux terendah', 'NAB', 'Status lux', 'Udara'].map((h) => (
-                      <th key={h} style={{ padding: '4px 7px', borderBottom: '1px solid var(--border)', fontSize: 9, textTransform: 'uppercase', color: 'var(--muted-foreground)', fontWeight: 700, textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
+                    {['Tanggal', 'Inspektur', 'Tingkat Kepatuhan', 'Sesuai', 'Tidak Sesuai', 'Belum Dinilai'].map((h) => (
+                      <th key={h} style={thStyle}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {lingkungan.data.slice(0, 8).map((r) => {
-                    const p = r.penilaian;
-                    const udaraGagal = p ? p.jumlahTidakMemenuhi - (p.statusLux === 'tidak-memenuhi' ? 1 : 0) : 0;
+                  {riwayat.map((r) => {
+                    const k = r.ringkasan;
+                    const warna = !k ? 'inherit' : k.persenSesuai >= 85 ? '#00B894' : k.persenSesuai >= 70 ? '#FF7A00' : '#FF2D2D';
                     return (
                       <tr key={r.id}>
-                        <td style={TD}>{r.namaRuang}</td>
-                        <td style={{ ...TD, fontSize: 10 }}>{r.peruntukanLabel}</td>
-                        <td style={{ ...TD, fontWeight: 700 }}>{p?.luxMin ?? '—'} lux</td>
-                        <td style={TD}>{p?.nabLux ?? '—'}</td>
-                        <td style={{ ...TD, fontWeight: 700, color: p?.statusLux === 'tidak-memenuhi' ? '#FF2D2D' : p?.statusLux === 'memenuhi' ? '#00B894' : '#778899' }}>
-                          {p?.statusLux === 'tidak-memenuhi' ? 'Tidak memenuhi' : p?.statusLux === 'memenuhi' ? 'Memenuhi' : 'Belum dinilai'}
-                        </td>
-                        <td style={{ ...TD, fontWeight: 700, color: udaraGagal > 0 ? '#FF7A00' : '#00B894' }}>
-                          {p ? (udaraGagal > 0 ? `${udaraGagal} tidak memenuhi` : 'Memenuhi') : '—'}
-                        </td>
+                        <td style={tdStyle}>{fmtDate(r.tanggal)}</td>
+                        <td style={tdStyle}>{r.inspektur ?? '—'}</td>
+                        <td style={{ ...tdStyle, fontWeight: 700, color: warna }}>{k ? `${k.persenSesuai.toFixed(1)}%` : '—'}</td>
+                        <td style={{ ...tdStyle, color: '#00B894' }}>{k?.sesuai ?? '—'}</td>
+                        <td style={{ ...tdStyle, color: k?.tidakSesuai ? '#FF2D2D' : 'inherit' }}>{k?.tidakSesuai ?? '—'}</td>
+                        <td style={{ ...tdStyle, color: 'var(--muted-foreground)' }}>{k?.belumDinilai ?? '—'}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-          ) : (
-            <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: 0 }}>
-              Belum ada pengukuran pencahayaan &amp; kualitas udara untuk site ini.
-            </p>
           )}
-        </div>
-      )}
-
-      {/* Form per kategori */}
-      {[...perKategori.entries()].map(([kategori, items]) => {
-        const kat = ringkasan?.perKategori?.[kategori];
-        return (
-          <div key={kategori} className="card" style={{ padding: '8px 10px', flexShrink: 0 }}>
-            <div className="card-head" style={{ marginBottom: 6 }}>
-              <span style={{ width: 3, height: 16, borderRadius: 2, background: '#1ABC9C', flexShrink: 0 }} />
-              <div style={{ minWidth: 0, flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ flex: 1 }}>
-                  <h2 style={{ fontSize: 12 }}>{KATEGORI_LABEL[kategori]}</h2>
-                  <p style={{ fontSize: 9 }}>{items.length} parameter diperiksa</p>
-                </div>
-                {kat && (
-                  <div style={{ display: 'flex', gap: 8, fontSize: 9.5, flexShrink: 0 }}>
-                    <span style={{ color: '#00B894' }}>✓ {kat.sesuai}</span>
-                    <span style={{ color: '#FF2D2D' }}>✗ {kat.tidakSesuai}</span>
-                    <span style={{ color: 'var(--muted-foreground)' }}>? {kat.belumDinilai}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 6 }}>
-              {items.map((it) => {
-                const hasilItem = hasil?.find((h) => h.key === it.key);
-                const isViolation = hasilItem?.status === 'tidak_sesuai';
-                const isOk = hasilItem?.status === 'sesuai';
-                return (
-                  <label key={it.key} className="flex flex-col gap-0.5" title={it.acuan}>
-                    <span style={{ fontSize: 9.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
-                      {isOk && <CheckCircle2 size={10} color="#00B894" />}
-                      {isViolation && <XCircle size={10} color="#FF2D2D" />}
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.label}</span>
-                    </span>
-                    {it.tipe === 'hitung' ? (
-                      <Input
-                        inputMode="decimal"
-                        value={nilai[it.key] == null ? '' : String(nilai[it.key])}
-                        onChange={(e) => set(it.key, e.target.value === '' ? null : Number(e.target.value.replace(',', '.')))}
-                        placeholder={it.satuan ? `acuan ${it.acuan} ${it.satuan}` : `acuan ${it.acuan}`}
-                        className="h-7 rounded-lg text-xs"
-                        style={isViolation ? { borderColor: '#FF2D2D' } : undefined}
-                      />
-                    ) : (
-                      <select
-                        value={String(nilai[it.key] ?? '')}
-                        onChange={(e) => set(it.key, (e.target.value || null) as NilaiItem)}
-                        className="h-7 rounded-lg border-input bg-background px-2 text-xs"
-                        style={isViolation ? { borderColor: '#FF2D2D' } : undefined}
-                      >
-                        <option value="">— belum dinilai —</option>
-                        <option value="SESUAI">Sesuai</option>
-                        <option value="TIDAK_SESUAI">Tidak sesuai</option>
-                        <option value="TIDAK_ADA">Tidak ada</option>
-                      </select>
-                    )}
-                    {hasilItem && (
-                      <span style={{ fontSize: 8, color: isViolation ? '#FF2D2D' : 'var(--muted-foreground)', lineHeight: 1.25 }}>
-                        {hasilItem.keterangan}
-                      </span>
-                    )}
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexShrink: 0, alignItems: 'center' }}>
-        <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>{jumlahTerisi} dari {ITEM_INSPEKSI.length} item terisi</span>
-        <Button size="sm" disabled={menyimpan} onClick={() => void simpan()} style={{ gap: 5 }}>
-          {menyimpan ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Simpan Inspeksi
-        </Button>
-      </div>
-
-      {/* Riwayat */}
-      <div className="card" style={{ padding: '8px 10px', flexShrink: 0 }}>
-        <div className="card-head" style={{ marginBottom: 6 }}>
-          <span style={{ width: 3, height: 16, borderRadius: 2, background: '#8E44AD', flexShrink: 0 }} />
-          <div>
-            <h2 style={{ fontSize: 12 }}>Riwayat Inspeksi — {site}</h2>
-            <p style={{ fontSize: 9 }}>{riwayat.length} sesi tercatat</p>
-          </div>
-        </div>
-        {!riwayat.length ? (
-          <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: 0 }}>
-            <ClipboardCheck size={11} style={{ verticalAlign: -1, marginRight: 4 }} />
-            Belum ada inspeksi tercatat untuk site ini.
-          </p>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  {['Tanggal', 'Inspektur', 'Kepatuhan', 'Sesuai', 'Tidak sesuai', 'Belum dinilai'].map((h) => (
-                    <th key={h} style={{ padding: '5px 7px', borderBottom: '1px solid var(--border)', fontSize: 9, textTransform: 'uppercase', color: 'var(--muted-foreground)', fontWeight: 700, textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {riwayat.map((r) => {
-                  const k = r.ringkasan;
-                  const warna = !k ? 'inherit' : k.persenSesuai >= 90 ? '#00B894' : k.persenSesuai >= 70 ? '#C99A00' : '#FF2D2D';
-                  return (
-                    <tr key={r.id}>
-                      <td style={TD}>{new Date(`${r.tanggal}T00:00:00`).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                      <td style={TD}>{r.inspektur ?? '—'}</td>
-                      <td style={{ ...TD, fontWeight: 800, color: warna }}>{k ? `${k.persenSesuai.toFixed(0)}%` : '—'}</td>
-                      <td style={{ ...TD, color: '#00B894' }}>{k?.sesuai ?? '—'}</td>
-                      <td style={{ ...TD, color: k?.tidakSesuai ? '#FF2D2D' : 'inherit' }}>{k?.tidakSesuai ?? '—'}</td>
-                      <td style={{ ...TD, color: 'var(--muted-foreground)' }}>{k?.belumDinilai ?? '—'}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        </Section>
       </div>
     </div>
   );
 }
-
-const TD: React.CSSProperties = { padding: '5px 7px', borderBottom: '1px solid var(--border)', fontSize: 10.5 };
