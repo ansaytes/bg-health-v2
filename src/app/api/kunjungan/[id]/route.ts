@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerCaller, requireServerRole } from '@/lib/server-auth';
 import { integrationAdminClient } from '@/lib/integration-settings';
+import { kembalikanStokKunjungan } from '@/lib/inventory-dispense';
 
 const KUNJUNGAN_ADMIN_ROLES = ['superuser', 'administrator'] as const;
 
@@ -87,6 +88,13 @@ export async function DELETE(
     if (attributionError) {
       console.error('[Kunjungan] Failed to attribute deletion:', attributionError.code);
       return NextResponse.json({ error: 'Gagal mencatat pelaku penghapusan data kunjungan.' }, { status: 500 });
+    }
+
+    // Kembalikan stok obat bila kunjungan ini pernah memotong stok inventory
+    try {
+      await kembalikanStokKunjungan(client, id);
+    } catch (revertErr) {
+      console.error('[Kunjungan] Reverting stock error:', revertErr);
     }
 
     const { data, error } = await client

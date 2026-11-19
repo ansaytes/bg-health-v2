@@ -12,12 +12,12 @@ export const inputStyle: CSSProperties = {
 };
 export const smallInput: CSSProperties = { ...inputStyle, height: 32, fontSize: 12, padding: '0 8px' };
 
-export function Field({ label, hint, children, full }: { label: ReactNode; hint?: string; children: ReactNode; full?: boolean }) {
+export function Field({ label, hint, children, full, style }: { label: ReactNode; hint?: string; children: ReactNode; full?: boolean; style?: CSSProperties }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, gridColumn: full ? '1 / -1' : undefined }}>
-      <label className="admin-label" style={{ marginBottom: 0 }}>
-        {label}
-        {hint && <span style={{ color: 'var(--muted-foreground)', fontWeight: 'normal', fontSize: 11 }}> {hint}</span>}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, gridColumn: full ? '1 / -1' : undefined, width: '100%', ...style }}>
+      <label className="admin-label" style={{ marginBottom: 0, minHeight: 18, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <span>{label}</span>
+        {hint && <span style={{ color: 'var(--muted-foreground)', fontWeight: 'normal', fontSize: 11, flexShrink: 0 }}> {hint}</span>}
       </label>
       {children}
     </div>
@@ -33,8 +33,9 @@ export function Section({ title, children }: { title: string; children: ReactNod
   );
 }
 
-export const grid2: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 };
-export const grid3: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 };
+export const grid2: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14, alignItems: 'end' };
+export const grid3: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, alignItems: 'end' };
+export const grid4: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, alignItems: 'end' };
 
 export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { key: T; label: string }[]; value: T; onChange: (k: T) => void }) {
   return (
@@ -73,6 +74,20 @@ export const thStyle: CSSProperties = { textAlign: 'left', padding: '6px 8px', b
 export const tdStyle: CSSProperties = { padding: '6px 8px', borderBottom: '1px solid var(--border)', verticalAlign: 'top' };
 
 export const fmtDate = (d?: string | null) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-');
+
+/** Menghitung kode titik ukur berikutnya berdasarkan kode sebelumnya (mis. WS-T1 -> WS-T2, OF-01 -> OF-02, T1 -> T2). */
+export function getNextKodeTitik(lastKode?: string, fallbackIndex = 1): string {
+  if (!lastKode || !lastKode.trim()) return `T${fallbackIndex}`;
+  const match = lastKode.trim().match(/^(.*?)(\d+)$/);
+  if (match) {
+    const prefix = match[1];
+    const digits = match[2];
+    const num = parseInt(digits, 10) + 1;
+    const padded = String(num).padStart(digits.length, '0');
+    return `${prefix}${padded}`;
+  }
+  return `${lastKode.trim()}-T${fallbackIndex}`;
+}
 
 export function Stat({ label, value, color, sub }: { label: string; value: ReactNode; color?: string; sub?: string }) {
   return (

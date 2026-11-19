@@ -1,18 +1,13 @@
 'use client';
 
 // ============================================================
-// Administrator > Higiene Industri > Pengukuran Pencahayaan
+// Administrator > Higiene Industri > Form Pengukuran Pencahayaan
 // ============================================================
 //
-// ACUAN K3:
-// 1. Permenkes No. 48 Tahun 2016 Tabel 4 (Standar Pencahayaan Peruntukan Ruang Perkantoran)
-// 2. Permenaker No. 5 Tahun 2018 Pasal 16–21 (Pencahayaan di Tempat Kerja)
-// 3. Kepmen ESDM No. 1827 K/30/MEM/2018 Lampiran II (Pencahayaan Area Tambang & Fasilitas Penunjang)
-//
-// METODE AUDIT SMKP & HIGIENE INDUSTRI:
-// - Pengukuran wajib dilakukan pada BIDANG KERJA (umumnya 0,85 m di atas lantai untuk meja kerja).
-// - Penilaian kepatuhan ditentukan oleh nilai LUX TERENDAH antar-titik ukur, bukan rata-rata.
-//   Satu titik di bawah Nilai Ambang Batas (NAB) merupakan ketidaksesuaian.
+// Standar: Permenkes 48/2016 Tabel 4 & Permenaker 5/2018.
+// - Pengukuran wajib dilakukan pada BIDANG KERJA (0,85 m).
+// - Penilaian kepatuhan ditentukan oleh nilai LUX TERENDAH antar-titik ukur.
+// - Kode titik ukur terintegrasi dengan referensi titik ukur Noise Mapping.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Loader2, Plus, RefreshCw, Save, Trash2, UserRound, XCircle } from 'lucide-react';
@@ -21,7 +16,7 @@ import { authFetch } from '@/lib/api-client';
 import { useMCUStore } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
 import { NAB_LUX, type PeruntukanRuang } from '@/lib/lingkungan-kerja';
-import { Btn, Field, Section, SITES, inputStyle, smallInput, tableStyle, thStyle, tdStyle, fmtDate } from './hc-ergo-ui';
+import { Btn, Field, Section, SITES, getNextKodeTitik, grid4, inputStyle, smallInput, tableStyle, thStyle, tdStyle } from './hc-ergo-ui';
 
 interface TitikLux {
   id: string;
@@ -30,28 +25,12 @@ interface TitikLux {
   lux: string;
 }
 
-interface RuangItem {
-  id: string;
-  namaRuang: string;
-  peruntukan: PeruntukanRuang;
-  luasM2: number | null;
-  jumlahPekerja: number | null;
-  tinggiRuanganM: number | null;
-  pengukuranTerakhir: Record<string, unknown> | null;
-  penilaian: {
-    nabLux: number | null;
-    luxMin: number | null;
-    luxRata: number | null;
-    luxMaks: number | null;
-    statusLux: string;
-  } | null;
-}
-
-interface Ringkasan {
-  jumlahRuang: number;
-  sudahDiukur: number;
-  luxTidakMemenuhi: number;
-}
+const newTitikLux = (n: number, defaultKode?: string, defaultPosisi?: string): TitikLux => ({
+  id: `t_${Date.now()}_${n}`,
+  kodeTitik: defaultKode || `T${n}`,
+  posisi: defaultPosisi || '',
+  lux: '',
+});
 
 export default function InspeksiPencahayaan() {
   const store = useMCUStore();
@@ -59,10 +38,6 @@ export default function InspeksiPencahayaan() {
   const namaPengukur = profile?.full_name || profile?.username || '';
 
   const [site, setSite] = useState('Head Office');
-  const [data, setData] = useState<RuangItem[]>([]);
-  const [ringkasan, setRingkasan] = useState<Ringkasan | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [tabelSiap, setTabelSiap] = useState(true);
   const [menyimpan, setMenyimpan] = useState(false);
   const [pesan, setPesan] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
@@ -77,9 +52,12 @@ export default function InspeksiPencahayaan() {
   const [alatLux, setAlatLux] = useState('Luxmeter Digital (Terkalibrasi)');
   const [catatan, setCatatan] = useState('');
 
+  // Referensi titik ukur dari Noise Mapping
+  const [refTitikNoise, setRefTitikNoise] = useState<{ kode: string; deskripsi: string; area: string }[]>([]);
+
   const [titikList, setTitikList] = useState<TitikLux[]>([
-    { id: 't1', kodeTitik: 'T1', posisi: 'Meja Kerja Utama', lux: '' },
-    { id: 't2', kodeTitik: 'T2', posisi: 'Area Tengah Ruang', lux: '' },
+    newTitikLux(1, 'T1', 'Meja Kerja Utama'),
+    newTitikLux(2, 'T2', 'Area Tengah Ruang'),
   ]);
 
   useEffect(() => {
@@ -88,29 +66,41 @@ export default function InspeksiPencahayaan() {
     }
   }, [namaPengukur, pengukur]);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setPesan(null);
+  // Load referensi titik ukur dari Noise Mapping untuk site aktif
+  const loadNoiseReference = useCallback(async () => {
     try {
-      const r = await authFetch(`/api/lingkungan?site=${encodeURIComponent(site)}`);
-      setData((r.data ?? []) as RuangItem[]);
-      setRingkasan((r.ringkasan ?? null) as Ringkasan | null);
-      setTabelSiap(r.tabelSiap !== false);
+      const res = await authFetch(`/api/hc?resource=noise`);
+      const surveys: any[] = res.data || [];
+      const pts: { kode: string; deskripsi: string; area: string }[] = [];
+
+      for (const s of surveys) {
+        if (!site || s.hc_area?.site === site) {
+          const areaName = s.hc_area?.nama_area || '';
+          for (const p of s.hc_noise_point || []) {
+            if (p.kode_titik && !pts.some((x) => x.kode === p.kode_titik && x.area === areaName)) {
+              pts.push({
+                kode: p.kode_titik,
+                deskripsi: p.deskripsi || '',
+                area: areaName,
+              });
+            }
+          }
+        }
+      }
+      setRefTitikNoise(pts);
     } catch {
-      setData([]);
-    } finally {
-      setLoading(false);
+      setRefTitikNoise([]);
     }
   }, [site]);
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    void loadNoiseReference();
+  }, [loadNoiseReference]);
 
   const nabInfo = NAB_LUX[peruntukan];
   const nabMin = nabInfo?.min ?? null;
 
-  // Real-time live calculation of lowest measured lux
+  // Real-time audit calculation of lowest measured lux
   const evaluasiLux = useMemo(() => {
     const luxNums = titikList
       .map((t) => Number(String(t.lux).replace(',', '.')))
@@ -126,10 +116,11 @@ export default function InspeksiPencahayaan() {
   }, [titikList, nabMin]);
 
   const tambahTitik = () => {
-    const nextIdx = titikList.length + 1;
+    const lastKode = titikList[titikList.length - 1]?.kodeTitik;
+    const nextKode = getNextKodeTitik(lastKode, titikList.length + 1);
     setTitikList((prev) => [
       ...prev,
-      { id: `t${Date.now()}`, kodeTitik: `T${nextIdx}`, posisi: '', lux: '' },
+      { id: `t_${Date.now()}_${titikList.length + 1}`, kodeTitik: nextKode, posisi: '', lux: '' },
     ]);
   };
 
@@ -139,7 +130,18 @@ export default function InspeksiPencahayaan() {
   };
 
   const updateTitik = (id: string, key: keyof TitikLux, val: string) => {
-    setTitikList((prev) => prev.map((t) => (t.id === id ? { ...t, [key]: val } : t)));
+    setTitikList((prev) => prev.map((t) => {
+      if (t.id !== id) return t;
+      const updated = { ...t, [key]: val };
+      // Bila memilih dari kode noise mapping, auto-isi posisi jika masih kosong
+      if (key === 'kodeTitik') {
+        const found = refTitikNoise.find((r) => r.kode === val);
+        if (found && !t.posisi) {
+          updated.posisi = found.deskripsi || found.area;
+        }
+      }
+      return updated;
+    }));
   };
 
   async function simpan(e: React.FormEvent) {
@@ -179,18 +181,17 @@ export default function InspeksiPencahayaan() {
       });
 
       store.showToast('Data pengukuran pencahayaan berhasil disimpan', 'success');
-      setPesan({ kind: 'ok', text: `Pengukuran ruang ${namaRuang} berhasil disimpan.` });
+      setPesan({ kind: 'ok', text: `Pengukuran ruang ${namaRuang} berhasil disimpan. Riwayat dapat dilihat dengan menekan tombol panah di kanan.` });
 
-      // Reset form fields
+      // Reset form
       setNamaRuang('');
       setLuasM2('');
       setJumlahPekerja('');
       setCatatan('');
       setTitikList([
-        { id: 't1', kodeTitik: 'T1', posisi: 'Meja Kerja Utama', lux: '' },
-        { id: 't2', kodeTitik: 'T2', posisi: 'Area Tengah Ruang', lux: '' },
+        newTitikLux(1, 'T1', 'Meja Kerja Utama'),
+        newTitikLux(2, 'T2', 'Area Tengah Ruang'),
       ]);
-      await loadData();
     } catch (err) {
       setPesan({ kind: 'err', text: err instanceof Error ? err.message : 'Gagal menyimpan data' });
     } finally {
@@ -202,18 +203,12 @@ export default function InspeksiPencahayaan() {
     <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '90%', margin: '0 auto' }}>
       <div className="admin-form-inner">
         {/* Header */}
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 14 }}>
           <h1 className="admin-form-title">Pengukuran Pencahayaan Tempat Kerja (Lux)</h1>
           <p className="admin-form-subtitle">
-            Evaluasi intensitas pencahayaan pada bidang kerja peruntukan ruang sesuai Permenkes 48/2016 Tabel 4 &amp; Permenaker 5/2018.
+            Evaluasi intensitas pencahayaan pada bidang kerja peruntukan ruang sesuai standar K3 Lingkungan Kerja &amp; Perkantoran.
           </p>
         </div>
-
-        {!tabelSiap && (
-          <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 8, background: 'rgba(255,196,0,0.10)', border: '1px solid rgba(255,196,0,0.4)', color: '#9a6b00', fontSize: 11 }}>
-            Tabel database pencahayaan belum dibuat. Jalankan migration <code>20261031_inspeksi_lingkungan.sql</code>.
-          </div>
-        )}
 
         {pesan && (
           <div style={{
@@ -230,20 +225,11 @@ export default function InspeksiPencahayaan() {
           </div>
         )}
 
-        {/* Ringkasan Status Site */}
-        {ringkasan && (
-          <div style={{ marginBottom: 14, padding: '10px 14px', borderRadius: 8, background: 'var(--muted)', display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap', fontSize: 12 }}>
-            <span>Total Ruang Terdata: <b>{ringkasan.jumlahRuang}</b></span>
-            <span>Telah Diukur: <b>{ringkasan.sudahDiukur}</b></span>
-            <span>Lux Memenuhi NAB: <b style={{ color: '#00B894' }}>{Math.max(0, ringkasan.sudahDiukur - ringkasan.luxTidakMemenuhi)}</b></span>
-            <span>Lux Di Bawah NAB: <b style={{ color: ringkasan.luxTidakMemenuhi ? '#FF2D2D' : '#00B894' }}>{ringkasan.luxTidakMemenuhi}</b></span>
-          </div>
-        )}
-
         {/* Form Pengukuran Ruang */}
         <form onSubmit={simpan}>
+          {/* Section 1: Lokasi & Pengukur — Baris Lurus */}
           <Section title="Informasi Lokasi &amp; Pengukur">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+            <div style={grid4}>
               <Field label="Job Site">
                 <select className="admin-input" style={smallInput} value={site} onChange={(e) => setSite(e.target.value)}>
                   {SITES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -275,15 +261,16 @@ export default function InspeksiPencahayaan() {
               </Field>
 
               <Field label="Peralatan Luxmeter" hint="(Merk & Kalibrasi)">
-                <input className="admin-input" style={smallInput} value={alatLux} onChange={(e) => setAlatLux(e.target.value)} placeholder="mis. Luxmeter Kyoritsu / Testo 540" />
+                <input className="admin-input" style={smallInput} value={alatLux} onChange={(e) => setAlatLux(e.target.value)} placeholder="mis. Luxmeter Digital" />
               </Field>
             </div>
           </Section>
 
+          {/* Section 2: Spesifikasi Ruangan — Baris Lurus */}
           <Section title="Identifikasi Ruangan &amp; Standar NAB">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
-              <Field label="Nama Ruangan" hint="(Contoh: Ruang Engineering)">
-                <input required className="admin-input" style={smallInput} value={namaRuang} onChange={(e) => setNamaRuang(e.target.value)} placeholder="Nama ruang / area spesifik" />
+            <div style={grid4}>
+              <Field label="Nama Ruangan">
+                <input required className="admin-input" style={smallInput} value={namaRuang} onChange={(e) => setNamaRuang(e.target.value)} placeholder="mis. Ruang Engineering" />
               </Field>
 
               <Field label="Peruntukan Ruang">
@@ -312,10 +299,20 @@ export default function InspeksiPencahayaan() {
             </div>
           </Section>
 
-          <Section title="Titik Pengukuran Intensitas Cahaya (Bidang Kerja)">
+          {/* Datalist untuk referensi Titik Ukur dari Noise Mapping */}
+          <datalist id="noise-points-ref">
+            {refTitikNoise.map((r, idx) => (
+              <option key={idx} value={r.kode}>
+                {r.area ? `${r.area} — ` : ''}{r.deskripsi}
+              </option>
+            ))}
+          </datalist>
+
+          {/* Section 3: Titik Pengukuran */}
+          <Section title="Titik Pengukuran Intensitas Cahaya (Bidang Kerja 0,85 m)">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <span style={{ fontSize: 11.5, color: 'var(--muted-foreground)' }}>
-                Tinggi bidang kerja standar: <b>0,85 meter</b> dari lantai. Masukkan hasil bacaan alat pada tiap titik.
+                Kode titik ukur ditulis manual sesuai kode area (mis. <b>WS-T1</b> untuk Workshop, <b>OF-T1</b> untuk Office, dsb.) atau dapat memilih dari referensi Noise Mapping.
               </span>
               <Btn type="button" onClick={tambahTitik} style={{ height: 28, fontSize: 11 }}>
                 <Plus size={12} /> Tambah Titik Ukur
@@ -326,11 +323,11 @@ export default function InspeksiPencahayaan() {
               <table style={tableStyle}>
                 <thead>
                   <tr>
-                    <th style={{ ...thStyle, width: '12%' }}>Kode Titik</th>
-                    <th style={{ ...thStyle, width: '38%' }}>Posisi / Deskripsi Titik Ukur</th>
-                    <th style={{ ...thStyle, width: '25%' }}>Hasil Ukur (Lux)</th>
-                    <th style={{ ...thStyle, width: '15%' }}>Status Titik</th>
-                    <th style={{ ...thStyle, width: '10%', textAlign: 'center' }}>Aksi</th>
+                    <th style={{ ...thStyle, width: '18%' }}>Kode Titik Ukur</th>
+                    <th style={{ ...thStyle, width: '36%' }}>Posisi / Deskripsi Titik Ukur</th>
+                    <th style={{ ...thStyle, width: '22%' }}>Hasil Ukur (Lux)</th>
+                    <th style={{ ...thStyle, width: '16%' }}>Status Titik</th>
+                    <th style={{ ...thStyle, width: '8%', textAlign: 'center' }}>Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -343,8 +340,11 @@ export default function InspeksiPencahayaan() {
                       <tr key={t.id}>
                         <td style={tdStyle}>
                           <input
+                            list="noise-points-ref"
                             className="admin-input"
                             style={{ ...smallInput, height: 28, fontWeight: 700 }}
+                            placeholder="mis. WS-T1"
+                            title="Kode titik ukur (dapat ditulis manual mis. WS-T1 atau pilih dari titik Noise Mapping)"
                             value={t.kodeTitik}
                             onChange={(e) => updateTitik(t.id, 'kodeTitik', e.target.value)}
                           />
@@ -409,7 +409,7 @@ export default function InspeksiPencahayaan() {
                       {evaluasiLux.memenuhi ? '✓ TINGKAT PENCAHAYAAN MEMENUHI NAB' : '✗ TIDAK MEMENUHI NAB (TERDAPAT TITIK KURANG TERANG)'}
                     </span>
                     <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '2px 0 0' }}>
-                      Berdasarkan kriteria audit SMKP: penilaian ruang memakai <b>Lux Terendah</b> ({evaluasiLux.min} Lux vs NAB {nabMin} Lux).
+                      Penilaian ruang memakai <b>Lux Terendah</b> ({evaluasiLux.min} Lux vs NAB {nabMin} Lux).
                     </p>
                   </div>
                   <div style={{ display: 'flex', gap: 14, fontSize: 11.5 }}>
@@ -429,56 +429,6 @@ export default function InspeksiPencahayaan() {
             </Btn>
           </div>
         </form>
-
-        {/* Section Riwayat Pengukuran Ruang */}
-        <Section title={`Daftar Pengukuran Pencahayaan Ruangan — ${site}`}>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
-            <Btn type="button" onClick={() => void loadData()} disabled={loading} style={{ height: 28 }}>
-              <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Refresh Daftar
-            </Btn>
-          </div>
-
-          {!data.length ? (
-            <p style={{ fontSize: 11.5, color: 'var(--muted-foreground)', margin: '4px 0' }}>
-              Belum ada data pengukuran ruang tercatat untuk site ini.
-            </p>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={tableStyle}>
-                <thead>
-                  <tr>
-                    {['Nama Ruangan', 'Peruntukan', 'Luas / Pekerja', 'Lux Terendah', 'Standar NAB', 'Status Kepatuhan', 'Tanggal Terakhir'].map((h) => (
-                      <th key={h} style={thStyle}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.map((r) => {
-                    const p = r.penilaian;
-                    const status = p?.statusLux;
-                    const warna = status === 'memenuhi' ? '#00B894' : status === 'tidak-memenuhi' ? '#FF2D2D' : 'var(--muted-foreground)';
-
-                    return (
-                      <tr key={r.id}>
-                        <td style={{ ...tdStyle, fontWeight: 700 }}>{r.namaRuang}</td>
-                        <td style={tdStyle}>{NAB_LUX[r.peruntukan]?.label || r.peruntukan}</td>
-                        <td style={tdStyle}>{r.luasM2 ? `${r.luasM2} m²` : '—'} / {r.jumlahPekerja ? `${r.jumlahPekerja} org` : '—'}</td>
-                        <td style={{ ...tdStyle, fontWeight: 700 }}>{p?.luxMin != null ? `${p.luxMin} Lux` : '—'}</td>
-                        <td style={tdStyle}>{p?.nabLux != null ? `${p.nabLux} Lux` : '—'}</td>
-                        <td style={{ ...tdStyle, fontWeight: 700, color: warna }}>
-                          {status === 'memenuhi' ? '✓ Memenuhi' : status === 'tidak-memenuhi' ? '✗ Tidak Memenuhi' : 'Belum Diukur'}
-                        </td>
-                        <td style={tdStyle}>
-                          {r.pengukuranTerakhir?.tanggal ? fmtDate(String(r.pengukuranTerakhir.tanggal)) : '—'}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Section>
       </div>
     </div>
   );

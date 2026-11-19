@@ -1,28 +1,23 @@
 'use client';
 
 // ============================================================
-// Administrator > Higiene Industri > Inspeksi Higiene & Sanitasi
+// Administrator > Higiene Industri > Form Inspeksi Higiene & Sanitasi
 // ============================================================
 //
-// DASAR: BG/QSHE/STD/005 Rev.001 via BG/QSHE/SOP/028 poin 5.7.
-// 4 Pilar Sanitasi Industri:
-//   1. Toilet & Fasilitas Sanitasi (Rasio, Kebersihan, Ventilasi, Sabun/Air Mengalir)
+// 4 Pilar Sanitasi Tempat Kerja:
+//   1. Toilet & Fasilitas Sanitasi (Rasio, Kebersihan, Ventilasi, Air Mengalir/Sabun)
 //   2. Penyediaan Air Minum (Kualitas Fisik/Bakteriologi, Aksesibilitas, Higiene Dispenser)
 //   3. Pengendalian Vektor & Binatang Pembawa Penyakit (Lalat, Nyamuk, Tikus, Kecoa)
 //   4. Pengelolaan Sampah & Limbah Padat Domestik (Pilah, Tempat Tertutup, Pengangkutan)
-//
-// CATATAN AUDIT:
-// Kebisingan area dan Pengukuran Pencahayaan/Udara ditangani oleh modul masing-masing
-// (Hearing Conservation, Pencahayaan, Kualitas Udara & Debu) untuk mencegah duplikasi data.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, ClipboardCheck, Loader2, RefreshCw, Save, UserRound, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, Save, UserRound, XCircle } from 'lucide-react';
 
 import { authFetch } from '@/lib/api-client';
 import { useMCUStore } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
 import { ITEM_INSPEKSI, KATEGORI_LABEL, type KategoriInspeksi, type NilaiItem } from '@/lib/sanitasi-inspeksi';
-import { Btn, Field, Section, SITES, inputStyle, smallInput, tableStyle, thStyle, tdStyle, fmtDate } from './hc-ergo-ui';
+import { Btn, Field, Section, SITES, grid4, inputStyle, smallInput } from './hc-ergo-ui';
 
 interface Ringkasan {
   total: number;
@@ -43,16 +38,6 @@ interface HasilItem {
   sumber: string;
 }
 
-interface Riwayat {
-  id: string;
-  site: string;
-  tanggal: string;
-  inspektur: string | null;
-  ringkasan: Ringkasan | null;
-  catatan: string | null;
-  created_at: string;
-}
-
 export default function InspeksiSanitasi() {
   const store = useMCUStore();
   const { profile } = useAuth();
@@ -61,29 +46,10 @@ export default function InspeksiSanitasi() {
   const [site, setSite] = useState('Head Office');
   const [tanggal, setTanggal] = useState(new Date().toISOString().slice(0, 10));
   const [nilai, setNilai] = useState<Record<string, NilaiItem>>({});
-  const [riwayat, setRiwayat] = useState<Riwayat[]>([]);
   const [hasil, setHasil] = useState<HasilItem[] | null>(null);
   const [ringkasan, setRingkasan] = useState<Ringkasan | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [menyimpan, setMenyimpan] = useState(false);
-  const [tabelSiap, setTabelSiap] = useState(true);
-
-  const loadRiwayat = useCallback(async () => {
-    setLoading(true);
-    try {
-      const r = await authFetch(`/api/sanitasi?site=${encodeURIComponent(site)}`);
-      setRiwayat((r.data ?? []) as Riwayat[]);
-      setTabelSiap(r.tabelSiap !== false);
-    } catch {
-      setRiwayat([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [site]);
-
-  useEffect(() => {
-    void loadRiwayat();
-  }, [loadRiwayat]);
 
   const perKategori = useMemo(() => {
     const map = new Map<KategoriInspeksi, typeof ITEM_INSPEKSI>();
@@ -105,7 +71,6 @@ export default function InspeksiSanitasi() {
       setRingkasan(r.ringkasan as Ringkasan);
       setHasil(r.items as HasilItem[]);
       store.showToast('Inspeksi sanitasi berhasil disimpan', 'success');
-      await loadRiwayat();
     } catch (e) {
       store.showToast(e instanceof Error ? e.message : 'Gagal menyimpan inspeksi sanitasi', 'error');
     } finally {
@@ -123,23 +88,16 @@ export default function InspeksiSanitasi() {
     <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '90%', margin: '0 auto' }}>
       <div className="admin-form-inner">
         {/* Header Title */}
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 14 }}>
           <h1 className="admin-form-title">Inspeksi Higiene &amp; Sanitasi</h1>
           <p className="admin-form-subtitle">
-            Standar kepatuhan fasilitas sanitasi industri (toilet, air minum, pengendalian vektor, dan limbah padat) sesuai BG/QSHE/STD/005 Rev.001.
+            Standar kepatuhan fasilitas sanitasi tempat kerja (toilet, air minum, pengendalian vektor, dan limbah padat) sesuai standar K3 Lingkungan Kerja.
           </p>
         </div>
 
-        {/* Warning Tabel Siap */}
-        {!tabelSiap && (
-          <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 8, background: 'rgba(255,196,0,0.10)', border: '1px solid rgba(255,196,0,0.4)', color: '#9a6b00', fontSize: 11 }}>
-            Tabel <b>sanitasi_inspeksi</b> belum dibuat. Jalankan migration <code>20261028_sanitasi_inspeksi.sql</code>.
-          </div>
-        )}
-
-        {/* Section 1: Parameter & Identitas Sesi */}
+        {/* Section 1: Parameter & Identitas Sesi — Baris Lurus Sempurna */}
         <Section title="Informasi Sesi Inspeksi">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+          <div style={grid4}>
             <Field label="Job Site">
               <select className="admin-input" style={smallInput} value={site} onChange={(e) => setSite(e.target.value)}>
                 {SITES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -170,9 +128,9 @@ export default function InspeksiSanitasi() {
               </div>
             </Field>
 
-            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-              <Btn type="button" onClick={() => void loadRiwayat()} disabled={loading} style={{ height: 32 }}>
-                <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh Data
+            <div style={{ display: 'flex', alignItems: 'flex-end', height: 32 }}>
+              <Btn type="button" onClick={() => setNilai({})} style={{ height: 32, width: '100%' }}>
+                Reset Isian
               </Btn>
             </div>
           </div>
@@ -189,7 +147,7 @@ export default function InspeksiSanitasi() {
 
           <div style={{ marginTop: 10, fontSize: 11, color: 'var(--muted-foreground)', display: 'flex', gap: 5, alignItems: 'center' }}>
             <AlertTriangle size={12} color="#FF7A00" />
-            <span>Item yang tidak diisi berstatus <b>Belum Dinilai</b> (tidak otomatis dianggap patuh).</span>
+            <span>Item yang tidak diisi berstatus <b>Belum Dinilai</b> (tidak otomatis dianggap patuh). Gunakan tombol panah di kanan layar untuk melihat riwayat inspeksi sebelumnya.</span>
           </div>
         </Section>
 
@@ -283,44 +241,6 @@ export default function InspeksiSanitasi() {
             {menyimpan ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Simpan Hasil Inspeksi
           </Btn>
         </div>
-
-        {/* Section Riwayat Inspeksi Sanitasi */}
-        <Section title={`Riwayat Inspeksi Sanitasi — ${site}`}>
-          {!riwayat.length ? (
-            <p style={{ fontSize: 11.5, color: 'var(--muted-foreground)', margin: '4px 0' }}>
-              <ClipboardCheck size={13} style={{ verticalAlign: -2, marginRight: 5 }} />
-              Belum ada riwayat inspeksi sanitasi tercatat untuk site ini.
-            </p>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={tableStyle}>
-                <thead>
-                  <tr>
-                    {['Tanggal', 'Inspektur', 'Tingkat Kepatuhan', 'Sesuai', 'Tidak Sesuai', 'Belum Dinilai'].map((h) => (
-                      <th key={h} style={thStyle}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {riwayat.map((r) => {
-                    const k = r.ringkasan;
-                    const warna = !k ? 'inherit' : k.persenSesuai >= 85 ? '#00B894' : k.persenSesuai >= 70 ? '#FF7A00' : '#FF2D2D';
-                    return (
-                      <tr key={r.id}>
-                        <td style={tdStyle}>{fmtDate(r.tanggal)}</td>
-                        <td style={tdStyle}>{r.inspektur ?? '—'}</td>
-                        <td style={{ ...tdStyle, fontWeight: 700, color: warna }}>{k ? `${k.persenSesuai.toFixed(1)}%` : '—'}</td>
-                        <td style={{ ...tdStyle, color: '#00B894' }}>{k?.sesuai ?? '—'}</td>
-                        <td style={{ ...tdStyle, color: k?.tidakSesuai ? '#FF2D2D' : 'inherit' }}>{k?.tidakSesuai ?? '—'}</td>
-                        <td style={{ ...tdStyle, color: 'var(--muted-foreground)' }}>{k?.belumDinilai ?? '—'}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Section>
       </div>
     </div>
   );

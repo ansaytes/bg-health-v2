@@ -25,10 +25,13 @@ const PakRegister = lazy(() => import('@/components/pak/PakRegister'));
 const AdminProKawan = lazy(() => import('@/components/administrator/AdminProKawan'));
 const MonitoringKaryawanSakit = lazy(() => import('@/components/administrator/MonitoringKaryawanSakit'));
 const InspeksiSanitasi = lazy(() => import('@/components/administrator/InspeksiSanitasi'));
+const InspeksiSanitasiTable = lazy(() => import('@/components/administrator/InspeksiSanitasiTable'));
 const InspeksiPencahayaan = lazy(() => import('@/components/administrator/InspeksiPencahayaan'));
+const InspeksiPencahayaanTable = lazy(() => import('@/components/administrator/InspeksiPencahayaanTable'));
 const InspeksiUdaraDebu = lazy(() => import('@/components/administrator/InspeksiUdaraDebu'));
-const InspeksiLingkungan = lazy(() => import('@/components/administrator/InspeksiLingkungan'));
-const GiziKerja = lazy(() => import('@/components/administrator/GiziKerja'));
+const InspeksiUdaraDebuTable = lazy(() => import('@/components/administrator/InspeksiUdaraDebuTable'));
+const GiziKerjaForm = lazy(() => import('@/components/administrator/GiziKerjaForm'));
+const GiziKerjaTable = lazy(() => import('@/components/administrator/GiziKerjaTable'));
 const ProgramInspeksiAdminTabs = lazy(() => import('@/components/administrator/ProgramInspeksiAdminTabs'));
 const SaranaKlinikWithChecklist = lazy(() => import('@/components/administrator/SaranaKlinikWithChecklist'));
 const InputJadwalMCU = lazy(() => import('@/components/administrator/InputJadwalMCUModern'));
@@ -115,13 +118,33 @@ function AdminHigieneIndustri() {
       />
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {tab === 'sanitasi' ? (
-          <InspeksiSanitasi />
+          <AdminTogglePanel
+            formContent={<InspeksiSanitasi />}
+            tableContents={[<InspeksiSanitasiTable key="sanitasi-table" />]}
+            hasTable
+            stepLabels={['Input Sanitasi', 'Riwayat Inspeksi']}
+          />
         ) : tab === 'cahaya' ? (
-          <InspeksiPencahayaan />
+          <AdminTogglePanel
+            formContent={<InspeksiPencahayaan />}
+            tableContents={[<InspeksiPencahayaanTable key="cahaya-table" />]}
+            hasTable
+            stepLabels={['Input Pencahayaan', 'Daftar Pengukuran']}
+          />
         ) : tab === 'udara' ? (
-          <InspeksiUdaraDebu />
+          <AdminTogglePanel
+            formContent={<InspeksiUdaraDebu />}
+            tableContents={[<InspeksiUdaraDebuTable key="udara-table" />]}
+            hasTable
+            stepLabels={['Input Kualitas Udara', 'Daftar Pemantauan']}
+          />
         ) : tab === 'gizi' ? (
-          <GiziKerja />
+          <AdminTogglePanel
+            formContent={<GiziKerjaForm />}
+            tableContents={[<GiziKerjaTable key="gizi-table" />]}
+            hasTable
+            stepLabels={['Input Inspeksi Jasaboga', 'Riwayat Inspeksi']}
+          />
         ) : tab === 'hearing' ? (
           <AdminTogglePanel
             formContent={<HcInputPage />}

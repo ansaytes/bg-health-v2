@@ -7,7 +7,8 @@
 //   2. Ergonomi              — faktor ERGONOMI
 //   3. Psikologi Lingkungan Kerja — faktor PSIKOLOGI (SDS-30)
 //   4. Pencahayaan           — faktor FISIKA (Permenkes 48/2016 Tabel 4)
-//   5. Kualitas Udara & Debu — faktor FISIKA & KIMIA (Permenaker 5/2018 Pasal 40–42 & Permenkes 48/2016)
+//   5. Kualitas Udara & Debu — faktor FISIKA & KIMIA (Permenaker 5/2018 & Permenkes 48/2016)
+//   6. Gizi Kerja            — Kebutuhan Kalori & Jasaboga (AKG 2019 & Permenkes 1096/2011)
 
 import { useState } from 'react';
 import HearingConservationDashboard from '@/components/dashboard/HearingConservationDashboard';
@@ -15,9 +16,10 @@ import ErgonomiDashboard from '@/components/dashboard/ErgonomiDashboard';
 import PemetaanPsikologisDashboard from '@/components/dashboard/PemetaanPsikologisDashboard';
 import PencahayaanDashboard from '@/components/dashboard/PencahayaanDashboard';
 import UdaraDebuDashboard from '@/components/dashboard/UdaraDebuDashboard';
+import GiziKerjaDashboard from '@/components/dashboard/GiziKerjaDashboard';
 import CenteredTabs from '@/components/ui/centered-tabs';
 
-export type HigieneTab = 'hearing' | 'ergonomi' | 'psikologi' | 'cahaya' | 'udara';
+export type HigieneTab = 'hearing' | 'ergonomi' | 'psikologi' | 'cahaya' | 'udara' | 'gizi';
 
 const TABS: { key: HigieneTab; label: string }[] = [
   { key: 'hearing', label: 'Hearing Conservation' },
@@ -25,6 +27,7 @@ const TABS: { key: HigieneTab; label: string }[] = [
   { key: 'psikologi', label: 'Psikologi Lingkungan Kerja' },
   { key: 'cahaya', label: 'Pencahayaan' },
   { key: 'udara', label: 'Kualitas Udara & Debu' },
+  { key: 'gizi', label: 'Gizi Kerja' },
 ];
 
 export default function HigieneIndustriTabs({ initialTab = 'hearing' }: { initialTab?: HigieneTab }) {
@@ -40,6 +43,7 @@ export default function HigieneIndustriTabs({ initialTab = 'hearing' }: { initia
         {tab === 'psikologi' && <PemetaanPsikologisDashboard />}
         {tab === 'cahaya' && <PencahayaanDashboard />}
         {tab === 'udara' && <UdaraDebuDashboard />}
+        {tab === 'gizi' && <GiziKerjaDashboard />}
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { authFetch } from '@/lib/api-client';
 import { aptRequirement, jatuhTempoUkur, zonaFromLeq, ZONA_COLOR, type Zona } from '@/lib/hc-ergo';
 import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
-import { Btn, Chip, Field, Notice, Section, SITES, Tabs, fmtDate, grid2, grid3, inputStyle, smallInput, tableStyle, tdStyle, thStyle } from './hc-ergo-ui';
+import { Btn, Chip, Field, Notice, Section, SITES, Tabs, fmtDate, getNextKodeTitik, grid2, grid3, inputStyle, smallInput, tableStyle, tdStyle, thStyle } from './hc-ergo-ui';
 import { usePopup, Popup } from '@/lib/popup';
 import { useAuth } from '@/lib/auth-context';
 
@@ -135,11 +135,14 @@ function NoiseTab({ areas, onMsg, onSaved }: { areas: Row[]; onMsg: (m: any) => 
         </Section>
 
         <Section title="Titik Ukur (Leq dB(A), minimal 5 menit per titik)">
+          <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '0 0 10px' }}>
+            Kode titik ukur dapat ditulis manual sesuai area yang diukur (contoh: <b>WS-T1</b> untuk Workshop, <b>CP-T1</b> untuk Crushing Plant, dsb.).
+          </p>
           {pts.map((p, i) => {
             const leq = parseFloat(p.leq_dba); const z = Number.isFinite(leq) ? zonaFromLeq(leq) : null;
             return (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 110px 110px 90px 32px', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-                <input style={smallInput} placeholder="T1" title="Kode titik ukur" value={p.kode_titik} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, kode_titik: e.target.value } : x))} />
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '110px 1fr 110px 110px 90px 32px', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                <input style={smallInput} placeholder="mis. WS-T1" title="Kode titik ukur (mis. WS-T1 untuk Workshop)" value={p.kode_titik} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, kode_titik: e.target.value } : x))} />
                 <input style={smallInput} placeholder="Lokasi titik, mis. 1 meter dari genset" value={p.deskripsi} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, deskripsi: e.target.value } : x))} />
                 <input style={smallInput} type="number" step="0.1" placeholder="85.5 dBA" title="Nilai Leq dalam dBA" value={p.leq_dba} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, leq_dba: e.target.value } : x))} />
                 <input style={smallInput} type="number" placeholder="10 Menit" title="Durasi pengukuran dalam menit (minimal 5)" value={p.durasi_menit} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, durasi_menit: e.target.value } : x))} />
@@ -148,7 +151,11 @@ function NoiseTab({ areas, onMsg, onSaved }: { areas: Row[]; onMsg: (m: any) => 
               </div>
             );
           })}
-          <Btn onClick={() => setPts([...pts, newPt(pts.length + 1)])}><Plus size={13} /> Tambah Titik</Btn>
+          <Btn onClick={() => {
+            const lastKode = pts[pts.length - 1]?.kode_titik;
+            const nextKode = getNextKodeTitik(lastKode, pts.length + 1);
+            setPts([...pts, { kode_titik: nextKode, deskripsi: '', leq_dba: '', durasi_menit: '10' }]);
+          }}><Plus size={13} /> Tambah Titik</Btn>
           {zona && leqMax !== null && apt && (
             <div style={{ marginTop: 12, fontSize: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               <span>Zona area (titik tertinggi {leqMax} dB(A)):</span><Chip text={zona} color={ZONA_COLOR[zona]} />

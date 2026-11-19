@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { integrationAdminClient } from '@/lib/integration-settings';
 import { getServerCaller, STAFF_ROLES, requireServerRole } from '@/lib/server-auth';
+import { potongStokResepKunjungan, type HasilDispensasi } from '@/lib/inventory-dispense';
+import { proteksiDiagnosaUntukRole } from '@/lib/kunjungan-pdp';
 
 const READ_ROLES = STAFF_ROLES;
 
@@ -55,7 +57,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Gagal mengambil data kunjungan.' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: data || [] });
+    const sanitizedData = (data || []).map((row) => {
+      if (caller!.role === 'manager') {
+        return {
+          ...row,
+          diagnosa: proteksiDiagnosaUntukRole(String(row.diagnosa ?? ''), caller!.role),
+        };
+      }
+      return row;
+    });
+
+    return NextResponse.json({ success: true, data: sanitizedData });
   } catch {
     return NextResponse.json({ success: false, error: 'Gagal mengambil data kunjungan.' }, { status: 500 });
   }
@@ -121,10 +133,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Gagal menyimpan data kunjungan.' }, { status: 500 });
     }
 
+    const kunjunganId = data?.[0]?.id;
+    let dispenseResult: HasilDispensasi | null = null;
+    if (kunjunganId && row.jenis_obat) {
+      try {
+        dispenseResult = await potongStokResepKunjungan(
+          integrationAdminClient(),
+          kunjunganId,
+          row.nama,
+          row.jenis_obat
+        );
+      } catch (dispenseErr) {
+        console.error('[Kunjungan] Stock deduction error:', dispenseErr);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Data kunjungan berhasil disimpan',
       data,
+      dispense: dispenseResult,
     });
   } catch {
     return NextResponse.json({ success: false, error: 'Gagal menyimpan data kunjungan.' }, { status: 500 });

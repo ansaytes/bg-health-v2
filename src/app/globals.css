@@ -44,7 +44,7 @@
    ═══════════════════════════════════ */
 :root {
   --radius: 0.75rem;
-  --background: #F5F5F5;
+  --background: #ECECEC;
   --foreground: #1A1A1A;
   --card: #FFFFFF;
   --card-foreground: #1A1A1A;
@@ -56,18 +56,18 @@
   --field-bg: #FFF4EE;
   --primary: #FF4D00;
   --primary-foreground: #FFFFFF;
-  --secondary: #F0F0F0;
+  --secondary: #E0E0E0;
   --secondary-foreground: #1A1A1A;
   --destructive: #DC2626;
   --destructive-foreground: #FFFFFF;
-  --muted: #F0F0F0;
+  --muted: #E0E0E0;
   --muted-foreground: #666666;
   --accent: rgba(255,77,0,0.07);
   --accent-foreground: #1A1A1A;
-  --border: #E0E0E0;
-  --input: #E0E0E0;
+  --border: #D8D8D8;
+  --input: #D8D8D8;
   --ring: rgba(255,77,0,0.3);
-  --sidebar: #F5F5F5;
+  --sidebar: #ECECEC;
   --sidebar-foreground: #1A1A1A;
   --sidebar-accent: rgba(255,77,0,0.04);
   --sidebar-accent-foreground: #1A1A1A;

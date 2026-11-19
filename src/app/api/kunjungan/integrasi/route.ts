@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerCaller, requireServerRole, STAFF_ROLES } from '@/lib/server-auth';
 import { integrationAdminClient } from '@/lib/integration-settings';
 import { encrypt, hashField } from '@/lib/encryption';
+import { tenggatDariTingkat } from '@/lib/inspeksi-program';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
   const client = integrationAdminClient();
   const { data: kunjungan, error: kunjunganError } = await client
     .from('kunjungan_berobat')
-    .select('nik,nama,jobsite,tanggal,rujuk_rs,nama_rs,keluhan,kategori,izin_absen')
+    .select('nik,nama,departemen,jobsite,tanggal,rujuk_rs,nama_rs,keluhan,kategori,izin_absen')
     .eq('id', kunjunganId)
     .maybeSingle();
   if (kunjunganError) return NextResponse.json({ success: false, error: 'Gagal memverifikasi kunjungan.' }, { status: 500 });
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
   const nikHash = hashField(nik);
   if (!nikHash) return NextResponse.json({ error: 'NIK tidak valid' }, { status: 400 });
 
-  const hasil: { karyawanSakit?: string; registerPak?: string; catatan: string[] } = { catatan: [] };
+  const hasil: { karyawanSakit?: string; registerPak?: string; pica?: string; catatan: string[] } = { catatan: [] };
 
   /* ── 1. Rujuk RS → episode karyawan sakit ───────────────────────────── */
   if (perluPemantauanSakit) {
@@ -179,6 +180,58 @@ export async function POST(req: NextRequest) {
       }
     } catch {
       hasil.catatan.push('Gagal membuat kasus PAK.');
+    }
+  }
+
+  /* ── 3. Kategori Kecelakaan Kerja → Draf PICA (Investigasi Insiden K3) ── */
+  if (/kecelakaan\s*kerja/i.test(kategori)) {
+    try {
+      const { data: adaPica } = await client
+        .from('pica')
+        .select('id')
+        .eq('sumber', 'kecelakaan_kerja')
+        .eq('objek_id', kunjunganId)
+        .maybeSingle();
+
+      if (adaPica?.id) {
+        hasil.pica = 'sudah-ada';
+        hasil.catatan.push('Draf PICA untuk insiden kecelakaan kerja ini sudah ada.');
+      } else {
+        const dibuat = tanggal || new Date().toISOString().slice(0, 10);
+        // Default 'mayor' — rujuk RS bukan berarti kritis, seringkali hanya
+        // karena klinik site tidak memiliki fasilitas rawat inap.
+        // Safety PIC/investigator yang mengeskalasi ke 'kritis' jika diperlukan.
+        const tingkat = 'mayor';
+        const dueDate = tenggatDariTingkat(tingkat, new Date(`${dibuat}T00:00:00`));
+
+        const { error: picaErr } = await client.from('pica').insert({
+          sumber: 'kecelakaan_kerja',
+          jenis_inspeksi: 'Kecelakaan Kerja',
+          jenis_pica: 'Insiden Kerja Tambang',
+          site: site || null,
+          departemen: kunjungan.departemen || null,
+          objek_id: kunjunganId,
+          objek_nama: `Karyawan: ${nama} (${nik || 'Non-NIK'})`,
+          deskripsi: `Laporan awal kecelakaan kerja dari klinik site. Keluhan: ${keluhan || '—'}. Rujuk RS: ${rujukRS ? 'Ya (' + (namaRS || 'RS Rujukan') + ')' : 'Tidak'}. Izin Istirahat: ${kunjungan.izin_absen ? 'Ya' : 'Tidak'}.`,
+          tingkat,
+          inisiator: caller.userId,
+          tanggal_dibuat: dibuat,
+          due_date: dueDate,
+          status: 'open',
+          tindakan: 'Lakukan investigasi insiden K3 (5-Why/Fishbone) dan verifikasi laporan awal 2x24 jam ke KTT.',
+        });
+
+        if (picaErr) {
+          if (!/does not exist|42P01|PGRST205/i.test(picaErr.message)) {
+            console.error('[Kunjungan integrasi] PICA insert error:', picaErr.code);
+          }
+        } else {
+          hasil.pica = 'dibuat';
+          hasil.catatan.push('Draf investigasi insiden K3 (PICA) dibuat otomatis untuk kategori Kecelakaan Kerja.');
+        }
+      }
+    } catch {
+      // Graceful fallback if pica table is unavailable
     }
   }
 

@@ -163,7 +163,7 @@ export default function SaranaKlinik({ onBukaPica }: { onBukaPica?: () => void }
         <div style={{ marginBottom: 14 }}>
           <h1 className="admin-form-title">Sarana & Prasarana Klinik</h1>
           <p className="admin-form-subtitle">
-            Standar kelengkapan ruangan, peralatan medis, APD, dan evakuasi klinik sesuai SOP/028 & standar operasional kesehatan kerja.
+            Standar kelengkapan ruangan, peralatan medis, APD, dan evakuasi fasilitas pelayanan kesehatan kerja.
           </p>
         </div>
 

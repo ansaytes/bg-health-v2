@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Plus, Trash2, CheckCircle2 } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Activity, HeartPulse, Thermometer, Stethoscope } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
 import { authFetch } from '@/lib/api-client';
@@ -76,7 +76,7 @@ const FORM_FIELDS = [
   { id: 'absen', label: 'Surat Izin / Absen', type: 'select', options: ['Tidak', 'Ya'], defaultValue: 'Tidak' },
   { id: 'rujukRS', label: 'Rujuk RS', type: 'select', options: ['Tidak', 'Ya'], required: true, defaultValue: 'Tidak' },
   { id: 'namaRS', label: 'Nama RS (jika dirujuk)', type: 'text', placeholder: 'Nama rumah sakit rujukan' },
-  { id: 'catatan', label: 'Keluhan & Hasil Pemeriksaan', type: 'textarea', placeholder: 'Keluhan pasien, hasil tensi (TD, HR, T, dll), atau catatan pemeriksaan...' },
+  { id: 'catatan', label: 'Keluhan Klinis & Anamnesis', type: 'textarea', placeholder: 'Keluhan utama pasien, riwayat penyakit sekarang, atau anamnesis lainnya...' },
 ];
 
 export default function KunjunganBerobatForm() {
@@ -89,6 +89,14 @@ export default function KunjunganBerobatForm() {
   const [isManualIdentity, setIsManualIdentity] = useState(false);
   const [diagnoses, setDiagnoses] = useState([{ id: Date.now().toString(), text: '' }]);
   const [medications, setMedications] = useState([{ id: Date.now().toString(), nama: '', aturan: '3DD1', jumlah: '10', satuan: 'Tablet' }]);
+  const [vital, setVital] = useState({
+    sistolik: '',
+    diastolik: '',
+    nadi: '',
+    suhu: '',
+    rr: '',
+    spo2: '',
+  });
   
   // Master database states
   const [masterDiagnosa, setMasterDiagnosa] = useState<string[]>(DEFAULT_DIAGNOSA);
@@ -277,7 +285,28 @@ export default function KunjunganBerobatForm() {
 
     setSaving(true);
     try {
-      const json = await authFetch<{ success: true; data?: Array<{ id?: string }> }>('/api/kunjungan', {
+      const tandaVitalParts: string[] = [];
+      if (vital.sistolik && vital.diastolik) tandaVitalParts.push(`TD: ${vital.sistolik}/${vital.diastolik} mmHg`);
+      else if (vital.sistolik) tandaVitalParts.push(`TD: ${vital.sistolik} mmHg`);
+      if (vital.nadi) tandaVitalParts.push(`HR: ${vital.nadi} x/m`);
+      if (vital.suhu) tandaVitalParts.push(`Suhu: ${vital.suhu}°C`);
+      if (vital.rr) tandaVitalParts.push(`RR: ${vital.rr} x/m`);
+      if (vital.spo2) tandaVitalParts.push(`SpO2: ${vital.spo2}%`);
+
+      const finalKeluhan = [
+        tandaVitalParts.length ? `[Tanda Vital] ${tandaVitalParts.join(' | ')}` : '',
+        form.catatan?.trim() ? `[Keluhan] ${form.catatan.trim()}` : '',
+      ].filter(Boolean).join('\n');
+
+      const json = await authFetch<{
+        success: true;
+        data?: Array<{ id?: string }>;
+        dispense?: {
+          berhasil: boolean;
+          itemDipotong: Array<{ nama: string; jumlahDipotong: number }>;
+          catatan: string[];
+        };
+      }>('/api/kunjungan', {
         method: 'POST',
         body: JSON.stringify({
           nik: form.nik && form.nik.trim() ? form.nik.trim() : null,
@@ -293,10 +322,20 @@ export default function KunjunganBerobatForm() {
           rujuk_rs: form.rujukRS === 'Ya',
           kategori: form.kategori,
           nama_rs: form.namaRS || null,
-          keluhan: form.catatan || null,
+          keluhan: finalKeluhan || null,
         }),
       });
       invalidateKunjunganDashboardData();
+
+      const infoList: string[] = [];
+      if (json.dispense?.itemDipotong?.length) {
+        infoList.push(
+          `Stok terpotong: ${json.dispense.itemDipotong.map(d => `${d.nama} (${d.jumlahDipotong})`).join(', ')}.`
+        );
+      }
+      if (json.dispense?.catatan?.length) {
+        infoList.push(...json.dispense.catatan);
+      }
 
       // ── TINDAK LANJUT OTOMATIS ─────────────────────────────────────────
       // Surat izin/absen atau rujukan → episode Monitoring Karyawan Sakit.
@@ -311,10 +350,14 @@ export default function KunjunganBerobatForm() {
           }),
         });
         if (Array.isArray(ik.catatan) && ik.catatan.length) {
-          setInfoMsg(ik.catatan.join(' '));
+          infoList.push(...ik.catatan);
         }
       } catch {
-        setInfoMsg('Kunjungan tersimpan, tetapi tautan ke pemantauan karyawan sakit gagal dibuat.');
+        infoList.push('Kunjungan tersimpan, tetapi tautan ke pemantauan karyawan sakit gagal dibuat.');
+      }
+
+      if (infoList.length) {
+        setInfoMsg(infoList.join(' '));
       }
 
       setSaved(true);
@@ -326,6 +369,14 @@ export default function KunjunganBerobatForm() {
       });
       setDiagnoses([{ id: Date.now().toString(), text: '' }]);
       setMedications([{ id: Date.now().toString(), nama: '', aturan: '3DD1', jumlah: '10', satuan: 'Tablet' }]);
+      setVital({
+        sistolik: '',
+        diastolik: '',
+        nadi: '',
+        suhu: '',
+        rr: '',
+        spo2: '',
+      });
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Gagal menyimpan data');
@@ -576,6 +627,105 @@ export default function KunjunganBerobatForm() {
                   </div>
                 );
               })}
+            </div>
+
+            {/* ─── TANDA VITAL & PEMERIKSAAN FISIK ─── */}
+            <div style={{ marginTop: 20, padding: '12px 14px', borderRadius: 8, background: 'var(--muted)', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <Activity size={16} color="var(--brand-primary, #ff4d00)" />
+                <h4 style={{ fontWeight: 700, fontSize: 13, margin: 0 }}>Tanda Vital &amp; Pemeriksaan Fisik</h4>
+                <span style={{ fontSize: 10.5, color: 'var(--muted-foreground)', marginLeft: 'auto' }}>
+                  Standar Klinis &amp; Triase
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
+                {/* Tekanan Darah */}
+                <div>
+                  <label className="admin-label" style={{ fontSize: 11, marginBottom: 4 }}>
+                    Tekanan Darah <span style={{ color: 'var(--muted-foreground)' }}>(mmHg)</span>
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <input
+                      type="number"
+                      placeholder="Sistolik (120)"
+                      value={vital.sistolik}
+                      onChange={(e) => setVital((v) => ({ ...v, sistolik: e.target.value }))}
+                      className="admin-input"
+                      style={{ ...inputStyle, height: 32, fontSize: 12, padding: '0 6px', textAlign: 'center' }}
+                    />
+                    <span>/</span>
+                    <input
+                      type="number"
+                      placeholder="Diastolik (80)"
+                      value={vital.diastolik}
+                      onChange={(e) => setVital((v) => ({ ...v, diastolik: e.target.value }))}
+                      className="admin-input"
+                      style={{ ...inputStyle, height: 32, fontSize: 12, padding: '0 6px', textAlign: 'center' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Denyut Nadi */}
+                <div>
+                  <label className="admin-label" style={{ fontSize: 11, marginBottom: 4 }}>
+                    Denyut Nadi <span style={{ color: 'var(--muted-foreground)' }}>(x/mnt)</span>
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="mis. 80"
+                    value={vital.nadi}
+                    onChange={(e) => setVital((v) => ({ ...v, nadi: e.target.value }))}
+                    className="admin-input"
+                    style={{ ...inputStyle, height: 32, fontSize: 12 }}
+                  />
+                </div>
+
+                {/* Suhu Tubuh */}
+                <div>
+                  <label className="admin-label" style={{ fontSize: 11, marginBottom: 4 }}>
+                    Suhu Tubuh <span style={{ color: 'var(--muted-foreground)' }}>(°C)</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder="mis. 36.5"
+                    value={vital.suhu}
+                    onChange={(e) => setVital((v) => ({ ...v, suhu: e.target.value }))}
+                    className="admin-input"
+                    style={{ ...inputStyle, height: 32, fontSize: 12 }}
+                  />
+                </div>
+
+                {/* Pernapasan */}
+                <div>
+                  <label className="admin-label" style={{ fontSize: 11, marginBottom: 4 }}>
+                    Laju Napas <span style={{ color: 'var(--muted-foreground)' }}>(RR x/mnt)</span>
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="mis. 18"
+                    value={vital.rr}
+                    onChange={(e) => setVital((v) => ({ ...v, rr: e.target.value }))}
+                    className="admin-input"
+                    style={{ ...inputStyle, height: 32, fontSize: 12 }}
+                  />
+                </div>
+
+                {/* SpO2 */}
+                <div>
+                  <label className="admin-label" style={{ fontSize: 11, marginBottom: 4 }}>
+                    Saturasi O2 <span style={{ color: 'var(--muted-foreground)' }}>(SpO2 %)</span>
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="mis. 98"
+                    value={vital.spo2}
+                    onChange={(e) => setVital((v) => ({ ...v, spo2: e.target.value }))}
+                    className="admin-input"
+                    style={{ ...inputStyle, height: 32, fontSize: 12 }}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* ─── DAFTAR DIAGNOSA DENGAN MASTER TABLE 'diagnosa' ─── */}
