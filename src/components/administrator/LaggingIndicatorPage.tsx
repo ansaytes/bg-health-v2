@@ -49,7 +49,7 @@ const EMPTY_ROW: IndicatorRow = {
 /**
  * Field definitions.
  *
- * Per Kepdirjen Minerba 1855.K/2019:
+ * Per Kepdirjen Minerba No. 185.K/37.04/DJB/2019:
  *  - Leading indicators (proaktif/pencegahan) sudah ada di halaman terpisah:
  *    Review MCU, Kunjungan Berobat, Health Campaign, Health Talk (YouTube).
  *  - Yang diinput di form ini adalah: (a) denominator/aggregate bulanan untuk
@@ -66,7 +66,7 @@ const AGGREGATE_FIELDS: { key: keyof IndicatorRow; label: string; hint?: string;
   { key: 'kunjungan_klinik', label: 'Total Kunjungan Klinik', hint: 'Hanya Head Office yang ter-auto-aggregate dari Halaman Kunjungan Berobat' },
   { key: 'tk_sakit', label: 'Tenaga Kerja Sakit', hint: 'Rekap jumlah karyawan sakit dari site', sourcePage: 'Data Karyawan Sakit' },
   { key: 'absensi_sakit', label: 'Total Absensi Sakit (hari)', hint: 'Rekap hari absen sakit dari site', sourcePage: 'Data Karyawan Sakit' },
-  { key: 'spell', label: 'Spell', hint: 'Jumlah Spell dari rekap site (Kepdirjen 1855.K/2019)', sourcePage: 'Data Karyawan Sakit' },
+  { key: 'spell', label: 'Spell', hint: 'Jumlah Spell dari rekap site (Kepdirjen Minerba No. 185.K/37.04/DJB/2019)', sourcePage: 'Data Karyawan Sakit' },
   { key: 'penyakit_akibat_kerja', label: 'Penyakit Akibat Kerja (PAK)', hint: 'Jumlah kasus PAK dari rekap site', sourcePage: 'Data Karyawan Sakit' },
   { key: 'kejadian_penyakit_tk', label: 'Kejadian Akibat Penyakit TK', hint: 'Jumlah kejadian KAPTK' },
 ];
@@ -484,7 +484,7 @@ function cetakLaporanSMKP(row: IndicatorRow) {
   <div class="header-box">
     <h2>PT BAGONG DEKAKA MAKMUR</h2>
     <h3>DIVISI KESEHATAN KERJA &amp; HIGIENE INDUSTRI (QSHE DEPT)<br>
-    LAPORAN KINERJA KESEHATAN KERJA BULANAN (KEPDIRJEN MINERBA 1855.K/2019)</h3>
+    LAPORAN KINERJA KESEHATAN KERJA BULANAN (KEPDIRJEN MINERBA NO. 185.K/37.04/DJB/2019)</h3>
   </div>
 
   <table style="border:none; margin-bottom: 12px;">

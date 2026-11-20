@@ -76,7 +76,7 @@ function getSickPeriodRange(bulan: number, tahun: number) {
   };
 }
 
-// ─── Evaluasi Target vs Realisasi KPI (Kepdirjen Minerba 1855.K/2019) ───
+// ─── Evaluasi Target vs Realisasi KPI (Kepdirjen Minerba No. 185.K/37.04/DJB/2019) ───
 function getRagRkk(val: number) {
   if (val >= 95) return { color: '#00B894', badge: 'Target (≥95%)', bg: 'rgba(0,184,148,0.12)' };
   if (val >= 90) return { color: '#FF7A00', badge: 'Waspada (<95%)', bg: 'rgba(255,122,0,0.12)' };

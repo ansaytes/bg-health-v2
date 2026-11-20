@@ -1613,25 +1613,27 @@ select.admin-input.compact-input {
   align-items: flex-start;
   justify-content: space-between;
   flex-shrink: 0;
+  margin-bottom: 8px;
 }
 .mcu-entry-page .admin-form-header h2 {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin: 0;
   color: var(--foreground);
-  font-size: 22px;
+  font-size: 13.5px;
   font-weight: 700;
-  letter-spacing: -.035em;
+  letter-spacing: -0.01em;
 }
 .mcu-entry-page .admin-form-header h2 svg {
   color: #ff4d00;
   stroke-width: 2.2;
 }
 .mcu-entry-page .admin-form-header p {
-  margin: 7px 0 0 30px;
+  margin: 2px 0 0;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: 10.5px;
+  line-height: 1.35;
 }
 .mcu-entry-page .admin-alert {
   flex-shrink: 0;
@@ -4182,15 +4184,18 @@ select option:active {
   overflow-y: auto;
 }
 .qh-page-head h2 {
-  margin: 0 0 6px;
-  font-size: 20px;
+  margin: 0 0 2px;
+  font-size: 13.5px;
   font-weight: 700;
+  color: var(--foreground);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
 }
 .qh-page-head p {
-  margin: 0 0 4px;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--fg-dim);
+  margin: 0 0 2px;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--muted-foreground);
 }
 .qh-warn {
   color: #b34700 !important;
@@ -4200,11 +4205,11 @@ select option:active {
 .qh-card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 18px;
+  border-radius: 8px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 .qh-card-head {
   display: flex;

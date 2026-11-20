@@ -210,15 +210,16 @@ export default function InputMentalHealthPage() {
   }
 
   return (
-    <div className="qh-page">
-      <header className="qh-page-head">
-        <h2>Input Kesehatan Mental</h2>
-        <p>
-          SRQ-20 dan DASS-21 menjadi dasar penilaian parameter Kesehatan Mental
-        </p>
-      </header>
+    <div className="admin-form-container" style={{ padding: '0 16px 8px 16px', height: '100%', minHeight: 0, overflowY: 'auto' }}>
+      <div className="admin-form-inner" style={{ maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ padding: '8px 0 4px', borderBottom: '1px solid var(--border)' }}>
+          <h1 className="admin-form-title">Input Kesehatan Mental</h1>
+          <p className="admin-form-subtitle">
+            Skrining terpadu SRQ-20 dan DASS-21 sebagai dasar penilaian parameter Kesehatan Mental sesuai standar STD-006 Rev001.
+          </p>
+        </div>
 
-      <StatusBanner status={error ? 'error' : submit.status} message={error || submit.message} />
+        <StatusBanner status={error ? 'error' : submit.status} message={error || submit.message} />
 
       <IdentityPanel
         query={query}
@@ -303,6 +304,7 @@ export default function InputMentalHealthPage() {
       />
 
       <ResultDialog data={resultDialog} onClose={() => setResultDialog(null)} />
+      </div>
     </div>
   );
 }

@@ -157,16 +157,16 @@ export default function InputPsikologiLingkunganPage() {
             transition={{ duration: 0.2, ease: 'easeOut' }}
             style={{ height: '100%', overflowY: 'auto' }}
           >
-            <div>
-              <header className="qh-page-head">
-        <h2>Psikologi Lingkungan Kerja — SDS-30</h2>
-        <p>
-          30 pernyataan kondisi kerja <b>1 bulan terakhir</b>. Skor dan kategori dihitung
-          otomatis oleh sistem untuk pemetaan risiko psikologis per departemen (Higiene Industri).
-        </p>
-      </header>
+            <div className="admin-form-container" style={{ padding: '0 16px 8px 16px', height: '100%', minHeight: 0 }}>
+              <div className="admin-form-inner" style={{ maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ padding: '8px 0 4px', borderBottom: '1px solid var(--border)' }}>
+                  <h1 className="admin-form-title">Psikologi Lingkungan Kerja (SDS-30)</h1>
+                  <p className="admin-form-subtitle">
+                    Survei Diagnosis Stres (Lampiran Permenaker 5/2018) — Pemetaan 6 faktor psikologi lingkungan kerja untuk laporan Higiene Industri.
+                  </p>
+                </div>
 
-      <StatusBanner status={error ? 'error' : submit.status} message={error || submit.message} />
+                <StatusBanner status={error ? 'error' : submit.status} message={error || submit.message} />
 
       <IdentityPanel
         query={query}
@@ -222,6 +222,7 @@ export default function InputPsikologiLingkunganPage() {
       />
 
       <ResultDialog data={resultDialog} onClose={() => setResultDialog(null)} />
+              </div>
             </div>
           </motion.div>
         ) : (

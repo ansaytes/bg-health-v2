@@ -12,6 +12,7 @@ import { Loader2, Printer, Plus, AlertTriangle, RefreshCw, Search, Trash2, Shiel
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import DownloadButton from '@/components/ui/download-button';
 import { authFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { useMCUStore } from '@/lib/store';
@@ -209,35 +210,82 @@ export default function PakRegister() {
     });
   }
 
-  const th = 'px-3 py-2 text-left text-[9.5px] font-bold uppercase tracking-wide text-muted-foreground border-b';
-  const td = 'px-3 py-2 text-[11px] border-b align-top';
+  const th = 'px-2.5 py-1.5 text-left text-[10.5px] font-bold uppercase tracking-wide text-foreground border-b bg-muted whitespace-nowrap';
+  const td = 'px-2.5 py-2 text-[11.5px] border-b align-top';
+
+  const tableDataForExport = () => {
+    return filtered.map((c, idx) => ({
+      No: idx + 1,
+      ID_Register: c.id_register,
+      Nama: c.nama_enc ?? '-',
+      Jabatan: c.jabatan ?? '-',
+      Departemen: c.department ?? '-',
+      Sumber_Dugaan: c.sumber_dugaan,
+      Detail_Sumber: c.sumber_detail ?? '-',
+      Verifikasi_HRA: c.hra_verified ? 'Ya' : 'Belum',
+      Tgl_Diterima: c.tanggal_diterima ? fmtJam(c.tanggal_diterima) : '-',
+      Triase_Keputusan: c.triase_keputusan ?? 'Menunggu',
+      Diagnosis_Okupasi: c.diagnosis_okupasi ?? '-',
+      Kelaikan_Kerja: c.kelaikan_kerja ?? '-',
+      Status: STATUS_LABEL[c.status] ?? c.status,
+    }));
+  };
 
   return (
-    <div className="dashboard" style={{ overflowY: 'auto', overflowX: 'hidden' }}>
-      {/* Toolbar */}
-      <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+    <div className="admin-form-container" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '0 16px 8px 16px', height: '100%', minHeight: 0, overflowY: 'auto' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0 4px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>Register PAK</h2>
-          <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '2px 0 0' }}>
-            {cases.length} kasus · {lewatDeadline > 0 ? <b style={{ color: '#FF2D2D' }}>{lewatDeadline} lewat batas waktu</b> : 'semua tepat waktu'}
+          <h1 className="admin-form-title">Register Penyakit Akibat Kerja (PAK)</h1>
+          <p className="admin-form-subtitle">
+            Pencatatan kasus, triase kelaikan kerja, dan pemenuhan pelaporan statutori 2×24 jam (Permenaker 01/1981 &amp; PP 44/2015).
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 h-9 px-3 rounded-lg border border-input bg-background">
-            <Search size={13} />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari ID / nama / jabatan"
-              style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 12, color: 'var(--foreground)', width: 180 }} />
-          </div>
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="h-9 rounded-lg border-input bg-background px-2 text-xs">
-            <option value="semua">Semua Status</option>
-            {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v} ({statusCounts[k] || 0})</option>)}
-          </select>
-          <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading} style={{ height: 30, fontSize: 11.5 }}>
+            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Refresh
           </Button>
           {canWrite && (
-            <Button size="sm" onClick={() => setCreating(true)}><Plus size={13} /> Kasus Baru</Button>
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              className="admin-form-btn-primary compact-btn"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 30, fontSize: 11.5 }}
+            >
+              <Plus size={14} /> Kasus Baru
+            </button>
           )}
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      <div className="mcu-records-toolbar" style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'transparent', padding: '0', border: 'none', flexWrap: 'nowrap' }}>
+        <div className="mcu-records-search" style={{ flex: '1 1 0px', minWidth: 0, display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--card)', padding: '0 10px', height: '30px', borderRadius: '6px', border: '1px solid var(--border)', boxSizing: 'border-box' }}>
+          <Search size={14} className="text-muted-foreground" style={{ flexShrink: 0 }} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari ID Register / nama karyawan / jabatan / departemen..."
+            style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '11.5px', color: 'var(--foreground)', width: '100%', height: '100%' }}
+          />
+        </div>
+        <div style={{ flexShrink: 0, width: '180px' }}>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            style={{ width: '100%', height: '30px', padding: '0 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card)', fontSize: '11.5px', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
+          >
+            <option value="semua">Semua Status ({cases.length})</option>
+            {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v} ({statusCounts[k] || 0})</option>)}
+          </select>
+        </div>
+        <div style={{ flexShrink: 0 }}>
+          <DownloadButton
+            variant="compact"
+            filename="Register_PAK_Tambang"
+            title="Register PAK Tambang"
+            getData={tableDataForExport}
+          />
         </div>
       </div>
 
@@ -246,8 +294,8 @@ export default function PakRegister() {
       ) : (
         <>
           {/* Tabel kasus */}
-          <div className="rounded-xl border overflow-x-auto">
-            <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+          <div className="mcu-records-table-wrap" style={{ border: '1px solid var(--border)', borderRadius: '8px', flex: '1 1 auto', minHeight: 360, overflowX: 'auto' }}>
+            <table className="mcu-records-table" style={{ borderCollapse: 'collapse', width: '100%', fontSize: '11.5px' }}>
               <thead><tr>
                 <th className={th}>ID Register</th>
                 <th className={th}>Karyawan</th>
@@ -258,26 +306,26 @@ export default function PakRegister() {
                 <th className={th}>Diagnosis</th>
                 <th className={th}>Batas Waktu</th>
                 <th className={th}>Status</th>
-                {canWrite && <th className={th}>Aksi</th>}
+                {canWrite && <th className={th} style={{ textAlign: 'center' }}>Aksi</th>}
               </tr></thead>
               <tbody>
                 {filtered.map((c) => (
-                  <tr key={c.id} className="hover:bg-accent/40">
+                  <tr key={c.id} className="hover:bg-accent/40" style={{ borderBottom: '1px solid var(--border)' }}>
                     <td className={td} style={{ fontWeight: 800, whiteSpace: 'nowrap' }}>{c.id_register}</td>
                     <td className={td}>
-                      <div style={{ fontWeight: 700 }}>{c.nama_enc ?? '—'}</div>
-                      <div style={{ fontSize: 9.5, color: 'var(--muted-foreground)' }}>{c.jabatan ?? '—'} · {c.department ?? '—'}</div>
+                      <div style={{ fontWeight: 700, fontSize: '12px' }}>{c.nama_enc ?? '—'}</div>
+                      <div style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>{c.jabatan ?? '—'} · {c.department ?? '—'}</div>
                     </td>
-                    <td className={td} style={{ fontSize: 10 }}>
+                    <td className={td} style={{ fontSize: '11px' }}>
                       {SUMBER_DUGAAN.find((s) => s.v === c.sumber_dugaan)?.label.split('(')[0].trim() ?? c.sumber_dugaan}
-                      {c.sumber_detail && <div style={{ fontSize: 9.5, color: 'var(--muted-foreground)' }}>{c.sumber_detail}</div>}
+                      {c.sumber_detail && <div style={{ fontSize: '9.5px', color: 'var(--muted-foreground)' }}>{c.sumber_detail}</div>}
                     </td>
                     <td className={td}>
                       {c.hra_verified ? (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9.5, fontWeight: 700, color: '#00895f', cursor: 'help' }}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '10px', fontWeight: 700, color: '#00895f', cursor: 'help' }}
                           title={`Diverifikasi oleh ${c.hra_verified_by ?? '-'} pada ${fmtJam(c.hra_verified_tgl)}`}>
-                          <ShieldCheck size={13} /> Terverifikasi
-                          <div style={{ fontSize: 9, color: 'var(--muted-foreground)', fontWeight: 400 }}>{c.hra_verified_by}</div>
+                          <ShieldCheck size={12} /> Terverifikasi
+                          <div style={{ fontSize: '9px', color: 'var(--muted-foreground)', fontWeight: 400 }}>{c.hra_verified_by}</div>
                         </span>
                       ) : (
                         canWrite && ['BEROBAT_LUAR', 'PIHAK_LAIN', 'KLUSTER_HRA'].includes(c.sumber_dugaan) ? (
@@ -285,53 +333,54 @@ export default function PakRegister() {
                             size="sm"
                             variant="outline"
                             disabled={saving}
+                            style={{ height: 24, fontSize: '10px', padding: '0 6px' }}
                             title="Klik bila Anda telah memeriksa dokumen HRA dan memastikan pajanan sesuai"
                             onClick={() => patchCase(c.id, { action: 'verify_hra' })}
                           >
-                            <ShieldAlert size={12} /> Konfirmasi HRA
+                            <ShieldAlert size={11} className="mr-1" /> Konfirmasi HRA
                           </Button>
                         ) : (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 700, color: '#9a6b00', cursor: 'help' }}
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '9.5px', fontWeight: 700, color: '#9a6b00', cursor: 'help' }}
                             title="Periksa dokumen HRA (Health Risk Assessment) unit kerja karyawan sebagai rujukan klarifikasi pajanan">
                             <AlertTriangle size={10} /> Belum diverifikasi
                           </span>
                         )
                       )}
                     </td>
-                    <td className={td} style={{ whiteSpace: 'nowrap', fontSize: 10.5 }}>{fmtJam(c.tanggal_diterima)}<div style={{ fontSize: 9.5, color: 'var(--muted-foreground)' }}>{c.diterima_oleh}</div></td>
-                    <td className={td} style={{ fontSize: 10 }}>
+                    <td className={td} style={{ whiteSpace: 'nowrap', fontSize: '11px' }}>{fmtJam(c.tanggal_diterima)}<div style={{ fontSize: '9.5px', color: 'var(--muted-foreground)' }}>{c.diterima_oleh}</div></td>
+                    <td className={td} style={{ fontSize: '11px' }}>
                       {c.triase_keputusan
-                        ? <><b>{c.triase_keputusan === 'TIDAK_MEMENUHI' ? 'Tidak memenuhi' : c.triase_keputusan === 'LANJUT_PAK02' ? 'Lanjut pemeriksaan' : 'Perlu tambahan'}</b><div style={{ fontSize: 9.5, color: 'var(--muted-foreground)' }}>{fmtJam(c.triase_tgl)}</div></>
+                        ? <><b>{c.triase_keputusan === 'TIDAK_MEMENUHI' ? 'Tidak memenuhi' : c.triase_keputusan === 'LANJUT_PAK02' ? 'Lanjut pemeriksaan' : 'Perlu tambahan'}</b><div style={{ fontSize: '9.5px', color: 'var(--muted-foreground)' }}>{fmtJam(c.triase_tgl)}</div></>
                         : <DeadlineBadge sisaJam={c.deadline_info?.triaseSisaJam ?? null} label="Triase" />}
                     </td>
-                    <td className={td} style={{ fontSize: 10 }}>
+                    <td className={td} style={{ fontSize: '11px' }}>
                       {c.diagnosis_okupasi
-                        ? <><b>{c.diagnosis_okupasi}</b>{c.kelaikan_kerja && <div style={{ fontSize: 9.5, color: 'var(--muted-foreground)' }}>{c.kelaikan_kerja}</div>}</>
+                        ? <><b>{c.diagnosis_okupasi}</b>{c.kelaikan_kerja && <div style={{ fontSize: '9.5px', color: 'var(--muted-foreground)' }}>{c.kelaikan_kerja}</div>}</>
                         : '—'}
                     </td>
-                    <td className={td} style={{ fontSize: 10 }}>
+                    <td className={td} style={{ fontSize: '11px' }}>
                       <DeadlineBadge sisaJam={c.deadline_info?.laporanMedisSisaJam ?? null} label="Lap. medis" />
-                      <div style={{ marginTop: 4 }}>
+                      <div style={{ marginTop: 2 }}>
                         <DeadlineBadge sisaJam={c.deadline_info?.tahap1SisaJam ?? null} label="Tahap I" />
                       </div>
                     </td>
                     <td className={td}>
-                      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 999, fontSize: 9.5, fontWeight: 800, background: `${STATUS_COLOR[c.status] ?? '#778899'}18`, color: STATUS_COLOR[c.status] ?? '#778899' }}>
+                      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 999, fontSize: '9.5px', fontWeight: 800, background: `${STATUS_COLOR[c.status] ?? '#778899'}18`, color: STATUS_COLOR[c.status] ?? '#778899' }}>
                         {STATUS_LABEL[c.status] ?? c.status}
                       </span>
                     </td>
                     {canWrite && (
-                      <td className={td}>
-                        <div className="flex gap-1">
-                          <Button size="sm" variant="outline" onClick={() => window.print()} title="Cetak formulir"><Printer size={12} /></Button>
-                          <Button size="sm" variant="ghost" onClick={() => deleteCase(c.id)} title="Hapus"><Trash2 size={12} className="text-destructive" /></Button>
+                      <td className={td} style={{ textAlign: 'center' }}>
+                        <div className="flex gap-1 justify-center">
+                          <Button size="sm" variant="outline" style={{ height: 24, width: 24, padding: 0 }} onClick={() => window.print()} title="Cetak formulir"><Printer size={11} /></Button>
+                          <Button size="sm" variant="ghost" style={{ height: 24, width: 24, padding: 0 }} onClick={() => deleteCase(c.id)} title="Hapus"><Trash2 size={11} className="text-destructive" /></Button>
                         </div>
                       </td>
                     )}
                   </tr>
                 ))}
                 {!filtered.length && (
-                  <tr><td colSpan={canWrite ? 10 : 9} style={{ padding: 32, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>
+                  <tr><td colSpan={canWrite ? 10 : 9} style={{ padding: 24, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 11.5 }}>
                     Belum ada kasus PAK pada filter ini.
                   </td></tr>
                 )}

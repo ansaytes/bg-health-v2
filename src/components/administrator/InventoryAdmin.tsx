@@ -323,51 +323,54 @@ export default function InventoryAdmin() {
   };
 
   const inputStyle: React.CSSProperties = {
-    width: '100%', height: 38, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)', padding: '0 12px', fontSize: 13, color: 'var(--foreground)', outline: 'none'
+    width: '100%', height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)', padding: '0 8px', fontSize: 11.5, color: 'var(--foreground)', outline: 'none'
   };
   const inventoryHeaderCellStyle: React.CSSProperties = {
-    padding: '10px 12px',
+    padding: '6px 10px',
     borderBottom: '1px solid var(--border)',
     fontWeight: 600,
+    fontSize: '11px',
     whiteSpace: 'nowrap',
     background: 'var(--background)',
     color: 'var(--foreground)',
   };
 
   return (
-    <div className="admin-form-container" style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '0 24px 8px 24px', height: '100%', minHeight: 0 }}>
+    <div className="admin-form-container" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '0 16px 8px 16px', height: '100%', minHeight: 0 }}>
 
-      {/* HEADER LAYOUT: SYMMETRICAL & APPLE-LIKE */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid var(--border)' }}>
+      {/* HEADER LAYOUT: Standard Admin Form Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0 4px', borderBottom: '1px solid var(--border)' }}>
         <div>
-          <h2 style={{ fontWeight: 700, letterSpacing: '-0.02em', fontSize: '20px', margin: 0, color: 'var(--foreground)' }}>Stok Obat & BHP</h2>
-          <p style={{ color: 'var(--muted-foreground)', fontSize: '13px', margin: '4px 0 0 0' }}>Sistem FIFO/FEFO Otomatis berbasis Batch.</p>
+          <h1 className="admin-form-title">Stok Obat &amp; BHP</h1>
+          <p className="admin-form-subtitle">Sistem FEFO/FIFO otomatis berbasis batch untuk pengelolaan obat &amp; bahan medis habis pakai.</p>
         </div>
-        <Button onClick={() => setIsAddOpen(true)} style={{ borderRadius: '999px', padding: '0 20px', fontWeight: 600, border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-          <Plus size={16} className="mr-2" /> Tambah Item Master
-        </Button>
+        <button
+          type="button"
+          onClick={() => setIsAddOpen(true)}
+          className="admin-form-btn-primary compact-btn"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 30, fontSize: 11.5 }}
+        >
+          <Plus size={14} /> Tambah Item Master
+        </button>
       </div>
 
-      {/* Toolbar TANPA latar card: sebelumnya kotak putih membentang selebar
-          halaman dan menyisakan area putih di kiri-kanan pencarian. Sekarang
-          toolbar transparan (menyatu dengan background), sedangkan kotak
-          pencarian & filter yang BERWARNA PUTIH agar menonjol. */}
-      <div className="mcu-records-toolbar" style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'transparent', padding: '0', border: 'none', flexWrap: 'nowrap' }}>
-        <div className="mcu-records-search" style={{ flex: '1 1 0px', minWidth: 0, display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--card)', padding: '0 12px', height: '38px', borderRadius: '6px', border: '1px solid var(--border)', boxSizing: 'border-box' }}>
-          <Search size={16} className="text-muted-foreground" style={{ flexShrink: 0 }} />
+      {/* Toolbar */}
+      <div className="mcu-records-toolbar" style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'transparent', padding: '0', border: 'none', flexWrap: 'nowrap' }}>
+        <div className="mcu-records-search" style={{ flex: '1 1 0px', minWidth: 0, display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--card)', padding: '0 10px', height: '30px', borderRadius: '6px', border: '1px solid var(--border)', boxSizing: 'border-box' }}>
+          <Search size={14} className="text-muted-foreground" style={{ flexShrink: 0 }} />
           <input
             type="text"
             placeholder="Cari nama obat atau bahan medis..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontSize: '13px', height: '100%' }}
+            style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontSize: '11.5px', height: '100%' }}
           />
         </div>
-        <div style={{ flexShrink: 0, width: '180px' }}>
+        <div style={{ flexShrink: 0, width: '160px' }}>
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            style={{ width: '100%', height: '38px', padding: '0 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card)', fontSize: '13px', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
+            style={{ width: '100%', height: '30px', padding: '0 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card)', fontSize: '11.5px', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
           >
             <option value="Semua">Semua Kategori</option>
             <option value="Obat">Obat</option>
@@ -375,12 +378,12 @@ export default function InventoryAdmin() {
             <option value="Lainnya">Lainnya</option>
           </select>
         </div>
-        <div style={{ flexShrink: 0, width: '170px' }}>
+        <div style={{ flexShrink: 0, width: '160px' }}>
           <select
             value={stockFilter}
             onChange={(e) => setStockFilter(e.target.value as StockFilter)}
             title="Filter klasifikasi status stok"
-            style={{ width: '100%', height: '38px', padding: '0 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card)', fontSize: '13px', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
+            style={{ width: '100%', height: '30px', padding: '0 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card)', fontSize: '11.5px', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
           >
             <option value="Semua">Semua Status Stok</option>
             <option value="Aman">Aman</option>
@@ -400,8 +403,8 @@ export default function InventoryAdmin() {
         </div>
       </div>
 
-      <div className="mcu-records-table-wrap inventory-admin-table-wrap" style={{ border: '1px solid var(--border)', borderRadius: '10px', flex: '1 1 auto', minHeight: 380, maxHeight: 'calc(100dvh - 200px)' }}>
-        <table className="mcu-records-table inventory-admin-table" style={{ borderCollapse: 'collapse', fontSize: '13px' }}>
+      <div className="mcu-records-table-wrap inventory-admin-table-wrap" style={{ border: '1px solid var(--border)', borderRadius: '8px', flex: '1 1 auto', minHeight: 380, maxHeight: 'calc(100dvh - 180px)' }}>
+        <table className="mcu-records-table inventory-admin-table" style={{ borderCollapse: 'collapse', fontSize: '11.5px' }}>
           <thead style={{ background: 'var(--muted)', textAlign: 'left', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             <tr>
               <th style={inventoryHeaderCellStyle}>No</th>
@@ -430,7 +433,7 @@ export default function InventoryAdmin() {
               </tr>
             ) : filteredItems.length === 0 ? (
               <tr>
-                <td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                <td colSpan={9} style={{ padding: '24px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
                   {error ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
                       <span>Gagal memuat data: {error}</span>
@@ -449,53 +452,53 @@ export default function InventoryAdmin() {
 
                 return (
                   <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '10px 12px', color: 'var(--muted-foreground)' }}>{idx + 1}</td>
-                    <td style={{ padding: '10px 12px' }}>
-                      <div style={{ fontWeight: 600 }}>{item.name}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--muted-foreground)', marginTop: '2px' }}>{item.category}</div>
+                    <td style={{ padding: '6px 10px', color: 'var(--muted-foreground)' }}>{idx + 1}</td>
+                    <td style={{ padding: '6px 10px' }}>
+                      <div style={{ fontWeight: 600, fontSize: '12px' }}>{item.name}</div>
+                      <div style={{ fontSize: '10px', color: 'var(--muted-foreground)', marginTop: '1px' }}>{item.category}</div>
                     </td>
 
-                    <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
                       {item.tanggal_masuk ? new Date(item.tanggal_masuk).toLocaleDateString('id-ID') : '-'}
                     </td>
 
-                    <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
                       {item.tanggal_expired ? new Date(item.tanggal_expired).toLocaleDateString('id-ID') : '-'}
                     </td>
 
-                    <td style={{ padding: '10px 12px' }}>
-                      <div style={{ fontWeight: 700, fontSize: '14px' }}>{item.stock} <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--muted-foreground)' }}>{item.unit}</span></div>
+                    <td style={{ padding: '6px 10px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '12.5px' }}>{item.stock} <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--muted-foreground)' }}>{item.unit}</span></div>
                     </td>
 
-                    <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
-                      <div style={{ fontWeight: 600 }}>{item.avg_monthly_usage || 0} <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--muted-foreground)' }}>{item.unit}</span></div>
+                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontWeight: 600 }}>{item.avg_monthly_usage || 0} <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--muted-foreground)' }}>{item.unit}</span></div>
                       {isFastMoving && (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 3, fontSize: 10, fontWeight: 700, color: '#00838f' }}>
-                          <Clock size={10} /> Fast Moving
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 2, fontSize: '9.5px', fontWeight: 700, color: '#00838f' }}>
+                          <Clock size={9} /> Fast Moving
                         </div>
                       )}
                     </td>
 
-                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                      <span style={{ background: stockBadge.bg, color: stockBadge.color, padding: '3px 8px', borderRadius: 4, fontSize: 10.5, fontWeight: 800 }}>
+                    <td style={{ padding: '6px 10px', textAlign: 'center' }}>
+                      <span style={{ background: stockBadge.bg, color: stockBadge.color, padding: '2px 6px', borderRadius: 4, fontSize: '9.5px', fontWeight: 800 }}>
                         {stockStatus.toUpperCase()}
                       </span>
                     </td>
 
-                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                      <span style={{ background: expBadge.bg, color: expBadge.color, padding: '3px 8px', borderRadius: 4, fontSize: 10.5, fontWeight: 700 }}>
+                    <td style={{ padding: '6px 10px', textAlign: 'center' }}>
+                      <span style={{ background: expBadge.bg, color: expBadge.color, padding: '2px 6px', borderRadius: 4, fontSize: '9.5px', fontWeight: 700 }}>
                         {expStatus}
                       </span>
                     </td>
 
-                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                        <Button size="sm" variant="outline" title="Tambah Stok / Restock (Batch Baru)" style={{ padding: '0 8px', height: '28px', fontSize: '12px', background: '#c2410c', color: '#ffffff', border: 'none' }} onClick={() => openRestock(item)}>
-                          <ArchiveRestore size={13} className="mr-1" /> Restock
+                    <td style={{ padding: '6px 10px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                        <Button size="sm" variant="outline" title="Tambah Stok / Restock (Batch Baru)" style={{ padding: '0 6px', height: '26px', fontSize: '11px', background: '#c2410c', color: '#ffffff', border: 'none' }} onClick={() => openRestock(item)}>
+                          <ArchiveRestore size={12} className="mr-1" /> Restock
                         </Button>
-                        <Button size="sm" variant="ghost" title={`Edit ${item.name}`} style={{ width: '28px', height: '28px', padding: 0 }} onClick={() => openEdit(item)}><Edit size={14} /></Button>
+                        <Button size="sm" variant="ghost" title={`Edit ${item.name}`} style={{ width: '26px', height: '26px', padding: 0 }} onClick={() => openEdit(item)}><Edit size={13} /></Button>
                         {isSuperuser && (
-                          <Button size="sm" variant="ghost" title={`Hapus ${item.name}`} disabled={deletingItemId === item.id} style={{ width: '28px', height: '28px', padding: 0 }} className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => void handleDeleteItem(item)}><Trash2 size={14} /></Button>
+                          <Button size="sm" variant="ghost" title={`Hapus ${item.name}`} disabled={deletingItemId === item.id} style={{ width: '26px', height: '26px', padding: 0 }} className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => void handleDeleteItem(item)}><Trash2 size={13} /></Button>
                         )}
                       </div>
                     </td>

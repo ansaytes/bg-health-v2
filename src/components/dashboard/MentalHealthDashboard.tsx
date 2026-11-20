@@ -304,7 +304,7 @@ export default function MentalHealthDashboard() {
           tidak informatif untuk menentukan prioritas tindak lanjut.
 
           SDS-30 diperluas menjadi tiga kartu (pelaporan UKL — Kepdirjen
-          Minerba 1855.K/2019):
+          Minerba No. 185.K/37.04/DJB/2019):
             • Rata-rata skor per indikator (5–35)
             • Sebaran derajat: ringan <10 · sedang 10–24 · berat >24
             • Indikator dengan kategori berat terbanyak → prioritas
@@ -333,7 +333,7 @@ export default function MentalHealthDashboard() {
         </MCUChartCard>
 
         {/* SDS-30 — instrumen faktor psikologi kerja (Lampiran Permenaker
-            5/2018), dipakai UKL untuk pelaporan Kepdirjen Minerba 1855.K/2019.
+            5/2018), dipakai UKL untuk pelaporan Kepdirjen Minerba No. 185.K/37.04/DJB/2019.
             6 indikator × 5 item, skor indikator 5–35. Kategori derajat
             (hal. 207 Permenaker 5/2018): ringan <10 · sedang 10–24 · berat >24.
             Tiga diagram ini disusun agar laporan UKL langsung terbaca:

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { CloudUpload, Loader2, Save } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authFetch } from '@/lib/api-client';
@@ -99,9 +100,13 @@ export default function IntegrationSettings({ canEdit }: { canEdit: boolean }) {
         method: 'PUT',
         body: JSON.stringify({ drive: settings.drive }),
       });
-      setMessage('Folder Google Drive berhasil disimpan.');
+      const msg = 'Pengaturan folder Google Drive berhasil disimpan.';
+      setMessage(msg);
+      toast.success(msg);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Gagal menyimpan folder Google Drive.');
+      const errMsg = error instanceof Error ? error.message : 'Gagal menyimpan folder Google Drive.';
+      setMessage(errMsg);
+      toast.error(errMsg);
     } finally {
       setSaving(false);
     }

@@ -157,12 +157,12 @@ export default function InputJadwalMCU() {
   );
 
   return (
-    <div className="admin-form-container mcu-entry-page">
-      <div className="admin-form-header">
-        <div>
-          <h2><CalendarDays size={20} /> Input Jadwal MCU</h2>
-          <p>Atur jadwal MCU berikutnya untuk karyawan sesuai kewenangan site Anda.</p>
-        </div>
+    <div className="admin-form-container mcu-entry-page" style={{ padding: '0 16px 8px 16px', height: '100%', minHeight: 0 }}>
+      <div style={{ marginBottom: 8, paddingBottom: 4, borderBottom: '1px solid var(--border)' }}>
+        <h1 className="admin-form-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <CalendarDays size={15} className="text-primary" /> Input Jadwal MCU
+        </h1>
+        <p className="admin-form-subtitle">Atur jadwal Medical Check Up berkala untuk karyawan sesuai kewenangan jobsite.</p>
       </div>
       {message && <div className="admin-alert">{message}</div>}
       <div className="mcu-entry-toolbar">

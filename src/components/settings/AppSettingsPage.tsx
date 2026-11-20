@@ -250,32 +250,92 @@ export default function AppSettingsPage() {
           <section style={{ background: 'var(--card)', borderRadius: 12, padding: 16, border: '1px solid var(--border)' }}>
             <div className="flex items-center gap-2 mb-1">
               <Clock className="size-4 text-primary" />
-              <h3 style={{ fontSize: 12.5, fontWeight: 700, margin: 0 }}>Batas Waktu PAK</h3>
+              <h3 style={{ fontSize: 12.5, fontWeight: 700, margin: 0 }}>Rujukan Statutori Batas Waktu Pelaporan PAK</h3>
             </div>
             <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: '0 0 12px' }}>
-              Dipakai untuk menghitung tenggat tindak lanjut dan pelaporan PAK.
+              Batas waktu pelaporan Penyakit Akibat Kerja (PAK) merupakan kewajiban hukum yang mengikat sesuai peraturan perundang-undangan Republik Indonesia. Sistem menggunakan parameter statutori berikut untuk memonitor kepatuhan dan menghitung tenggat waktu pelaporan otomatis di Register PAK.
             </p>
+
+            <div style={{
+              background: 'rgba(0,184,148,0.06)',
+              border: '1px solid rgba(0,184,148,0.25)',
+              borderRadius: 8,
+              padding: '10px 14px',
+              marginBottom: 14,
+              fontSize: 11,
+              lineHeight: 1.5,
+              color: 'var(--foreground)',
+            }}>
+              <div style={{ fontWeight: 700, color: '#00895f', marginBottom: 2 }}>
+                ⚖️ Dasar Hukum Wajib (Statutory Compliance):
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 18, listStyleType: 'disc' }}>
+                <li><b>Permenaker No. 01/MEN/1981 Pasal 4 ayat (1):</b> Kewajiban melaporkan Penyakit Akibat Kerja dalam waktu 2 × 24 jam setelah diagnosis ditegakkan.</li>
+                <li><b>PP No. 44 Tahun 2015 Pasal 25 ayat (2):</b> Laporan penyakit akibat kerja wajib disampaikan paling lambat 2 × 24 jam sejak diagnosis ditegakkan ke BPJS Ketenagakerjaan dan Dinas Ketenagakerjaan setempat.</li>
+                <li><b>Kepmen ESDM No. 1827 K/30/MEM/2018 &amp; Kepdirjen Minerba No. 185.K/37.04/DJB/2019:</b> Tata kelola pelaporan PAK dan kejadian berbahaya pada operasional pertambangan mineral dan batubara.</li>
+              </ul>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1">
-                <span className={labelCls}>Triase Dokter (hari kerja sejak diterima)</span>
-                <Input type="number" min={1} max={10} className={inputCls} value={draft.pak.triaseHariKerja} disabled={!canEdit} onChange={(e) => set('pak.triaseHariKerja', Number(e.target.value))} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className={labelCls}>Laporan Medis ke QSHE Manager (×24 jam)</span>
-                <Input type="number" min={1} max={72} className={inputCls} value={draft.pak.laporanMedisJam} disabled={!canEdit} onChange={(e) => set('pak.laporanMedisJam', Number(e.target.value))} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className={labelCls}>Laporan Tahap I ke BPJS (×24 jam sejak diagnosis)</span>
-                <Input type="number" min={24} max={168} className={inputCls} value={draft.pak.tahapSatuJam} disabled={!canEdit} onChange={(e) => set('pak.tahapSatuJam', Number(e.target.value))} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className={labelCls}>Kesimpulan BPJS TK (hari kalender)</span>
-                <Input type="number" min={7} max={90} className={inputCls} value={draft.pak.kesimpulanBpjsHari} disabled={!canEdit} onChange={(e) => set('pak.kesimpulanBpjsHari', Number(e.target.value))} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className={labelCls}>Jawab Permintaan Info BPJS/Pengawas (hari kerja)</span>
-                <Input type="number" min={1} max={30} className={inputCls} value={draft.pak.jawabInfoHariKerja} disabled={!canEdit} onChange={(e) => set('pak.jawabInfoHariKerja', Number(e.target.value))} />
-              </label>
+              <div style={{ background: 'var(--background)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700 }}>Pelaporan Tahap I ke BPJS &amp; Disnaker</span>
+                  <span style={{ fontSize: 9.5, fontWeight: 700, background: 'rgba(255,45,45,0.12)', color: '#FF2D2D', padding: '2px 6px', borderRadius: 4 }}>
+                    Statutori Wajib
+                  </span>
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--brand-primary)', margin: '4px 0' }}>
+                  2 × 24 Jam (48 Jam)
+                </div>
+                <p style={{ fontSize: 9.5, color: 'var(--muted-foreground)', margin: 0 }}>
+                  Terhitung sejak tanggal diagnosis klinis / okupasi ditegakkan oleh dokter pemeriksa. Formulir 3 KK3 wajib terbit.
+                </p>
+              </div>
+
+              <div style={{ background: 'var(--background)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700 }}>Triase Dokter Perusahaan</span>
+                  <span style={{ fontSize: 9.5, fontWeight: 700, background: 'rgba(0,184,148,0.12)', color: '#00895f', padding: '2px 6px', borderRadius: 4 }}>
+                    SOP Medis
+                  </span>
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--foreground)', margin: '4px 0' }}>
+                  2 Hari Kerja
+                </div>
+                <p style={{ fontSize: 9.5, color: 'var(--muted-foreground)', margin: 0 }}>
+                  Verifikasi dugaan kasus sejak diterima dari hasil MCU, klinik, atau kluster HRA untuk penentuan kelayakan kerja.
+                </p>
+              </div>
+
+              <div style={{ background: 'var(--background)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700 }}>Laporan Medis ke KTT / QSHE</span>
+                  <span style={{ fontSize: 9.5, fontWeight: 700, background: 'rgba(0,184,148,0.12)', color: '#00895f', padding: '2px 6px', borderRadius: 4 }}>
+                    SMKP Minerba
+                  </span>
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--foreground)', margin: '4px 0' }}>
+                  24 Jam
+                </div>
+                <p style={{ fontSize: 9.5, color: 'var(--muted-foreground)', margin: 0 }}>
+                  Laporan hasil diagnosis okupasi dari tim medis internal ke Kepala Teknik Tambang (KTT) &amp; QSHE Manager.
+                </p>
+              </div>
+
+              <div style={{ background: 'var(--background)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700 }}>Target Kesimpulan BPJS TK (Tahap II)</span>
+                  <span style={{ fontSize: 9.5, fontWeight: 700, background: 'rgba(255,122,0,0.12)', color: '#d97706', padding: '2px 6px', borderRadius: 4 }}>
+                    Klaim Asuransi
+                  </span>
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--foreground)', margin: '4px 0' }}>
+                  30 Hari Kalender
+                </div>
+                <p style={{ fontSize: 9.5, color: 'var(--muted-foreground)', margin: 0 }}>
+                  Monitoring penerbitan penetapan jaminan atau rekomendasi medis lanjutan dari BPJS Ketenagakerjaan.
+                </p>
+              </div>
             </div>
           </section>
         )}

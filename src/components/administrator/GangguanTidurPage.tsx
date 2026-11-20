@@ -105,20 +105,16 @@ export default function GangguanTidurPage() {
   const canSave = !!identity && filled > 0 && submit.status !== 'saving';
 
   return (
-    <div className="qh-page">
-      <header className="qh-page-head">
-        <h2>Gangguan Tidur</h2>
-        <p>
-          Epworth Sleepiness Scale — parameter <strong>Kualitas Tidur</strong> pada STD-006 Rev001.
-          Delapan pertanyaan tentang kantuk di berbagai situasi, skor 0 sampai 32.
-        </p>
-        <p>
-          ESS di atas 15 berarti <strong>tidak layak operasi alat berat atau shift malam</strong>.
-          Jadwalkan pemeriksaan ini secara berkala, tidak hanya saat MCU.
-        </p>
-      </header>
+    <div className="admin-form-container" style={{ padding: '0 16px 8px 16px', height: '100%', minHeight: 0, overflowY: 'auto' }}>
+      <div className="admin-form-inner" style={{ maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ padding: '8px 0 4px', borderBottom: '1px solid var(--border)' }}>
+          <h1 className="admin-form-title">Gangguan Tidur</h1>
+          <p className="admin-form-subtitle">
+            Epworth Sleepiness Scale (ESS) — Evaluasi kantuk siang hari (ambang kritis &gt; 15 tidak layak alat berat / shift malam) sesuai STD-006 Rev001.
+          </p>
+        </div>
 
-      <StatusBanner status={error ? 'error' : submit.status} message={error || submit.message} />
+        <StatusBanner status={error ? 'error' : submit.status} message={error || submit.message} />
 
       <IdentityPanel
         query={query}
@@ -160,6 +156,7 @@ export default function GangguanTidurPage() {
       />
 
       <ResultDialog data={resultDialog} onClose={() => setResultDialog(null)} />
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -563,9 +563,8 @@ export default function InventoryDashboard() {
               {/* Header Bar */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexShrink: 0 }}>
                 <div>
-                  <h1 style={{ fontSize: 17, fontWeight: 700, color: 'var(--foreground)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Boxes size={18} color="var(--brand-primary, #ff4d00)" />
-                    Stok Obat & BHP
+                  <h1 style={{ fontSize: 17, fontWeight: 700, color: 'var(--foreground)', margin: 0 }}>
+                    Stok Obat &amp; BHP
                   </h1>
                 </div>
 
@@ -575,121 +574,28 @@ export default function InventoryDashboard() {
                     onClick={() => loadData(true)}
                     title="Refresh Data"
                     style={{
-                      height: 34,
+                      height: 32,
                       padding: '0 12px',
                       borderRadius: 8,
                       border: '1px solid var(--border)',
                       background: 'var(--background)',
                       color: 'var(--foreground)',
-                      fontSize: 12,
-                      fontWeight: 500,
+                      fontSize: 11.5,
+                      fontWeight: 600,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 6,
                     }}
                   >
-                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                    <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
                     Refresh
                   </button>
                 </div>
               </div>
 
-              {/* KPI Cards Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginBottom: 10, flexShrink: 0 }}>
-                {/* Card 1: Obat Habis */}
-                <div
-                  className="card glow-coral"
-                  style={{ padding: '8px 10px' }}
-                  title="Jumlah item dengan stok habis"
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 10, color: '#dc2626', fontWeight: 700 }}>Stok Habis</span>
-                    <AlertCircle size={14} color="#FF4444" />
-                  </div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#FF4444', marginTop: 2, lineHeight: 1.1 }}>
-                    {habisItems.length}
-                  </div>
-                  <div style={{ fontSize: 10, color: habisItems.length > 0 ? '#b91c1c' : 'var(--muted-foreground)', marginTop: 2, fontWeight: 500 }}>
-                    {habisItems.length > 0 ? 'Order segera' : 'Tersedia'}
-                  </div>
-                </div>
-
-                {/* Card 2: Stok Kritis / Menipis */}
-                <div
-                  className="card glow-amber"
-                  style={{ padding: '8px 10px' }}
-                  title="Jumlah item dengan stok menipis"
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 10, color: '#9a6b00', fontWeight: 700 }}>Stok Menipis</span>
-                    <AlertTriangle size={14} color="#E6B800" />
-                  </div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#E6B800', marginTop: 2, lineHeight: 1.1 }}>
-                    {kritisItems.length}
-                  </div>
-                  <div style={{ fontSize: 10, color: '#9a6b00', marginTop: 2, fontWeight: 500 }}>
-                    &lt; 3 bulan pemakaian
-                  </div>
-                </div>
-
-                {/* Card 3: Top Fast-Moving Item #1 */}
-                <div
-                  className="card glow-teal"
-                  style={{ padding: '8px 10px' }}
-                  title="Item dengan pemakaian rata-rata tertinggi per bulan"
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 10, color: '#00838f', fontWeight: 700 }}>Fast-Moving</span>
-                    <Boxes size={14} color="#00BCD4" />
-                  </div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--foreground)', marginTop: 4, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {topFastItem?.name || '-'}
-                  </div>
-                  <div style={{ fontSize: 10.5, color: '#00BCD4', marginTop: 2, fontWeight: 700 }}>
-                    {topFastItem?.avg_monthly_usage || 0} {topFastItem?.unit || 'unit'}/bln
-                  </div>
-                </div>
-
-                {/* Card 4: Segera Expired (< 3 Bulan) */}
-                <div
-                  className="card glow-orange"
-                  style={{ padding: '8px 10px' }}
-                  title="Jumlah item yang akan kedaluwarsa dalam 3 bulan ke depan"
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 10, color: '#c2410c', fontWeight: 700 }}>Expired &lt; 3 Bln</span>
-                    <Clock size={14} color="#E67E22" />
-                  </div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#E67E22', marginTop: 2, lineHeight: 1.1 }}>
-                    {expSoonItems.length}
-                  </div>
-                  <div style={{ fontSize: 10, color: '#9a3412', marginTop: 2, fontWeight: 500 }}>
-                    Prioritas FEFO
-                  </div>
-                </div>
-
-                {/* Card 5: Sudah Kadaluarsa */}
-                <div
-                  className="card glow-coral"
-                  style={{ padding: '8px 10px' }}
-                  title="Jumlah item yang sudah kedaluwarsa"
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 10, color: '#dc2626', fontWeight: 700 }}>Sudah Expired</span>
-                    <ShieldAlert size={14} color="#dc2626" />
-                  </div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#dc2626', marginTop: 2, lineHeight: 1.1 }}>
-                    {expiredItems.length}
-                  </div>
-                  <div style={{ fontSize: 10, color: '#991b1b', marginTop: 2, fontWeight: 500 }}>
-                    {expiredItems.length > 0 ? 'Tarik & Berita Acara' : 'Aman'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Grid grafik — dua baris, kartu lebar agar grafik dominan */}
-              <div key="charts-grid" style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1.1fr 1fr', gap: 8 }}>
+              {/* Grid grafik — dua baris, memenuhi satu halaman */}
+              <div key="charts-grid" style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 10 }}>
         {/* Chart 1: Top Sudah Expired */}
         <div className="card mcu-dashboard-card glow-coral" data-chart="expired" style={{ padding: '3px 6px' }}>
           <div className="card-head"><div><h2>Stok Obat/BHP Expired</h2><p className="mcu-dashboard-card-sub">10 item stok terbanyak, sudah kedaluwarsa</p></div></div>
