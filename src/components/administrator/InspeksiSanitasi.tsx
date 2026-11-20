@@ -85,10 +85,10 @@ export default function InspeksiSanitasi() {
   const jumlahTerisi = Object.values(nilai).filter((v) => v !== null && v !== undefined).length;
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '90%', margin: '0 auto' }}>
+    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '94%', margin: '0 auto' }}>
       <div className="admin-form-inner">
         {/* Header Title */}
-        <div style={{ marginBottom: 14 }}>
+        <div style={{ marginBottom: 8 }}>
           <h1 className="admin-form-title">Inspeksi Higiene &amp; Sanitasi</h1>
           <p className="admin-form-subtitle">
             Standar kepatuhan fasilitas sanitasi tempat kerja (toilet, air minum, pengendalian vektor, dan limbah padat) sesuai standar K3 Lingkungan Kerja.

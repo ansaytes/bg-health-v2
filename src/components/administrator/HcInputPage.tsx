@@ -28,9 +28,9 @@ export default function HcInputPage() {
   useEffect(() => { const id = setTimeout(loadAreas, 0); return () => clearTimeout(id); }, [loadAreas]);
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '90%', margin: '0 auto' }}>
+    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '94%', margin: '0 auto' }}>
       <div className="admin-form-inner">
-        <div style={{ marginBottom: 14 }}>
+        <div style={{ marginBottom: 8 }}>
           <h1 className="admin-form-title">Hearing Conservation</h1>
           <p className="admin-form-subtitle">Noise mapping, klasifikasi karyawan terpajan, dan master area. Data audiometri dibaca dari Record MCU.</p>
         </div>

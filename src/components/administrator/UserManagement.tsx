@@ -169,17 +169,17 @@ export default function UserManagement() {
 
   return (
     <div className="admin-form-inner">
-      <div style={{ marginBottom: 16, flexShrink: 0 }}>
+      <div style={{ marginBottom: 8, flexShrink: 0 }}>
         <h1 className="admin-form-title">Kelola Pengguna</h1>
         <p className="admin-form-subtitle">Kelola akun dan akses pengguna sistem BG-Health</p>
       </div>
 
       {isSuperuser && (
-        <div style={{ flexShrink: 0, marginBottom: 12 }}>
+        <div style={{ flexShrink: 0, marginBottom: 8 }}>
           <button
             onClick={() => { setShowRegister(!showRegister); setRegError(''); setRegSuccess(''); }}
             className={`admin-form-btn-${showRegister ? 'secondary' : 'primary'}`}
-            style={{ flex: 'unset', width: 'auto', padding: '0 18px', height: 38, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            style={{ flex: 'unset', width: 'auto', padding: '0 14px', height: 32, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11.5 }}
           >
             {showRegister ? 'Tutup Form' : 'Tambah Pengguna'}
           </button>

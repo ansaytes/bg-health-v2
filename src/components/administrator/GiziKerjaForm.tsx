@@ -145,10 +145,10 @@ export default function GiziKerjaForm() {
       : '#FF2D2D';
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '90%', margin: '0 auto' }}>
+    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '94%', margin: '0 auto' }}>
       <div className="admin-form-inner">
         {/* Header Title */}
-        <div style={{ marginBottom: 14 }}>
+        <div style={{ marginBottom: 8 }}>
           <h1 className="admin-form-title">Inspeksi Jasaboga &amp; Gizi Kerja</h1>
           <p className="admin-form-subtitle">
             Standar kelaikan higiene sanitasi jasaboga/kantin dan evaluasi pemenuhan kalori menu katering pekerja lapangan sesuai regulasi kesehatan kerja.

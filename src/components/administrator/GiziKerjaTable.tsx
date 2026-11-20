@@ -78,10 +78,10 @@ export default function GiziKerjaTable() {
     : 0;
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '90%', margin: '0 auto' }}>
+    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '94%', margin: '0 auto' }}>
       <div className="admin-form-inner">
         {/* Header & Filter */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, flexWrap: 'wrap', gap: 10 }}>
           <div>
             <h1 className="admin-form-title">Riwayat Inspeksi Jasaboga &amp; Gizi Kerja</h1>
             <p className="admin-form-subtitle">

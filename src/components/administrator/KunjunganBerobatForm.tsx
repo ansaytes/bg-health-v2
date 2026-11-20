@@ -1,8 +1,16 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Plus, Trash2, CheckCircle2, Activity, HeartPulse, Thermometer, Stethoscope } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
 import { authFetch } from '@/lib/api-client';
 import { invalidateKunjunganDashboardData } from '@/lib/dashboard-data';
@@ -110,6 +118,48 @@ export default function KunjunganBerobatForm() {
   // Hasil tindak lanjut otomatis (episode karyawan sakit / kasus PAK).
   const [infoMsg, setInfoMsg] = useState('');
 
+  // Riwayat Pasien & Alergi
+  const [patientHistory, setPatientHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [showRiwayatModal, setShowRiwayatModal] = useState(false);
+  const [detectedAllergy, setDetectedAllergy] = useState<string>('');
+
+  const fetchPatientHistory = useCallback(async (nik: string) => {
+    if (!nik || !nik.trim()) {
+      setPatientHistory([]);
+      setDetectedAllergy('');
+      return;
+    }
+    setLoadingHistory(true);
+    try {
+      const res = await fetch(`/api/kunjungan?nik=${encodeURIComponent(nik.trim())}`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        setPatientHistory(json.data);
+        let foundAllergy = '';
+        for (const item of json.data) {
+          const m = String(item.keluhan || '').match(/\[Alergi\]\s*([^\[\n]+)/i);
+          if (m && m[1].trim() && !/tidak\s*ada/i.test(m[1])) {
+            foundAllergy = m[1].trim();
+            break;
+          }
+        }
+        if (foundAllergy) {
+          setDetectedAllergy(foundAllergy);
+          setForm(prev => prev.alergi ? prev : ({ ...prev, alergi: foundAllergy }));
+        } else {
+          setDetectedAllergy('');
+        }
+      } else {
+        setPatientHistory([]);
+      }
+    } catch {
+      setPatientHistory([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, []);
+
   // 1. Fetch master Diagnosa, Dosis, and Inventory items from DB
   useEffect(() => {
     // Diagnosa master table
@@ -150,6 +200,8 @@ export default function KunjunganBerobatForm() {
 
   const handleNewIdentity = () => {
     setIsManualIdentity(true);
+    setPatientHistory([]);
+    setDetectedAllergy('');
     const searchVal = (form.nik || '').trim();
     if (/^[a-zA-Z\s]+$/.test(searchVal) && searchVal.length > 2) {
       setForm(prev => ({ ...prev, nama: searchVal, nik: '' }));
@@ -158,10 +210,17 @@ export default function KunjunganBerobatForm() {
 
   const handleResetToLookup = () => {
     setIsManualIdentity(false);
+    setPatientHistory([]);
+    setDetectedAllergy('');
   };
 
   // 2. Autofill Employee: Jobsite, Jenis Kelamin, Departemen, Usia, Nama
   const handleEmployeeFound = useCallback((data: EmployeeData) => {
+    // NIK & Riwayat
+    if (data.nik) {
+      fetchPatientHistory(data.nik);
+    }
+
     // Nama
     if (data.nama) handleChange('nama', data.nama);
 
@@ -295,6 +354,7 @@ export default function KunjunganBerobatForm() {
 
       const finalKeluhan = [
         tandaVitalParts.length ? `[Tanda Vital] ${tandaVitalParts.join(' | ')}` : '',
+        form.alergi?.trim() ? `[Alergi] ${form.alergi.trim()}` : '',
         form.catatan?.trim() ? `[Keluhan] ${form.catatan.trim()}` : '',
       ].filter(Boolean).join('\n');
 
@@ -366,7 +426,10 @@ export default function KunjunganBerobatForm() {
         kategori: 'Umum',
         absen: 'Tidak',
         rujukRS: 'Tidak',
+        alergi: '',
       });
+      setPatientHistory([]);
+      setDetectedAllergy('');
       setDiagnoses([{ id: Date.now().toString(), text: '' }]);
       setMedications([{ id: Date.now().toString(), nama: '', aturan: '3DD1', jumlah: '10', satuan: 'Tablet' }]);
       setVital({
@@ -400,7 +463,7 @@ export default function KunjunganBerobatForm() {
   };
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', width: '90%', margin: '0 auto' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', width: '94%', margin: '0 auto' }}>
       {/* ─── Datalists terhubung ke Database ─── */}
       <datalist id="dept-datalist">
         {DEPARTMENTS.map((d) => (
@@ -439,7 +502,7 @@ export default function KunjunganBerobatForm() {
 
       <div className="admin-form-inner">
         {/* Header */}
-        <div style={{ marginBottom: 18 }}>
+        <div style={{ marginBottom: 8 }}>
           <h1 className="admin-form-title">Kunjungan Berobat</h1>
           <p className="admin-form-subtitle">Formulir kunjungan berobat dengan integrasi tabel master diagnosa, dosis obat, dan inventory klinik.</p>
         </div>
@@ -484,23 +547,42 @@ export default function KunjunganBerobatForm() {
                           <label className="admin-label" style={{ marginBottom: 0 }}>
                             NIK Pasien <span style={{ color: 'var(--muted-foreground)', fontWeight: 'normal', fontSize: 11 }}>(Opsional jika Magang)</span>
                           </label>
-                          <button
-                            type="button"
-                            onClick={handleResetToLookup}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: 'var(--brand-primary, #ff4d00)',
-                              fontSize: 11,
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 4,
-                            }}
-                          >
-                            🔍 Cari di Master Karyawan
-                          </button>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {form.nama && (
+                              <button
+                                type="button"
+                                className="download-btn-trigger"
+                                onClick={() => setShowRiwayatModal(true)}
+                                style={{
+                                  height: 24,
+                                  padding: '0 10px',
+                                  fontSize: 11,
+                                  borderRadius: 6,
+                                  cursor: 'pointer',
+                                  background: 'linear-gradient(135deg, #ff4d00 0%, #ff6b2b 100%)',
+                                  color: '#fff',
+                                  fontWeight: 600,
+                                  border: 'none',
+                                }}
+                              >
+                                Riwayat {patientHistory.length > 0 ? `(${patientHistory.length})` : ''}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={handleResetToLookup}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--brand-primary, #ff4d00)',
+                                fontSize: 11,
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Cari di Master Karyawan
+                            </button>
+                          </div>
                         </div>
                         <input
                           type="text"
@@ -542,9 +624,36 @@ export default function KunjunganBerobatForm() {
                         }}
                         placeholder={field.placeholder}
                         label={
-                          <span className="admin-label" style={{ marginBottom: 0 }}>
-                            {field.label} <span style={{ color: 'var(--muted-foreground)', fontWeight: 'normal', fontSize: 11 }}>(Opsional)</span>
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 3 }}>
+                            <span className="admin-label" style={{ marginBottom: 0 }}>
+                              {field.label} <span style={{ color: 'var(--muted-foreground)', fontWeight: 'normal', fontSize: 11 }}>(Opsional)</span>
+                            </span>
+                            {(form.nik || form.nama) && (
+                              <button
+                                type="button"
+                                className="download-btn-trigger"
+                                onClick={() => {
+                                  if (form.nik && patientHistory.length === 0) {
+                                    fetchPatientHistory(form.nik);
+                                  }
+                                  setShowRiwayatModal(true);
+                                }}
+                                style={{
+                                  height: 24,
+                                  padding: '0 10px',
+                                  fontSize: 11,
+                                  borderRadius: 6,
+                                  cursor: 'pointer',
+                                  background: 'linear-gradient(135deg, #ff4d00 0%, #ff6b2b 100%)',
+                                  color: '#fff',
+                                  fontWeight: 600,
+                                  border: 'none',
+                                }}
+                              >
+                                Riwayat {patientHistory.length > 0 ? `(${patientHistory.length})` : ''}
+                              </button>
+                            )}
+                          </div>
                         }
                         required={false}
                         inputStyle={inputStyle}
@@ -630,18 +739,14 @@ export default function KunjunganBerobatForm() {
             </div>
 
             {/* ─── TANDA VITAL & PEMERIKSAAN FISIK ─── */}
-            <div style={{ marginTop: 20, padding: '12px 14px', borderRadius: 8, background: 'var(--muted)', border: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <Activity size={16} color="var(--brand-primary, #ff4d00)" />
-                <h4 style={{ fontWeight: 700, fontSize: 13, margin: 0 }}>Tanda Vital &amp; Pemeriksaan Fisik</h4>
-                <span style={{ fontSize: 10.5, color: 'var(--muted-foreground)', marginLeft: 'auto' }}>
-                  Standar Klinis &amp; Triase
-                </span>
+            <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 8, background: 'var(--muted)', border: '1px solid var(--border)' }}>
+              <div style={{ marginBottom: 8 }}>
+                <h4 style={{ fontWeight: 700, fontSize: 12, margin: 0, color: 'var(--foreground)' }}>Tanda Vital &amp; Pemeriksaan Fisik</h4>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8 }}>
                 {/* Tekanan Darah */}
                 <div>
-                  <label className="admin-label" style={{ fontSize: 11, marginBottom: 4 }}>
+                  <label className="admin-label" style={{ fontSize: 10, marginBottom: 2 }}>
                     Tekanan Darah <span style={{ color: 'var(--muted-foreground)' }}>(mmHg)</span>
                   </label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -651,7 +756,7 @@ export default function KunjunganBerobatForm() {
                       value={vital.sistolik}
                       onChange={(e) => setVital((v) => ({ ...v, sistolik: e.target.value }))}
                       className="admin-input"
-                      style={{ ...inputStyle, height: 32, fontSize: 12, padding: '0 6px', textAlign: 'center' }}
+                      style={{ ...inputStyle, height: 28, fontSize: 11, padding: '0 6px', textAlign: 'center' }}
                     />
                     <span>/</span>
                     <input
@@ -660,14 +765,14 @@ export default function KunjunganBerobatForm() {
                       value={vital.diastolik}
                       onChange={(e) => setVital((v) => ({ ...v, diastolik: e.target.value }))}
                       className="admin-input"
-                      style={{ ...inputStyle, height: 32, fontSize: 12, padding: '0 6px', textAlign: 'center' }}
+                      style={{ ...inputStyle, height: 28, fontSize: 11, padding: '0 6px', textAlign: 'center' }}
                     />
                   </div>
                 </div>
 
                 {/* Denyut Nadi */}
                 <div>
-                  <label className="admin-label" style={{ fontSize: 11, marginBottom: 4 }}>
+                  <label className="admin-label" style={{ fontSize: 10, marginBottom: 2 }}>
                     Denyut Nadi <span style={{ color: 'var(--muted-foreground)' }}>(x/mnt)</span>
                   </label>
                   <input
@@ -676,13 +781,13 @@ export default function KunjunganBerobatForm() {
                     value={vital.nadi}
                     onChange={(e) => setVital((v) => ({ ...v, nadi: e.target.value }))}
                     className="admin-input"
-                    style={{ ...inputStyle, height: 32, fontSize: 12 }}
+                    style={{ ...inputStyle, height: 28, fontSize: 11 }}
                   />
                 </div>
 
                 {/* Suhu Tubuh */}
                 <div>
-                  <label className="admin-label" style={{ fontSize: 11, marginBottom: 4 }}>
+                  <label className="admin-label" style={{ fontSize: 10, marginBottom: 2 }}>
                     Suhu Tubuh <span style={{ color: 'var(--muted-foreground)' }}>(°C)</span>
                   </label>
                   <input
@@ -692,13 +797,13 @@ export default function KunjunganBerobatForm() {
                     value={vital.suhu}
                     onChange={(e) => setVital((v) => ({ ...v, suhu: e.target.value }))}
                     className="admin-input"
-                    style={{ ...inputStyle, height: 32, fontSize: 12 }}
+                    style={{ ...inputStyle, height: 28, fontSize: 11 }}
                   />
                 </div>
 
                 {/* Pernapasan */}
                 <div>
-                  <label className="admin-label" style={{ fontSize: 11, marginBottom: 4 }}>
+                  <label className="admin-label" style={{ fontSize: 10, marginBottom: 2 }}>
                     Laju Napas <span style={{ color: 'var(--muted-foreground)' }}>(RR x/mnt)</span>
                   </label>
                   <input
@@ -707,13 +812,13 @@ export default function KunjunganBerobatForm() {
                     value={vital.rr}
                     onChange={(e) => setVital((v) => ({ ...v, rr: e.target.value }))}
                     className="admin-input"
-                    style={{ ...inputStyle, height: 32, fontSize: 12 }}
+                    style={{ ...inputStyle, height: 28, fontSize: 11 }}
                   />
                 </div>
 
                 {/* SpO2 */}
                 <div>
-                  <label className="admin-label" style={{ fontSize: 11, marginBottom: 4 }}>
+                  <label className="admin-label" style={{ fontSize: 10, marginBottom: 2 }}>
                     Saturasi O2 <span style={{ color: 'var(--muted-foreground)' }}>(SpO2 %)</span>
                   </label>
                   <input
@@ -722,23 +827,43 @@ export default function KunjunganBerobatForm() {
                     value={vital.spo2}
                     onChange={(e) => setVital((v) => ({ ...v, spo2: e.target.value }))}
                     className="admin-input"
-                    style={{ ...inputStyle, height: 32, fontSize: 12 }}
+                    style={{ ...inputStyle, height: 28, fontSize: 11 }}
                   />
                 </div>
+              </div>
+
+              {/* Riwayat Alergi */}
+              <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+                <label className="admin-label" style={{ fontSize: 10, marginBottom: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>Riwayat Alergi <span style={{ color: 'var(--muted-foreground)', fontWeight: 'normal' }}>(Obat / Makanan / Zat Lain)</span></span>
+                  {detectedAllergy && (
+                    <span style={{ color: '#ef4444', fontWeight: 700, fontSize: 10 }}>
+                      ⚠️ Terdeteksi di riwayat: {detectedAllergy}
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="text"
+                  placeholder="mis. Alergi Penisilin/Amoxicillin, Sulfa, Seafood (kosongkan atau isi 'Tidak Ada' bila tidak ada)"
+                  value={form.alergi || ''}
+                  onChange={(e) => handleChange('alergi', e.target.value)}
+                  className="admin-input"
+                  style={{ ...inputStyle, height: 28, fontSize: 11 }}
+                />
               </div>
             </div>
 
             {/* ─── DAFTAR DIAGNOSA DENGAN MASTER TABLE 'diagnosa' ─── */}
-            <div style={{ marginTop: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ marginTop: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <div>
-                  <h4 style={{ fontWeight: 600, fontSize: 14 }}>Daftar Diagnosa (Tabel diagnosa)</h4>
-                  <p style={{ fontSize: 11, color: 'var(--muted-foreground)', marginTop: 2 }}>
+                  <h4 style={{ fontWeight: 600, fontSize: 12.5 }}>Daftar Diagnosa (Tabel diagnosa)</h4>
+                  <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', marginTop: 2 }}>
                     Pilih diagnosa dari master dropdown atau ketik diagnosa baru dan simpan langsung ke database master diagnosa.
                   </p>
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={handleAddDiagnosis}>
-                  <Plus size={14} className="mr-2" /> Tambah Diagnosa
+                <Button type="button" variant="outline" size="sm" onClick={handleAddDiagnosis} style={{ height: 28, fontSize: 11 }}>
+                  <Plus size={13} className="mr-1" /> Tambah Diagnosa
                 </Button>
               </div>
 
@@ -799,32 +924,32 @@ export default function KunjunganBerobatForm() {
             </div>
 
             {/* ─── RESEP & OBAT TERHUBUNG KE INVENTORY & DOSIS MASTER ─── */}
-            <div style={{ marginTop: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ marginTop: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <div>
-                  <h4 style={{ fontWeight: 600, fontSize: 14 }}>Resep & Obat / BHP (Terhubung ke Inventory)</h4>
-                  <p style={{ fontSize: 11, color: 'var(--muted-foreground)', marginTop: 2 }}>
+                  <h4 style={{ fontWeight: 600, fontSize: 12.5 }}>Resep & Obat / BHP (Terhubung ke Inventory)</h4>
+                  <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', marginTop: 2 }}>
                     Nama obat dan satuan terhubung otomatis ke database tabel inventory. Dosis terhubung ke master dosis.
                   </p>
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={handleAddMedication}>
-                  <Plus size={14} className="mr-2" /> Tambah Obat
+                <Button type="button" variant="outline" size="sm" onClick={handleAddMedication} style={{ height: 28, fontSize: 11 }}>
+                  <Plus size={13} className="mr-1" /> Tambah Obat
                 </Button>
               </div>
 
-              <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 600, width: 20 }}></span>
-                <span style={{ fontSize: 11, fontWeight: 600, flex: 2 }}>Nama Obat / BHP (Tabel Inventory)</span>
-                <span style={{ fontSize: 11, fontWeight: 600, flex: 1.2 }}>Dosis / Aturan Pakai</span>
-                <span style={{ fontSize: 11, fontWeight: 600, width: 70 }}>Jumlah</span>
-                <span style={{ fontSize: 11, fontWeight: 600, width: 90 }}>Satuan (Auto)</span>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: 10.5, fontWeight: 600, width: 20 }}></span>
+                <span style={{ fontSize: 10.5, fontWeight: 600, flex: 2 }}>Nama Obat / BHP (Tabel Inventory)</span>
+                <span style={{ fontSize: 10.5, fontWeight: 600, flex: 1.2 }}>Dosis / Aturan Pakai</span>
+                <span style={{ fontSize: 10.5, fontWeight: 600, width: 70 }}>Jumlah</span>
+                <span style={{ fontSize: 10.5, fontWeight: 600, width: 90 }}>Satuan (Auto)</span>
                 <span style={{ width: 36 }}></span>
               </div>
 
               {medications.map((med, index) => {
                 const isNewDosis = med.aturan.trim() && !masterDosis.some(d => d.toLowerCase() === med.aturan.trim().toLowerCase());
                 return (
-                  <div key={med.id} style={{ marginBottom: 10 }}>
+                  <div key={med.id} style={{ marginBottom: 6 }}>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       <span style={{ fontSize: 13, color: 'var(--muted-foreground)', width: 20 }}>{index + 1}.</span>
                       <input
@@ -908,7 +1033,7 @@ export default function KunjunganBerobatForm() {
                 {infoMsg}
               </p>
             )}
-            <div style={{ marginTop: 20, display: 'flex', gap: 10 }}>
+            <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
               <button
                 type="submit"
                 disabled={saving}
@@ -924,8 +1049,11 @@ export default function KunjunganBerobatForm() {
                     kategori: 'Umum',
                     absen: 'Tidak',
                     rujukRS: 'Tidak',
+                    alergi: '',
                   });
                   setIsManualIdentity(false);
+                  setPatientHistory([]);
+                  setDetectedAllergy('');
                 }}
                 className="admin-form-btn-secondary"
               >
@@ -935,6 +1063,104 @@ export default function KunjunganBerobatForm() {
           </div>
         </form>
       </div>
+
+      {/* ─── POP-UP RIWAYAT KUNJUNGAN PASIEN ─── */}
+      <Dialog open={showRiwayatModal} onOpenChange={setShowRiwayatModal}>
+        <DialogContent className="sm:max-w-3xl" style={{ maxHeight: '85vh', overflowY: 'auto' }}>
+          <DialogHeader>
+            <DialogTitle style={{ fontSize: 16 }}>Riwayat Kunjungan Pasien</DialogTitle>
+            <DialogDescription>
+              {form.nama || 'Pasien'} · NIK: {form.nik || 'Non-NIK'} · {form.departemen || '-'} · {form.site || '-'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {detectedAllergy && (
+            <div style={{
+              padding: '8px 12px',
+              borderRadius: 6,
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid #ef4444',
+              color: '#ef4444',
+              fontSize: 12,
+              fontWeight: 600,
+            }}>
+              ⚠️ PERINGATAN ALERGI PASIEN: {detectedAllergy}
+            </div>
+          )}
+
+          {loadingHistory ? (
+            <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>
+              Memuat riwayat kunjungan...
+            </div>
+          ) : patientHistory.length === 0 ? (
+            <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>
+              Belum ada riwayat kunjungan sebelumnya untuk pasien ini.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
+              {patientHistory.map((item, idx) => {
+                let diagStr = '-';
+                try {
+                  const p = JSON.parse(item.diagnosa);
+                  diagStr = Array.isArray(p) ? p.join(', ') : String(item.diagnosa || '-');
+                } catch {
+                  diagStr = String(item.diagnosa || '-');
+                }
+
+                let obatStr = '-';
+                try {
+                  const p = JSON.parse(item.jenis_obat);
+                  if (Array.isArray(p)) {
+                    obatStr = p.map((m: any) => m.nama ? `${m.nama} (${m.aturan || ''})` : m).join(', ');
+                  } else {
+                    obatStr = String(item.jenis_obat || '-');
+                  }
+                } catch {
+                  obatStr = String(item.jenis_obat || '-');
+                }
+
+                return (
+                  <div key={item.id || idx} style={{
+                    padding: '12px 14px',
+                    borderRadius: 8,
+                    border: '1px solid var(--border)',
+                    background: 'var(--card)',
+                    fontSize: 12,
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, borderBottom: '1px solid var(--border)', paddingBottom: 6 }}>
+                      <strong style={{ color: 'var(--brand-primary, #ff4d00)' }}>{item.tanggal}</strong>
+                      <span style={{ color: 'var(--muted-foreground)' }}>{item.jobsite || '-'} · Kategori: {item.kategori || 'Umum'}</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div>
+                        <span style={{ color: 'var(--muted-foreground)', display: 'block', fontSize: 11, fontWeight: 600 }}>Anamnesis / Keluhan:</span>
+                        <p style={{ margin: '3px 0', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{item.keluhan || '-'}</p>
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--muted-foreground)', display: 'block', fontSize: 11, fontWeight: 600 }}>Diagnosa Klinis:</span>
+                        <p style={{ margin: '3px 0', fontWeight: 600 }}>{diagStr}</p>
+                        <span style={{ color: 'var(--muted-foreground)', display: 'block', fontSize: 11, fontWeight: 600, marginTop: 6 }}>Terapi / Obat:</span>
+                        <p style={{ margin: '3px 0' }}>{obatStr}</p>
+                        {item.rujuk_rs && (
+                          <span style={{ display: 'inline-block', marginTop: 4, padding: '2px 6px', borderRadius: 4, background: '#fee2e2', color: '#dc2626', fontSize: 10, fontWeight: 600 }}>
+                            Rujuk ke: {item.nama_rs || 'RS Rujukan'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRiwayatModal(false)}>
+              Tutup
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

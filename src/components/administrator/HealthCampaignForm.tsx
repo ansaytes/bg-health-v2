@@ -178,7 +178,7 @@ export default function HealthCampaignForm() {
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto', paddingBottom: 60 }}>
       <div className="admin-form-inner">
         {/* Header */}
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h1 className="admin-form-title">Health Campaign</h1>
             <p className="admin-form-subtitle">Posting konten kampanye kesehatan — tampil di Home page</p>
@@ -186,7 +186,7 @@ export default function HealthCampaignForm() {
           <button
             onClick={() => { if (showForm) { resetForm(); setShowForm(false); } else { resetForm(); setShowForm(true); } }}
             className={`admin-form-btn-${showForm ? 'secondary' : 'primary'}`}
-            style={{ flex: 'unset', width: 'auto', padding: '0 16px', height: 36, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            style={{ flex: 'unset', width: 'auto', padding: '0 14px', height: 32, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11.5 }}
           >
             {showForm ? (
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>

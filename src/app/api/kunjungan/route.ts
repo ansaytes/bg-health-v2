@@ -24,8 +24,17 @@ export async function GET(request: NextRequest) {
     const bulan = searchParams.get('bulan') || '';
     const tahun = searchParams.get('tahun') || '';
     const rujukRs = searchParams.get('rujuk_rs') || '';
+    const nik = searchParams.get('nik') || '';
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : 0;
 
     let query = supabase.from('kunjungan_berobat').select('*').order('tanggal', { ascending: false });
+
+    if (nik) {
+      query = query.eq('nik', nik);
+    }
+    if (limit > 0) {
+      query = query.limit(limit);
+    }
 
     if (caller!.role === 'pic') {
       if (jobsite && jobsite !== 'All Site' && jobsite !== 'all'

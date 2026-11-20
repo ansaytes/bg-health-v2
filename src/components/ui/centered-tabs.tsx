@@ -30,7 +30,7 @@ export default function CenteredTabs<K extends string>({
       role="tablist"
       aria-label={ariaLabel}
       className="centered-tabs"
-      style={compact ? { padding: '6px 12px 0' } : undefined}
+      style={compact ? { padding: '4px 12px 0' } : undefined}
     >
       {tabs.map((t) => {
         const isActive = active === t.key;
@@ -42,7 +42,7 @@ export default function CenteredTabs<K extends string>({
             aria-selected={isActive}
             onClick={() => onChange(t.key)}
             className={`centered-tab${isActive ? ' is-active' : ''}`}
-            style={compact ? { height: 30, padding: '0 14px', fontSize: 11.5 } : undefined}
+            style={compact ? { height: 28, padding: '0 12px', fontSize: 11 } : undefined}
           >
             {t.label}
             {typeof t.count === 'number' && (

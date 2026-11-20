@@ -57,9 +57,9 @@ export default function InspeksiSanitasiTable() {
     : 0;
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '90%', margin: '0 auto' }}>
+    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '94%', margin: '0 auto' }}>
       <div className="admin-form-inner">
-        <div style={{ marginBottom: 14 }}>
+        <div style={{ marginBottom: 8 }}>
           <h1 className="admin-form-title">Rekapitulasi Riwayat Inspeksi Sanitasi</h1>
           <p className="admin-form-subtitle">
             Catatan kepatuhan fasilitas sanitasi (toilet, air minum, vektor, dan pengelolaan sampah) seluruh job site.

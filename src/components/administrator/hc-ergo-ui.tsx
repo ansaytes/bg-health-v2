@@ -7,17 +7,17 @@ import { JOBSITES } from '@/lib/lagging-data';
 export const SITES = JOBSITES.filter((s) => s !== 'All Site');
 
 export const inputStyle: CSSProperties = {
-  width: '100%', height: 38, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--background)',
-  padding: '0 12px', fontSize: 13, color: 'var(--foreground)', outline: 'none', fontFamily: 'inherit',
+  width: '100%', height: 32, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)',
+  padding: '0 10px', fontSize: 11.5, color: 'var(--foreground)', outline: 'none', fontFamily: 'inherit',
 };
-export const smallInput: CSSProperties = { ...inputStyle, height: 32, fontSize: 12, padding: '0 8px' };
+export const smallInput: CSSProperties = { ...inputStyle, height: 28, fontSize: 10.5, padding: '0 7px' };
 
 export function Field({ label, hint, children, full, style }: { label: ReactNode; hint?: string; children: ReactNode; full?: boolean; style?: CSSProperties }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, gridColumn: full ? '1 / -1' : undefined, width: '100%', ...style }}>
-      <label className="admin-label" style={{ marginBottom: 0, minHeight: 18, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, gridColumn: full ? '1 / -1' : undefined, width: '100%', ...style }}>
+      <label className="admin-label" style={{ marginBottom: 0, minHeight: 16, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 10.5 }}>
         <span>{label}</span>
-        {hint && <span style={{ color: 'var(--muted-foreground)', fontWeight: 'normal', fontSize: 11, flexShrink: 0 }}> {hint}</span>}
+        {hint && <span style={{ color: 'var(--muted-foreground)', fontWeight: 'normal', fontSize: 10, flexShrink: 0 }}> {hint}</span>}
       </label>
       {children}
     </div>
@@ -26,24 +26,24 @@ export function Field({ label, hint, children, full, style }: { label: ReactNode
 
 export function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="admin-form-card" style={{ marginBottom: 14 }}>
-      <div className="admin-section-header"><h3 className="admin-section-title">{title}</h3></div>
+    <div className="admin-form-card" style={{ marginBottom: 10 }}>
+      <div className="admin-section-header" style={{ marginBottom: 8 }}><h3 className="admin-section-title">{title}</h3></div>
       {children}
     </div>
   );
 }
 
-export const grid2: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14, alignItems: 'end' };
-export const grid3: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, alignItems: 'end' };
-export const grid4: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, alignItems: 'end' };
+export const grid2: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, alignItems: 'end' };
+export const grid3: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, alignItems: 'end' };
+export const grid4: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, alignItems: 'end' };
 
 export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { key: T; label: string }[]; value: T; onChange: (k: T) => void }) {
   return (
-    <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: 5, marginBottom: 10, flexWrap: 'wrap' }}>
       {tabs.map((t) => (
         <button key={t.key} type="button" onClick={() => onChange(t.key)}
           style={{
-            padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            padding: '4px 12px', borderRadius: 999, fontSize: 11, fontWeight: 600, cursor: 'pointer',
             border: '1px solid var(--border)',
             background: value === t.key ? 'var(--brand-primary, #ff4d00)' : 'var(--background)',
             color: value === t.key ? '#fff' : 'var(--foreground)',
@@ -63,15 +63,15 @@ export function Chip({ text, color }: { text: string; color: string }) {
 export function Notice({ kind, children }: { kind: 'ok' | 'err' | 'warn'; children: ReactNode }) {
   const c = kind === 'ok' ? '#00B894' : kind === 'warn' ? '#d97706' : '#E63946';
   return (
-    <div style={{ background: `${c}18`, border: `1px solid ${c}`, color: c, borderRadius: 8, padding: '8px 12px',
-      fontSize: 12, fontWeight: 600, marginBottom: 12 }}>{children}</div>
+    <div style={{ background: `${c}18`, border: `1px solid ${c}`, color: c, borderRadius: 6, padding: '6px 10px',
+      fontSize: 11, fontWeight: 600, marginBottom: 8 }}>{children}</div>
   );
 }
 
-export const tableStyle: CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: 12 };
-export const thStyle: CSSProperties = { textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid var(--border)',
-  color: 'var(--muted-foreground)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' };
-export const tdStyle: CSSProperties = { padding: '6px 8px', borderBottom: '1px solid var(--border)', verticalAlign: 'top' };
+export const tableStyle: CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: 11 };
+export const thStyle: CSSProperties = { textAlign: 'left', padding: '5px 7px', borderBottom: '1px solid var(--border)',
+  color: 'var(--muted-foreground)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' };
+export const tdStyle: CSSProperties = { padding: '5px 7px', borderBottom: '1px solid var(--border)', verticalAlign: 'top' };
 
 export const fmtDate = (d?: string | null) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-');
 
@@ -91,10 +91,10 @@ export function getNextKodeTitik(lastKode?: string, fallbackIndex = 1): string {
 
 export function Stat({ label, value, color, sub }: { label: string; value: ReactNode; color?: string; sub?: string }) {
   return (
-    <div className="card" style={{ padding: '10px 12px', gap: 2 }}>
-      <span style={{ fontSize: 10, color: 'var(--muted-foreground)', textTransform: 'uppercase', fontWeight: 700 }}>{label}</span>
-      <span style={{ fontSize: 24, fontWeight: 800, color: color || 'var(--foreground)', lineHeight: 1.1 }}>{value}</span>
-      {sub && <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>{sub}</span>}
+    <div className="card" style={{ padding: '8px 10px', gap: 2 }}>
+      <span style={{ fontSize: 9.5, color: 'var(--muted-foreground)', textTransform: 'uppercase', fontWeight: 700 }}>{label}</span>
+      <span style={{ fontSize: 20, fontWeight: 800, color: color || 'var(--foreground)', lineHeight: 1.1 }}>{value}</span>
+      {sub && <span style={{ fontSize: 9.5, color: 'var(--muted-foreground)' }}>{sub}</span>}
     </div>
   );
 }
@@ -103,10 +103,10 @@ export function Stat({ label, value, color, sub }: { label: string; value: React
 type BtnKind = 'primary' | 'secondary' | 'danger';
 export function Btn({ kind = 'secondary', size = 'sm', children, style, ...rest }:
   { kind?: BtnKind; size?: 'sm' | 'md' } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const h = size === 'md' ? 38 : 30;
+  const h = size === 'md' ? 32 : 28;
   const base: CSSProperties = {
-    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxSizing: 'border-box',
-    height: h, minWidth: h, padding: size === 'md' ? '0 20px' : '0 12px', borderRadius: 8, fontSize: size === 'md' ? 13 : 11.5,
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, boxSizing: 'border-box',
+    height: h, minWidth: h, padding: size === 'md' ? '0 16px' : '0 10px', borderRadius: 6, fontSize: size === 'md' ? 12 : 11,
     fontWeight: 600, lineHeight: 1, whiteSpace: 'nowrap', cursor: rest.disabled ? 'not-allowed' : 'pointer',
     fontFamily: 'inherit', opacity: rest.disabled ? 0.55 : 1, flex: '0 0 auto', width: 'auto',
     ...(kind === 'primary' ? { background: '#ff4d00', color: '#fff', border: '1px solid #ff4d00' }
@@ -118,5 +118,5 @@ export function Btn({ kind = 'secondary', size = 'sm', children, style, ...rest 
 
 /** Baris tombol: rata, jarak sama, boleh membungkus per tombol (bukan per teks). */
 export function BtnRow({ children, justify = 'flex-start' }: { children: ReactNode; justify?: CSSProperties['justifyContent'] }) {
-  return <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', justifyContent: justify }}>{children}</div>;
+  return <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center', justifyContent: justify }}>{children}</div>;
 }

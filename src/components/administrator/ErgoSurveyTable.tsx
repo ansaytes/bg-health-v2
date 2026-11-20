@@ -62,9 +62,9 @@ export default function ErgoSurveyTable() {
   const t = new Date().toISOString().slice(0, 10);
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '90%', margin: '0 auto' }}>
+    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '94%', margin: '0 auto' }}>
       <div className="admin-form-inner">
-        <div style={{ marginBottom: 14 }}>
+        <div style={{ marginBottom: 8 }}>
           <h1 className="admin-form-title">Data Survei Ergonomi & PICA</h1>
           <p className="admin-form-subtitle">Persetujuan dilakukan oleh QSHE Manager / PJO (role Manager) pada menu Dashboard → Persetujuan Ergonomi. Klasifikasi sedang ke atas wajib ditindaklanjuti lewat PICA; verifikasi efektivitas maksimal 30 hari kerja sejak laporan disetujui.</p>
         </div>

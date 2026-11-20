@@ -109,9 +109,9 @@ export default function ErgoSurveyForm() {
   const progress = Math.round((step / last) * 100);
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '90%', margin: '0 auto' }}>
+    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '94%', margin: '0 auto' }}>
       <div className="admin-form-inner">
-        <div style={{ marginBottom: 12 }}>
+        <div style={{ marginBottom: 8 }}>
           <h1 className="admin-form-title">Survei Ergonomi</h1>
           <p className="admin-form-subtitle">Pengukuran internal minimal 1× per bulan; survei pihak ketiga minimal 1× per tahun. Jawab tiap langkah; skor dihitung otomatis.</p>
         </div>

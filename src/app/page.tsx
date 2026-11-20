@@ -651,7 +651,7 @@ function ReviewMCUWithTabs() {
   return (
     <div
       className="admin-form-container"
-      style={{ width: '100%', padding: 16, overflow: 'hidden', flex: 1, minHeight: 0 }}
+      style={{ width: '100%', padding: '8px 12px', overflow: 'hidden', flex: 1, minHeight: 0 }}
     >
       <ReviewMCU />
     </div>

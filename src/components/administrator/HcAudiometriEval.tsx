@@ -48,9 +48,9 @@ export default function HcAudiometriEval() {
   const t = new Date().toISOString().slice(0, 10);
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '90%', margin: '0 auto' }}>
+    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '94%', margin: '0 auto' }}>
       <div className="admin-form-inner">
-        <div style={{ marginBottom: 14 }}>
+        <div style={{ marginBottom: 8 }}>
           <h1 className="admin-form-title">Evaluasi Audiometri & STS</h1>
           <p className="admin-form-subtitle">Karyawan Kategori A/B. Derajat gangguan (WHO) = rata-rata 500/1000/2000/4000 Hz per telinga, dibulatkan ke bilangan bulat terdekat; derajat karyawan = telinga yang lebih baik. STS = geser rata-rata 2000/3000/4000 Hz ≥ 10 dB terhadap baseline, per telinga.</p>
         </div>
