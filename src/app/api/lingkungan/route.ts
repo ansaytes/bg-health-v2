@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { adminClient, getCaller } from '@/lib/questionnaire-store';
+import { mergeSettings } from '@/lib/app-settings';
 import {
   NAB_LUX,
   NAB_UDARA,
@@ -31,18 +32,39 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
   }
 
+  const client = adminClient();
+
+  // Ambil pengaturan NAB kustom dari app_settings
+  const { data: settingsRow } = await client
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'app')
+    .maybeSingle();
+  const currentSettings = mergeSettings(settingsRow?.value ?? null);
+  const nabCustom = currentSettings.nab ? {
+    lux: currentSettings.nab.lux as unknown as Record<PeruntukanRuang, number>,
+    udara: currentSettings.nab.udara,
+  } : undefined;
+
   // Ambang & metode — dipakai form agar label acuan tidak ditulis ulang di UI.
   if (req.nextUrl.searchParams.get('template') === '1') {
     return NextResponse.json({
       success: true,
-      nabLux: NAB_LUX,
-      nabUdara: NAB_UDARA,
+      nabLux: nabCustom?.lux ? Object.fromEntries(
+        Object.entries(NAB_LUX).map(([k, v]) => [k, { ...v, min: nabCustom.lux?.[k as PeruntukanRuang] ?? v.min }])
+      ) : NAB_LUX,
+      nabUdara: nabCustom?.udara ? {
+        ...NAB_UDARA,
+        suhu: { ...NAB_UDARA.suhu, min: nabCustom.udara.suhuMin ?? NAB_UDARA.suhu.min, max: nabCustom.udara.suhuMax ?? NAB_UDARA.suhu.max },
+        kelembapan: { ...NAB_UDARA.kelembapan, min: nabCustom.udara.kelembabanMin ?? NAB_UDARA.kelembapan.min, max: nabCustom.udara.kelembabanMax ?? NAB_UDARA.kelembapan.max },
+        oksigen: { ...NAB_UDARA.oksigen, min: nabCustom.udara.oksigenMin ?? NAB_UDARA.oksigen.min, max: nabCustom.udara.oksigenMax ?? NAB_UDARA.oksigen.max },
+        pm10: { ...NAB_UDARA.pm10, max: nabCustom.udara.pm10Max ?? NAB_UDARA.pm10.max },
+        asbes: { ...NAB_UDARA.asbes, max: nabCustom.udara.asbesMax ?? NAB_UDARA.asbes.max },
+      } : NAB_UDARA,
       nabLain: NAB_LAIN,
       metode: CATATAN_METODE,
     });
   }
-
-  const client = adminClient();
   const siteParam = req.nextUrl.searchParams.get('site')?.trim() || '';
   if (caller.role === 'pic' && !caller.site) {
     return NextResponse.json({ error: 'Site PIC belum ditetapkan.' }, { status: 403 });
@@ -110,6 +132,7 @@ export async function GET(req: NextRequest) {
           pm10: x.pm10_mg_m3 === null ? null : Number(x.pm10_mg_m3),
           asbes: x.asbes_serat_ml === null ? null : Number(x.asbes_serat_ml),
         })),
+        nabCustom,
       })
       : null;
 

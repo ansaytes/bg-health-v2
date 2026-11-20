@@ -127,9 +127,9 @@ export default function SaranaKlinik({ onBukaPica }: { onBukaPica?: () => void }
   }, [items, filter]);
 
   const th: React.CSSProperties = {
-    padding: '8px 10px',
+    padding: '5px 8px',
     borderBottom: '1px solid var(--border)',
-    fontSize: 11,
+    fontSize: 10,
     textTransform: 'uppercase',
     letterSpacing: '0.04em',
     color: 'var(--muted-foreground)',
@@ -138,16 +138,16 @@ export default function SaranaKlinik({ onBukaPica }: { onBukaPica?: () => void }
     whiteSpace: 'nowrap',
   };
   const td: React.CSSProperties = {
-    padding: '8px 10px',
+    padding: '6px 8px',
     borderBottom: '1px solid var(--border)',
-    fontSize: 12,
+    fontSize: 11,
     verticalAlign: 'middle',
   };
   const cellInput: React.CSSProperties = {
-    height: 32,
-    fontSize: 12,
-    padding: '0 8px',
-    borderRadius: 7,
+    height: 28,
+    fontSize: 11,
+    padding: '0 7px',
+    borderRadius: 6,
     border: '1px solid var(--border)',
     background: 'var(--background)',
     color: 'var(--foreground)',
@@ -261,15 +261,15 @@ export default function SaranaKlinik({ onBukaPica }: { onBukaPica?: () => void }
         )}
 
         {[...perKategori.entries()].map(([kategori, list]) => (
-          <div key={kategori} className="admin-form-card" style={{ overflow: 'auto', marginBottom: 18, padding: '14px 18px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 3, height: 16, borderRadius: 2, background: 'var(--brand-primary, #ff4d00)', display: 'inline-block', flexShrink: 0 }} />
-                <h3 className="admin-section-title" style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>
+          <div key={kategori} className="admin-form-card" style={{ overflow: 'auto', marginBottom: 10, padding: '10px 14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 3, height: 12, borderRadius: 2, background: 'var(--brand-primary, #ff4d00)', display: 'inline-block', flexShrink: 0 }} />
+                <h3 className="admin-section-title" style={{ fontSize: 11, fontWeight: 700, margin: 0 }}>
                   {KATEGORI_LABEL[kategori] ?? kategori}
                 </h3>
               </div>
-              <div style={{ fontSize: 11.5, color: 'var(--muted-foreground)' }}>
+              <div style={{ fontSize: 10.5, color: 'var(--muted-foreground)' }}>
                 {list.filter((i) => i.status === 'ada').length} tersedia · {list.length} item
               </div>
             </div>
@@ -294,7 +294,7 @@ export default function SaranaKlinik({ onBukaPica }: { onBukaPica?: () => void }
                       <tr key={it.katalogId} style={{ opacity: menyimpan === it.katalogId ? 0.55 : 1 }}>
                         <td style={td}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontWeight: 600, fontSize: 12.5 }}>{it.nama}</span>
+                            <span style={{ fontWeight: 600, fontSize: 11 }}>{it.nama}</span>
                             {!it.wajib && (
                               <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
                                 tambahan
@@ -309,10 +309,10 @@ export default function SaranaKlinik({ onBukaPica }: { onBukaPica?: () => void }
                             onChange={(e) => void simpan(it, { status: e.target.value as ItemSarana['status'] })}
                             disabled={menyimpan === it.katalogId}
                             style={{
-                              height: 30,
-                              fontSize: 11.5,
+                              height: 26,
+                              fontSize: 11,
                               fontWeight: 700,
-                              padding: '0 24px 0 10px',
+                              padding: '0 20px 0 8px',
                               borderRadius: 999,
                               border: `1px solid ${meta.warna}66`,
                               background: `${meta.warna}15`,
@@ -420,37 +420,37 @@ function FormTambah({ onSelesai }: { onSelesai: () => void }) {
   }
 
   return (
-    <div className="admin-form-card" style={{ padding: '14px 18px', flexShrink: 0, marginBottom: 14 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <span style={{ width: 3, height: 16, borderRadius: 2, background: '#00B894', display: 'inline-block', flexShrink: 0 }} />
-        <h3 className="admin-section-title" style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>
+    <div className="admin-form-card" style={{ padding: '10px 14px', flexShrink: 0, marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+        <span style={{ width: 3, height: 12, borderRadius: 2, background: '#00B894', display: 'inline-block', flexShrink: 0 }} />
+        <h3 className="admin-section-title" style={{ fontSize: 11, fontWeight: 700, margin: 0 }}>
           Tambah Item Sarana
         </h3>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" style={{ marginBottom: 12 }}>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" style={{ marginBottom: 8 }}>
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold text-muted-foreground">Nama item</span>
-          <Input value={nama} onChange={(e) => setNama(e.target.value)} placeholder="mis. Nebulizer" className="h-9 rounded-lg text-sm" />
+          <span className="text-[10px] font-semibold text-muted-foreground">Nama item</span>
+          <Input value={nama} onChange={(e) => setNama(e.target.value)} placeholder="mis. Nebulizer" className="h-8 rounded-md text-xs" />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold text-muted-foreground">Kategori</span>
-          <select value={kategori} onChange={(e) => setKategori(e.target.value)} className="h-9 rounded-lg border-input bg-background px-2 text-sm">
+          <span className="text-[10px] font-semibold text-muted-foreground">Kategori</span>
+          <select value={kategori} onChange={(e) => setKategori(e.target.value)} className="h-8 rounded-md border-input bg-background px-2 text-xs">
             {Object.entries(KATEGORI_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </label>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, justifyContent: 'center', fontSize: 12 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'center', fontSize: 11 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <input type="checkbox" checked={wajib} onChange={(e) => setWajib(e.target.checked)} /> Wajib tersedia
           </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <input type="checkbox" checked={perluKalibrasi} onChange={(e) => setPerluKalibrasi(e.target.checked)} /> Perlu kalibrasi berkala
           </label>
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <Button variant="outline" size="sm" onClick={onSelesai} style={{ height: 34 }}>Batal</Button>
-        <Button size="sm" disabled={simpan || !nama.trim()} onClick={() => void kirim()} style={{ gap: 6, height: 34 }}>
-          {simpan ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Simpan Item
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+        <Button variant="outline" size="sm" onClick={onSelesai} style={{ height: 28, fontSize: 11 }}>Batal</Button>
+        <Button size="sm" disabled={simpan || !nama.trim()} onClick={() => void kirim()} style={{ gap: 5, height: 28, fontSize: 11 }}>
+          {simpan ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Simpan Item
         </Button>
       </div>
     </div>

@@ -7,6 +7,7 @@ const ALLOWED_TYPES: Record<string, Set<string>> = {
   mcu: new Set(['application/pdf', 'image/jpeg', 'image/png']),
   ergonomi: new Set(['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm']),
   kampanye: new Set(['image/jpeg', 'image/png', 'image/webp']),
+  branding: new Set(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml']),
 };
 
 function safeFilename(value: string): string {
@@ -38,8 +39,22 @@ export async function POST(request: NextRequest) {
     }
 
     const drive = await readIntegration('google_drive');
-    const folderId = typeof drive?.config.folderId === 'string' ? drive.config.folderId : '';
-    if (!folderId) return NextResponse.json({ success: false, error: 'Folder Google Drive belum diatur.' }, { status: 503 });
+    
+    // Tentukan folder target berdasarkan kategori (folder terpisah)
+    let folderId = '';
+    if (category === 'mcu') {
+      folderId = (drive?.config.folderMcu as string) || (drive?.config.folderId as string) || '';
+    } else if (category === 'ergonomi') {
+      folderId = (drive?.config.folderErgo as string) || (drive?.config.folderId as string) || '';
+    } else if (category === 'kampanye') {
+      folderId = (drive?.config.folderKampanye as string) || (drive?.config.folderId as string) || '';
+    } else if (category === 'branding') {
+      folderId = (drive?.config.folderBranding as string) || (drive?.config.folderId as string) || '';
+    } else {
+      folderId = (drive?.config.folderId as string) || '';
+    }
+
+    if (!folderId) return NextResponse.json({ success: false, error: `Folder Google Drive untuk kategori '${category}' belum diatur.` }, { status: 503 });
 
     const accessToken = await getDriveAccessToken();
     const site = (caller!.role === 'pic' ? caller!.site : requestedSite) || '';
@@ -70,7 +85,7 @@ export async function POST(request: NextRequest) {
     if (!result || typeof result !== 'object' || !('id' in result) || typeof result.id !== 'string') {
       return NextResponse.json({ success: false, error: 'Google Drive memberikan respons yang tidak valid.' }, { status: 502 });
     }
-    if (category === 'kampanye') {
+    if (category === 'kampanye' || category === 'branding') {
       const permissionResponse = await fetch(
         `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(result.id)}/permissions?supportsAllDrives=true`,
         {
@@ -82,8 +97,7 @@ export async function POST(request: NextRequest) {
         },
       );
       if (!permissionResponse.ok) {
-        console.error('[Drive upload] Could not make campaign image publicly readable:', permissionResponse.status);
-        return NextResponse.json({ success: false, error: 'Folder Drive menolak izin baca publik untuk gambar kampanye.' }, { status: 502 });
+        console.error(`[Drive upload] Could not make ${category} image publicly readable:`, permissionResponse.status);
       }
     }
     return NextResponse.json({
@@ -91,8 +105,8 @@ export async function POST(request: NextRequest) {
       data: {
         id: result.id,
         name: 'name' in result && typeof result.name === 'string' ? result.name : metadata.name,
-        url: category === 'kampanye'
-          ? `https://drive.google.com/file/d/${encodeURIComponent(result.id)}/view`
+        url: category === 'kampanye' || category === 'branding'
+          ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(result.id)}&sz=w2000`
           : 'webViewLink' in result && typeof result.webViewLink === 'string'
             ? result.webViewLink
             : `https://drive.google.com/file/d/${encodeURIComponent(result.id)}/view`,

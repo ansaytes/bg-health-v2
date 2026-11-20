@@ -57,13 +57,21 @@ export async function GET(req: NextRequest) {
   const periode = params.get('periode')?.trim() || periodeBulan();
   const siteParam = params.get('site')?.trim() || '';
   const jenisFilter = params.get('jenis')?.trim() || '';
+  const statusFilter = params.get('status')?.trim() || '';
+  const semuaPeriode = params.get('semua_periode') === '1' || statusFilter === 'menunggu_persetujuan';
   const fokusSite = sitePIC(caller) || siteParam;
 
   let query = client
     .from('inspeksi_jadwal')
     .select('*')
-    .eq('periode', periode)
     .order('tanggal_rencana', { ascending: true });
+
+  if (!semuaPeriode) {
+    query = query.eq('periode', periode);
+  }
+  if (statusFilter) {
+    query = query.eq('status', statusFilter);
+  }
   if (fokusSite) query = query.eq('site', fokusSite);
   if (jenisFilter) query = query.eq('jenis', jenisFilter);
 
@@ -262,15 +270,16 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (aksi === 'selesai') {
+    if (aksi === 'selesai' || aksi === 'ajukan_persetujuan') {
       const id = body?.id;
       if (!id) return NextResponse.json({ error: 'id wajib diisi' }, { status: 400 });
 
-      // Petugas SELALU dari sesi login, tidak pernah dibaca dari body.
-      // Atribusi beban kerja harus tidak bisa dipalsukan atau tertukar:
-      // siapa pun yang menekan "Selesai", dialah yang tercatat.
+      // Jika diajukan oleh PIC, status masuk ke 'menunggu_persetujuan' untuk divalidasi Manager/PJO.
+      // Jika diselesaikan oleh Manager/Superuser, langsung 'selesai'.
+      const targetStatus = aksi === 'ajukan_persetujuan' || caller.role === 'pic' ? 'menunggu_persetujuan' : 'selesai';
+
       const patch: Record<string, unknown> = {
-        status: 'selesai',
+        status: targetStatus,
         tanggal_selesai: String(body?.tanggal_selesai ?? '').slice(0, 10) || tanggalISO(new Date()),
         petugas: caller.userId ?? null,
         waktu_lapor: new Date().toISOString(),
@@ -282,7 +291,90 @@ export async function POST(req: NextRequest) {
       if (picSite) q = q.eq('site', picSite);
       const { error } = await q;
       if (error) throw error;
-      return NextResponse.json({ success: true });
+      return NextResponse.json({
+        success: true,
+        status: targetStatus,
+        pesan: targetStatus === 'menunggu_persetujuan'
+          ? 'Inspeksi berhasil diajukan untuk approval Manager / PJO'
+          : 'Inspeksi berhasil ditandai selesai',
+      });
+    }
+
+    if (aksi === 'approve') {
+      const id = body?.id;
+      if (!id) return NextResponse.json({ error: 'id wajib diisi' }, { status: 400 });
+      if (!['superuser', 'administrator', 'manager'].includes(String(caller.role))) {
+        return NextResponse.json({ error: 'Hanya Pengawas/Manager/Superuser yang dapat menyetujui inspeksi' }, { status: 403 });
+      }
+
+      const patch: Record<string, unknown> = {
+        status: 'selesai',
+        waktu_verifikasi: new Date().toISOString(),
+        diverifikasi_oleh: caller.userId ?? null,
+        updated_at: new Date().toISOString(),
+      };
+      if (body?.catatan != null) patch.catatan = String(body.catatan);
+
+      const { error } = await client.from('inspeksi_jadwal').update(patch).eq('id', id);
+      if (error) throw error;
+      return NextResponse.json({ success: true, pesan: 'Inspeksi berhasil disetujui' });
+    }
+
+    if (aksi === 'approve_all') {
+      if (!['superuser', 'administrator', 'manager'].includes(String(caller.role))) {
+        return NextResponse.json({ error: 'Hanya Pengawas/Manager/Superuser yang dapat menyetujui inspeksi' }, { status: 403 });
+      }
+
+      const bulkIds = Array.isArray(body?.ids) ? body.ids : null;
+      const targetSite = body?.site ? String(body.site).trim() : null;
+
+      const patch: Record<string, unknown> = {
+        status: 'selesai',
+        waktu_verifikasi: new Date().toISOString(),
+        diverifikasi_oleh: caller.userId ?? null,
+        updated_at: new Date().toISOString(),
+      };
+
+      let q = client.from('inspeksi_jadwal').update(patch).eq('status', 'menunggu_persetujuan');
+      if (bulkIds && bulkIds.length > 0) {
+        q = q.in('id', bulkIds);
+      }
+      if (targetSite) {
+        q = q.eq('site', targetSite);
+      }
+
+      const { data: updatedData, error } = await q.select('id');
+      if (error) throw error;
+      const count = updatedData?.length ?? 0;
+      return NextResponse.json({
+        success: true,
+        count,
+        pesan: `${count} inspeksi berhasil disetujui sekaligus.`,
+      });
+    }
+
+    if (aksi === 'reject') {
+      const id = body?.id;
+      if (!id) return NextResponse.json({ error: 'id wajib diisi' }, { status: 400 });
+      if (!['superuser', 'administrator', 'manager'].includes(String(caller.role))) {
+        return NextResponse.json({ error: 'Hanya Pengawas/Manager/Superuser yang dapat menolak inspeksi' }, { status: 403 });
+      }
+      const catatanAlasan = String(body?.catatan ?? '').trim();
+      if (!catatanAlasan) {
+        return NextResponse.json({ error: 'Alasan penolakan wajib diisi pada catatan' }, { status: 400 });
+      }
+
+      const patch: Record<string, unknown> = {
+        status: 'ditolak',
+        catatan: catatanAlasan,
+        waktu_verifikasi: new Date().toISOString(),
+        diverifikasi_oleh: caller.userId ?? null,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await client.from('inspeksi_jadwal').update(patch).eq('id', id);
+      if (error) throw error;
+      return NextResponse.json({ success: true, pesan: 'Inspeksi ditolak untuk dilakukan evaluasi ulang.' });
     }
 
     if (aksi === 'batal') {

@@ -34,6 +34,12 @@ export async function GET(request: NextRequest) {
       ai: { profiles: aiProfiles, maxProfiles: MAX_AI_PROFILES },
       drive: {
         folderId: typeof driveRecord?.config.folderId === 'string' ? driveRecord.config.folderId : '',
+        folders: {
+          mcu: typeof driveRecord?.config.folderMcu === 'string' ? driveRecord.config.folderMcu : '',
+          ergonomi: typeof driveRecord?.config.folderErgo === 'string' ? driveRecord.config.folderErgo : '',
+          kampanye: typeof driveRecord?.config.folderKampanye === 'string' ? driveRecord.config.folderKampanye : '',
+          branding: typeof driveRecord?.config.folderBranding === 'string' ? driveRecord.config.folderBranding : '',
+        },
         connected: typeof driveSecrets.refreshToken === 'string' && driveSecrets.refreshToken.length > 0,
         accountEmail: typeof driveRecord?.config.accountEmail === 'string' ? driveRecord.config.accountEmail : '',
       },
@@ -96,14 +102,22 @@ export async function PUT(request: NextRequest) {
 
     if (body.drive !== undefined) {
       if (!isRecord(body.drive)) return NextResponse.json({ success: false, error: 'Pengaturan Google Drive tidak valid.' }, { status: 400 });
-      const folderId = body.drive.folderId;
-      if (typeof folderId !== 'string' || folderId.length > 200 || /[/\\\s]/.test(folderId)) {
-        return NextResponse.json({ success: false, error: 'Folder ID Google Drive tidak valid.' }, { status: 400 });
-      }
+      const folderId = typeof body.drive.folderId === 'string' ? body.drive.folderId.trim() : '';
+      const folders = isRecord(body.drive.folders) ? body.drive.folders : {};
+      
+      const cleanId = (v: unknown) => (typeof v === 'string' && !/[/\\\s]/.test(v.trim())) ? v.trim() : '';
+
       const existing = await readIntegration('google_drive');
       await writeIntegration({
         key: 'google_drive',
-        config: { ...(existing?.config || {}), folderId: folderId.trim() },
+        config: {
+          ...(existing?.config || {}),
+          folderId: cleanId(folderId) || (existing?.config?.folderId as string || ''),
+          folderMcu: cleanId(folders.mcu),
+          folderErgo: cleanId(folders.ergonomi),
+          folderKampanye: cleanId(folders.kampanye),
+          folderBranding: cleanId(folders.branding),
+        },
         secrets: decryptIntegrationSecret(existing?.secret_ciphertext ?? null),
         updatedBy: caller!.userId,
       });

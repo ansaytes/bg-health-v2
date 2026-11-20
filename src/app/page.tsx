@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { clearDashboardDataCache, preloadDashboardData } from '@/lib/dashboard-data';
 import { clearMCUDashboardData } from '@/components/dashboard/MCUDashboardShared';
 import { usePopup, Popup } from '@/lib/popup';
+import { useAppSettings } from '@/lib/use-app-settings';
 import HomeView from '@/components/home/HomeView';
 
 /* ──── Lazy imports: semua komponen dashboard berat di-load on-demand ──── */
@@ -49,6 +50,7 @@ const LayananKuratifTabs = lazy(() => import('@/components/dashboard/LayananKura
 const ProKawanDashboard = lazy(() => import('@/components/dashboard/ProKawanDashboard'));
 const ProgramInspeksiTabs = lazy(() => import('@/components/dashboard/ProgramInspeksiTabs'));
 const ErgoApproval = lazy(() => import('@/components/dashboard/ErgoApproval'));
+const InspeksiApproval = lazy(() => import('@/components/dashboard/InspeksiApproval'));
 const HcInputPage = lazy(() => import('@/components/administrator/HcInputPage'));
 const HcAudiometriEval = lazy(() => import('@/components/administrator/HcAudiometriEval'));
 const ErgoSurveyForm = lazy(() => import('@/components/administrator/ErgoSurveyForm'));
@@ -464,6 +466,7 @@ const DATA_ENTRY_SIDEBAR: SidebarItem[] = [
   { key: 'kesehatan-mental', label: 'Kesehatan Mental', icon: <IconBrain /> },
   { key: 'psikologi-lingkungan', label: 'Psikologi Lingkungan Kerja', icon: <IconPsikologiLingkungan /> },
   { key: 'persetujuan-ergonomi', label: 'Approval Survey Ergonomi', icon: <IconPena />, approverOnly: true },
+  { key: 'persetujuan-inspeksi', label: 'Approval Inspeksi Lapangan', icon: <IconPena />, approverOnly: true },
 ];
 
 /*   Content Routers */
@@ -502,6 +505,9 @@ function DataEntryContent() {
   }
   if (activeDataEntrySidebar === 'persetujuan-ergonomi') {
     return <div className="admin-form-container" style={{ overflow: 'hidden' }}><ErgoApproval /></div>;
+  }
+  if (activeDataEntrySidebar === 'persetujuan-inspeksi') {
+    return <div className="admin-form-container" style={{ overflow: 'hidden' }}><InspeksiApproval /></div>;
   }
   return activeDataEntrySidebar === 'input-jadwal-mcu'
     ? <div className="admin-form-container"><InputJadwalMCU /></div>
@@ -1322,6 +1328,14 @@ export default function Home() {
     }
   };
 
+  const { settings } = useAppSettings();
+  const branding = settings.branding;
+  const appTitle = branding?.namaAplikasi || 'BG-Health v2';
+  const logoPerusahaan = branding?.logoPerusahaanUrl || '/LogoBDM.png';
+  const logoBus = branding?.logoBusUrl || '/Bus2023.png';
+  const logoBestK3 = branding?.logoBestK3Url || '/BestK3.png';
+  const logoTuwuh = branding?.logoTuwuhUrl || '/TuwuhLanNgrembaka_float.png';
+
   // Get user display name and initials
   const displayName = profile?.full_name || profile?.username || 'User';
   const roleLabel = profile?.role === 'superuser' ? 'Superuser'
@@ -1341,17 +1355,17 @@ export default function Home() {
         <div className="sidebar-head">
           <div className="sidebar-logo-wrap">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/LogoBDM.png" alt="Logo" className="sidebar-logo-img" />
+            <img src={logoPerusahaan} alt="Logo" className="sidebar-logo-img" />
           </div>
         </div>
 
-        {/* Bus 2023 image - full width, reduced height, 85% opacity */}
+        {/* Bus image - full width, reduced height, 85% opacity */}
         <div style={{ padding: '0 12px', flexShrink: 0 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/Bus2023.png" alt="" style={{ width: '100%', height: 80, objectFit: 'cover', objectPosition: 'center', opacity: 0.85, borderRadius: 6, display: 'block' }} />
+          <img src={logoBus} alt="" style={{ width: '100%', height: 80, objectFit: 'cover', objectPosition: 'center', opacity: 0.85, borderRadius: 6, display: 'block' }} />
         </div>
 
-        <div className="sidebar-label">BG-Health v2</div>
+        <div className="sidebar-label">{appTitle}</div>
         <nav className="sidebar-nav">
           {sidebarItems.map((item) => (
             <button
@@ -1365,10 +1379,10 @@ export default function Home() {
           ))}
         </nav>
 
-        {/* Tuwuh lan ngrembaka — above login */}
+        {/* Slogan / Tuwuh image — above login */}
         <div className="sidebar-tuwuh-wrap">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/TuwuhLanNgrembaka_float.png" alt="" className="sidebar-tuwuh-img" />
+          <img src={logoTuwuh} alt="" className="sidebar-tuwuh-img" />
         </div>
 
         <div className="sidebar-footer">
@@ -1420,7 +1434,7 @@ export default function Home() {
             </nav>
             <div className="header-right">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/BestK3.png" alt="BestK3" className="header-right-logo" />
+              <img src={logoBestK3} alt="BestK3" className="header-right-logo" />
               <NotificationBell
                 isSuperuser={isSuperuser}
                 // Notifikasi tindak lanjut hanya untuk QSHE Medic.

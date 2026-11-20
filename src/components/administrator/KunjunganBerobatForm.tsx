@@ -14,55 +14,7 @@ import {
 import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
 import { authFetch } from '@/lib/api-client';
 import { invalidateKunjunganDashboardData } from '@/lib/dashboard-data';
-
-const JOBSITES = [
-  'Aceh','Angsana','Balikpapan','Banjarmasin','Banyuwangi',
-  'Batu Kajang','Bengalon','Binuang','Binungan','Bontang','Bukit Pinang',
-  'Bunyu','Gorontalo','Gunung Bintang Awai','Gunung Mas','Gunung Sari',
-  'Halmahera Timur','Head Office','Kaliorang','Kapuas Tengah','Kaubun',
-  'Kayong Utara','Kelubir','Ketapang','Konawe','Kota Baru','Kotamobagu',
-  'Labanan','Lahat','Luwu','Malinau','Melak','Morowali','Muara Bungo',
-  'Muara Enim','Muara Teweh','Murung Raya','Palu','Rantau','Samarinda',
-  'Sangatta','Satui','Sebakis','Senakin','Soroako','Tabang',
-  'Tanjung Redeb','Tanjung Tabalong','Tenggarong','Tri Yoga Morowali',
-  'Tuhup','Wetar',
-];
-
-const DEPARTMENTS = [
-  'Plant',
-  'Quality, Safety, Health, & Environment',
-  'Finance, Account, & Tax',
-  'Human Capital & General Services',
-  'Supply Chain Management',
-  'Operation',
-  'Training & Development Center',
-  'Management',
-];
-
-const DEFAULT_DIAGNOSA = [
-  'Commond Cold', 'Faringitis', 'Vertigo', 'Strain', 'Chepalgia',
-  'Unspesified Disorder', 'Gastritis', 'Unspesified Allergy', 'Hipertermia',
-  'Odontalgia', 'Hipertensi', 'Myalgia', 'Diarhea', 'Gerd', 'Contusion',
-  'Hiperuricemia', 'Disminorhea', 'Unspesified Infection', 'Pulpitis',
-  'Vomiting', 'Vulnus Laceratum', 'Hiperlipidemia', 'Hordeulum', 'Stomatitis',
-  'Artritis', 'Diabetes Mellitus', 'Dermatitis', 'Tinea', 'Konjungtivitis',
-  'Toothache', 'Trauma Okuli', 'Vulnus Contussum', 'Hipotension', 'Migrain',
-  'Hipoxia', 'Combustio', 'Keratitis', 'Gingivitis', 'Herpes Zoster',
-  'Leukositosis', 'Osteoarthitis', 'Pra-Hipertensi', 'Tachicardia',
-];
-
-const DEFAULT_DOSIS = [
-  '3DD1',
-  '2DD1',
-  '1DD1',
-  '4DD1',
-  '2TAB/BAB',
-  'K/P',
-  'Q4H',
-  '4QH',
-  '1x1 Sesudah Makan',
-  '3x1 Sesudah Makan',
-];
+import { JOBSITES } from '@/lib/lagging-data';
 
 interface InventoryItem {
   id: string;
@@ -77,7 +29,7 @@ const FORM_FIELDS = [
   { id: 'nama', label: 'Nama Pasien / Karyawan', type: 'text', placeholder: 'Nama lengkap pasien (karyawan atau anak magang)', required: true },
   { id: 'jk', label: 'Jenis Kelamin', type: 'select', options: ['Laki - Laki', 'Perempuan'], placeholder: 'Pilih jenis kelamin' },
   { id: 'usia', label: 'Usia (Tahun)', type: 'number', placeholder: 'Contoh: 28' },
-  { id: 'departemen', label: 'Departemen', type: 'datalist', listId: 'dept-datalist', options: DEPARTMENTS, placeholder: 'Pilih atau ketik departemen', required: true },
+  { id: 'departemen', label: 'Departemen', type: 'datalist', listId: 'dept-datalist', placeholder: 'Pilih atau ketik departemen', required: true },
   { id: 'site', label: 'Jobsite', type: 'jobsite', placeholder: 'Pilih lokasi site', required: true },
   { id: 'tanggalKunjungan', label: 'Tanggal Kunjungan', type: 'date', placeholder: '', required: true },
   { id: 'kategori', label: 'Kategori Kunjungan', type: 'select', options: ['Umum', 'Kecelakaan Kerja', 'Penyakit Akibat Kerja'], defaultValue: 'Umum' },
@@ -107,8 +59,9 @@ export default function KunjunganBerobatForm() {
   });
   
   // Master database states
-  const [masterDiagnosa, setMasterDiagnosa] = useState<string[]>(DEFAULT_DIAGNOSA);
-  const [masterDosis, setMasterDosis] = useState<string[]>(DEFAULT_DOSIS);
+  const [masterDiagnosa, setMasterDiagnosa] = useState<string[]>([]);
+  const [masterDosis, setMasterDosis] = useState<string[]>([]);
+  const [departmentList, setDepartmentList] = useState<string[]>([]);
   const [inventoryList, setInventoryList] = useState<InventoryItem[]>([]);
   const [savingMasterNotice, setSavingMasterNotice] = useState<string>('');
 
@@ -160,11 +113,10 @@ export default function KunjunganBerobatForm() {
     }
   }, []);
 
-  // 1. Fetch master Diagnosa, Dosis, and Inventory items from DB
+  // 1. Fetch master Diagnosa, Dosis, Departemen, and Inventory items from DB via authFetch
   useEffect(() => {
     // Diagnosa master table
-    fetch('/api/diagnosa')
-      .then(res => res.json())
+    authFetch<{ success: boolean; data: string[] }>('/api/diagnosa')
       .then(json => {
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
           setMasterDiagnosa(json.data);
@@ -173,8 +125,7 @@ export default function KunjunganBerobatForm() {
       .catch(() => {});
 
     // Dosis master table
-    fetch('/api/dosis')
-      .then(res => res.json())
+    authFetch<{ success: boolean; data: string[] }>('/api/dosis')
       .then(json => {
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
           setMasterDosis(json.data);
@@ -182,9 +133,17 @@ export default function KunjunganBerobatForm() {
       })
       .catch(() => {});
 
+    // Departemen dinamis dari database
+    authFetch<{ success: boolean; departments: string[] }>('/api/departments')
+      .then(json => {
+        if (json.success && Array.isArray(json.departments) && json.departments.length > 0) {
+          setDepartmentList(json.departments);
+        }
+      })
+      .catch(() => {});
+
     // Inventory items (Obat & BHP)
-    fetch('/api/inventory')
-      .then(res => res.json())
+    authFetch<{ success: boolean; data: InventoryItem[] }>('/api/inventory')
       .then(json => {
         if (json.success && Array.isArray(json.data)) {
           setInventoryList(json.data);
@@ -264,12 +223,10 @@ export default function KunjunganBerobatForm() {
     const trimmed = diagText.trim();
     if (!trimmed) return;
     try {
-      const res = await fetch('/api/diagnosa', {
+      const json = await authFetch<{ success: boolean }>('/api/diagnosa', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nama: trimmed }),
       });
-      const json = await res.json();
       if (json.success) {
         setMasterDiagnosa(prev => prev.includes(trimmed) ? prev : [...prev, trimmed].sort((a,b)=>a.localeCompare(b)));
         setSavingMasterNotice(`Diagnosa "${trimmed}" berhasil disimpan ke tabel master diagnosa!`);
@@ -308,12 +265,10 @@ export default function KunjunganBerobatForm() {
     const trimmed = dosisText.trim();
     if (!trimmed) return;
     try {
-      const res = await fetch('/api/dosis', {
+      const json = await authFetch<{ success: boolean }>('/api/dosis', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kode: trimmed }),
       });
-      const json = await res.json();
       if (json.success) {
         setMasterDosis(prev => prev.includes(trimmed) ? prev : [...prev, trimmed]);
         setSavingMasterNotice(`Aturan pakai "${trimmed}" berhasil disimpan ke tabel master dosis!`);
@@ -466,7 +421,7 @@ export default function KunjunganBerobatForm() {
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', width: '94%', margin: '0 auto' }}>
       {/* ─── Datalists terhubung ke Database ─── */}
       <datalist id="dept-datalist">
-        {DEPARTMENTS.map((d) => (
+        {departmentList.map((d) => (
           <option key={d} value={d} />
         ))}
       </datalist>

@@ -22,18 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 import DownloadButton from '@/components/ui/download-button';
-const JOBSITES = [
-  'All Site','Aceh','Angsana','Balikpapan','Banjarmasin','Banyuwangi',
-  'Batu Kajang','Bengalon','Binuang','Binungan','Bontang','Bukit Pinang',
-  'Bunyu','Gorontalo','Gunung Bintang Awai','Gunung Mas','Gunung Sari',
-  'Halmahera Timur','Head Office','Kaliorang','Kapuas Tengah','Kaubun',
-  'Kayong Utara','Kelubir','Ketapang','Konawe','Kota Baru','Kotamobagu',
-  'Labanan','Lahat','Luwu','Malinau','Melak','Morowali','Muara Bungo',
-  'Muara Enim','Muara Teweh','Murung Raya','Palu','Rantau','Samarinda',
-  'Sangatta','Satui','Sebakis','Senakin','Soroako','Tabang',
-  'Tanjung Redeb','Tanjung Tabalong','Tenggarong','Tri Yoga Morowali',
-  'Tuhup','Wetar',
-];
+import { JOBSITES } from '@/lib/lagging-data';
 
 const MONTHS = ['Semua','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 

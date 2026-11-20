@@ -182,3 +182,136 @@ export function sarankanBebanKerja(jabatan: string | null | undefined): BebanKer
   if (/manager|supervisor|admin|analis|staf|staff|engineer|draf/.test(j)) return 'ringan';
   return 'sedang';
 }
+
+// ============================================================
+// Master Data Komposisi Bahan Makanan (DKBM) Kemenkes RI
+// ============================================================
+// Dasar: Tabel Komposisi Pangan Indonesia (TKPI) / DKBM Kemenkes RI
+// Nilai gizi dihitung per 100 gram bahan matang / porsi katering siap saji.
+
+export interface ItemDKBM {
+  id: string;
+  nama: string;
+  kategori: 'Karbohidrat' | 'Lauk Hewani' | 'Lauk Nabati' | 'Sayuran' | 'Buah' | 'Ekstra / Pelengkap';
+  kaloriPer100g: number;
+  proteinPer100g: number;
+  lemakPer100g: number;
+  karbohidratPer100g: number;
+  porsiUmum: string;
+}
+
+export const DEFAULT_DKBM_SEED: ItemDKBM[] = [
+  // ── Makanan Pokok / Karbohidrat ──
+  { id: 'nasi-putih', nama: 'Nasi Putih Pulen', kategori: 'Karbohidrat', kaloriPer100g: 130, proteinPer100g: 2.7, lemakPer100g: 0.3, karbohidratPer100g: 28.2, porsiUmum: '1 centong = 100g' },
+  { id: 'nasi-merah', nama: 'Nasi Merah', kategori: 'Karbohidrat', kaloriPer100g: 111, proteinPer100g: 2.6, lemakPer100g: 0.9, karbohidratPer100g: 23.5, porsiUmum: '1 centong = 100g' },
+  { id: 'nasi-goreng', nama: 'Nasi Goreng Telur/Ayam', kategori: 'Karbohidrat', kaloriPer100g: 168, proteinPer100g: 4.5, lemakPer100g: 6.2, karbohidratPer100g: 23.8, porsiUmum: '1 piring = 200g' },
+  { id: 'kentang-rebus', nama: 'Kentang Kukus / Rebus', kategori: 'Karbohidrat', kaloriPer100g: 87, proteinPer100g: 1.9, lemakPer100g: 0.1, karbohidratPer100g: 20.1, porsiUmum: '1 buah sedang = 100g' },
+  { id: 'mie-goreng', nama: 'Mie Goreng Telur', kategori: 'Karbohidrat', kaloriPer100g: 175, proteinPer100g: 4.8, lemakPer100g: 6.8, karbohidratPer100g: 24.0, porsiUmum: '1 porsi = 150g' },
+  { id: 'bihun-goreng', nama: 'Bihun Goreng Sayur', kategori: 'Karbohidrat', kaloriPer100g: 160, proteinPer100g: 3.2, lemakPer100g: 5.5, karbohidratPer100g: 25.0, porsiUmum: '1 porsi = 120g' },
+  { id: 'roti-gandum', nama: 'Roti Tawar Gandum', kategori: 'Karbohidrat', kaloriPer100g: 247, proteinPer100g: 13.0, lemakPer100g: 3.4, karbohidratPer100g: 41.3, porsiUmum: '2 lembar = 70g' },
+
+  // ── Lauk Hewani ──
+  { id: 'ayam-goreng', nama: 'Ayam Goreng Lengkuas', kategori: 'Lauk Hewani', kaloriPer100g: 260, proteinPer100g: 24.6, lemakPer100g: 17.5, karbohidratPer100g: 0.8, porsiUmum: '1 potong paha/dada = 90g' },
+  { id: 'ayam-bakar', nama: 'Ayam Panggang / Bakar Kecap', kategori: 'Lauk Hewani', kaloriPer100g: 215, proteinPer100g: 26.0, lemakPer100g: 11.2, karbohidratPer100g: 3.5, porsiUmum: '1 potong = 90g' },
+  { id: 'ayam-rica', nama: 'Ayam Bumbu Rica / Balado', kategori: 'Lauk Hewani', kaloriPer100g: 228, proteinPer100g: 23.5, lemakPer100g: 13.8, karbohidratPer100g: 2.5, porsiUmum: '1 potong = 90g' },
+  { id: 'daging-rendang', nama: 'Daging Sapi Rendang', kategori: 'Lauk Hewani', kaloriPer100g: 280, proteinPer100g: 22.0, lemakPer100g: 20.0, karbohidratPer100g: 4.0, porsiUmum: '1 potong = 60g' },
+  { id: 'empal-daging', nama: 'Empal Daging Sapi Goreng', kategori: 'Lauk Hewani', kaloriPer100g: 295, proteinPer100g: 26.5, lemakPer100g: 19.5, karbohidratPer100g: 3.0, porsiUmum: '1 potong = 50g' },
+  { id: 'ikan-kembung', nama: 'Ikan Kembung Goreng', kategori: 'Lauk Hewani', kaloriPer100g: 190, proteinPer100g: 21.3, lemakPer100g: 10.8, karbohidratPer100g: 0.5, porsiUmum: '1 ekor sedang = 80g' },
+  { id: 'ikan-nila', nama: 'Ikan Nila Bakar / Goreng', kategori: 'Lauk Hewani', kaloriPer100g: 172, proteinPer100g: 20.5, lemakPer100g: 9.5, karbohidratPer100g: 0.8, porsiUmum: '1 ekor = 100g' },
+  { id: 'ikan-tongkol', nama: 'Ikan Tongkol Balado', kategori: 'Lauk Hewani', kaloriPer100g: 185, proteinPer100g: 24.0, lemakPer100g: 8.5, karbohidratPer100g: 2.2, porsiUmum: '1 potong = 75g' },
+  { id: 'telur-rebus', nama: 'Telur Ayam Rebus Matang', kategori: 'Lauk Hewani', kaloriPer100g: 155, proteinPer100g: 13.0, lemakPer100g: 10.6, karbohidratPer100g: 1.1, porsiUmum: '1 butir = 55g' },
+  { id: 'telur-dadar', nama: 'Telur Dadar Daun Bawang', kategori: 'Lauk Hewani', kaloriPer100g: 193, proteinPer100g: 12.5, lemakPer100g: 15.0, karbohidratPer100g: 1.8, porsiUmum: '1 butir = 60g' },
+  { id: 'telur-ceplok', nama: 'Telur Mata Sapi (Ceplok)', kategori: 'Lauk Hewani', kaloriPer100g: 188, proteinPer100g: 12.8, lemakPer100g: 14.5, karbohidratPer100g: 1.0, porsiUmum: '1 butir = 55g' },
+
+  // ── Lauk Nabati ──
+  { id: 'tempe-goreng', nama: 'Tempe Goreng / Mendoan', kategori: 'Lauk Nabati', kaloriPer100g: 220, proteinPer100g: 17.5, lemakPer100g: 14.0, karbohidratPer100g: 10.5, porsiUmum: '2 potong = 50g' },
+  { id: 'tempe-bacem', nama: 'Tempe Bacem Manis', kategori: 'Lauk Nabati', kaloriPer100g: 170, proteinPer100g: 15.0, lemakPer100g: 5.5, karbohidratPer100g: 16.0, porsiUmum: '2 potong = 60g' },
+  { id: 'tahu-goreng', nama: 'Tahu Goreng Gurih', kategori: 'Lauk Nabati', kaloriPer100g: 115, proteinPer100g: 10.0, lemakPer100g: 7.2, karbohidratPer100g: 3.5, porsiUmum: '2 potong = 80g' },
+  { id: 'tahu-bacem', nama: 'Tahu Bacem', kategori: 'Lauk Nabati', kaloriPer100g: 102, proteinPer100g: 9.2, lemakPer100g: 3.8, karbohidratPer100g: 8.5, porsiUmum: '2 potong = 80g' },
+  { id: 'perkedel-kentang', nama: 'Perkedel Kentang Telur', kategori: 'Lauk Nabati', kaloriPer100g: 185, proteinPer100g: 4.5, lemakPer100g: 8.5, karbohidratPer100g: 23.0, porsiUmum: '1 butir = 45g' },
+
+  // ── Sayuran ──
+  { id: 'sayur-sop', nama: 'Sayur Sop Wortel Kol Buncis', kategori: 'Sayuran', kaloriPer100g: 38, proteinPer100g: 1.5, lemakPer100g: 0.8, karbohidratPer100g: 6.8, porsiUmum: '1 mangkok = 120g' },
+  { id: 'sayur-asem', nama: 'Sayur Asem Segar', kategori: 'Sayuran', kaloriPer100g: 35, proteinPer100g: 1.2, lemakPer100g: 0.6, karbohidratPer100g: 6.5, porsiUmum: '1 mangkok = 120g' },
+  { id: 'sayur-lodeh', nama: 'Sayur Lodeh Santan Sedang', kategori: 'Sayuran', kaloriPer100g: 68, proteinPer100g: 2.1, lemakPer100g: 4.5, karbohidratPer100g: 5.8, porsiUmum: '1 mangkok = 120g' },
+  { id: 'tumis-kangkung', nama: 'Tumis Kangkung Tauco/Bawang', kategori: 'Sayuran', kaloriPer100g: 65, proteinPer100g: 2.8, lemakPer100g: 4.2, karbohidratPer100g: 4.5, porsiUmum: '1 porsi = 100g' },
+  { id: 'tumis-buncis', nama: 'Oseng Buncis Wortel Tempe', kategori: 'Sayuran', kaloriPer100g: 72, proteinPer100g: 3.2, lemakPer100g: 3.8, karbohidratPer100g: 7.0, porsiUmum: '1 porsi = 100g' },
+  { id: 'capcay', nama: 'Capcay Goreng Bakso/Ayam', kategori: 'Sayuran', kaloriPer100g: 85, proteinPer100g: 4.0, lemakPer100g: 4.5, karbohidratPer100g: 7.5, porsiUmum: '1 porsi = 120g' },
+
+  // ── Buah-buahan ──
+  { id: 'pisang-ambon', nama: 'Pisang Ambon Matang', kategori: 'Buah', kaloriPer100g: 97, proteinPer100g: 1.2, lemakPer100g: 0.2, karbohidratPer100g: 25.8, porsiUmum: '1 buah = 100g' },
+  { id: 'semangka', nama: 'Semangka Potong Dingin', kategori: 'Buah', kaloriPer100g: 30, proteinPer100g: 0.6, lemakPer100g: 0.2, karbohidratPer100g: 7.5, porsiUmum: '1 potong = 150g' },
+  { id: 'melon', nama: 'Melon Potong', kategori: 'Buah', kaloriPer100g: 34, proteinPer100g: 0.8, lemakPer100g: 0.2, karbohidratPer100g: 8.2, porsiUmum: '1 potong = 120g' },
+  { id: 'pepaya', nama: 'Pepaya Potong Matang', kategori: 'Buah', kaloriPer100g: 39, proteinPer100g: 0.5, lemakPer100g: 0.1, karbohidratPer100g: 9.8, porsiUmum: '1 potong = 130g' },
+  { id: 'jeruk-manis', nama: 'Jeruk Manis', kategori: 'Buah', kaloriPer100g: 45, proteinPer100g: 0.9, lemakPer100g: 0.1, karbohidratPer100g: 11.2, porsiUmum: '1 buah = 110g' },
+
+  // ── Ekstra / Pelengkap ──
+  { id: 'susu-uht', nama: 'Susu UHT Segar Full Cream', kategori: 'Ekstra / Pelengkap', kaloriPer100g: 65, proteinPer100g: 3.2, lemakPer100g: 3.6, karbohidratPer100g: 4.8, porsiUmum: '1 kotak kecil = 200ml (130 kkal)' },
+  { id: 'kerupuk-putih', nama: 'Kerupuk Putih / Kaleng', kategori: 'Ekstra / Pelengkap', kaloriPer100g: 476, proteinPer100g: 7.0, lemakPer100g: 21.0, karbohidratPer100g: 65.0, porsiUmum: '1 keping = 15g (71 kkal)' },
+  { id: 'sambal-terasi', nama: 'Sambal Terasi Goreng', kategori: 'Ekstra / Pelengkap', kaloriPer100g: 120, proteinPer100g: 2.5, lemakPer100g: 8.0, karbohidratPer100g: 9.5, porsiUmum: '1 sdm = 15g' },
+];
+
+export const MASTER_DKBM = DEFAULT_DKBM_SEED;
+
+export interface RincianSajianDKBM {
+  bahanId: string;
+  nama: string;
+  kategori: string;
+  gram: number;
+  kalori: number;
+  protein: number;
+  lemak: number;
+  karbohidrat: number;
+}
+
+export function hitungGiziSajian(
+  items: { bahanId: string; gram: number }[],
+  masterList: ItemDKBM[] = DEFAULT_DKBM_SEED,
+): {
+  totalKalori: number;
+  totalProtein: number;
+  totalLemak: number;
+  totalKarbohidrat: number;
+  rincian: RincianSajianDKBM[];
+} {
+  const mapBahan = new Map(masterList.map((b) => [b.id, b]));
+  let totalKalori = 0;
+  let totalProtein = 0;
+  let totalLemak = 0;
+  let totalKarbohidrat = 0;
+  const rincian: RincianSajianDKBM[] = [];
+
+  for (const it of items) {
+    const bahan = mapBahan.get(it.bahanId);
+    if (!bahan || it.gram <= 0) continue;
+    const factor = it.gram / 100;
+    const kalori = Math.round(bahan.kaloriPer100g * factor);
+    const protein = Number((bahan.proteinPer100g * factor).toFixed(1));
+    const lemak = Number((bahan.lemakPer100g * factor).toFixed(1));
+    const karbohidrat = Number((bahan.karbohidratPer100g * factor).toFixed(1));
+
+    totalKalori += kalori;
+    totalProtein += protein;
+    totalLemak += lemak;
+    totalKarbohidrat += karbohidrat;
+
+    rincian.push({
+      bahanId: bahan.id,
+      nama: bahan.nama,
+      kategori: bahan.kategori,
+      gram: it.gram,
+      kalori,
+      protein,
+      lemak,
+      karbohidrat,
+    });
+  }
+
+  return {
+    totalKalori,
+    totalProtein: Number(totalProtein.toFixed(1)),
+    totalLemak: Number(totalLemak.toFixed(1)),
+    totalKarbohidrat: Number(totalKarbohidrat.toFixed(1)),
+    rincian,
+  };
+}

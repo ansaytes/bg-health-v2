@@ -155,14 +155,39 @@ export async function PATCH(req: NextRequest) {
   if ('error' in auth) return auth.error;
   const { caller } = auth;
   const b: Row = await req.json().catch(() => ({}));
-  if (!b.id) return fail('id wajib');
+  if (!b.id && !b.bulk_ids) return fail('id atau bulk_ids wajib');
   try {
     if (b.resource === 'survey') {
-      if (b.action === 'approve' || b.action === 'reject') {
+      if (b.action === 'approve' || b.action === 'reject' || b.action === 'approve_all') {
         // Persetujuan hanya oleh QSHE Manager / PJO (role manager); superuser sebagai cadangan.
         if (!APPROVER_ROLES.includes(caller.role)) return fail('Persetujuan hanya dapat diberikan oleh role Manager', 403);
       } else if (!ADMIN_ROLES.includes(caller.role)) {
         return fail('Akses ditolak', 403);
+      }
+      if (b.action === 'approve_all') {
+        const ids: string[] = Array.isArray(b.bulk_ids) ? b.bulk_ids.filter(Boolean) : [];
+        if (!ids.length) return fail('Daftar ID survei kosong');
+        const t = today();
+        const { data: updated, error } = await db.from('ergo_survey').update({
+          status: 'DISETUJUI',
+          disetujui_oleh: caller.name,
+          disetujui_jabatan: caller.jabatan,
+          tgl_disetujui: t,
+          catatan_persetujuan: b.catatan || 'Disetujui serentak',
+        })
+        .in('id', ids)
+        .eq('status', 'MENUNGGU_PERSETUJUAN')
+        .eq('sah', true)
+        .select('id');
+
+        if (error) throw new Error(error.message);
+        const count = updated?.length || 0;
+
+        if (count > 0) {
+          const approvedIds = updated.map((u: { id: string }) => u.id);
+          await db.from('ergo_recommendation').update({ batas_verifikasi: addWorkdays(t, 30) }).in('survey_id', approvedIds).is('batas_verifikasi', null);
+        }
+        return ok({ count, message: `${count} survei berhasil disetujui sekaligus.` });
       }
       if (b.action === 'approve') {
         const { data: s } = await db.from('ergo_survey').select('sah,status').eq('id', b.id).maybeSingle();

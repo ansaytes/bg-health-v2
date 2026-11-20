@@ -10,14 +10,34 @@ import AiProfilesEditor from './AiProfilesEditor';
 
 type SettingsData = {
   ai: { profiles: AiProfilePublic[]; maxProfiles: number };
-  drive: { folderId: string; connected: boolean; accountEmail: string };
+  drive: {
+    folderId: string;
+    folders?: {
+      mcu?: string;
+      ergonomi?: string;
+      kampanye?: string;
+      branding?: string;
+    };
+    connected: boolean;
+    accountEmail: string;
+  };
   googleDriveOAuthConfigured: boolean;
   encryptionKeyConfigured: boolean;
 };
 
 const initial: SettingsData = {
   ai: { profiles: [], maxProfiles: 10 },
-  drive: { folderId: '', connected: false, accountEmail: '' },
+  drive: {
+    folderId: '',
+    folders: {
+      mcu: '',
+      ergonomi: '',
+      kampanye: '',
+      branding: '',
+    },
+    connected: false,
+    accountEmail: '',
+  },
   googleDriveOAuthConfigured: false,
   encryptionKeyConfigured: false,
 };
@@ -139,16 +159,100 @@ export default function IntegrationSettings({ canEdit }: { canEdit: boolean }) {
 
       <section className="rounded-xl border border-border bg-card p-4">
         <h3 className="mb-1 text-sm font-bold">Google Drive</h3>
-        <p className="mb-4 text-xs text-muted-foreground">File mengikuti izin folder Drive. Atur folder perusahaan yang telah dibagikan sesuai akses staf.</p>
-        <div className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1 text-xs font-semibold">
-            Folder ID
-            <Input className={inputClass} value={settings.drive.folderId} disabled={loading || !canEdit} maxLength={200} onChange={(event) => setSettings({ ...settings, drive: { ...settings.drive, folderId: event.target.value } })} />
-          </label>
+        <p className="mb-4 text-xs text-muted-foreground">
+          File tersimpan mengikuti izin folder Drive. Anda dapat memisahkan folder berkas MCU, foto ergonomi, banner kampanye, dan branding logo agar arsip terkelola rapi.
+        </p>
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1 text-xs font-semibold sm:col-span-2">
+              Folder ID Utama (Default / Fallback)
+              <Input
+                className={inputClass}
+                placeholder="ID folder Google Drive utama"
+                value={settings.drive.folderId}
+                disabled={loading || !canEdit}
+                maxLength={200}
+                onChange={(event) => setSettings({ ...settings, drive: { ...settings.drive, folderId: event.target.value } })}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1 text-xs font-semibold">
+              Folder Khusus: Berkas MCU (PDF/Hasil)
+              <Input
+                className={inputClass}
+                placeholder="Folder ID untuk berkas MCU (opsional)"
+                value={settings.drive.folders?.mcu || ''}
+                disabled={loading || !canEdit}
+                maxLength={200}
+                onChange={(event) => setSettings({
+                  ...settings,
+                  drive: {
+                    ...settings.drive,
+                    folders: { ...(settings.drive.folders || {}), mcu: event.target.value },
+                  },
+                })}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1 text-xs font-semibold">
+              Folder Khusus: Foto/Video Ergonomi
+              <Input
+                className={inputClass}
+                placeholder="Folder ID untuk foto ergonomi (opsional)"
+                value={settings.drive.folders?.ergonomi || ''}
+                disabled={loading || !canEdit}
+                maxLength={200}
+                onChange={(event) => setSettings({
+                  ...settings,
+                  drive: {
+                    ...settings.drive,
+                    folders: { ...(settings.drive.folders || {}), ergonomi: event.target.value },
+                  },
+                })}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1 text-xs font-semibold">
+              Folder Khusus: Banner Health Campaign
+              <Input
+                className={inputClass}
+                placeholder="Folder ID untuk health campaign (opsional)"
+                value={settings.drive.folders?.kampanye || ''}
+                disabled={loading || !canEdit}
+                maxLength={200}
+                onChange={(event) => setSettings({
+                  ...settings,
+                  drive: {
+                    ...settings.drive,
+                    folders: { ...(settings.drive.folders || {}), kampanye: event.target.value },
+                  },
+                })}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1 text-xs font-semibold">
+              Folder Khusus: Branding &amp; Logo WebApp
+              <Input
+                className={inputClass}
+                placeholder="Folder ID untuk logo branding (opsional)"
+                value={settings.drive.folders?.branding || ''}
+                disabled={loading || !canEdit}
+                maxLength={200}
+                onChange={(event) => setSettings({
+                  ...settings,
+                  drive: {
+                    ...settings.drive,
+                    folders: { ...(settings.drive.folders || {}), branding: event.target.value },
+                  },
+                })}
+              />
+            </label>
+          </div>
+
           <div className="flex flex-wrap items-center gap-3">
             <Button type="button" disabled={loading || !canEdit || saving || !settings.encryptionKeyConfigured} onClick={() => void saveDriveFolder()}>
               {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-              Simpan Folder
+              Simpan Pengaturan Folder
             </Button>
             <Button type="button" variant="outline" disabled={loading || !canEdit || connecting || !settings.googleDriveOAuthConfigured} onClick={connectDrive}>
               {connecting ? <Loader2 className="size-4 animate-spin" /> : <CloudUpload className="size-4" />}

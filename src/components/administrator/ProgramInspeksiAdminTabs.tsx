@@ -18,11 +18,13 @@ import { useState } from 'react';
 import CenteredTabs from '@/components/ui/centered-tabs';
 import ProgramInspeksi from './ProgramInspeksi';
 import PicaRegister from './PicaRegister';
+import InspeksiApproval from '@/components/dashboard/InspeksiApproval';
 
-export type ProgramInspeksiAdminTab = 'program' | 'pica';
+export type ProgramInspeksiAdminTab = 'program' | 'approval' | 'pica';
 
 const TABS: { key: ProgramInspeksiAdminTab; label: string }[] = [
   { key: 'program', label: 'Program Inspeksi' },
+  { key: 'approval', label: 'Approval Inspeksi' },
   { key: 'pica', label: 'Register PICA' },
 ];
 
@@ -35,7 +37,13 @@ export default function ProgramInspeksiAdminTabs({ initialTab = 'program' }: { i
         <CenteredTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Program Inspeksi & Register PICA" compact />
       </div>
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {tab === 'program' ? <ProgramInspeksi key="program" /> : <PicaRegister key="pica" />}
+        {tab === 'program' ? (
+          <ProgramInspeksi key="program" />
+        ) : tab === 'approval' ? (
+          <InspeksiApproval key="approval" />
+        ) : (
+          <PicaRegister key="pica" />
+        )}
       </div>
     </div>
   );

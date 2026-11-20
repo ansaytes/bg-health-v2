@@ -137,8 +137,23 @@ export function nilaiRuang(input: {
   jumlahPekerja: number | null;
   tinggiRuanganM: number | null;
   titik: HasilTitik[];
+  nabCustom?: {
+    lux?: Record<PeruntukanRuang, number>;
+    udara?: {
+      suhuMin?: number;
+      suhuMax?: number;
+      kelembabanMin?: number;
+      kelembabanMax?: number;
+      oksigenMin?: number;
+      oksigenMax?: number;
+      pm10Max?: number;
+      asbesMax?: number;
+    };
+  };
 }): PenilaianRuang {
-  const nab = NAB_LUX[input.peruntukan];
+  const defaultNabLux = NAB_LUX[input.peruntukan];
+  const customLuxVal = input.nabCustom?.lux?.[input.peruntukan];
+  const nabMinLux = customLuxVal !== undefined ? customLuxVal : defaultNabLux.min;
 
   const luxList = input.titik.map((t) => t.lux).filter((v): v is number => v !== null);
   const luxMin = luxList.length ? Math.min(...luxList) : null;
@@ -148,17 +163,45 @@ export function nilaiRuang(input: {
     : null;
 
   // Penilaian pencahayaan memakai nilai TERENDAH antar titik.
-  const statusLux = nab.min === null
+  const statusLux = nabMinLux === null
     ? 'tidak-dinilai'
-    : nilaikan(luxMin, nab.min, null);
+    : nilaikan(luxMin, nabMinLux, null);
+
+  // Kualitas udara: ambil dari nabCustom bila ada, fallback ke default NAB_UDARA
+  const customUdara = input.nabCustom?.udara;
+  const udaraParams = {
+    suhu: {
+      ...NAB_UDARA.suhu,
+      min: customUdara?.suhuMin ?? NAB_UDARA.suhu.min,
+      max: customUdara?.suhuMax ?? NAB_UDARA.suhu.max,
+    },
+    kelembapan: {
+      ...NAB_UDARA.kelembapan,
+      min: customUdara?.kelembabanMin ?? NAB_UDARA.kelembapan.min,
+      max: customUdara?.kelembabanMax ?? NAB_UDARA.kelembapan.max,
+    },
+    oksigen: {
+      ...NAB_UDARA.oksigen,
+      min: customUdara?.oksigenMin ?? NAB_UDARA.oksigen.min,
+      max: customUdara?.oksigenMax ?? NAB_UDARA.oksigen.max,
+    },
+    pm10: {
+      ...NAB_UDARA.pm10,
+      max: customUdara?.pm10Max ?? NAB_UDARA.pm10.max,
+    },
+    asbes: {
+      ...NAB_UDARA.asbes,
+      max: customUdara?.asbesMax ?? NAB_UDARA.asbes.max,
+    },
+  };
 
   // Kualitas udara: setiap parameter punya NAB sendiri.
   const statusUdara = [
-    { parameter: 'suhu', label: 'Suhu', kunci: 'suhu' as const, nab: NAB_UDARA.suhu },
-    { parameter: 'kelembapan', label: 'Kelembapan', kunci: 'kelembapan' as const, nab: NAB_UDARA.kelembapan },
-    { parameter: 'oksigen', label: 'Kadar oksigen', kunci: 'oksigen' as const, nab: NAB_UDARA.oksigen },
-    { parameter: 'pm10', label: 'Debu PM10', kunci: 'pm10' as const, nab: NAB_UDARA.pm10 },
-    { parameter: 'asbes', label: 'Asbes bebas', kunci: 'asbes' as const, nab: NAB_UDARA.asbes },
+    { parameter: 'suhu', label: 'Suhu', kunci: 'suhu' as const, nab: udaraParams.suhu },
+    { parameter: 'kelembapan', label: 'Kelembapan', kunci: 'kelembapan' as const, nab: udaraParams.kelembapan },
+    { parameter: 'oksigen', label: 'Kadar oksigen', kunci: 'oksigen' as const, nab: udaraParams.oksigen },
+    { parameter: 'pm10', label: 'Debu PM10', kunci: 'pm10' as const, nab: udaraParams.pm10 },
+    { parameter: 'asbes', label: 'Asbes bebas', kunci: 'asbes' as const, nab: udaraParams.asbes },
   ].map((p) => {
     const nilaiArr = input.titik.map((t) => t[p.kunci]).filter((v): v is number => v !== null);
     // Untuk parameter berbahaya (PM10, asbes) dipakai nilai TERTINGGI;
@@ -203,7 +246,7 @@ export function nilaiRuang(input: {
 
   return {
     peruntukan: input.peruntukan,
-    nabLux: nab.min,
+    nabLux: nabMinLux,
     luxMin, luxRata, luxMaks,
     statusLux,
     statusUdara,

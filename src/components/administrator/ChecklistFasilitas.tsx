@@ -369,9 +369,9 @@ export default function ChecklistFasilitas({
 
   /* ── Gaya Tabel & Layout Bersih Mengacu Hearing Conservation / Ergonomi ── */
   const th: React.CSSProperties = {
-    padding: '8px 10px',
+    padding: '5px 8px',
     borderBottom: '1px solid var(--border)',
-    fontSize: 11,
+    fontSize: 10,
     textTransform: 'uppercase',
     letterSpacing: '0.04em',
     color: 'var(--muted-foreground)',
@@ -380,16 +380,16 @@ export default function ChecklistFasilitas({
     whiteSpace: 'nowrap',
   };
   const td: React.CSSProperties = {
-    padding: '8px 10px',
+    padding: '6px 8px',
     borderBottom: '1px solid var(--border)',
-    fontSize: 12,
+    fontSize: 11,
     verticalAlign: 'middle',
   };
   const cellInput: React.CSSProperties = {
-    height: 32,
-    fontSize: 12,
-    padding: '0 8px',
-    borderRadius: 7,
+    height: 28,
+    fontSize: 11,
+    padding: '0 7px',
+    borderRadius: 6,
     border: '1px solid var(--border)',
     background: 'var(--background)',
     color: 'var(--foreground)',
@@ -546,11 +546,11 @@ export default function ChecklistFasilitas({
 
         {/* Baris Status Kesiapan Khusus Ambulans */}
         {jenis === 'ambulans' && grup && (
-          <div className="admin-form-card" style={{ padding: '12px 16px', marginBottom: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 12 }}>
+          <div className="admin-form-card" style={{ padding: '8px 12px', marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 11 }}>
                 <span style={{ fontWeight: 700, color: 'var(--brand-primary, #ff4d00)' }}>Status Unit {grup}:</span>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
                   <span style={{ color: 'var(--muted-foreground)' }}>Kesiapan Operasional:</span>
                   <select
                     value={unitStatus[grup]?.kesiapan ?? 'ready'}
@@ -578,7 +578,7 @@ export default function ChecklistFasilitas({
                   </select>
                 </label>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
                   <span style={{ color: 'var(--muted-foreground)' }}>BBM Tangki:</span>
                   <input
                     type="number"
@@ -621,23 +621,23 @@ export default function ChecklistFasilitas({
 
         {/* Modal Tambah Grup / Lokasi / Unit */}
         {tambahGrup && pengelompok && (
-          <div className="admin-form-card" style={{ padding: '12px 16px', flexShrink: 0, marginBottom: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <span style={{ width: 3, height: 16, borderRadius: 2, background: '#00B894', display: 'inline-block', flexShrink: 0 }} />
-              <h3 className="admin-section-title" style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>
+          <div className="admin-form-card" style={{ padding: '10px 14px', flexShrink: 0, marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <span style={{ width: 3, height: 12, borderRadius: 2, background: '#00B894', display: 'inline-block', flexShrink: 0 }} />
+              <h3 className="admin-section-title" style={{ fontSize: 11, fontWeight: 700, margin: 0 }}>
                 Tambah {labelGrup} Baru
               </h3>
             </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', flexWrap: 'wrap' }}>
               <label className="flex flex-col gap-1">
-                <span className="text-[11px] font-semibold text-muted-foreground">
+                <span className="text-[10px] font-semibold text-muted-foreground">
                   Nama {labelGrup}
                 </span>
                 <Input
                   value={grupBaru}
                   onChange={(e) => setGrupBaru(e.target.value)}
                   placeholder={jenis === 'ambulans' ? 'mis. AMB-02' : 'mis. Ruang Lab / Batching Plant'}
-                  className="h-9 w-64 rounded-lg text-sm"
+                  className="h-8 w-64 rounded-md text-xs"
                 />
               </label>
               <Button
@@ -650,11 +650,11 @@ export default function ChecklistFasilitas({
                   setGrupBaru('');
                   setTambahGrup(false);
                 }}
-                style={{ gap: 6, height: 36 }}
+                style={{ gap: 5, height: 28, fontSize: 11 }}
               >
-                <Check size={14} /> Gunakan {labelGrup} Ini
+                <Check size={12} /> Gunakan {labelGrup} Ini
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setTambahGrup(false)} style={{ height: 36 }}>Batal</Button>
+              <Button variant="outline" size="sm" onClick={() => setTambahGrup(false)} style={{ height: 28, fontSize: 11 }}>Batal</Button>
             </div>
           </div>
         )}
@@ -681,19 +681,19 @@ export default function ChecklistFasilitas({
           const tidakAdaCount = list.filter((i) => i.status === 'tidak_ada').length;
 
           return (
-            <div key={kategori} className="admin-form-card" style={{ overflow: 'auto', marginBottom: 18, padding: '14px 18px' }}>
+            <div key={kategori} className="admin-form-card" style={{ overflow: 'auto', marginBottom: 10, padding: '10px 14px' }}>
               {/* Header Kartu Kategori: Rata Kiri & Rapi */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 3, height: 16, borderRadius: 2, background: 'var(--brand-primary, #ff4d00)', display: 'inline-block', flexShrink: 0 }} />
-                  <h3 className="admin-section-title" style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 3, height: 12, borderRadius: 2, background: 'var(--brand-primary, #ff4d00)', display: 'inline-block', flexShrink: 0 }} />
+                  <h3 className="admin-section-title" style={{ fontSize: 11, fontWeight: 700, margin: 0 }}>
                     {kategoriMap[kategori] ?? kategori}
                   </h3>
                 </div>
-                <div style={{ fontSize: 11.5, color: 'var(--muted-foreground)' }}>
+                <div style={{ fontSize: 10.5, color: 'var(--muted-foreground)' }}>
                   <b style={{ color: '#00B894' }}>{siapCount}</b> siap · Total {list.length} item
-                  {rusakCount > 0 && <span style={{ marginLeft: 8, color: '#FF7A00', fontWeight: 600 }}>({rusakCount} rusak)</span>}
-                  {tidakAdaCount > 0 && <span style={{ marginLeft: 8, color: '#FF2D2D', fontWeight: 600 }}>({tidakAdaCount} tidak ada)</span>}
+                  {rusakCount > 0 && <span style={{ marginLeft: 6, color: '#FF7A00', fontWeight: 600 }}>({rusakCount} rusak)</span>}
+                  {tidakAdaCount > 0 && <span style={{ marginLeft: 6, color: '#FF2D2D', fontWeight: 600 }}>({tidakAdaCount} tidak ada)</span>}
                 </div>
               </div>
 
@@ -721,7 +721,7 @@ export default function ChecklistFasilitas({
                           {/* 1. Item Nama & Standar */}
                           <td style={td}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontWeight: 600, fontSize: 12.5 }}>{b.nama}</span>
+                              <span style={{ fontWeight: 600, fontSize: 11 }}>{b.nama}</span>
                               {!b.wajib && (
                                 <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
                                   opsional
@@ -747,10 +747,10 @@ export default function ChecklistFasilitas({
                               disabled={!isAdmin || sibuk}
                               onChange={(e) => void simpan(b, { status: e.target.value as Status })}
                               style={{
-                                height: 30,
-                                fontSize: 11.5,
+                                height: 26,
+                                fontSize: 11,
                                 fontWeight: 700,
-                                padding: '0 24px 0 10px',
+                                padding: '0 20px 0 8px',
                                 borderRadius: 999,
                                 border: `1px solid ${meta.warna}66`,
                                 background: `${meta.warna}15`,
@@ -881,43 +881,43 @@ function FormTambahItem({
   }
 
   return (
-    <div className="admin-form-card" style={{ padding: '14px 18px', flexShrink: 0, marginBottom: 14 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <span style={{ width: 3, height: 16, borderRadius: 2, background: '#00B894', display: 'inline-block', flexShrink: 0 }} />
-        <h3 className="admin-section-title" style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>
+    <div className="admin-form-card" style={{ padding: '10px 14px', flexShrink: 0, marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+        <span style={{ width: 3, height: 12, borderRadius: 2, background: '#00B894', display: 'inline-block', flexShrink: 0 }} />
+        <h3 className="admin-section-title" style={{ fontSize: 11, fontWeight: 700, margin: 0 }}>
           Tambah Item Checklist Baru
         </h3>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3" style={{ marginBottom: 12 }}>
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2" style={{ marginBottom: 8 }}>
         <label className="flex flex-col gap-1 sm:col-span-2">
-          <span className="text-[11px] font-semibold text-muted-foreground">Nama Item</span>
+          <span className="text-[10px] font-semibold text-muted-foreground">Nama Item</span>
           <Input
             value={nama}
             onChange={(e) => setNama(e.target.value)}
             placeholder="mis. Tabung Oksigen Cadangan 2m3"
-            className="h-9 rounded-lg text-sm"
+            className="h-8 rounded-md text-xs"
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold text-muted-foreground">Kategori</span>
+          <span className="text-[10px] font-semibold text-muted-foreground">Kategori</span>
           <select
             value={kategori}
             onChange={(e) => setKategori(e.target.value)}
-            className="h-9 rounded-lg border-input bg-background px-2 text-sm"
+            className="h-8 rounded-md border-input bg-background px-2 text-xs"
           >
             {Object.entries(kategoriOptions).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </label>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, justifyContent: 'center', fontSize: 12 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'center', fontSize: 11 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <input type="checkbox" checked={wajib} onChange={(e) => setWajib(e.target.checked)} /> Wajib Sesuai Standar
           </label>
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <Button variant="outline" size="sm" onClick={onSelesai} style={{ height: 34 }}>Batal</Button>
-        <Button size="sm" disabled={simpan || !nama.trim()} onClick={() => void kirim()} style={{ gap: 6, height: 34 }}>
-          {simpan ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Simpan Item
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+        <Button variant="outline" size="sm" onClick={onSelesai} style={{ height: 28, fontSize: 11 }}>Batal</Button>
+        <Button size="sm" disabled={simpan || !nama.trim()} onClick={() => void kirim()} style={{ gap: 5, height: 28, fontSize: 11 }}>
+          {simpan ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Simpan Item
         </Button>
       </div>
     </div>

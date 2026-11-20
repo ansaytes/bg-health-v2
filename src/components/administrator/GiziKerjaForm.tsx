@@ -11,7 +11,7 @@
 //   4. Pemenuhan Kecukupan Kalori Kerja (AKG Kemenkes 2019 / Permenkes 28/2019)
 //   5. Penyimpanan Sampel Makanan 1x24 Jam & Uji Mikrobiologi
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Award,
@@ -19,9 +19,12 @@ import {
   Clock,
   Info,
   Loader2,
+  Plus,
+  Scale,
   Save,
   ShieldCheck,
   Sparkles,
+  Trash2,
   UserRound,
   UtensilsCrossed,
   XCircle,
@@ -37,6 +40,7 @@ import {
   type ItemInspeksiGizi,
   type StatusLaikJasaboga,
 } from '@/lib/gizi-inspeksi';
+import { MASTER_DKBM, hitungGiziSajian, type ItemDKBM } from '@/lib/gizi-kerja';
 import { Btn, Field, Section, SITES, grid4, smallInput } from './hc-ergo-ui';
 
 export default function GiziKerjaForm() {
@@ -62,6 +66,108 @@ export default function GiziKerjaForm() {
   const [kaloriSarapan, setKaloriSarapan] = useState<number | ''>(650);
   const [kaloriSiang, setKaloriSiang] = useState<number | ''>(1100);
   const [kaloriMalam, setKaloriMalam] = useState<number | ''>(950);
+
+  // Kalkulator DKBM Timbangan Porsi
+  const [bukaDkbm, setBukaDkbm] = useState(false);
+  const [bukaFormTambahMenu, setBukaFormTambahMenu] = useState(false);
+  const [masterDkbm, setMasterDkbm] = useState<ItemDKBM[]>(MASTER_DKBM);
+  const [loadingDkbm, setLoadingDkbm] = useState(false);
+  const [sesiPilihan, setSesiPilihan] = useState<'sarapan' | 'siang' | 'malam'>('siang');
+  const [daftarTimbangan, setDaftarTimbangan] = useState<{ id: string; bahanId: string; gram: number }[]>([
+    { id: '1', bahanId: 'nasi-putih', gram: 200 },
+    { id: '2', bahanId: 'ayam-goreng', gram: 90 },
+    { id: '3', bahanId: 'tempe-goreng', gram: 50 },
+    { id: '4', bahanId: 'sayur-sop', gram: 120 },
+    { id: '5', bahanId: 'semangka', gram: 150 },
+  ]);
+  const [bahanTerpilih, setBahanTerpilih] = useState(MASTER_DKBM[0].id);
+  const [gramInput, setGramInput] = useState<number | ''>(100);
+
+  // Form Tambah Menu Baru ke Database
+  const [baruNama, setBaruNama] = useState('');
+  const [baruKategori, setBaruKategori] = useState<ItemDKBM['kategori']>('Lauk Hewani');
+  const [baruKalori, setBaruKalori] = useState<number | ''>(200);
+  const [baruProtein, setBaruProtein] = useState<number | ''>(15);
+  const [baruLemak, setBaruLemak] = useState<number | ''>(8);
+  const [baruKarbo, setBaruKarbo] = useState<number | ''>(5);
+  const [baruPorsi, setBaruPorsi] = useState('');
+  const [menyimpanMenu, setMenyimpanMenu] = useState(false);
+
+  // Load DKBM dari database Supabase
+  const loadMasterDkbm = useCallback(async () => {
+    setLoadingDkbm(true);
+    try {
+      const res = (await authFetch('/api/gizi/dkbm')) as { success: boolean; data?: ItemDKBM[] };
+      if (res.data && res.data.length > 0) {
+        setMasterDkbm(res.data);
+      }
+    } catch (err) {
+      console.error('[GiziKerja] Failed to load DKBM from database:', err);
+    } finally {
+      setLoadingDkbm(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadMasterDkbm();
+  }, [loadMasterDkbm]);
+
+  const hasilGiziTimbangan = useMemo(() => {
+    return hitungGiziSajian(daftarTimbangan, masterDkbm);
+  }, [daftarTimbangan, masterDkbm]);
+
+  function handleTambahTimbangan() {
+    if (!bahanTerpilih || !gramInput || Number(gramInput) <= 0) return;
+    setDaftarTimbangan((prev) => [
+      ...prev,
+      { id: String(Date.now()), bahanId: bahanTerpilih, gram: Number(gramInput) },
+    ]);
+  }
+
+  function handleHapusTimbangan(id: string) {
+    setDaftarTimbangan((prev) => prev.filter((it) => it.id !== id));
+  }
+
+  function handleTerapkanKeKalori() {
+    if (sesiPilihan === 'sarapan') setKaloriSarapan(hasilGiziTimbangan.totalKalori);
+    else if (sesiPilihan === 'siang') setKaloriSiang(hasilGiziTimbangan.totalKalori);
+    else setKaloriMalam(hasilGiziTimbangan.totalKalori);
+
+    store.showToast(`Kalori ${sesiPilihan.toUpperCase()} diperbarui menjadi ${hasilGiziTimbangan.totalKalori} kkal (berdasarkan timbangan)`, 'success');
+  }
+
+  async function handleSimpanMenuDatabase() {
+    if (!baruNama.trim() || !baruKalori) {
+      store.showToast('Nama menu dan kalori per 100g wajib diisi', 'info');
+      return;
+    }
+    setMenyimpanMenu(true);
+    try {
+      const res = (await authFetch('/api/gizi/dkbm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nama: baruNama.trim(),
+          kategori: baruKategori,
+          kaloriPer100g: Number(baruKalori),
+          proteinPer100g: Number(baruProtein) || 0,
+          lemakPer100g: Number(baruLemak) || 0,
+          karbohidratPer100g: Number(baruKarbo) || 0,
+          porsiUmum: baruPorsi.trim() || undefined,
+        }),
+      })) as { success?: boolean; pesan?: string; data?: ItemDKBM };
+
+      store.showToast(res.pesan || 'Menu berhasil ditambahkan ke database master DKBM', 'success');
+      setBaruNama('');
+      setBukaFormTambahMenu(false);
+      await loadMasterDkbm();
+      if (res.data?.id) setBahanTerpilih(res.data.id);
+    } catch (e) {
+      store.showToast(e instanceof Error ? e.message : 'Gagal menyimpan menu ke database', 'error');
+    } finally {
+      setMenyimpanMenu(false);
+    }
+  }
 
   // Checklist
   const [jawaban, setJawaban] = useState<Record<string, 'sesuai' | 'tidak_sesuai' | 'tidak_berlaku'>>({});
@@ -312,6 +418,32 @@ export default function GiziKerjaForm() {
 
         {/* Section 3: Evaluasi Menu & Asupan Kalori Kerja */}
         <Section title="Evaluasi Kalori Siklus Menu Katering">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>
+              Input kalori per waktu makan. Anda dapat mengisi langsung angka kalori atau menggunakan modul timbangan porsi DKBM di bawah.
+            </span>
+            <button
+              type="button"
+              onClick={() => setBukaDkbm(!bukaDkbm)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '4px 10px',
+                borderRadius: 6,
+                background: bukaDkbm ? 'rgba(0,184,148,0.15)' : 'var(--muted)',
+                border: '1px solid var(--border)',
+                color: bukaDkbm ? '#00B894' : 'var(--foreground)',
+                fontSize: 11,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <Scale size={13} />
+              {bukaDkbm ? 'Tutup Timbangan DKBM' : 'Buka Kalkulator Timbangan DKBM'}
+            </button>
+          </div>
+
           <div style={grid4}>
             <Field label="Kalori Sarapan (kkal)">
               <input
@@ -363,6 +495,340 @@ export default function GiziKerjaForm() {
               </div>
             </div>
           </div>
+
+          {/* ── Kalkulator Timbangan Porsi DKBM ────────────────── */}
+          {bukaDkbm && (
+            <div
+              style={{
+                marginTop: 14,
+                padding: '12px 14px',
+                borderRadius: 8,
+                background: 'var(--muted)',
+                border: '1px solid var(--border)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--foreground)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Scale size={14} color="#00B894" />
+                    Kalkulator Timbangan Sajian Katering (Daftar Komposisi Bahan Makanan Kemenkes)
+                  </div>
+                  <div style={{ fontSize: 10.5, color: 'var(--muted-foreground)', marginTop: 2 }}>
+                    Timbang satu sajian standar katering di dapur mess, masukkan gram per bahan untuk menghitung energi dan zat gizi makro.
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setBukaFormTambahMenu(!bukaFormTambahMenu)}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: 6,
+                      background: bukaFormTambahMenu ? '#FF7A00' : 'var(--background)',
+                      border: '1px solid var(--border)',
+                      color: bukaFormTambahMenu ? '#fff' : 'var(--foreground)',
+                      fontSize: 10.5,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    <Plus size={12} /> {bukaFormTambahMenu ? 'Tutup Form Menu' : '+ Menu Baru'}
+                  </button>
+
+                  <span style={{ fontSize: 11, fontWeight: 600 }}>Target:</span>
+                  <select
+                    value={sesiPilihan}
+                    onChange={(e) => setSesiPilihan(e.target.value as 'sarapan' | 'siang' | 'malam')}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: 6,
+                      border: '1px solid var(--border)',
+                      background: 'var(--background)',
+                      fontSize: 11,
+                      fontWeight: 700,
+                    }}
+                  >
+                    <option value="sarapan">Sarapan Pagi</option>
+                    <option value="siang">Makan Siang</option>
+                    <option value="malam">Makan Malam</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Form Tambah Menu Baru ke Database (Jika Dibuka) */}
+              {bukaFormTambahMenu && (
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: 6,
+                    background: 'var(--card)',
+                    border: '1px solid var(--border)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                  }}
+                >
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#FF7A00' }}>
+                    Tambah Bahan Makanan Baru ke Database Master DKBM
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr 1fr 1fr', gap: 6 }}>
+                    <div>
+                      <label style={{ fontSize: 10, color: 'var(--muted-foreground)', display: 'block' }}>Nama Menu *</label>
+                      <input
+                        type="text"
+                        placeholder="mis. Rawon Daging Sapi"
+                        value={baruNama}
+                        onChange={(e) => setBaruNama(e.target.value)}
+                        style={{ ...smallInput, width: '100%' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 10, color: 'var(--muted-foreground)', display: 'block' }}>Kategori</label>
+                      <select
+                        value={baruKategori}
+                        onChange={(e) => setBaruKategori(e.target.value as ItemDKBM['kategori'])}
+                        style={{ ...smallInput, width: '100%' }}
+                      >
+                        <option value="Karbohidrat">Karbohidrat</option>
+                        <option value="Lauk Hewani">Lauk Hewani</option>
+                        <option value="Lauk Nabati">Lauk Nabati</option>
+                        <option value="Sayuran">Sayuran</option>
+                        <option value="Buah">Buah</option>
+                        <option value="Ekstra / Pelengkap">Ekstra / Pelengkap</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 10, color: 'var(--muted-foreground)', display: 'block' }}>Kkal/100g *</label>
+                      <input
+                        type="number"
+                        placeholder="Kalori"
+                        value={baruKalori}
+                        onChange={(e) => setBaruKalori(e.target.value === '' ? '' : Number(e.target.value))}
+                        style={{ ...smallInput, width: '100%' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 10, color: 'var(--muted-foreground)', display: 'block' }}>Protein (g)</label>
+                      <input
+                        type="number"
+                        value={baruProtein}
+                        onChange={(e) => setBaruProtein(e.target.value === '' ? '' : Number(e.target.value))}
+                        style={{ ...smallInput, width: '100%' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 10, color: 'var(--muted-foreground)', display: 'block' }}>Lemak (g)</label>
+                      <input
+                        type="number"
+                        value={baruLemak}
+                        onChange={(e) => setBaruLemak(e.target.value === '' ? '' : Number(e.target.value))}
+                        style={{ ...smallInput, width: '100%' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 10, color: 'var(--muted-foreground)', display: 'block' }}>Karbo (g)</label>
+                      <input
+                        type="number"
+                        value={baruKarbo}
+                        onChange={(e) => setBaruKarbo(e.target.value === '' ? '' : Number(e.target.value))}
+                        style={{ ...smallInput, width: '100%' }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
+                    <button
+                      type="button"
+                      onClick={() => setBukaFormTambahMenu(false)}
+                      style={{ padding: '4px 10px', borderRadius: 5, border: '1px solid var(--border)', background: 'transparent', fontSize: 11 }}
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      disabled={menyimpanMenu}
+                      onClick={() => void handleSimpanMenuDatabase()}
+                      style={{
+                        padding: '4px 12px',
+                        borderRadius: 5,
+                        border: 'none',
+                        background: '#00B894',
+                        color: '#fff',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {menyimpanMenu ? 'Menyimpan...' : 'Simpan ke Database'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Baris Tambah Bahan */}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                <div style={{ flex: 2, minWidth: 200 }}>
+                  <label style={{ display: 'block', fontSize: 10.5, fontWeight: 600, color: 'var(--muted-foreground)', marginBottom: 3 }}>
+                    Pilih Bahan Makanan (DKBM Database)
+                  </label>
+                  <select
+                    value={bahanTerpilih}
+                    onChange={(e) => setBahanTerpilih(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '5px 8px',
+                      borderRadius: 6,
+                      border: '1px solid var(--border)',
+                      background: 'var(--background)',
+                      fontSize: 11,
+                    }}
+                  >
+                    {masterDkbm.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        [{b.kategori}] {b.nama} — ({b.kaloriPer100g} kkal/100g)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ width: 120 }}>
+                  <label style={{ display: 'block', fontSize: 10.5, fontWeight: 600, color: 'var(--muted-foreground)', marginBottom: 3 }}>
+                    Berat Timbangan (g)
+                  </label>
+                  <input
+                    type="number"
+                    value={gramInput}
+                    onChange={(e) => setGramInput(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="mis. 150"
+                    style={{
+                      width: '100%',
+                      padding: '5px 8px',
+                      borderRadius: 6,
+                      border: '1px solid var(--border)',
+                      background: 'var(--background)',
+                      fontSize: 11,
+                    }}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleTambahTimbangan}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    background: '#00B894',
+                    color: '#fff',
+                    border: 'none',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  <Plus size={13} /> Tambah Bahan
+                </button>
+              </div>
+
+              {/* Tabel Rincian Timbangan */}
+              <div style={{ overflowX: 'auto', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--card)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                  <thead>
+                    <tr style={{ background: 'var(--muted)', borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
+                      <th style={{ padding: '6px 10px' }}>Bahan Makanan</th>
+                      <th style={{ padding: '6px 10px' }}>Kategori</th>
+                      <th style={{ padding: '6px 10px', textAlign: 'right' }}>Berat (g)</th>
+                      <th style={{ padding: '6px 10px', textAlign: 'right' }}>Energi (kkal)</th>
+                      <th style={{ padding: '6px 10px', textAlign: 'right' }}>Protein (g)</th>
+                      <th style={{ padding: '6px 10px', textAlign: 'right' }}>Lemak (g)</th>
+                      <th style={{ padding: '6px 10px', textAlign: 'right' }}>Karbo (g)</th>
+                      <th style={{ padding: '6px 10px', width: 40, textAlign: 'center' }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {hasilGiziTimbangan.rincian.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} style={{ padding: 14, textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                          Belum ada bahan yang ditimbang. Pilih bahan makanan di atas dan masukkan berat gram.
+                        </td>
+                      </tr>
+                    ) : (
+                      hasilGiziTimbangan.rincian.map((r, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '6px 10px', fontWeight: 600 }}>{r.nama}</td>
+                          <td style={{ padding: '6px 10px', color: 'var(--muted-foreground)' }}>{r.kategori}</td>
+                          <td style={{ padding: '6px 10px', textAlign: 'right' }}>{r.gram} g</td>
+                          <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 700, color: '#00B894' }}>{r.kalori}</td>
+                          <td style={{ padding: '6px 10px', textAlign: 'right' }}>{r.protein}</td>
+                          <td style={{ padding: '6px 10px', textAlign: 'right' }}>{r.lemak}</td>
+                          <td style={{ padding: '6px 10px', textAlign: 'right' }}>{r.karbohidrat}</td>
+                          <td style={{ padding: '6px 10px', textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleHapusTimbangan(daftarTimbangan[i]?.id)}
+                              style={{ background: 'transparent', border: 'none', color: '#FF2D2D', cursor: 'pointer', padding: 2 }}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                  {hasilGiziTimbangan.rincian.length > 0 && (
+                    <tfoot>
+                      <tr style={{ background: 'var(--muted)', fontWeight: 800 }}>
+                        <td colSpan={2} style={{ padding: '8px 10px' }}>Total Sajian Terhitung:</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right' }}>
+                          {daftarTimbangan.reduce((acc, it) => acc + it.gram, 0)} g
+                        </td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right', color: '#00B894', fontSize: 12 }}>
+                          {hasilGiziTimbangan.totalKalori} kkal
+                        </td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right' }}>{hasilGiziTimbangan.totalProtein} g</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right' }}>{hasilGiziTimbangan.totalLemak} g</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right' }}>{hasilGiziTimbangan.totalKarbohidrat} g</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+
+              {hasilGiziTimbangan.rincian.length > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={handleTerapkanKeKalori}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: 6,
+                      background: '#00B894',
+                      color: '#fff',
+                      border: 'none',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <CheckCircle2 size={14} />
+                    Terapkan {hasilGiziTimbangan.totalKalori} kkal ke Kalori {sesiPilihan.toUpperCase()}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={{ marginTop: 8, display: 'flex', gap: 14, fontSize: 10.5, color: 'var(--muted-foreground)', alignItems: 'center' }}>
             <Info size={12} />

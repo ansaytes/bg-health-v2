@@ -2,21 +2,9 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
+import { JOBSITES } from '@/lib/lagging-data';
 
-/* Jobsite list from Lagging Indicator spreadsheet */
-const JOBSITES = [
-  'All Site','Aceh','Angsana','Balikpapan','Banjarmasin','Banyuwangi',
-  'Batu Kajang','Bengalon','Binuang','Binungan','Bontang','Bukit Pinang',
-  'Bunyu','Gorontalo','Gunung Bintang Awai','Gunung Mas','Gunung Sari',
-  'Halmahera Timur','Head Office','Kaliorang','Kapuas Tengah','Kaubun',
-  'Kayong Utara','Kelubir','Ketapang','Konawe','Kota Baru','Kotamobagu',
-  'Labanan','Lahat','Luwu','Malinau','Melak','Morowali','Muara Bungo',
-  'Muara Enim','Muara Teweh','Murung Raya','Palu','Rantau','Samarinda',
-  'Sangatta','Satui','Sebakis','Senakin','Soroako','Tabang',
-  'Tanjung Redeb','Tanjung Tabalong','Tenggarong','Tri Yoga Morowali',
-  'Tuhup','Wetar',
-];
-
+// Full month names (lagging-data exports short abbreviations; keep full names here)
 const MONTHS = [
   'Januari','Februari','Maret','April','Mei','Juni',
   'Juli','Agustus','September','Oktober','November','Desember',

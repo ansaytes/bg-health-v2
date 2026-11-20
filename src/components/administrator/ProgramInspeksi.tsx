@@ -43,9 +43,11 @@ interface Data {
 
 const STATUS_STYLE: Record<string, { label: string; warna: string; bg: string }> = {
   selesai: { label: 'Selesai', warna: '#00614f', bg: 'rgba(0,184,148,0.12)' },
+  menunggu_persetujuan: { label: 'Menunggu Approval', warna: '#9a6b00', bg: 'rgba(255,196,0,0.15)' },
   rencana: { label: 'Rencana', warna: '#1f5f9b', bg: 'rgba(52,152,219,0.12)' },
   terlewat: { label: 'Terlewat', warna: '#a01818', bg: 'rgba(255,45,45,0.12)' },
   dibatalkan: { label: 'Dibatalkan', warna: '#5b6570', bg: 'rgba(119,136,153,0.15)' },
+  ditolak: { label: 'Ditolak / Ulang', warna: '#b3261e', bg: 'rgba(255,45,45,0.15)' },
 };
 
 export default function ProgramInspeksi() {

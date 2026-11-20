@@ -41,10 +41,59 @@ export interface FaskesSetting {
   dinasPerSite: { site: string; instansi: string }[];
 }
 
+export interface NabLux {
+  ruang_kerja: number;    // default 300
+  ruang_gambar: number;   // default 750
+  resepsionis: number;    // default 300
+  ruang_arsip: number;    // default 150
+  ruang_rapat: number;    // default 300
+  ruang_makan: number;    // default 250
+  koridor_lobi: number;   // default 100
+}
+
+export interface NabUdara {
+  suhuMin: number;        // default 23
+  suhuMax: number;        // default 26
+  kelembabanMin: number;  // default 40
+  kelembabanMax: number;  // default 60
+  oksigenMin: number;     // default 19.5
+  oksigenMax: number;     // default 23.5
+  pm10Max: number;        // default 0.15
+  asbesMax: number;       // default 0.1
+}
+
+export interface NabKebisingan {
+  jam8: number;           // default 85 (dB)
+  jam4: number;           // default 88
+  jam2: number;           // default 91
+  jam1: number;           // default 94
+}
+
+export interface NabSetting {
+  lux: NabLux;
+  udara: NabUdara;
+  kebisingan: NabKebisingan;
+}
+
+export interface BrandingSetting {
+  /** Nama aplikasi di antarmuka (default: 'BG-Health v2'). */
+  namaAplikasi: string;
+  /** URL/path logo perusahaan di sidebar atas (default: '/LogoBDM.png'). */
+  logoPerusahaanUrl: string;
+  /** URL/path banner bus di sidebar (default: '/Bus2023.png'). */
+  logoBusUrl: string;
+  /** URL/path logo Best K3 di kanan header (default: '/BestK3.png'). */
+  logoBestK3Url: string;
+  /** URL/path logo slogan di bawah sidebar (default: '/TuwuhLanNgrembaka_float.png'). */
+  logoTuwuhUrl: string;
+}
+
 export interface AppSettings {
   perusahaan: PerusahaanSetting;
+  branding: BrandingSetting;
   pak: PakDeadlines;
   faskes: FaskesSetting;
+  nab: NabSetting;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -53,6 +102,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
     prefiksId: 'BG',
     alamat: '',
     zonaWaktu: 'WITA',
+  },
+  branding: {
+    namaAplikasi: 'BG-Health v2',
+    logoPerusahaanUrl: '/LogoBDM.png',
+    logoBusUrl: '/Bus2023.png',
+    logoBestK3Url: '/BestK3.png',
+    logoTuwuhUrl: '/TuwuhLanNgrembaka_float.png',
   },
   pak: {
     // INK/017: triase maks 1 hari kerja; laporan medis 1x24 jam;
@@ -68,6 +124,34 @@ export const DEFAULT_SETTINGS: AppSettings = {
     bpjsCabang: '',
     dinasPerSite: [],
   },
+  nab: {
+    // Permenkes No. 48 Tahun 2016 tentang Standar Keselamatan dan Kesehatan Kerja Perkantoran
+    lux: {
+      ruang_kerja: 300,
+      ruang_gambar: 750,
+      resepsionis: 300,
+      ruang_arsip: 150,
+      ruang_rapat: 300,
+      ruang_makan: 250,
+      koridor_lobi: 100,
+    },
+    udara: {
+      suhuMin: 23,
+      suhuMax: 26,
+      kelembabanMin: 40,
+      kelembabanMax: 60,
+      oksigenMin: 19.5,
+      oksigenMax: 23.5,
+      pm10Max: 0.15,
+      asbesMax: 0.1,
+    },
+    kebisingan: {
+      jam8: 85,
+      jam4: 88,
+      jam2: 91,
+      jam1: 94,
+    },
+  },
 };
 
 /** Gabungan default + nilai tersimpan (tersimpan menang per key). */
@@ -75,8 +159,14 @@ export function mergeSettings(stored: Partial<AppSettings> | null | undefined): 
   if (!stored) return { ...DEFAULT_SETTINGS };
   return {
     perusahaan: { ...DEFAULT_SETTINGS.perusahaan, ...(stored.perusahaan ?? {}) },
+    branding: { ...DEFAULT_SETTINGS.branding, ...(stored.branding ?? {}) },
     pak: { ...DEFAULT_SETTINGS.pak, ...(stored.pak ?? {}) },
     faskes: { ...DEFAULT_SETTINGS.faskes, ...(stored.faskes ?? {}) },
+    nab: {
+      lux: { ...DEFAULT_SETTINGS.nab.lux, ...(stored.nab?.lux ?? {}) },
+      udara: { ...DEFAULT_SETTINGS.nab.udara, ...(stored.nab?.udara ?? {}) },
+      kebisingan: { ...DEFAULT_SETTINGS.nab.kebisingan, ...(stored.nab?.kebisingan ?? {}) },
+    },
   };
 }
 

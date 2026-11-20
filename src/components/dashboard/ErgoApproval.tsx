@@ -6,7 +6,7 @@
 // tab status di tengah, lalu daftar kartu survei yang bisa dibuka satu per satu.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ClipboardCheck } from 'lucide-react';
+import { ClipboardCheck, CheckCircle2 } from 'lucide-react';
 import { authFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { KLAS_COLOR, type Klasifikasi } from '@/lib/hc-ergo';
@@ -50,6 +50,8 @@ export default function ErgoApproval() {
   }, [tab]);
   useEffect(() => { const id = setTimeout(load, 0); return () => clearTimeout(id); }, [load]);
 
+  const [approvingAll, setApprovingAll] = useState(false);
+
   const act = async (s: Row, action: 'approve' | 'reject') => {
     if (action === 'reject' && !catatan.trim()) { setMsg({ kind: 'err', text: 'Isi alasan penolakan pada kolom catatan.' }); return; }
     setBusy(s.id);
@@ -59,6 +61,28 @@ export default function ErgoApproval() {
       setCatatan(''); setOpen(null); await load();
     } catch (e) { setMsg({ kind: 'err', text: e instanceof Error ? e.message : 'Gagal' }); }
     finally { setBusy(null); }
+  };
+
+  const actApproveAll = async () => {
+    const validRows = rows.filter((r) => r.status === 'MENUNGGU_PERSETUJUAN' && r.sah);
+    if (!validRows.length) {
+      setMsg({ kind: 'err', text: 'Tidak ada survei yang memenuhi syarat untuk disetujui sekaligus.' });
+      return;
+    }
+    setApprovingAll(true);
+    try {
+      const bulkIds = validRows.map((r) => r.id);
+      const r = await authFetch<{ success: boolean; data?: { count: number; message: string } }>('/api/ergo', {
+        method: 'PATCH',
+        body: JSON.stringify({ resource: 'survey', action: 'approve_all', bulk_ids: bulkIds }),
+      });
+      setMsg({ kind: 'ok', text: r.data?.message || `${validRows.length} survei disetujui.` });
+      await load();
+    } catch (e) {
+      setMsg({ kind: 'err', text: e instanceof Error ? e.message : 'Gagal menyetujui semua' });
+    } finally {
+      setApprovingAll(false);
+    }
   };
 
   const tone = STATUS_TONE[tab];
@@ -92,7 +116,19 @@ export default function ErgoApproval() {
             {canApprove && <> Anda masuk sebagai <b>{profile?.full_name || profile?.username}</b>; nama &amp; jabatan dicatat otomatis.</>}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {tab === 'MENUNGGU_PERSETUJUAN' && canApprove && validCount > 0 && (
+            <Btn
+              kind="primary"
+              size="md"
+              disabled={approvingAll || loading}
+              onClick={actApproveAll}
+              style={{ fontWeight: 700, padding: '8px 14px', borderRadius: 10, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              <CheckCircle2 size={16} />
+              {approvingAll ? 'Menyetujui Semua...' : `Setujui Semua yang Sah (${validCount})`}
+            </Btn>
+          )}
           {[
             { label: 'Menunggu', value: waitCount, color: '#C99A00' },
             { label: 'Layak disetujui', value: validCount, color: '#00895f' },

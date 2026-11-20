@@ -30,7 +30,13 @@ export type JenisInspeksi =
   | 'ergonomi'
   | 'kalibrasi';
 
-export type StatusJadwal = 'rencana' | 'selesai' | 'terlewat' | 'dibatalkan';
+export type StatusJadwal =
+  | 'rencana'
+  | 'menunggu_persetujuan'
+  | 'selesai'
+  | 'terlewat'
+  | 'dibatalkan'
+  | 'ditolak';
 
 /** Tingkat temuan. Menentukan warna dan prioritas PICA. */
 export type TingkatTemuan = 'kritis' | 'mayor' | 'minor';
@@ -189,8 +195,9 @@ export function statusEfektif(
 ): StatusJadwal {
   const status = String(baris.status ?? '').toLowerCase();
   if (status === 'dibatalkan') return 'dibatalkan';
-  if (baris.tanggal_selesai) return 'selesai';
-  if (status === 'selesai') return 'selesai';
+  if (status === 'ditolak') return 'ditolak';
+  if (status === 'menunggu_persetujuan') return 'menunggu_persetujuan';
+  if (status === 'selesai' || (baris.tanggal_selesai && status !== 'rencana')) return 'selesai';
   const sisa = selisihHari(baris.tanggal_rencana, sekarang);
   // H+0 masih boleh diselesaikan hari itu; terlewat mulai H+1.
   if (sisa !== null && sisa < 0) return 'terlewat';
@@ -222,6 +229,10 @@ export interface BarisJadwal {
   petugas: string | null;
   /** Waktu laporan dibuat (untuk reporting lead time). */
   waktu_lapor?: string | null;
+  waktu_verifikasi?: string | null;
+  diverifikasi_oleh?: string | null;
+  catatan?: string | null;
+  catatan_verifikasi?: string | null;
 }
 
 export interface RingkasanProgram {

@@ -76,6 +76,41 @@ function getSickPeriodRange(bulan: number, tahun: number) {
   };
 }
 
+// ─── Evaluasi Target vs Realisasi KPI (Kepdirjen Minerba 1855.K/2019) ───
+function getRagRkk(val: number) {
+  if (val >= 95) return { color: '#00B894', badge: 'Target (≥95%)', bg: 'rgba(0,184,148,0.12)' };
+  if (val >= 90) return { color: '#FF7A00', badge: 'Waspada (<95%)', bg: 'rgba(255,122,0,0.12)' };
+  return { color: '#FF2D2D', badge: 'Kritis (<90%)', bg: 'rgba(255,45,45,0.12)' };
+}
+function getRagCmr(val: number) {
+  if (val <= 10) return { color: '#00B894', badge: 'Terkendali (≤10%)', bg: 'rgba(0,184,148,0.12)' };
+  if (val <= 15) return { color: '#FF7A00', badge: 'Meningkat (10-15%)', bg: 'rgba(255,122,0,0.12)' };
+  return { color: '#FF2D2D', badge: 'Tinggi (>15%)', bg: 'rgba(255,45,45,0.12)' };
+}
+function getRagMfr(val: number) {
+  if (val <= 10) return { color: '#00B894', badge: 'Rendah (≤10)', bg: 'rgba(0,184,148,0.12)' };
+  if (val <= 20) return { color: '#FF7A00', badge: 'Sedang (10-20)', bg: 'rgba(255,122,0,0.12)' };
+  return { color: '#FF2D2D', badge: 'Tinggi (>20)', bg: 'rgba(255,45,45,0.12)' };
+}
+function getRagSsr(val: number) {
+  if (val <= 3) return { color: '#00B894', badge: 'Ringan (≤3h)', bg: 'rgba(0,184,148,0.12)' };
+  if (val <= 7) return { color: '#FF7A00', badge: 'Sedang (3-7h)', bg: 'rgba(255,122,0,0.12)' };
+  return { color: '#FF2D2D', badge: 'Berat (>7h)', bg: 'rgba(255,45,45,0.12)' };
+}
+function getRagAsr(val: number) {
+  if (val <= 50) return { color: '#00B894', badge: 'Baik (≤50)', bg: 'rgba(0,184,148,0.12)' };
+  if (val <= 100) return { color: '#FF7A00', badge: 'Waspada (50-100)', bg: 'rgba(255,122,0,0.12)' };
+  return { color: '#FF2D2D', badge: 'Tinggi (>100)', bg: 'rgba(255,45,45,0.12)' };
+}
+function getRagFrPak(val: number) {
+  if (val === 0) return { color: '#00B894', badge: 'Zero PAK', bg: 'rgba(0,184,148,0.12)' };
+  return { color: '#FF2D2D', badge: 'Ada Kasus PAK', bg: 'rgba(255,45,45,0.12)' };
+}
+function getRagKaptk(val: number) {
+  if (val === 0) return { color: '#00B894', badge: 'Zero Kasus', bg: 'rgba(0,184,148,0.12)' };
+  return { color: '#FF2D2D', badge: 'Ada Kejadian', bg: 'rgba(255,45,45,0.12)' };
+}
+
 /* ──────────────────────────────────────────────────────────────
    Main Component — pure Supabase, no static fallback
    ────────────────────────────────────────────────────────────── */
@@ -645,36 +680,89 @@ export default function DashboardView() {
               </div>
             ) : currentMonth ? (
               <>
-                <div className="stats-grid">
-                  <div className="stat-box stat-wide" style={{ borderLeft: '3px solid #00B894' }}>
-                    <div className="stat-val" style={{ color: '#00B894' }}>{rkk.toFixed(2)}%</div>
-                    <div className="stat-label">RKK - Rasio Kelayakan Kerja</div>
-                  </div>
-                  <div className="stat-box" style={{ borderLeft: '3px solid #00CEC9' }}>
-                    <div className="stat-val" style={{ color: '#00CEC9' }}>{cmr.toFixed(2)}%</div>
-                    <div className="stat-label">CMR</div>
-                  </div>
-                  <div className="stat-box" style={{ borderLeft: '3px solid #FF8C42' }}>
-                    <div className="stat-val" style={{ color: '#FF8C42' }}>{mfr.toFixed(2)}</div>
-                    <div className="stat-label">MFR</div>
-                  </div>
-                  <div className="stat-box" style={{ borderLeft: '3px solid #FF6347' }}>
-                    <div className="stat-val" style={{ color: '#FF6347' }}>{ssr.toFixed(2)}</div>
-                    <div className="stat-label">SSR</div>
-                  </div>
-                  <div className="stat-box" style={{ borderLeft: '3px solid #ff4d00' }}>
-                    <div className="stat-val" style={{ color: '#ff4d00' }}>{asr.toFixed(2)}</div>
-                    <div className="stat-label">ASR</div>
-                  </div>
-                  <div className="stat-box" style={{ borderLeft: '3px solid #778899' }}>
-                    <div className="stat-val" style={{ color: '#778899' }}>{frPak.toFixed(2)}%</div>
-                    <div className="stat-label">FR PAK</div>
-                  </div>
-                  <div className="stat-box" style={{ borderLeft: '3px solid #FF4444' }}>
-                    <div className="stat-val" style={{ color: '#FF4444' }}>{kaptk.toFixed(0)}</div>
-                    <div className="stat-label">KAPTK</div>
-                  </div>
-                </div>
+                {(() => {
+                  const ragRkk = getRagRkk(rkk);
+                  const ragCmr = getRagCmr(cmr);
+                  const ragMfr = getRagMfr(mfr);
+                  const ragSsr = getRagSsr(ssr);
+                  const ragAsr = getRagAsr(asr);
+                  const ragFrPak = getRagFrPak(frPak);
+                  const ragKaptk = getRagKaptk(kaptk);
+
+                  return (
+                    <div className="stats-grid">
+                      <div className="stat-box stat-wide" style={{ borderLeft: `3px solid ${ragRkk.color}`, position: 'relative' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div className="stat-val" style={{ color: ragRkk.color }}>{rkk.toFixed(2)}%</div>
+                          <span style={{ fontSize: 9.5, padding: '2px 6px', borderRadius: 4, background: ragRkk.bg, color: ragRkk.color, fontWeight: 700 }}>
+                            {ragRkk.badge}
+                          </span>
+                        </div>
+                        <div className="stat-label">RKK - Rasio Kelayakan Kerja</div>
+                      </div>
+
+                      <div className="stat-box" style={{ borderLeft: `3px solid ${ragCmr.color}` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div className="stat-val" style={{ color: ragCmr.color }}>{cmr.toFixed(2)}%</div>
+                          <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: ragCmr.bg, color: ragCmr.color, fontWeight: 700 }}>
+                            {ragCmr.badge}
+                          </span>
+                        </div>
+                        <div className="stat-label">CMR (Morbidity)</div>
+                      </div>
+
+                      <div className="stat-box" style={{ borderLeft: `3px solid ${ragMfr.color}` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div className="stat-val" style={{ color: ragMfr.color }}>{mfr.toFixed(2)}</div>
+                          <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: ragMfr.bg, color: ragMfr.color, fontWeight: 700 }}>
+                            {ragMfr.badge}
+                          </span>
+                        </div>
+                        <div className="stat-label">MFR (Frekuensi)</div>
+                      </div>
+
+                      <div className="stat-box" style={{ borderLeft: `3px solid ${ragSsr.color}` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div className="stat-val" style={{ color: ragSsr.color }}>{ssr.toFixed(2)}</div>
+                          <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: ragSsr.bg, color: ragSsr.color, fontWeight: 700 }}>
+                            {ragSsr.badge}
+                          </span>
+                        </div>
+                        <div className="stat-label">SSR (Keparahan TK)</div>
+                      </div>
+
+                      <div className="stat-box" style={{ borderLeft: `3px solid ${ragAsr.color}` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div className="stat-val" style={{ color: ragAsr.color }}>{asr.toFixed(2)}</div>
+                          <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: ragAsr.bg, color: ragAsr.color, fontWeight: 700 }}>
+                            {ragAsr.badge}
+                          </span>
+                        </div>
+                        <div className="stat-label">ASR (Keparahan Jam)</div>
+                      </div>
+
+                      <div className="stat-box" style={{ borderLeft: `3px solid ${ragFrPak.color}` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div className="stat-val" style={{ color: ragFrPak.color }}>{frPak.toFixed(2)}%</div>
+                          <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: ragFrPak.bg, color: ragFrPak.color, fontWeight: 700 }}>
+                            {ragFrPak.badge}
+                          </span>
+                        </div>
+                        <div className="stat-label">FR PAK</div>
+                      </div>
+
+                      <div className="stat-box" style={{ borderLeft: `3px solid ${ragKaptk.color}` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div className="stat-val" style={{ color: ragKaptk.color }}>{kaptk.toFixed(0)}</div>
+                          <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: ragKaptk.bg, color: ragKaptk.color, fontWeight: 700 }}>
+                            {ragKaptk.badge}
+                          </span>
+                        </div>
+                        <div className="stat-label">KAPTK</div>
+                      </div>
+                    </div>
+                  );
+                })()}
                 <div style={{ padding: '8px 12px', borderTop: '1px solid var(--border)', display: 'flex', gap: 20, flexWrap: 'wrap', flexShrink: 0 }}>
                   <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}><b style={{ color: 'var(--foreground)' }}>{manPower.toLocaleString('id-ID')}</b> Σ Man Power</span>
                   <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}><b style={{ color: 'var(--foreground)' }}>{(manHours / 1000).toFixed(0)}K</b> Man Hours</span>

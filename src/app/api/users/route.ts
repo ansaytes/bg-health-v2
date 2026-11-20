@@ -1,51 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { decryptEmployee, hashField } from '@/lib/encryption';
+import { getServerCaller, requireServerRole } from '@/lib/server-auth';
+import { integrationAdminClient } from '@/lib/integration-settings';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+/** Pakai server-auth.ts agar konsisten dengan semua API lain — tidak duplikasi logika auth. */
+const adminClient = () => integrationAdminClient();
 
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : supabase;
-
-async function getCallerRole(req: NextRequest): Promise<{ userId: string; role: string } | null> {
-  const authHeader = req.headers.get('authorization');
-  let accessToken = authHeader?.replace('Bearer ', '');
-  if (!accessToken) {
-    const cookie = req.cookies.get('sb-access-token')?.value;
-    if (cookie) accessToken = cookie;
-  }
-  if (!accessToken) return null;
-
-  const client = supabaseServiceKey ? supabaseAdmin : supabase;
-  const { data: { user }, error } = await client.auth.getUser(accessToken);
-  if (error || !user) return null;
-
-  const { data: profile } = await client
-    .from('user_profiles')
-    .select('role')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile) return null;
-  return { userId: user.id, role: profile.role };
-}
-
-// GET /api/users — list all users (admin/superuser only)
+// GET /api/users — list all users (superuser only)
 export async function GET(req: NextRequest) {
   try {
-    const caller = await getCallerRole(req);
-    if (!caller || caller.role !== 'superuser') {
-      return NextResponse.json({
-        error: 'Akses ditolak',
-        detail: !caller ? 'Tidak bisa memverifikasi sesi login. Pastikan SUPABASE_SERVICE_ROLE_KEY sudah diisi.' : 'Role Anda tidak punya akses ke halaman ini.',
-        caller_found: !!caller,
-        caller_role: caller?.role || null,
-      }, { status: 403 });
-    }
+    const caller = await getServerCaller(req);
+    const denied = requireServerRole(caller, ['superuser']);
+    if (denied) return denied;
 
-    const client = supabaseServiceKey ? supabaseAdmin : supabase;
+    const client = adminClient();
     const { data, error } = await client
       .from('user_profiles')
       .select('*')
@@ -100,10 +68,9 @@ export async function GET(req: NextRequest) {
 // PATCH /api/users — update user role (superuser only)
 export async function PATCH(req: NextRequest) {
   try {
-    const caller = await getCallerRole(req);
-    if (!caller || caller.role !== 'superuser') {
-      return NextResponse.json({ error: 'Akses ditolak. Hanya superuser yang dapat mengubah role.' }, { status: 403 });
-    }
+    const caller = await getServerCaller(req);
+    const denied = requireServerRole(caller, ['superuser']);
+    if (denied) return denied;
 
     const body = await req.json();
     const { id, role } = body;
@@ -117,7 +84,8 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Role tidak valid' }, { status: 400 });
     }
 
-    const { data: targetProfile } = await supabaseAdmin
+    const client = adminClient();
+    const { data: targetProfile } = await client
       .from('user_profiles')
       .select('role,employee_nik_hash')
       .eq('id', id)
@@ -128,7 +96,7 @@ export async function PATCH(req: NextRequest) {
     // Role Manager hanya untuk karyawan dengan jabatan yang mengandung "manager"
     if (role === 'manager') {
       const { data: emp } = targetProfile.employee_nik_hash
-        ? await supabaseAdmin.from('employees').select('job_position').eq('nik_hash', targetProfile.employee_nik_hash).maybeSingle()
+        ? await client.from('employees').select('job_position').eq('nik_hash', targetProfile.employee_nik_hash).maybeSingle()
         : { data: null };
       const jabatan = emp ? String(decryptEmployee(emp).job_position || '') : '';
       if (!/manager/i.test(jabatan)) {
@@ -139,17 +107,18 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Gunakan pendaftaran role baru agar akun Employee diperbarui dengan password pribadi.' }, { status: 400 });
     }
 
-    const { data: selfProfile } = await supabase
+    // Cegah ubah role sendiri
+    const { data: selfProfile } = await client
       .from('user_profiles')
       .select('id')
-      .eq('user_id', caller.userId)
+      .eq('user_id', caller!.userId)
       .single();
 
     if (selfProfile && selfProfile.id === id) {
       return NextResponse.json({ error: 'Tidak dapat mengubah role sendiri' }, { status: 400 });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('user_profiles')
       .update({ role })
       .eq('id', id)
@@ -169,10 +138,9 @@ export async function PATCH(req: NextRequest) {
 // DELETE /api/users?id=xxx — delete user (superuser only)
 export async function DELETE(req: NextRequest) {
   try {
-    const caller = await getCallerRole(req);
-    if (!caller || caller.role !== 'superuser') {
-      return NextResponse.json({ error: 'Akses ditolak. Hanya superuser yang dapat menghapus pengguna.' }, { status: 403 });
-    }
+    const caller = await getServerCaller(req);
+    const denied = requireServerRole(caller, ['superuser']);
+    if (denied) return denied;
 
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('id');
@@ -181,17 +149,20 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'ID pengguna wajib diisi' }, { status: 400 });
     }
 
-    const { data: selfProfile } = await supabase
+    const client = adminClient();
+
+    // Cegah hapus akun sendiri
+    const { data: selfProfile } = await client
       .from('user_profiles')
       .select('id')
-      .eq('user_id', caller.userId)
+      .eq('user_id', caller!.userId)
       .single();
 
     if (selfProfile && selfProfile.id === userId) {
       return NextResponse.json({ error: 'Tidak dapat menghapus akun sendiri' }, { status: 400 });
     }
 
-    const { data: targetProfile } = await supabaseAdmin
+    const { data: targetProfile } = await client
       .from('user_profiles')
       .select('user_id')
       .eq('id', userId)
@@ -200,12 +171,12 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Pengguna tidak ditemukan' }, { status: 404 });
     }
 
-    const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(targetProfile.user_id);
+    const { error: deleteAuthError } = await client.auth.admin.deleteUser(targetProfile.user_id);
     if (deleteAuthError) {
       return NextResponse.json({ error: deleteAuthError.message }, { status: 500 });
     }
 
-    const { error: deleteProfileError } = await supabaseAdmin
+    const { error: deleteProfileError } = await client
       .from('user_profiles')
       .delete()
       .eq('id', userId);

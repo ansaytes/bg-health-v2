@@ -8,7 +8,7 @@
 // Pola UI mengikuti tema aplikasi (var(--card)/var(--border)).
 
 import { useEffect, useState } from 'react';
-import { Building2, Clock, Hospital, Save, Loader2, Users } from 'lucide-react';
+import { Building2, Clock, Hospital, Save, Loader2, Users, Gauge, Image } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/lib/use-app-settings';
@@ -17,13 +17,15 @@ import { DEFAULT_SETTINGS, type AppSettings } from '@/lib/app-settings';
 import CenteredTabs from '@/components/ui/centered-tabs';
 import UserManagement from '@/components/administrator/UserManagement';
 import IntegrationSettings from '@/components/settings/IntegrationSettings';
+import DriveFileUpload from '@/components/settings/DriveFileUpload';
 
-type Tab = 'perusahaan' | 'pak' | 'faskes' | 'integrasi' | 'pengguna';
+type Tab = 'perusahaan' | 'pak' | 'faskes' | 'integrasi' | 'pengguna' | 'nab';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'perusahaan', label: 'Perusahaan' },
   { key: 'pak', label: 'Batas Waktu PAK' },
   { key: 'faskes', label: 'Faskes & BPJS' },
+  { key: 'nab', label: 'Nilai Ambang Batas' },
   { key: 'integrasi', label: 'Integrasi' },
   { key: 'pengguna', label: 'Kelola Pengguna' },
 ];
@@ -79,7 +81,7 @@ export default function AppSettingsPage() {
             Identitas perusahaan dan konfigurasi operasional aplikasi.
           </p>
         </div>
-        {canEdit && tab !== 'integrasi' && (
+        {canEdit && tab !== 'integrasi' && tab !== 'pengguna' && (
           <Button onClick={handleSave} disabled={saving || loading} className="h-10 rounded-xl">
             {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
             Simpan
@@ -120,34 +122,128 @@ export default function AppSettingsPage() {
       <div className="app-settings-content">
         {tab === 'integrasi' && <IntegrationSettings canEdit={canEdit} />}
         {tab === 'perusahaan' && (
-          <section style={{ background: 'var(--card)', borderRadius: 12, padding: 16, border: '1px solid var(--border)' }}>
-            <div className="flex items-center gap-2 mb-3">
-              <Building2 className="size-4 text-primary" />
-              <h3 style={{ fontSize: 12.5, fontWeight: 700, margin: 0 }}>Identitas Perusahaan</h3>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1">
-                <span className={labelCls}>Nama Perusahaan (kop laporan)</span>
-                <Input className={inputCls} value={draft.perusahaan.nama} disabled={!canEdit} onChange={(e) => set('perusahaan.nama', e.target.value)} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className={labelCls}>Awalan ID Kasus PAK</span>
-                <Input className={inputCls} value={draft.perusahaan.prefiksId} disabled={!canEdit} onChange={(e) => set('perusahaan.prefiksId', e.target.value.toUpperCase())} maxLength={4} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className={labelCls}>Zona Waktu Default</span>
-                <select className="h-9 rounded-lg border border-input bg-background px-3 text-sm" value={draft.perusahaan.zonaWaktu} disabled={!canEdit} onChange={(e) => set('perusahaan.zonaWaktu', e.target.value)}>
-                  <option value="WIB">WIB</option>
-                  <option value="WITA">WITA</option>
-                  <option value="WIT">WIT</option>
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 sm:col-span-2">
-                <span className={labelCls}>Alamat (opsional, untuk kop)</span>
-                <Input className={inputCls} value={draft.perusahaan.alamat} disabled={!canEdit} onChange={(e) => set('perusahaan.alamat', e.target.value)} />
-              </label>
-            </div>
-          </section>
+          <div className="flex flex-col gap-4">
+            <section style={{ background: 'var(--card)', borderRadius: 12, padding: 16, border: '1px solid var(--border)' }}>
+              <div className="flex items-center gap-2 mb-3">
+                <Building2 className="size-4 text-primary" />
+                <h3 style={{ fontSize: 12.5, fontWeight: 700, margin: 0 }}>Identitas Perusahaan</h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1">
+                  <span className={labelCls}>Nama Perusahaan (kop laporan)</span>
+                  <Input className={inputCls} value={draft.perusahaan.nama} disabled={!canEdit} onChange={(e) => set('perusahaan.nama', e.target.value)} />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className={labelCls}>Awalan ID Kasus PAK</span>
+                  <Input className={inputCls} value={draft.perusahaan.prefiksId} disabled={!canEdit} onChange={(e) => set('perusahaan.prefiksId', e.target.value.toUpperCase())} maxLength={4} />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className={labelCls}>Zona Waktu Default</span>
+                  <select className="h-9 rounded-lg border border-input bg-background px-3 text-sm" value={draft.perusahaan.zonaWaktu} disabled={!canEdit} onChange={(e) => set('perusahaan.zonaWaktu', e.target.value)}>
+                    <option value="WIB">WIB</option>
+                    <option value="WITA">WITA</option>
+                    <option value="WIT">WIT</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 sm:col-span-2">
+                  <span className={labelCls}>Alamat (opsional, untuk kop)</span>
+                  <Input className={inputCls} value={draft.perusahaan.alamat} disabled={!canEdit} onChange={(e) => set('perusahaan.alamat', e.target.value)} />
+                </label>
+              </div>
+            </section>
+
+            <section style={{ background: 'var(--card)', borderRadius: 12, padding: 16, border: '1px solid var(--border)' }}>
+              <div className="flex items-center gap-2 mb-1">
+                <Image className="size-4 text-primary" />
+                <h3 style={{ fontSize: 12.5, fontWeight: 700, margin: 0 }}>Branding &amp; Tampilan Visual</h3>
+              </div>
+              <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: '0 0 12px' }}>
+                Kustomisasi nama aplikasi dan logo antarmuka. Anda dapat mengunggah file langsung ke Google Drive (otomatis diatur resolusi optimalnya) atau menempelkan link/path gambar.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="flex flex-col gap-1 sm:col-span-2">
+                  <span className={labelCls}>Nama Aplikasi (Sidebar &amp; Judul)</span>
+                  <Input className={inputCls} value={draft.branding?.namaAplikasi || ''} placeholder="Contoh: BG-Health v2" disabled={!canEdit} onChange={(e) => set('branding.namaAplikasi', e.target.value)} />
+                </label>
+
+                {/* Logo Perusahaan */}
+                <div className="flex flex-col gap-1.5 p-3 rounded-lg border border-border bg-muted/20">
+                  <span className={labelCls}>Logo Perusahaan (Sidebar Atas)</span>
+                  <span className="text-[10px] text-muted-foreground">Dimensi optimal: 480 × 208 px (Maks: 25 MB)</span>
+                  <Input className={inputCls} value={draft.branding?.logoPerusahaanUrl || ''} placeholder="Default: /LogoBDM.png" disabled={!canEdit} onChange={(e) => set('branding.logoPerusahaanUrl', e.target.value)} />
+                  {canEdit && (
+                    <div className="mt-1">
+                      <DriveFileUpload
+                        category="branding"
+                        accept="image/png,image/jpeg,image/webp"
+                        label="Unggah Logo (480x208)"
+                        targetWidth={480}
+                        targetHeight={208}
+                        onUploaded={(url) => set('branding.logoPerusahaanUrl', url)}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Banner Bus */}
+                <div className="flex flex-col gap-1.5 p-3 rounded-lg border border-border bg-muted/20">
+                  <span className={labelCls}>Banner Armada / Bus (Sidebar)</span>
+                  <span className="text-[10px] text-muted-foreground">Dimensi optimal: 1400 × 323 px (Rasio ~4:1)</span>
+                  <Input className={inputCls} value={draft.branding?.logoBusUrl || ''} placeholder="Default: /Bus2023.png" disabled={!canEdit} onChange={(e) => set('branding.logoBusUrl', e.target.value)} />
+                  {canEdit && (
+                    <div className="mt-1">
+                      <DriveFileUpload
+                        category="branding"
+                        accept="image/png,image/jpeg,image/webp"
+                        label="Unggah Banner (1400x323)"
+                        targetWidth={1400}
+                        targetHeight={323}
+                        onUploaded={(url) => set('branding.logoBusUrl', url)}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Logo Best K3 */}
+                <div className="flex flex-col gap-1.5 p-3 rounded-lg border border-border bg-muted/20">
+                  <span className={labelCls}>Logo K3 (Header Kanan)</span>
+                  <span className="text-[10px] text-muted-foreground">Dimensi optimal: 480 × 172 px</span>
+                  <Input className={inputCls} value={draft.branding?.logoBestK3Url || ''} placeholder="Default: /BestK3.png" disabled={!canEdit} onChange={(e) => set('branding.logoBestK3Url', e.target.value)} />
+                  {canEdit && (
+                    <div className="mt-1">
+                      <DriveFileUpload
+                        category="branding"
+                        accept="image/png,image/jpeg,image/webp"
+                        label="Unggah Logo K3 (480x172)"
+                        targetWidth={480}
+                        targetHeight={172}
+                        onUploaded={(url) => set('branding.logoBestK3Url', url)}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Logo Tuwuh */}
+                <div className="flex flex-col gap-1.5 p-3 rounded-lg border border-border bg-muted/20">
+                  <span className={labelCls}>Logo Slogan / Tuwuh (Sidebar Bawah)</span>
+                  <span className="text-[10px] text-muted-foreground">Dimensi optimal: 640 × 229 px</span>
+                  <Input className={inputCls} value={draft.branding?.logoTuwuhUrl || ''} placeholder="Default: /TuwuhLanNgrembaka_float.png" disabled={!canEdit} onChange={(e) => set('branding.logoTuwuhUrl', e.target.value)} />
+                  {canEdit && (
+                    <div className="mt-1">
+                      <DriveFileUpload
+                        category="branding"
+                        accept="image/png,image/jpeg,image/webp"
+                        label="Unggah Slogan (640x229)"
+                        targetWidth={640}
+                        targetHeight={229}
+                        onUploaded={(url) => set('branding.logoTuwuhUrl', url)}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+          </div>
         )}
 
         {tab === 'pak' && (
@@ -228,6 +324,103 @@ export default function AppSettingsPage() {
                     }))}>+ Tambah Site</Button>
                   )}
                 </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {tab === 'nab' && (
+          <section style={{ background: 'var(--card)', borderRadius: 12, padding: 16, border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div className="flex items-center gap-2">
+              <Gauge className="size-4 text-primary" />
+              <h3 style={{ fontSize: 12.5, fontWeight: 700, margin: 0 }}>Nilai Ambang Batas (NAB)</h3>
+            </div>
+            <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: '-12px 0 0' }}>
+              Batas paparan lingkungan kerja sesuai regulasi. Dipakai sebagai acuan penilaian otomatis pada modul Lingkungan Kerja.
+            </p>
+
+            {/* NAB Pencahayaan */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, marginBottom: 8, color: 'var(--foreground)' }}>
+                Pencahayaan (lux) <span style={{ fontWeight: 400, color: 'var(--muted-foreground)' }}>(Permenkes 48/2016 Tabel 4)</span>
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {([
+                  { field: 'ruang_kerja',  label: 'Ruang Kerja (lux)',    min: 50, max: 2000 },
+                  { field: 'ruang_gambar', label: 'Ruang Gambar (lux)',   min: 50, max: 2000 },
+                  { field: 'resepsionis',  label: 'Resepsionis (lux)',    min: 50, max: 2000 },
+                  { field: 'ruang_arsip',  label: 'Ruang Arsip (lux)',    min: 50, max: 2000 },
+                  { field: 'ruang_rapat',  label: 'Ruang Rapat (lux)',    min: 50, max: 2000 },
+                  { field: 'ruang_makan',  label: 'Ruang Makan (lux)',    min: 50, max: 2000 },
+                  { field: 'koridor_lobi', label: 'Koridor / Lobi (lux)', min: 50, max: 2000 },
+                ] as { field: keyof typeof draft.nab.lux; label: string; min: number; max: number }[]).map(({ field, label, min, max }) => (
+                  <label key={field} className="flex flex-col gap-1">
+                    <span className={labelCls}>{label}</span>
+                    <Input
+                      type="number" min={min} max={max}
+                      className={inputCls}
+                      value={draft.nab.lux[field]}
+                      disabled={!canEdit}
+                      onChange={(e) => set(`nab.lux.${field}`, Number(e.target.value))}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* NAB Kualitas Udara */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, marginBottom: 8, color: 'var(--foreground)' }}>
+                Kualitas Udara <span style={{ fontWeight: 400, color: 'var(--muted-foreground)' }}>(Permenkes 48/2016 Pasal 11)</span>
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {([
+                  { field: 'suhuMin',       label: 'Suhu Min (°C)',           min: 10, max: 40,  step: 0.5 },
+                  { field: 'suhuMax',       label: 'Suhu Maks (°C)',          min: 10, max: 40,  step: 0.5 },
+                  { field: 'kelembabanMin', label: 'Kelembaban Min (%)',       min: 10, max: 100, step: 1 },
+                  { field: 'kelembabanMax', label: 'Kelembaban Maks (%)',      min: 10, max: 100, step: 1 },
+                  { field: 'oksigenMin',    label: 'O₂ Min (%)',              min: 10, max: 25,  step: 0.1 },
+                  { field: 'oksigenMax',    label: 'O₂ Maks (%)',             min: 10, max: 25,  step: 0.1 },
+                  { field: 'pm10Max',       label: 'PM10 Maks (mg/m³)',       min: 0,  max: 1,   step: 0.01 },
+                  { field: 'asbesMax',      label: 'Asbes Maks (serat/ml)',   min: 0,  max: 1,   step: 0.01 },
+                ] as { field: keyof typeof draft.nab.udara; label: string; min: number; max: number; step: number }[]).map(({ field, label, min, max, step }) => (
+                  <label key={field} className="flex flex-col gap-1">
+                    <span className={labelCls}>{label}</span>
+                    <Input
+                      type="number" min={min} max={max} step={step}
+                      className={inputCls}
+                      value={draft.nab.udara[field]}
+                      disabled={!canEdit}
+                      onChange={(e) => set(`nab.udara.${field}`, Number(e.target.value))}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* NAB Kebisingan */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, marginBottom: 8, color: 'var(--foreground)' }}>
+                Kebisingan – dB(A) <span style={{ fontWeight: 400, color: 'var(--muted-foreground)' }}>(Kepmenaker 51/1999)</span>
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {([
+                  { field: 'jam8', label: 'Paparan 8 jam/hari (dB)', min: 70, max: 140 },
+                  { field: 'jam4', label: 'Paparan 4 jam/hari (dB)', min: 70, max: 140 },
+                  { field: 'jam2', label: 'Paparan 2 jam/hari (dB)', min: 70, max: 140 },
+                  { field: 'jam1', label: 'Paparan 1 jam/hari (dB)', min: 70, max: 140 },
+                ] as { field: keyof typeof draft.nab.kebisingan; label: string; min: number; max: number }[]).map(({ field, label, min, max }) => (
+                  <label key={field} className="flex flex-col gap-1">
+                    <span className={labelCls}>{label}</span>
+                    <Input
+                      type="number" min={min} max={max}
+                      className={inputCls}
+                      value={draft.nab.kebisingan[field]}
+                      disabled={!canEdit}
+                      onChange={(e) => set(`nab.kebisingan.${field}`, Number(e.target.value))}
+                    />
+                  </label>
+                ))}
               </div>
             </div>
           </section>
