@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import CenteredTabs from '@/components/ui/centered-tabs';
 import { JOBSITES } from '@/lib/lagging-data';
 import { authFetch } from '@/lib/api-client';
 import InputLaggingIndicator from './InputLaggingIndicator';
@@ -95,13 +96,16 @@ export default function LaggingIndicatorPage() {
           </p>
         </div>
 
-        <div className="admin-tab-row">
-          <button type="button" className={`admin-tab-btn${tab === 'statistik' ? ' active' : ''}`} onClick={() => setTab('statistik')}>
-            Statistik Kesehatan
-          </button>
-          <button type="button" className={`admin-tab-btn${tab === 'karyawan-sakit' ? ' active' : ''}`} onClick={() => setTab('karyawan-sakit')}>
-            Data Karyawan Sakit
-          </button>
+        <div style={{ marginBottom: 12 }}>
+          <CenteredTabs
+            tabs={[
+              { key: 'statistik', label: 'Statistik Kesehatan' },
+              { key: 'karyawan-sakit', label: 'Data Karyawan Sakit' },
+            ]}
+            active={tab}
+            onChange={setTab}
+            ariaLabel="Lagging Indicator Tabs"
+          />
         </div>
         {tab === 'statistik' ? <StatistikKesehatanForm /> : <InputLaggingIndicator />}
       </div>

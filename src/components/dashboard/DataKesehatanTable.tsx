@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
+import { Search, RefreshCw } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -100,6 +101,7 @@ export default function DataKesehatanTable({ canEdit = false }: DataKesehatanTab
   const [siteFilter, setSiteFilter] = useState('All Site');
   const [monthFilter, setMonthFilter] = useState('Semua');
   const [yearFilter, setYearFilter] = useState('2026');
+  const [search, setSearch] = useState('');
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -134,6 +136,16 @@ export default function DataKesehatanTable({ canEdit = false }: DataKesehatanTab
   }, [siteFilter, monthFilter, yearFilter]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) =>
+      String(r.nik || '').toLowerCase().includes(q) ||
+      String(r.nama || '').toLowerCase().includes(q) ||
+      String(r.jabatan || '').toLowerCase().includes(q)
+    );
+  }, [rows, search]);
 
   const totalSick = rows.reduce((s, r) => s + (r.hari_a || 0) + (r.hari_b || 0) + (r.hari_c || 0), 0);
   const totalSpell = rows.reduce((s, r) => s + (r.jumlah_spell || 0), 0);
@@ -234,129 +246,150 @@ export default function DataKesehatanTable({ canEdit = false }: DataKesehatanTab
   };
 
   return (
-    <div className="raw-table-container">
-      {/* Header Bar */}
-      <div className="raw-table-header-bar">
-        <span style={{ fontWeight: 700 }}>Data Karyawan Sakit</span>
-        <span style={{ color: 'var(--muted-foreground)' }}>
-          {rows.length} baris
-          <span style={{ margin: '0 6px', opacity: 0.3 }}>|</span>
-          {uniqueEmployees} karyawan
-          <span style={{ margin: '0 6px', opacity: 0.3 }}>|</span>
-          {totalSick} hari absensi
-          <span style={{ margin: '0 6px', opacity: 0.3 }}>|</span>
-          {totalSpell} spell
-        </span>
-      </div>
+    <div className="mcu-records-modern" style={{ height: '100%', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <div className="mcu-records-card" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        {/* Modern Header ala Record MCU */}
+        <div className="mcu-records-header">
+          <div>
+            <div className="mcu-records-kicker">DATABASE LAGGING INDICATOR</div>
+            <h3>Tabel Data Karyawan Sakit</h3>
+          </div>
+          <div className="mcu-records-actions">
+            <div className="mcu-records-search">
+              <Search size={14} />
+              <input
+                aria-label="Cari data karyawan sakit"
+                placeholder="Cari NIK, Nama, Jabatan..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <button
+              type="button"
+              className="mcu-dashboard-refresh"
+              onClick={() => void fetchData()}
+              disabled={loading}
+              title="Muat ulang data"
+            >
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              Refresh
+            </button>
+            <div className="mcu-records-count">
+              {filteredRows.length} dari {rows.length} record
+            </div>
+          </div>
+        </div>
 
-      {/* Filters */}
-      <div className="raw-table-filter-bar">
-        <div className="filter-tag">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 11, height: 11 }}>
-            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-          </svg>
-          Filter
+        {/* Filters Bar */}
+        <div className="raw-table-filter-bar" style={{ padding: '8px 14px', borderBottom: '1px solid var(--border)', background: 'var(--card)' }}>
+          <div className="filter-tag">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 11, height: 11 }}>
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+            </svg>
+            Filter
+          </div>
+          <select value={siteFilter} onChange={(e) => setSiteFilter(e.target.value)}>
+            {JOBSITES.map(s => (<option key={s} value={s}>{s}</option>))}
+          </select>
+          <select value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}>
+            {MONTHS.map(m => (<option key={m} value={m}>{m}</option>))}
+          </select>
+          <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
+            {YEARS.map(y => (<option key={y} value={y}>{y}</option>))}
+          </select>
+          <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
+            <DownloadButton
+              variant="compact"
+              filename="Data_Karyawan_Sakit"
+              title="Data Karyawan Sakit"
+              getData={tableDataForExport}
+            />
+          </div>
         </div>
-        <select value={siteFilter} onChange={(e) => setSiteFilter(e.target.value)}>
-          {JOBSITES.map(s => (<option key={s} value={s}>{s}</option>))}
-        </select>
-        <select value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}>
-          {MONTHS.map(m => (<option key={m} value={m}>{m}</option>))}
-        </select>
-        <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
-          {YEARS.map(y => (<option key={y} value={y}>{y}</option>))}
-        </select>
-        <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
-          <DownloadButton
-            variant="compact"
-            filename="Data_Karyawan_Sakit"
-            title="Data Karyawan Sakit"
-            getData={tableDataForExport}
-          />
-        </div>
-      </div>
-      {/* Table */}
-      <div className="raw-table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>No</th>
-              {COLUMNS.map(col => (
-                <th key={col.key}>{col.label}</th>
-              ))}
-              {canEdit && <th style={{ width: 70 }}>Aksi</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
+
+        {/* Table */}
+        <div className="raw-table-scroll" style={{ flex: 1, minHeight: 0 }}>
+          <table>
+            <thead>
               <tr>
-                <td colSpan={COLUMNS.length + 1 + (canEdit ? 1 : 0)} style={{ padding: 0 }}>
-                  <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data kesehatan">
-                    <div className="bm-loading-spinner">
-                      <div className="bm-loading-ring" aria-hidden="true" />
-                      <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
-                    </div>
-                    <p className="bm-loading-label">Memuat data kesehatan…</p>
-                  </div>
-                </td>
+                <th>No</th>
+                {COLUMNS.map(col => (
+                  <th key={col.key}>{col.label}</th>
+                ))}
+                {canEdit && <th style={{ width: 70 }}>Aksi</th>}
               </tr>
-            ) : rows.length === 0 ? (
-              <tr>
-                <td colSpan={COLUMNS.length + 1 + (canEdit ? 1 : 0)} style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>
-                  Tidak ada data untuk filter ini.
-                </td>
-              </tr>
-            ) : (
-              rows.map((row, idx) => (
-                <tr key={row.id || idx}>
-                  <td style={{ color: 'var(--muted-foreground)' }}>{idx + 1}</td>
-                  {COLUMNS.map(col => {
-                    const val = row[col.key];
-                    const isDate = DATE_KEYS.has(col.key);
-                    const isNum = NUM_KEYS.has(col.key);
-                    let display: string;
-                    if (isDate) {
-                      display = fmtDate(val);
-                    } else if (isNum) {
-                      display = (val === 0 || val === '0') ? '-' : String(val);
-                    } else {
-                      display = String(val || '');
-                    }
-                    return (
-                      <td key={col.key} style={{ fontWeight: isNum ? 600 : 400 }}>
-                        {display}
-                      </td>
-                    );
-                  })}
-                  {canEdit && (
-                    <td>
-                      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                        <button
-                          onClick={() => openEdit(row)}
-                          title="Edit"
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--muted-foreground)', display: 'flex', alignItems: 'center' }}
-                        >
-                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => openDelete(row)}
-                          title="Hapus"
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#FF4444', display: 'flex', alignItems: 'center' }}
-                        >
-                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                          </svg>
-                        </button>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={COLUMNS.length + 1 + (canEdit ? 1 : 0)} style={{ padding: 0 }}>
+                    <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data kesehatan">
+                      <div className="bm-loading-spinner">
+                        <div className="bm-loading-ring" aria-hidden="true" />
+                        <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
                       </div>
-                    </td>
-                  )}
+                      <p className="bm-loading-label">Memuat data kesehatan…</p>
+                    </div>
+                  </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : filteredRows.length === 0 ? (
+                <tr>
+                  <td colSpan={COLUMNS.length + 1 + (canEdit ? 1 : 0)} style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>
+                    Tidak ada data untuk filter ini.
+                  </td>
+                </tr>
+              ) : (
+                filteredRows.map((row, idx) => (
+                  <tr key={row.id || idx}>
+                    <td style={{ color: 'var(--muted-foreground)' }}>{idx + 1}</td>
+                    {COLUMNS.map(col => {
+                      const val = row[col.key];
+                      const isDate = DATE_KEYS.has(col.key);
+                      const isNum = NUM_KEYS.has(col.key);
+                      let display: string;
+                      if (isDate) {
+                        display = fmtDate(val);
+                      } else if (isNum) {
+                        display = (val === 0 || val === '0') ? '-' : String(val);
+                      } else {
+                        display = String(val || '');
+                      }
+                      return (
+                        <td key={col.key} style={{ fontWeight: isNum ? 600 : 400 }}>
+                          {display}
+                        </td>
+                      );
+                    })}
+                    {canEdit && (
+                      <td>
+                        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          <button
+                            onClick={() => openEdit(row)}
+                            title="Edit"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--muted-foreground)', display: 'flex', alignItems: 'center' }}
+                          >
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => openDelete(row)}
+                            title="Hapus"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#FF4444', display: 'flex', alignItems: 'center' }}
+                          >
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Edit Dialog */}

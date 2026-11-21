@@ -49,97 +49,17 @@ export default function HraAdminTabs() {
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--background)' }}>
-      {/* ── macOS Window Toolbar ─────────────────────────────── */}
-      <div
-        style={{
-          padding: '10px 18px',
-          flexShrink: 0,
-          borderBottom: '1px solid var(--border)',
-          background: 'var(--card)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
-          flexWrap: 'wrap',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-        }}
-      >
-        {/* Left: Brand Orange Accent Dot + Subtitle */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
-              background: 'linear-gradient(180deg, #FF6F1A 0%, #FF4D00 100%)',
-              display: 'inline-block',
-              boxShadow: '0 0 6px rgba(255, 94, 0, 0.45)',
-            }}
-          />
-          <div style={{ height: 14, width: 1, background: 'var(--border)', margin: '0 2px' }} />
-          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--foreground)' }}>
-            Health Risk Assessment
-          </span>
-        </div>
-
-        {/* Center: macOS Segmented Control (Pill Slider) */}
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            padding: 3,
-            borderRadius: 999,
-            background: 'var(--muted)',
-            border: '1px solid var(--border)',
-          }}
-        >
-          {TABS.map((t) => {
-            const active = tab === t.key;
-            return (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setTab(t.key)}
-                style={{
-                  padding: '5px 15px',
-                  borderRadius: 999,
-                  fontSize: 11.5,
-                  fontWeight: active ? 700 : 500,
-                  cursor: 'pointer',
-                  border: 'none',
-                  background: active ? 'var(--background)' : 'transparent',
-                  color: active ? '#FF5E00' : 'var(--muted-foreground)',
-                  boxShadow: active ? '0 1px 4px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)' : 'none',
-                  transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
-              >
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Right: Apple Capsule Tag */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              padding: '3px 10px',
-              borderRadius: 999,
-              background: 'rgba(255, 94, 0, 0.09)',
-              color: '#FF5E00',
-              border: '1px solid rgba(255, 94, 0, 0.25)',
-              letterSpacing: '0.03em',
-            }}
-          >
-            FORM/069 Rev.001
-          </span>
-        </div>
-      </div>
+      {/* ── Sub Tab HRA Rata Kiri Seragam dengan Modul Lain ──────── */}
+      <CenteredTabs
+        tabs={[
+          { key: 'tabel', label: 'Matriks & Dokumen HRA' },
+          { key: 'form', label: 'Form Input / Edit' },
+          { key: 'mapping', label: 'Pemetaan Risiko Jabatan' },
+        ]}
+        active={tab}
+        onChange={setTab}
+        ariaLabel="Health Risk Assessment"
+      />
 
       {/* Main Tab Content */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

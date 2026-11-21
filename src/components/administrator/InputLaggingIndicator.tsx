@@ -39,10 +39,11 @@ function PeriodBlock({ label, prefix, form, onChange }: {
 
   return (
     <div style={{
-      background: 'var(--muted)',
-      borderRadius: 10,
+      background: 'var(--card)',
+      borderRadius: 12,
       padding: '14px 16px',
       border: '1px solid var(--border)',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
     }}>
       <div style={{
         fontSize: 12, fontWeight: 700, color: 'var(--foreground)',

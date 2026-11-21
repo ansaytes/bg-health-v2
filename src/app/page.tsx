@@ -1439,9 +1439,7 @@ export default function Home() {
       <div className="main">
         <div className="header">
           <div className="header-top">
-            <div className="header-left-spacer">
-              <span className="brand-orange-dot" />
-            </div>
+            <div className="header-left-spacer" />
             <nav className="header-nav">
               {headerNav.map((item) => (
                 <button
