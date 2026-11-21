@@ -48,10 +48,92 @@ export default function HraAdminTabs() {
   };
 
   return (
-    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* Top Tab Bar */}
-      <div style={{ padding: '8px 16px 0', flexShrink: 0, borderBottom: '1px solid var(--border)', background: 'var(--card)' }}>
-        <CenteredTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Health Risk Assessment" compact />
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--background)' }}>
+      {/* ── macOS Window Toolbar ─────────────────────────────── */}
+      <div
+        style={{
+          padding: '10px 18px',
+          flexShrink: 0,
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--card)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          flexWrap: 'wrap',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+        }}
+      >
+        {/* Left: macOS Traffic Lights + Subtitle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#FF5F56', display: 'inline-block', boxShadow: 'inset 0 1px 1px rgba(0,0,0,0.25)' }} />
+            <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#FFBD2E', display: 'inline-block', boxShadow: 'inset 0 1px 1px rgba(0,0,0,0.25)' }} />
+            <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#27C93F', display: 'inline-block', boxShadow: 'inset 0 1px 1px rgba(0,0,0,0.25)' }} />
+          </div>
+          <div style={{ height: 14, width: 1, background: 'var(--border)', margin: '0 2px' }} />
+          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--foreground)' }}>
+            Health Risk Assessment
+          </span>
+        </div>
+
+        {/* Center: macOS Segmented Control (Pill Slider) */}
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: 3,
+            borderRadius: 999,
+            background: 'var(--muted)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          {TABS.map((t) => {
+            const active = tab === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTab(t.key)}
+                style={{
+                  padding: '5px 15px',
+                  borderRadius: 999,
+                  fontSize: 11.5,
+                  fontWeight: active ? 700 : 500,
+                  cursor: 'pointer',
+                  border: 'none',
+                  background: active ? 'var(--background)' : 'transparent',
+                  color: active ? '#FF5E00' : 'var(--muted-foreground)',
+                  boxShadow: active ? '0 1px 4px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                  transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Right: Apple Capsule Tag */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              padding: '3px 10px',
+              borderRadius: 999,
+              background: 'rgba(255, 94, 0, 0.09)',
+              color: '#FF5E00',
+              border: '1px solid rgba(255, 94, 0, 0.25)',
+              letterSpacing: '0.03em',
+            }}
+          >
+            FORM/069 Rev.001
+          </span>
+        </div>
       </div>
 
       {/* Main Tab Content */}
@@ -117,72 +199,98 @@ function HraMappingView() {
   });
 
   return (
-    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '10px 16px' }}>
-      {/* Filter Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '12px 18px' }}>
+      {/* ── macOS Filter Bar ───────────────────────────────── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
         <div>
-          <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>
-            Pemetaan Kategori Risiko Kesehatan Kerja Berdasarkan Jabatan
+          <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, letterSpacing: '-0.015em', color: 'var(--foreground)' }}>
+            Pemetaan Risiko Berdasarkan Jabatan
           </h2>
           <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '2px 0 0' }}>
-            Dasar penetapan jenis pemeriksaan MCU khusus & klarifikasi keterkaitan pajanan kasus PAK (INK/017).
+            Dasar MCU khusus & kajian keterkaitan pajanan kasus PAK (INK/017)
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Spotlight Search Pill */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 6,
+              gap: 7,
               background: 'var(--background)',
               border: '1px solid var(--border)',
-              borderRadius: 6,
-              padding: '0 8px',
-              height: 30,
-              minWidth: 180,
+              borderRadius: 999,
+              padding: '0 12px',
+              height: 32,
+              minWidth: 200,
+              boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.03)',
             }}
           >
-            <Search size={12} style={{ color: 'var(--muted-foreground)' }} />
+            <Search size={13} style={{ color: 'var(--muted-foreground)' }} />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari jabatan, lokasi, dept..."
-              style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 11, color: 'var(--foreground)', width: '100%' }}
+              placeholder="Cari jabatan, lokasi, departemen..."
+              style={{
+                border: 'none',
+                background: 'transparent',
+                outline: 'none',
+                fontSize: 11.5,
+                color: 'var(--foreground)',
+                width: '100%',
+              }}
             />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 11, color: 'var(--muted-foreground)', padding: 0 }}
+              >
+                ✕
+              </button>
+            )}
           </div>
 
+          {/* macOS Pop-Up Select: Risiko */}
           <select
             value={filterKat}
             onChange={(e) => setFilterKat(e.target.value)}
             style={{
-              height: 30,
-              borderRadius: 6,
+              height: 32,
+              borderRadius: 8,
               border: '1px solid var(--border)',
               background: 'var(--background)',
               color: 'var(--foreground)',
-              fontSize: 11,
-              padding: '0 8px',
+              fontSize: 11.5,
+              fontWeight: 500,
+              padding: '0 10px',
+              cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
             }}
           >
-            <option value="ALL">Semua Tingkat Risiko</option>
+            <option value="ALL">Semua Risiko</option>
             <option value="Tinggi">🔴 Risiko Tinggi (R 15-25)</option>
             <option value="Sedang">🟡 Risiko Sedang (R 5-12)</option>
             <option value="Rendah">🟢 Risiko Rendah (R 1-4)</option>
           </select>
 
+          {/* macOS Pop-Up Select: Lokasi */}
           <select
             value={filterLokasi}
             onChange={(e) => setFilterLokasi(e.target.value)}
             style={{
-              height: 30,
-              borderRadius: 6,
+              height: 32,
+              borderRadius: 8,
               border: '1px solid var(--border)',
               background: 'var(--background)',
               color: 'var(--foreground)',
-              fontSize: 11,
-              padding: '0 8px',
+              fontSize: 11.5,
+              fontWeight: 500,
+              padding: '0 10px',
+              cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
             }}
           >
             <option value="ALL">Semua Lokasi</option>
@@ -191,24 +299,26 @@ function HraMappingView() {
             <option value="Head Office & Jobsite">Head Office & Jobsite</option>
           </select>
 
+          {/* Refresh Button */}
           <button
             type="button"
             onClick={loadMappings}
             disabled={loading}
             title="Refresh pemetaan jabatan"
             style={{
-              height: 30,
-              padding: '0 10px',
-              borderRadius: 6,
+              height: 32,
+              padding: '0 12px',
+              borderRadius: 8,
               border: '1px solid var(--border)',
               background: 'var(--background)',
               color: 'var(--foreground)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: 4,
-              fontSize: 11,
+              gap: 5,
+              fontSize: 11.5,
               fontWeight: 600,
+              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
             }}
           >
             <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
@@ -218,76 +328,103 @@ function HraMappingView() {
       </div>
 
       {error && (
-        <div style={{ padding: '8px 12px', borderRadius: 6, background: 'rgba(255,45,45,0.08)', color: '#b3261e', fontSize: 11, marginBottom: 8 }}>
+        <div style={{ padding: '8px 14px', borderRadius: 10, background: 'rgba(255,59,48,0.1)', color: '#FF3B30', fontSize: 11.5, marginBottom: 10, border: '1px solid rgba(255,59,48,0.2)' }}>
           {error}
         </div>
       )}
 
-      {/* Table Content */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--card)' }}>
+      {/* ── macOS Table Panel ──────────────────────────────── */}
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          border: '1px solid var(--border)',
+          borderRadius: 12,
+          background: 'var(--card)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+        }}
+      >
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 11.5 }}>
-            <RefreshCw size={18} className="animate-spin" style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+          <div style={{ padding: 48, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>
+            <RefreshCw size={20} className="animate-spin" style={{ margin: '0 auto 8px', opacity: 0.5, color: '#FF5E00' }} />
             Memuat data pemetaan risiko jabatan...
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 11.5 }}>
-            Tidak ada jabatan yang cocok dengan filter atau database belum diisi.
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>
+            Tidak ada jabatan yang cocok dengan filter atau kata kunci.
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5 }}>
             <thead>
               <tr style={{ position: 'sticky', top: 0, background: 'var(--muted)', zIndex: 1, borderBottom: '1px solid var(--border)' }}>
-                <th style={{ textAlign: 'left', padding: '6px 10px', fontWeight: 700, width: 36, fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>No</th>
-                <th style={{ textAlign: 'left', padding: '6px 10px', fontWeight: 700, fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>Jabatan</th>
-                <th style={{ textAlign: 'left', padding: '6px 10px', fontWeight: 700, width: 120, fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>Lokasi Kerja</th>
-                <th style={{ textAlign: 'left', padding: '6px 10px', fontWeight: 700, fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>Departemen</th>
-                <th style={{ textAlign: 'left', padding: '6px 10px', fontWeight: 700, fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>Kelompok Pekerja</th>
-                <th style={{ textAlign: 'center', padding: '6px 10px', fontWeight: 700, width: 80, fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>R Max</th>
-                <th style={{ textAlign: 'center', padding: '6px 10px', fontWeight: 700, width: 100, fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>Kategori</th>
-                <th style={{ textAlign: 'left', padding: '6px 10px', fontWeight: 700, fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>Dasar Pertimbangan</th>
+                <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, width: 40, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>No</th>
+                <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>Jabatan</th>
+                <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, width: 130, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>Lokasi Kerja</th>
+                <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>Departemen</th>
+                <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>Kelompok Pekerja</th>
+                <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 600, width: 80, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>R Max</th>
+                <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 600, width: 100, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>Kategori</th>
+                <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>Dasar Pertimbangan</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((row, i) => {
                 const isTinggi = row.kategori_risiko === 'Tinggi' || row.nilai_r_tertinggi >= 15;
                 const isSedang = row.kategori_risiko === 'Sedang' || (row.nilai_r_tertinggi >= 5 && row.nilai_r_tertinggi < 15);
-                const color = isTinggi ? '#FF2D2D' : isSedang ? '#F5A623' : '#00B894';
-                const bg = isTinggi ? 'rgba(255, 45, 45, 0.12)' : isSedang ? 'rgba(245, 166, 35, 0.12)' : 'rgba(0, 184, 148, 0.12)';
-                const bdr = isTinggi ? 'rgba(255, 45, 45, 0.35)' : isSedang ? 'rgba(245, 166, 35, 0.35)' : 'rgba(0, 184, 148, 0.35)';
+                const color = isTinggi ? '#FF3B30' : isSedang ? '#FF9500' : '#34C759';
+                const bg = isTinggi ? 'rgba(255, 59, 48, 0.12)' : isSedang ? 'rgba(255, 149, 0, 0.12)' : 'rgba(52, 199, 89, 0.12)';
+                const bdr = isTinggi ? 'rgba(255, 59, 48, 0.28)' : isSedang ? 'rgba(255, 149, 0, 0.28)' : 'rgba(52, 199, 89, 0.28)';
 
                 const isJobsite = row.lokasi_kerja?.includes('Jobsite');
                 const isHO = row.lokasi_kerja?.includes('Head Office');
 
                 return (
-                  <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '6px 10px', color: 'var(--muted-foreground)' }}>{i + 1}</td>
-                    <td style={{ padding: '6px 10px', fontWeight: 700 }}>{row.jabatan}</td>
-                    <td style={{ padding: '6px 10px' }}>
+                  <tr
+                    key={i}
+                    style={{
+                      borderBottom: '1px solid var(--border)',
+                      transition: 'background 0.12s ease',
+                    }}
+                  >
+                    <td style={{ padding: '8px 12px', color: 'var(--muted-foreground)' }}>{i + 1}</td>
+                    <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--foreground)' }}>{row.jabatan}</td>
+                    <td style={{ padding: '8px 12px' }}>
                       <span
                         style={{
                           fontSize: 10,
-                          fontWeight: 700,
+                          fontWeight: 600,
                           padding: '2px 8px',
                           borderRadius: 999,
-                          background: isJobsite && !isHO ? 'rgba(234, 88, 12, 0.12)' : isHO && !isJobsite ? 'rgba(59, 130, 246, 0.12)' : 'var(--muted)',
-                          color: isJobsite && !isHO ? '#c2410c' : isHO && !isJobsite ? '#1d4ed8' : 'var(--foreground)',
-                          border: '1px solid var(--border)',
+                          background: isJobsite && !isHO ? 'rgba(234, 88, 12, 0.12)' : isHO && !isJobsite ? 'rgba(0, 122, 255, 0.12)' : 'var(--muted)',
+                          color: isJobsite && !isHO ? '#ea580c' : isHO && !isJobsite ? '#007aff' : 'var(--foreground)',
+                          border: `1px solid ${isJobsite && !isHO ? 'rgba(234, 88, 12, 0.25)' : isHO && !isJobsite ? 'rgba(0, 122, 255, 0.25)' : 'var(--border)'}`,
                           whiteSpace: 'nowrap',
                         }}
                       >
                         {row.lokasi_kerja || '-'}
                       </span>
                     </td>
-                    <td style={{ padding: '6px 10px' }}>{row.departemen}</td>
-                    <td style={{ padding: '6px 10px', color: 'var(--muted-foreground)' }}>{row.kelompok_pekerja}</td>
-                    <td style={{ padding: '6px 10px', textAlign: 'center', fontWeight: 800 }}>{row.nilai_r_tertinggi}</td>
-                    <td style={{ padding: '6px 10px', textAlign: 'center' }}>
-                      <span style={{ padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700, background: bg, color, border: `1px solid ${bdr}` }}>
+                    <td style={{ padding: '8px 12px' }}>{row.departemen}</td>
+                    <td style={{ padding: '8px 12px', color: 'var(--muted-foreground)' }}>{row.kelompok_pekerja}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700 }}>{row.nilai_r_tertinggi}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                      <span
+                        style={{
+                          padding: '2px 9px',
+                          borderRadius: 999,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          background: bg,
+                          color,
+                          border: `1px solid ${bdr}`,
+                          letterSpacing: '0.02em',
+                        }}
+                      >
                         {row.kategori_risiko}
                       </span>
                     </td>
-                    <td style={{ padding: '6px 10px', fontSize: 10.5, color: 'var(--muted-foreground)', maxWidth: 350 }}>
+                    <td style={{ padding: '8px 12px', fontSize: 11, color: 'var(--muted-foreground)', maxWidth: 360, lineHeight: 1.4 }}>
                       {row.dasar_pertimbangan}
                     </td>
                   </tr>

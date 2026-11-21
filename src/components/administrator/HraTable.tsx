@@ -146,64 +146,68 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
   }, [data]);
 
   return (
-    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* 1. Header Toolbar & Ringkasan KPI */}
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--background)' }}>
+      {/* ── macOS Control Bar & Toolbar ────────────────────────── */}
       <div
         style={{
-          padding: '10px 16px',
+          padding: '12px 18px',
           borderBottom: '1px solid var(--border)',
           background: 'var(--card)',
           display: 'flex',
           flexDirection: 'column',
-          gap: 10,
+          gap: 12,
           flexShrink: 0,
+          boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+        {/* Top Header: Title + Primary Action */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <h1 style={{ fontSize: 15, fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>
-                Health Risk Assessment (HRA)
+              <h1 style={{ fontSize: 16, fontWeight: 700, margin: 0, letterSpacing: '-0.02em', color: 'var(--foreground)' }}>
+                Matriks Penilaian Risiko (HRA)
               </h1>
               <span
                 style={{
                   fontSize: 10,
-                  fontWeight: 700,
+                  fontWeight: 600,
                   padding: '2px 8px',
                   borderRadius: 999,
-                  background: 'var(--muted)',
-                  color: 'var(--muted-foreground)',
-                  border: '1px solid var(--border)',
+                  background: 'rgba(255, 94, 0, 0.09)',
+                  color: '#FF5E00',
+                  border: '1px solid rgba(255, 94, 0, 0.22)',
                 }}
               >
-                FORM/069 Rev.001
+                FORM/069
               </span>
             </div>
-            <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '2px 0 0' }}>
-              Identifikasi bahaya kesehatan, pemetaan kelompok berisiko, dan evaluasi hierarki pengendalian.
+            <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '2px 0 0', lineHeight: 1.3 }}>
+              Evaluasi identifikasi bahaya kerja, paparan per minggu, efek kesehatan &amp; hierarki kontrol
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {onAddNew && (
               <button
                 type="button"
                 onClick={onAddNew}
                 style={{
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 5,
-                  padding: '5px 12px',
-                  borderRadius: 6,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  background: 'var(--brand-primary, #ff4d00)',
+                  gap: 6,
+                  padding: '6px 14px',
+                  borderRadius: 999,
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  background: 'linear-gradient(180deg, #FF6F1A 0%, #FF4D00 100%)',
                   color: '#fff',
                   border: 'none',
                   cursor: 'pointer',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25), 0 2px 6px rgba(255,77,0,0.3)',
+                  transition: 'all 0.15s ease',
                 }}
               >
-                <Plus size={13} /> Tambah Entri HRA
+                <Plus size={13} strokeWidth={2.5} /> Tambah Entri HRA
               </button>
             )}
             <button
@@ -212,17 +216,19 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
               disabled={loading}
               title="Muat ulang data"
               style={{
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: 4,
-                padding: '5px 10px',
-                borderRadius: 6,
-                fontSize: 11,
-                fontWeight: 600,
+                gap: 5,
+                padding: '6px 12px',
+                borderRadius: 999,
+                fontSize: 11.5,
+                fontWeight: 500,
                 background: 'var(--background)',
                 color: 'var(--foreground)',
                 border: '1px solid var(--border)',
                 cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                transition: 'all 0.15s ease',
               }}
             >
               <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
@@ -231,108 +237,125 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
           </div>
         </div>
 
-        {/* Metrik Counter Badges (Pills) */}
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span
+        {/* macOS Capsule KPI Group (Segmented Badges) */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div
             style={{
-              padding: '3px 10px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: 3,
               borderRadius: 999,
               background: 'var(--muted)',
               border: '1px solid var(--border)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 10.5,
-              fontWeight: 600,
-              color: 'var(--foreground)',
+              gap: 3,
             }}
           >
-            <span style={{ color: 'var(--muted-foreground)' }}>Total Bahaya:</span>
-            <b style={{ fontWeight: 800 }}>{summary.total}</b>
-          </span>
+            <span
+              style={{
+                padding: '3px 10px',
+                borderRadius: 999,
+                fontSize: 10.5,
+                fontWeight: 600,
+                color: 'var(--foreground)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+              }}
+            >
+              <span style={{ color: 'var(--muted-foreground)' }}>Total:</span>
+              <b style={{ fontWeight: 800 }}>{summary.total}</b>
+            </span>
 
-          <span
-            onClick={() => setRiskFilter(riskFilter === 'High Risk' ? 'ALL' : 'High Risk')}
-            style={{
-              padding: '3px 10px',
-              borderRadius: 999,
-              background: getRiskBg(16),
-              border: `1px solid ${getRiskBorder(16)}`,
-              color: getRiskColor(16),
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              cursor: 'pointer',
-              fontSize: 10.5,
-              fontWeight: 700,
-              outline: riskFilter === 'High Risk' ? `2px solid ${getRiskColor(16)}` : 'none',
-            }}
-          >
-            <AlertTriangle size={12} />
-            <span>High Risk:</span>
-            <b>{summary.tinggi}</b>
-          </span>
+            <button
+              type="button"
+              onClick={() => setRiskFilter(riskFilter === 'High Risk' ? 'ALL' : 'High Risk')}
+              style={{
+                border: 'none',
+                cursor: 'pointer',
+                padding: '3px 10px',
+                borderRadius: 999,
+                fontSize: 10.5,
+                fontWeight: 700,
+                background: riskFilter === 'High Risk' ? '#FF3B30' : 'rgba(255, 59, 48, 0.12)',
+                color: riskFilter === 'High Risk' ? '#fff' : '#FF3B30',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                boxShadow: riskFilter === 'High Risk' ? '0 1px 3px rgba(255, 59, 48, 0.35)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <AlertTriangle size={11} />
+              <span>High Risk:</span>
+              <b>{summary.tinggi}</b>
+            </button>
 
-          <span
-            onClick={() => setRiskFilter(riskFilter === 'Medium Risk' ? 'ALL' : 'Medium Risk')}
-            style={{
-              padding: '3px 10px',
-              borderRadius: 999,
-              background: getRiskBg(9),
-              border: `1px solid ${getRiskBorder(9)}`,
-              color: getRiskColor(9),
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              cursor: 'pointer',
-              fontSize: 10.5,
-              fontWeight: 700,
-              outline: riskFilter === 'Medium Risk' ? `2px solid ${getRiskColor(9)}` : 'none',
-            }}
-          >
-            <ShieldAlert size={12} />
-            <span>Medium Risk:</span>
-            <b>{summary.sedang}</b>
-          </span>
+            <button
+              type="button"
+              onClick={() => setRiskFilter(riskFilter === 'Medium Risk' ? 'ALL' : 'Medium Risk')}
+              style={{
+                border: 'none',
+                cursor: 'pointer',
+                padding: '3px 10px',
+                borderRadius: 999,
+                fontSize: 10.5,
+                fontWeight: 700,
+                background: riskFilter === 'Medium Risk' ? '#FF9500' : 'rgba(255, 149, 0, 0.12)',
+                color: riskFilter === 'Medium Risk' ? '#fff' : '#FF9500',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                boxShadow: riskFilter === 'Medium Risk' ? '0 1px 3px rgba(255, 149, 0, 0.35)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <ShieldAlert size={11} />
+              <span>Medium:</span>
+              <b>{summary.sedang}</b>
+            </button>
 
-          <span
-            onClick={() => setRiskFilter(riskFilter === 'Low Risk' ? 'ALL' : 'Low Risk')}
-            style={{
-              padding: '3px 10px',
-              borderRadius: 999,
-              background: getRiskBg(2),
-              border: `1px solid ${getRiskBorder(2)}`,
-              color: getRiskColor(2),
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              cursor: 'pointer',
-              fontSize: 10.5,
-              fontWeight: 700,
-              outline: riskFilter === 'Low Risk' ? `2px solid ${getRiskColor(2)}` : 'none',
-            }}
-          >
-            <ShieldCheck size={12} />
-            <span>Low Risk:</span>
-            <b>{summary.rendah}</b>
-          </span>
+            <button
+              type="button"
+              onClick={() => setRiskFilter(riskFilter === 'Low Risk' ? 'ALL' : 'Low Risk')}
+              style={{
+                border: 'none',
+                cursor: 'pointer',
+                padding: '3px 10px',
+                borderRadius: 999,
+                fontSize: 10.5,
+                fontWeight: 700,
+                background: riskFilter === 'Low Risk' ? '#34C759' : 'rgba(52, 199, 89, 0.12)',
+                color: riskFilter === 'Low Risk' ? '#fff' : '#34C759',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                boxShadow: riskFilter === 'Low Risk' ? '0 1px 3px rgba(52, 199, 89, 0.35)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <ShieldCheck size={11} />
+              <span>Low:</span>
+              <b>{summary.rendah}</b>
+            </button>
+          </div>
         </div>
 
-        {/* Filter Controls Row */}
+        {/* macOS Controls Filter Row */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Search Box */}
+          {/* Spotlight Search Capsule */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 6,
+              gap: 7,
               background: 'var(--background)',
               border: '1px solid var(--border)',
-              borderRadius: 6,
-              padding: '0 8px',
+              borderRadius: 999,
+              padding: '0 12px',
               flex: 1,
-              minWidth: 200,
-              height: 30,
+              minWidth: 220,
+              height: 32,
+              boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.03)',
             }}
           >
             <Search size={13} style={{ color: 'var(--muted-foreground)' }} />
@@ -345,7 +368,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                 border: 'none',
                 background: 'transparent',
                 outline: 'none',
-                fontSize: 11,
+                fontSize: 11.5,
                 color: 'var(--foreground)',
                 width: '100%',
               }}
@@ -354,26 +377,28 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 11, color: 'var(--muted-foreground)' }}
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 11, color: 'var(--muted-foreground)', padding: 0 }}
               >
                 ✕
               </button>
             )}
           </div>
 
-          {/* Filter Departemen */}
+          {/* macOS Pop-Up: Departemen */}
           <select
             value={deptFilter}
             onChange={(e) => setDeptFilter(e.target.value)}
             style={{
-              height: 30,
-              borderRadius: 6,
+              height: 32,
+              borderRadius: 8,
               border: '1px solid var(--border)',
               background: 'var(--background)',
               color: 'var(--foreground)',
-              fontSize: 11,
-              padding: '0 8px',
+              fontSize: 11.5,
+              fontWeight: 500,
+              padding: '0 10px',
               cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
             }}
           >
             <option value="ALL">Semua Departemen</option>
@@ -384,19 +409,21 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
             ))}
           </select>
 
-          {/* Filter Jenis Hazard */}
+          {/* macOS Pop-Up: Hazard */}
           <select
             value={hazardFilter}
             onChange={(e) => setHazardFilter(e.target.value)}
             style={{
-              height: 30,
-              borderRadius: 6,
+              height: 32,
+              borderRadius: 8,
               border: '1px solid var(--border)',
               background: 'var(--background)',
               color: 'var(--foreground)',
-              fontSize: 11,
-              padding: '0 8px',
+              fontSize: 11.5,
+              fontWeight: 500,
+              padding: '0 10px',
               cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
             }}
           >
             <option value="ALL">Semua Hazard</option>
@@ -407,19 +434,21 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
             ))}
           </select>
 
-          {/* Filter Risiko Level */}
+          {/* macOS Pop-Up: Level Risiko */}
           <select
             value={riskFilter}
             onChange={(e) => setRiskFilter(e.target.value as any)}
             style={{
-              height: 30,
-              borderRadius: 6,
+              height: 32,
+              borderRadius: 8,
               border: '1px solid var(--border)',
               background: 'var(--background)',
               color: 'var(--foreground)',
-              fontSize: 11,
-              padding: '0 8px',
+              fontSize: 11.5,
+              fontWeight: 500,
+              padding: '0 10px',
               cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
             }}
           >
             <option value="ALL">Semua Level Risiko</option>
@@ -482,15 +511,17 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                 <div
                   key={item.id}
                   style={{
-                    borderRadius: 10,
-                    border: isExpanded ? '1px solid var(--brand-primary, #ff4d00)' : '1px solid var(--border)',
+                    borderRadius: 12,
+                    border: isExpanded ? '1px solid rgba(255, 94, 0, 0.45)' : '1px solid var(--border)',
                     background: 'var(--card)',
                     overflow: 'hidden',
-                    transition: 'all 0.15s ease',
-                    boxShadow: isExpanded ? '0 3px 12px rgba(0,0,0,0.06)' : 'none',
+                    transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+                    boxShadow: isExpanded
+                      ? '0 6px 20px rgba(255, 94, 0, 0.08), 0 1px 3px rgba(0,0,0,0.04)'
+                      : '0 1px 2px rgba(0,0,0,0.02)',
                   }}
                 >
-                  {/* Row Summary Bar (Clickable) */}
+                  {/* Row Summary Bar (Clickable macOS List Item) */}
                   <div
                     onClick={() => toggleExpand(item.id)}
                     style={{
@@ -500,41 +531,49 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                       gap: 12,
                       cursor: 'pointer',
                       userSelect: 'none',
-                      background: isExpanded ? 'rgba(255, 77, 0, 0.03)' : 'transparent',
+                      background: isExpanded ? 'rgba(255, 94, 0, 0.025)' : 'transparent',
+                      transition: 'background 0.15s ease',
                     }}
                   >
-                    {/* Expand Indicator */}
+                    {/* macOS Smooth Disclosure Circle */}
                     <div
                       style={{
                         width: 24,
                         height: 24,
-                        borderRadius: 6,
+                        borderRadius: '50%',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        background: isExpanded ? 'var(--brand-primary, #ff4d00)' : 'var(--muted)',
-                        color: isExpanded ? '#fff' : 'var(--muted-foreground)',
+                        background: isExpanded ? 'rgba(255, 94, 0, 0.12)' : 'var(--muted)',
+                        color: isExpanded ? '#FF5E00' : 'var(--muted-foreground)',
                         flexShrink: 0,
-                        transition: 'all 0.15s ease',
+                        transition: 'all 0.18s ease',
                       }}
                     >
-                      {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                      <ChevronRight
+                        size={13}
+                        strokeWidth={2.5}
+                        style={{
+                          transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                          transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                        }}
+                      />
                     </div>
 
-                    {/* Departemen Badge */}
+                    {/* Departemen Badge (Apple Capsule) */}
                     <span
                       style={{
                         fontSize: 9.5,
                         fontWeight: 700,
-                        padding: '2px 8px',
+                        padding: '2px 9px',
                         borderRadius: 999,
-                        background: 'var(--muted)',
-                        color: 'var(--muted-foreground)',
-                        border: '1px solid var(--border)',
+                        background: 'rgba(255, 94, 0, 0.08)',
+                        color: '#FF5E00',
+                        border: '1px solid rgba(255, 94, 0, 0.22)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.04em',
                         flexShrink: 0,
-                        minWidth: 78,
+                        minWidth: 80,
                         textAlign: 'center',
                       }}
                     >
@@ -544,10 +583,10 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                     {/* Main Title: Jenis Pekerjaan & Kelompok */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--foreground)' }}>
+                        <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--foreground)', letterSpacing: '-0.01em' }}>
                           {item.jenis_pekerjaan}
                         </span>
-                        <span style={{ fontSize: 10.5, color: 'var(--muted-foreground)' }}>
+                        <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>
                           • {item.kelompok_beresiko}
                         </span>
                       </div>
@@ -570,7 +609,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                       style={{
                         fontSize: 10,
                         fontWeight: 600,
-                        padding: '2px 8px',
+                        padding: '2px 9px',
                         borderRadius: 999,
                         background: 'var(--muted)',
                         color: 'var(--muted-foreground)',
@@ -586,7 +625,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                       <div
                         title={`Initial Risk: P=${item.init_p} × E=${item.init_e} = R=${item.init_r} (${katInit})`}
                         style={{
-                          padding: '2px 8px',
+                          padding: '2px 9px',
                           borderRadius: 999,
                           fontSize: 10,
                           fontWeight: 700,
@@ -596,6 +635,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                           display: 'flex',
                           alignItems: 'center',
                           gap: 4,
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
                         }}
                       >
                         <span>Awal: R={item.init_r}</span>
@@ -606,7 +646,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                       <div
                         title={`Residual Risk: P=${item.res_p} × E=${item.res_e} = R=${item.res_r} (${katRes})`}
                         style={{
-                          padding: '2px 8px',
+                          padding: '2px 9px',
                           borderRadius: 999,
                           fontSize: 10,
                           fontWeight: 700,
@@ -616,13 +656,14 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                           display: 'flex',
                           alignItems: 'center',
                           gap: 4,
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
                         }}
                       >
                         <span>Sisa: R={item.res_r}</span>
                       </div>
                     </div>
 
-                    {/* Actions */}
+                    {/* macOS Action Buttons */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                       {onEdit && (
                         <button
@@ -632,7 +673,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                           style={{
                             width: 28,
                             height: 28,
-                            borderRadius: 6,
+                            borderRadius: 8,
                             border: '1px solid var(--border)',
                             background: 'var(--background)',
                             color: 'var(--foreground)',
@@ -640,6 +681,8 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                             alignItems: 'center',
                             justifyContent: 'center',
                             cursor: 'pointer',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                            transition: 'all 0.15s ease',
                           }}
                         >
                           <Edit2 size={12} />
@@ -652,14 +695,16 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                         style={{
                           width: 28,
                           height: 28,
-                          borderRadius: 6,
+                          borderRadius: 8,
                           border: '1px solid var(--border)',
                           background: 'var(--background)',
-                          color: '#E63946',
+                          color: '#FF3B30',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           cursor: 'pointer',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                          transition: 'all 0.15s ease',
                         }}
                       >
                         <Trash2 size={12} />
@@ -667,11 +712,11 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                     </div>
                   </div>
 
-                  {/* Expanded Detail View */}
+                  {/* ── macOS Inset Inspector View ──────────────────── */}
                   {isExpanded && (
                     <div
                       style={{
-                        padding: '14px 16px 16px',
+                        padding: '14px 16px',
                         borderTop: '1px solid var(--border)',
                         background: 'var(--background)',
                         display: 'flex',
@@ -681,59 +726,61 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                     >
                       {/* Grid 2 Kolom: Detail Bahaya & Efek */}
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
-                        {/* Kolom 1: Sumber & Efek Kesehatan */}
+                        {/* Kolom 1: Sumber & Efek Kesehatan (macOS Inset Card) */}
                         <div
                           style={{
-                            padding: '10px 12px',
-                            borderRadius: 8,
+                            padding: '12px 14px',
+                            borderRadius: 10,
                             background: 'var(--card)',
                             border: '1px solid var(--border)',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
                           }}
                         >
-                          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--muted-foreground)', marginBottom: 4 }}>
-                            Sumber Bahaya Kesehatan & Efek
+                          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--muted-foreground)', letterSpacing: '0.04em', marginBottom: 6 }}>
+                            Sumber Bahaya &amp; Efek Kesehatan
                           </div>
-                          <div style={{ fontSize: 12, lineHeight: 1.5, marginBottom: 8 }}>
+                          <div style={{ fontSize: 12, lineHeight: 1.5, marginBottom: 8, color: 'var(--foreground)' }}>
                             <span style={{ fontWeight: 600 }}>Sumber: </span>
                             {item.sumber_hazard}
                           </div>
-                          <div style={{ fontSize: 12, lineHeight: 1.5, color: '#e63946' }}>
+                          <div style={{ fontSize: 12, lineHeight: 1.5, color: '#FF3B30' }}>
                             <span style={{ fontWeight: 700 }}>Efek Kesehatan Potensial: </span>
                             {item.efek_kesehatan}
                           </div>
                         </div>
 
-                        {/* Kolom 2: Skoring Matriks Risiko */}
+                        {/* Kolom 2: Skoring Matriks Risiko (macOS Health Gauges) */}
                         <div
                           style={{
-                            padding: '10px 12px',
-                            borderRadius: 8,
+                            padding: '12px 14px',
+                            borderRadius: 10,
                             background: 'var(--card)',
                             border: '1px solid var(--border)',
                             display: 'grid',
                             gridTemplateColumns: '1fr 1fr',
                             gap: 10,
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
                           }}
                         >
                           {/* Initial Risk Card */}
                           <div
                             style={{
-                              padding: '8px 10px',
-                              borderRadius: 6,
+                              padding: '10px',
+                              borderRadius: 8,
                               background: getRiskBg(item.init_r),
                               border: `1px solid ${getRiskBorder(item.init_r)}`,
+                              textAlign: 'center',
                             }}
                           >
-                            <div style={{ fontSize: 9, fontWeight: 700, color: getRiskColor(item.init_r), textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            <div style={{ fontSize: 9.5, fontWeight: 700, color: getRiskColor(item.init_r), textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                               Initial Risk
                             </div>
-                            <div style={{ fontSize: 16, fontWeight: 800, color: getRiskColor(item.init_r), margin: '2px 0' }}>
+                            <div style={{ fontSize: 20, fontWeight: 800, color: getRiskColor(item.init_r), margin: '2px 0', letterSpacing: '-0.02em' }}>
                               R = {item.init_r}
                             </div>
-                            <div style={{ fontSize: 9.5, color: 'var(--foreground)', lineHeight: 1.4 }}>
-                              Paparan (P): <b>{item.init_p}</b><br />
-                              Efek (E): <b>{item.init_e}</b><br />
-                              <span style={{ display: 'inline-block', marginTop: 2, padding: '1px 6px', borderRadius: 999, fontSize: 9, fontWeight: 700, background: 'var(--background)', color: getRiskColor(item.init_r), border: `1px solid ${getRiskBorder(item.init_r)}` }}>
+                            <div style={{ fontSize: 10, color: 'var(--foreground)', lineHeight: 1.4 }}>
+                              P: <b>{item.init_p}</b> • E: <b>{item.init_e}</b><br />
+                              <span style={{ display: 'inline-block', marginTop: 4, padding: '2px 8px', borderRadius: 999, fontSize: 9.5, fontWeight: 700, background: 'var(--background)', color: getRiskColor(item.init_r), border: `1px solid ${getRiskBorder(item.init_r)}` }}>
                                 {katInit}
                               </span>
                             </div>
@@ -742,22 +789,22 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                           {/* Residual Risk Card */}
                           <div
                             style={{
-                              padding: '8px 10px',
-                              borderRadius: 6,
+                              padding: '10px',
+                              borderRadius: 8,
                               background: getRiskBg(item.res_r),
                               border: `1px solid ${getRiskBorder(item.res_r)}`,
+                              textAlign: 'center',
                             }}
                           >
-                            <div style={{ fontSize: 9, fontWeight: 700, color: getRiskColor(item.res_r), textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            <div style={{ fontSize: 9.5, fontWeight: 700, color: getRiskColor(item.res_r), textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                               Residual Risk
                             </div>
-                            <div style={{ fontSize: 16, fontWeight: 800, color: getRiskColor(item.res_r), margin: '2px 0' }}>
+                            <div style={{ fontSize: 20, fontWeight: 800, color: getRiskColor(item.res_r), margin: '2px 0', letterSpacing: '-0.02em' }}>
                               R = {item.res_r}
                             </div>
-                            <div style={{ fontSize: 9.5, color: 'var(--foreground)', lineHeight: 1.4 }}>
-                              Paparan (P): <b>{item.res_p}</b><br />
-                              Efek (E): <b>{item.res_e}</b><br />
-                              <span style={{ display: 'inline-block', marginTop: 2, padding: '1px 6px', borderRadius: 999, fontSize: 9, fontWeight: 700, background: 'var(--background)', color: getRiskColor(item.res_r), border: `1px solid ${getRiskBorder(item.res_r)}` }}>
+                            <div style={{ fontSize: 10, color: 'var(--foreground)', lineHeight: 1.4 }}>
+                              P: <b>{item.res_p}</b> • E: <b>{item.res_e}</b><br />
+                              <span style={{ display: 'inline-block', marginTop: 4, padding: '2px 8px', borderRadius: 999, fontSize: 9.5, fontWeight: 700, background: 'var(--background)', color: getRiskColor(item.res_r), border: `1px solid ${getRiskBorder(item.res_r)}` }}>
                                 {katRes}
                               </span>
                             </div>
@@ -768,29 +815,30 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                       {/* Tindakan Pengendalian & Hierarki Kontrol */}
                       <div
                         style={{
-                          padding: '10px 12px',
-                          borderRadius: 8,
+                          padding: '12px 14px',
+                          borderRadius: 10,
                           background: 'var(--card)',
                           border: '1px solid var(--border)',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--muted-foreground)' }}>
-                            Tindakan Pencegahan / Pengendalian yang Ditetapkan
+                          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>
+                            Tindakan Pengendalian yang Ditetapkan
                           </span>
                           {item.kontrol_tingkat && (
                             <span
                               style={{
                                 fontSize: 9.5,
                                 fontWeight: 700,
-                                padding: '1px 6px',
-                                borderRadius: 4,
-                                background: 'rgba(52, 152, 219, 0.15)',
-                                color: '#2980b9',
-                                border: '1px solid rgba(52, 152, 219, 0.3)',
+                                padding: '2px 8px',
+                                borderRadius: 999,
+                                background: 'rgba(0, 122, 255, 0.12)',
+                                color: '#007aff',
+                                border: '1px solid rgba(0, 122, 255, 0.25)',
                               }}
                             >
-                              Tingkat Kontrol: {item.kontrol_tingkat}
+                              {item.kontrol_tingkat}
                             </span>
                           )}
                         </div>
@@ -799,23 +847,24 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                         </div>
                       </div>
 
-                      {/* Regulasi Terkait */}
+                      {/* Referensi Regulasi */}
                       {item.regulasi && (
                         <div
                           style={{
-                            padding: '8px 12px',
-                            borderRadius: 6,
-                            background: 'var(--muted)',
+                            padding: '10px 14px',
+                            borderRadius: 10,
+                            background: 'var(--card)',
+                            border: '1px solid var(--border)',
                             fontSize: 11,
                             color: 'var(--muted-foreground)',
-                            lineHeight: 1.4,
                             display: 'flex',
+                            alignItems: 'baseline',
                             gap: 6,
                           }}
                         >
-                          <BookOpen size={13} style={{ flexShrink: 0, marginTop: 2, opacity: 0.7 }} />
-                          <div>
-                            <b style={{ color: 'var(--foreground)' }}>Dasar Regulasi: </b>
+                          <BookOpen size={13} style={{ flexShrink: 0, color: '#FF5E00' }} />
+                          <div style={{ lineHeight: 1.4 }}>
+                            <b style={{ color: 'var(--foreground)' }}>Regulasi Acuan: </b>
                             {item.regulasi}
                           </div>
                         </div>
