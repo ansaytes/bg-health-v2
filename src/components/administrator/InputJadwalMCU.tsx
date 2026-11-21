@@ -1,8 +1,20 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, CalendarDays, ChevronLeft, ChevronRight, Search, Save } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  CalendarDays,
+  Search,
+  RefreshCw,
+  Save,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUp,
+  ArrowDown,
+  CheckCircle2,
+  AlertCircle,
+  Calendar,
+  Clock,
+} from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 
@@ -34,7 +46,7 @@ export default function InputJadwalMCU() {
   const [rows, setRows] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [query, setQuery] = useState('');
   const [siteFilter, setSiteFilter] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('');
@@ -48,9 +60,7 @@ export default function InputJadwalMCU() {
 
   const getAuthHeaders = async (): Promise<HeadersInit> => {
     const accessToken = session?.access_token || (await supabase.auth.getSession()).data.session?.access_token;
-    return accessToken
-      ? { Authorization: `Bearer ${accessToken}` }
-      : {};
+    return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
   };
 
   const load = async () => {
@@ -69,32 +79,37 @@ export default function InputJadwalMCU() {
       setSiteOptions(json.sites || []);
       setDepartmentOptions(json.departments || []);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Gagal memuat data karyawan');
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Gagal memuat data karyawan',
+      });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    const timer = window.setTimeout(() => { void load(); }, 250);
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 250);
     return () => window.clearTimeout(timer);
   }, [page, query, siteFilter, departmentFilter]);
 
   const updateDate = (nik: string, value: string) => {
-    setRows(current => current.map(row => row.nik_karyawan === nik ? { ...row, tanggal_jadwal: value } : row));
+    setRows((current) => current.map((row) => (row.nik_karyawan === nik ? { ...row, tanggal_jadwal: value } : row)));
   };
 
   const save = async (row: Schedule) => {
     if (!row.tanggal_jadwal) {
-      setMessage(`Tanggal jadwal untuk ${row.nama} wajib diisi`);
+      setMessage({ type: 'error', text: `Tanggal jadwal untuk ${row.nama} wajib diisi` });
       return;
     }
     setSaving(row.nik_karyawan);
-    setMessage('');
+    setMessage(null);
     try {
       const response = await fetch('/api/mcu/schedule', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
         body: JSON.stringify({
           id: row.id,
           nikKaryawan: row.nik_karyawan,
@@ -109,30 +124,53 @@ export default function InputJadwalMCU() {
       });
       const json = await response.json();
       if (!response.ok) throw new Error(json.error || 'Gagal menyimpan jadwal');
-      setMessage(`Jadwal ${row.nama} berhasil disimpan`);
+      setMessage({ type: 'success', text: `Jadwal MCU ${row.nama} berhasil disimpan` });
+      setTimeout(() => setMessage(null), 4000);
       await load();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Gagal menyimpan jadwal');
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Gagal menyimpan jadwal',
+      });
     } finally {
       setSaving(null);
     }
   };
 
   const changeSort = (key: SortKey) => {
-    setSort(current => current.key === key
-      ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
-      : { key, direction: 'asc' });
+    setSort((current) =>
+      current.key === key
+        ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+        : { key, direction: 'asc' }
+    );
   };
 
   const visibleRows = useMemo(() => {
     return rows
-      .filter(row => scheduleFilter === 'all' || (scheduleFilter === 'filled' ? Boolean(row.tanggal_jadwal) : !row.tanggal_jadwal))
+      .filter((row) =>
+        scheduleFilter === 'all'
+          ? true
+          : scheduleFilter === 'filled'
+          ? Boolean(row.tanggal_jadwal)
+          : !row.tanggal_jadwal
+      )
       .sort((a, b) => {
         const left = String(a[sort.key] || '');
         const right = String(b[sort.key] || '');
         return left.localeCompare(right, 'id', { numeric: true }) * (sort.direction === 'asc' ? 1 : -1);
       });
   }, [rows, scheduleFilter, sort]);
+
+  // Statistik baris aktif
+  const stats = useMemo(() => {
+    let filled = 0;
+    let empty = 0;
+    rows.forEach((r) => {
+      if (r.tanggal_jadwal) filled++;
+      else empty++;
+    });
+    return { filled, empty };
+  }, [rows]);
 
   const resetFilters = () => {
     setQuery('');
@@ -147,77 +185,655 @@ export default function InputJadwalMCU() {
     setPage(nextPage);
   };
 
-  const header = (key: SortKey, label: string) => (
-    <th>
-      <button type="button" className="mcu-sort-button" onClick={() => changeSort(key)}>
-        {label}
-        {sort.key === key && (sort.direction === 'asc' ? <ArrowUp size={13} /> : <ArrowDown size={13} />)}
+  const hasActiveFilters = Boolean(query || siteFilter || departmentFilter || scheduleFilter !== 'all');
+
+  const renderSortableHeader = (key: SortKey, label: string, width?: number | string) => (
+    <th
+      style={{
+        textAlign: 'left',
+        padding: '8px 12px',
+        fontWeight: 600,
+        fontSize: 10,
+        textTransform: 'uppercase',
+        letterSpacing: '0.04em',
+        color: 'var(--muted-foreground)',
+        width: width,
+        userSelect: 'none',
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => changeSort(key)}
+        style={{
+          border: 'none',
+          background: 'transparent',
+          color: 'inherit',
+          font: 'inherit',
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          padding: 0,
+        }}
+      >
+        <span>{label}</span>
+        {sort.key === key &&
+          (sort.direction === 'asc' ? (
+            <ArrowUp size={11} style={{ color: '#FF5E00' }} />
+          ) : (
+            <ArrowDown size={11} style={{ color: '#FF5E00' }} />
+          ))}
       </button>
     </th>
   );
 
   return (
-    <div className="admin-form-container mcu-entry-page" style={{ padding: '0 16px 8px 16px', height: '100%', minHeight: 0 }}>
-      <div style={{ marginBottom: 8, paddingBottom: 4, borderBottom: '1px solid var(--border)' }}>
-        <h1 className="admin-form-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <CalendarDays size={15} className="text-primary" /> Input Jadwal MCU
-        </h1>
-        <p className="admin-form-subtitle">Atur jadwal Medical Check Up berkala untuk karyawan sesuai kewenangan jobsite.</p>
-      </div>
-      {message && <div className="admin-alert">{message}</div>}
-      <div className="mcu-entry-toolbar">
-        <div className="mcu-entry-search"><Search size={16} /><input aria-label="Cari karyawan" placeholder="Cari nama, site, departemen..." value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} /></div>
-        <select className="mcu-entry-filter" aria-label="Filter site" value={siteFilter} onChange={event => { setSiteFilter(event.target.value); setPage(1); }}>
-          <option value="">Semua Site</option>
-          {siteOptions.map(site => <option key={site} value={site}>{site}</option>)}
-        </select>
-        <select className="mcu-entry-filter" aria-label="Filter departemen" value={departmentFilter} onChange={event => { setDepartmentFilter(event.target.value); setPage(1); }}>
-          <option value="">Semua Departemen</option>
-          {departmentOptions.map(department => <option key={department} value={department}>{department}</option>)}
-        </select>
-        <select className="mcu-entry-filter" aria-label="Filter status jadwal" value={scheduleFilter} onChange={event => setScheduleFilter(event.target.value as typeof scheduleFilter)}>
-          <option value="all">Semua Jadwal</option>
-          <option value="filled">Sudah Dijadwalkan</option>
-          <option value="empty">Belum Dijadwalkan</option>
-        </select>
-        {(query || siteFilter || departmentFilter || scheduleFilter !== 'all') && <button type="button" className="mcu-filter-reset" onClick={resetFilters}>Reset</button>}
-        <span className="mcu-entry-count">{visibleRows.length} dari {total} karyawan | Halaman {page} dari {totalPages || 1}</span>
-      </div>
-      <div className="raw-table-scroll mcu-entry-table">
-        <table>
-          <thead><tr>
-            <th>No</th>{header('nik_karyawan', 'NIK Karyawan')}{header('nama', 'Nama')}{header('site', 'Site')}{header('department', 'Departemen')}{header('jabatan', 'Jabatan')}{header('tanggal_mcu_terakhir', 'MCU Terakhir')}{header('tanggal_jadwal', 'Jadwal MCU Berikutnya')}<th>Aksi</th>
-          </tr></thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={9} className="mcu-empty-state" style={{ padding: 0 }}>
-                  <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data karyawan">
-                    <div className="bm-loading-spinner">
-                      <div className="bm-loading-ring" aria-hidden="true" />
-                      <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
-                    </div>
-                    <p className="bm-loading-label">Memuat data karyawan & jadwal MCU…</p>
-                  </div>
-                </td>
-              </tr>
-            )
-              : visibleRows.length === 0 ? <tr><td colSpan={9} className="mcu-empty-state">Tidak ada data karyawan.</td></tr>
-              : visibleRows.map((row, index) => <tr key={row.nik_karyawan}>
-                <td>{index + 1}</td><td className="mcu-nik">{row.nik_karyawan}</td><td className="mcu-name">{row.nama}</td><td>{row.site}</td><td>{row.department || '-'}</td><td>{row.jabatan || '-'}</td><td>{formatDate(row.tanggal_mcu_terakhir)}</td>
-                <td><input className="admin-input mcu-date-input" type="date" value={row.tanggal_jadwal || ''} onChange={event => updateDate(row.nik_karyawan, event.target.value)} /></td>
-                <td><Button size="sm" onClick={() => void save(row)} disabled={saving === row.nik_karyawan}><Save size={14} /> {saving === row.nik_karyawan ? '...' : 'Simpan'}</Button></td>
-              </tr>)}
-          </tbody>
-        </table>
-      </div>
-      {totalPages > 1 && (
-        <div className="mcu-entry-pagination">
-          <Button variant="outline" size="sm" disabled={page === 1} onClick={() => changePage(page - 1)}><ChevronLeft size={14} /> Sebelumnya</Button>
-          <span>Halaman {page} / {totalPages}</span>
-          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => changePage(page + 1)}>Berikutnya <ChevronRight size={14} /></Button>
+    <div
+      style={{
+        flex: 1,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        background: 'var(--background)',
+      }}
+    >
+      {/* ── macOS Control Bar & Toolbar (HRA Style) ─────────────── */}
+      <div
+        style={{
+          padding: '12px 18px',
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--card)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+          flexShrink: 0,
+          boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+        }}
+      >
+        {/* Top Header: Title + Primary Action */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h1 style={{ fontSize: 16, fontWeight: 700, margin: 0, letterSpacing: '-0.02em', color: 'var(--foreground)' }}>
+                  Input Jadwal MCU
+                </h1>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    padding: '2px 8px',
+                    borderRadius: 999,
+                    background: 'rgba(255, 94, 0, 0.09)',
+                    color: '#FF5E00',
+                    border: '1px solid rgba(255, 94, 0, 0.22)',
+                  }}
+                >
+                  BERKALA
+                </span>
+              </div>
+              <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '2px 0 0', lineHeight: 1.3 }}>
+                Atur jadwal Medical Check Up berkala untuk karyawan sesuai kewenangan jobsite.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => void load()}
+              disabled={loading}
+              title="Muat ulang data"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '6px 14px',
+                borderRadius: 999,
+                fontSize: 11.5,
+                fontWeight: 600,
+                background: 'var(--background)',
+                color: 'var(--foreground)',
+                border: '1px solid var(--border)',
+                cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+              Refresh
+            </button>
+          </div>
         </div>
-      )}
+
+        {/* macOS Capsule KPI Group (Segmented Badges) */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: 3,
+              borderRadius: 999,
+              background: 'var(--muted)',
+              border: '1px solid var(--border)',
+              gap: 3,
+            }}
+          >
+            {/* Total Pill */}
+            <button
+              type="button"
+              onClick={() => setScheduleFilter('all')}
+              style={{
+                border: 'none',
+                cursor: 'pointer',
+                padding: '3px 12px',
+                borderRadius: 999,
+                fontSize: 10.5,
+                fontWeight: 600,
+                background: scheduleFilter === 'all' ? 'var(--card)' : 'transparent',
+                color: scheduleFilter === 'all' ? '#FF5E00' : 'var(--foreground)',
+                boxShadow: scheduleFilter === 'all' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <span style={{ color: scheduleFilter === 'all' ? '#FF5E00' : 'var(--muted-foreground)' }}>Total:</span>
+              <b style={{ fontWeight: 800 }}>{total}</b>
+            </button>
+
+            {/* Sudah Dijadwalkan Pill */}
+            <button
+              type="button"
+              onClick={() => setScheduleFilter(scheduleFilter === 'filled' ? 'all' : 'filled')}
+              style={{
+                border: 'none',
+                cursor: 'pointer',
+                padding: '3px 12px',
+                borderRadius: 999,
+                fontSize: 10.5,
+                fontWeight: 700,
+                background: scheduleFilter === 'filled' ? '#34C759' : 'transparent',
+                color: scheduleFilter === 'filled' ? '#fff' : '#34C759',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                boxShadow: scheduleFilter === 'filled' ? '0 1px 3px rgba(52, 199, 89, 0.35)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <CheckCircle2 size={11} />
+              <span>Sudah Dijadwalkan</span>
+              {stats.filled > 0 && <span style={{ opacity: 0.85 }}>({stats.filled})</span>}
+            </button>
+
+            {/* Belum Dijadwalkan Pill */}
+            <button
+              type="button"
+              onClick={() => setScheduleFilter(scheduleFilter === 'empty' ? 'all' : 'empty')}
+              style={{
+                border: 'none',
+                cursor: 'pointer',
+                padding: '3px 12px',
+                borderRadius: 999,
+                fontSize: 10.5,
+                fontWeight: 700,
+                background: scheduleFilter === 'empty' ? '#FF9500' : 'transparent',
+                color: scheduleFilter === 'empty' ? '#fff' : '#FF9500',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                boxShadow: scheduleFilter === 'empty' ? '0 1px 3px rgba(255, 149, 0, 0.35)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <Clock size={11} />
+              <span>Belum Dijadwalkan</span>
+              {stats.empty > 0 && <span style={{ opacity: 0.85 }}>({stats.empty})</span>}
+            </button>
+          </div>
+        </div>
+
+        {/* macOS Controls Filter Row */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Spotlight Search Capsule */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 7,
+              background: 'var(--background)',
+              border: '1px solid var(--border)',
+              borderRadius: 999,
+              padding: '0 12px',
+              flex: 1,
+              minWidth: 220,
+              height: 32,
+              boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.03)',
+            }}
+          >
+            <Search size={13} style={{ color: 'var(--muted-foreground)' }} />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
+              placeholder="Cari nama, NIK, site, departemen, jabatan..."
+              style={{
+                border: 'none',
+                background: 'transparent',
+                outline: 'none',
+                fontSize: 11.5,
+                color: 'var(--foreground)',
+                width: '100%',
+              }}
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery('');
+                  setPage(1);
+                }}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontSize: 11,
+                  color: 'var(--muted-foreground)',
+                  padding: 0,
+                }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* macOS Pop-Up: Site */}
+          <select
+            value={siteFilter}
+            onChange={(e) => {
+              setSiteFilter(e.target.value);
+              setPage(1);
+            }}
+            style={{
+              height: 32,
+              borderRadius: 8,
+              border: '1px solid var(--border)',
+              background: 'var(--background)',
+              color: 'var(--foreground)',
+              fontSize: 11.5,
+              fontWeight: 500,
+              padding: '0 10px',
+              cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+            }}
+          >
+            <option value="">Semua Site</option>
+            {siteOptions.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+
+          {/* macOS Pop-Up: Departemen */}
+          <select
+            value={departmentFilter}
+            onChange={(e) => {
+              setDepartmentFilter(e.target.value);
+              setPage(1);
+            }}
+            style={{
+              height: 32,
+              borderRadius: 8,
+              border: '1px solid var(--border)',
+              background: 'var(--background)',
+              color: 'var(--foreground)',
+              fontSize: 11.5,
+              fontWeight: 500,
+              padding: '0 10px',
+              cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+            }}
+          >
+            <option value="">Semua Departemen</option>
+            {departmentOptions.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+
+          {/* Reset Filters */}
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              style={{
+                height: 32,
+                padding: '0 12px',
+                borderRadius: 8,
+                border: '1px solid var(--border)',
+                background: 'var(--background)',
+                color: '#FF5E00',
+                fontSize: 11.5,
+                fontWeight: 600,
+                cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+              }}
+            >
+              Reset
+            </button>
+          )}
+
+          {/* Counter info */}
+          <span
+            style={{
+              fontSize: 10.5,
+              padding: '4px 10px',
+              borderRadius: 999,
+              background: 'var(--muted)',
+              color: 'var(--muted-foreground)',
+              border: '1px solid var(--border)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {visibleRows.length} dari {total} karyawan | Hal {page}/{totalPages || 1}
+          </span>
+        </div>
+      </div>
+
+      {/* ── Table Container (HRA Panel Style) ───────────────────── */}
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          padding: '12px 18px',
+        }}
+      >
+        {/* Inline Message Alert */}
+        {message && (
+          <div
+            style={{
+              padding: '8px 14px',
+              borderRadius: 10,
+              background: message.type === 'success' ? 'rgba(52, 199, 89, 0.12)' : 'rgba(255, 59, 48, 0.12)',
+              color: message.type === 'success' ? '#248A3D' : '#FF3B30',
+              border: `1px solid ${message.type === 'success' ? 'rgba(52, 199, 89, 0.25)' : 'rgba(255, 59, 48, 0.25)'}`,
+              fontSize: 11.5,
+              marginBottom: 10,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            {message.type === 'success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+            <span style={{ fontWeight: 600 }}>{message.text}</span>
+          </div>
+        )}
+
+        {/* macOS Table Card Panel */}
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            border: '1px solid var(--border)',
+            borderRadius: 12,
+            background: 'var(--card)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+          }}
+        >
+          {/* Scrollable Table Area */}
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'auto' }}>
+            {loading ? (
+              <div style={{ padding: 48, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>
+                <RefreshCw size={22} className="animate-spin" style={{ margin: '0 auto 8px', opacity: 0.5, color: '#FF5E00' }} />
+                Memuat data karyawan & jadwal MCU...
+              </div>
+            ) : visibleRows.length === 0 ? (
+              <div style={{ padding: 48, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>
+                <Calendar size={28} style={{ margin: '0 auto 10px', opacity: 0.35 }} />
+                <h4 style={{ fontSize: 13, fontWeight: 700, margin: '0 0 4px', color: 'var(--foreground)' }}>
+                  Tidak Ada Data Karyawan
+                </h4>
+                <p style={{ fontSize: 11, margin: 0 }}>
+                  Coba sesuaikan kata kunci pencarian atau bersihkan filter di atas.
+                </p>
+              </div>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5 }}>
+                <thead>
+                  <tr
+                    style={{
+                      position: 'sticky',
+                      top: 0,
+                      background: 'var(--muted)',
+                      zIndex: 2,
+                      borderBottom: '1px solid var(--border)',
+                    }}
+                  >
+                    <th
+                      style={{
+                        textAlign: 'center',
+                        padding: '8px 12px',
+                        fontWeight: 600,
+                        width: 45,
+                        fontSize: 10,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        color: 'var(--muted-foreground)',
+                      }}
+                    >
+                      No
+                    </th>
+                    {renderSortableHeader('nik_karyawan', 'NIK Karyawan', 120)}
+                    {renderSortableHeader('nama', 'Nama Lengkap')}
+                    {renderSortableHeader('site', 'Site', 120)}
+                    {renderSortableHeader('department', 'Departemen')}
+                    {renderSortableHeader('jabatan', 'Jabatan')}
+                    {renderSortableHeader('tanggal_mcu_terakhir', 'MCU Terakhir', 120)}
+                    {renderSortableHeader('tanggal_jadwal', 'Jadwal MCU Berikutnya', 180)}
+                    <th
+                      style={{
+                        textAlign: 'center',
+                        padding: '8px 12px',
+                        fontWeight: 600,
+                        width: 95,
+                        fontSize: 10,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        color: 'var(--muted-foreground)',
+                      }}
+                    >
+                      Aksi
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleRows.map((row, index) => {
+                    const isJobsite = row.site && !row.site.toLowerCase().includes('head office');
+                    return (
+                      <tr
+                        key={row.nik_karyawan}
+                        style={{
+                          borderBottom: '1px solid var(--border)',
+                          transition: 'background 0.12s ease',
+                        }}
+                      >
+                        <td style={{ padding: '8px 12px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                          {(page - 1) * 20 + (index + 1)}
+                        </td>
+                        <td
+                          style={{
+                            padding: '8px 12px',
+                            fontFamily: 'var(--font-mono, monospace)',
+                            fontWeight: 600,
+                            color: 'var(--foreground)',
+                          }}
+                        >
+                          {row.nik_karyawan}
+                        </td>
+                        <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--foreground)' }}>
+                          {row.nama}
+                        </td>
+                        <td style={{ padding: '8px 12px' }}>
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 600,
+                              padding: '2px 8px',
+                              borderRadius: 999,
+                              background: isJobsite ? 'rgba(234, 88, 12, 0.12)' : 'rgba(0, 122, 255, 0.12)',
+                              color: isJobsite ? '#ea580c' : '#007aff',
+                              border: `1px solid ${isJobsite ? 'rgba(234, 88, 12, 0.25)' : 'rgba(0, 122, 255, 0.25)'}`,
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {row.site || '-'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '8px 12px', color: 'var(--muted-foreground)' }}>
+                          {row.department || '-'}
+                        </td>
+                        <td style={{ padding: '8px 12px', color: 'var(--foreground)' }}>
+                          {row.jabatan || '-'}
+                        </td>
+                        <td style={{ padding: '8px 12px', color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>
+                          {formatDate(row.tanggal_mcu_terakhir)}
+                        </td>
+                        <td style={{ padding: '8px 12px' }}>
+                          <input
+                            type="date"
+                            value={row.tanggal_jadwal || ''}
+                            onChange={(e) => updateDate(row.nik_karyawan, e.target.value)}
+                            style={{
+                              height: 28,
+                              borderRadius: 6,
+                              border: '1px solid var(--border)',
+                              background: 'var(--background)',
+                              color: 'var(--foreground)',
+                              fontSize: 11.5,
+                              padding: '0 8px',
+                              outline: 'none',
+                              width: '100%',
+                              boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)',
+                            }}
+                          />
+                        </td>
+                        <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => void save(row)}
+                            disabled={saving === row.nik_karyawan}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 5,
+                              padding: '4px 12px',
+                              borderRadius: 999,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              background: 'linear-gradient(180deg, #FF6F1A 0%, #FF4D00 100%)',
+                              color: '#fff',
+                              border: 'none',
+                              cursor: saving === row.nik_karyawan ? 'not-allowed' : 'pointer',
+                              boxShadow: '0 2px 6px rgba(255, 77, 0, 0.28)',
+                              opacity: saving === row.nik_karyawan ? 0.7 : 1,
+                              transition: 'all 0.15s ease',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            <Save size={12} />
+                            {saving === row.nik_karyawan ? '...' : 'Simpan'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* ── Table Footer / Pagination (macOS Style) ──────────── */}
+          {totalPages > 1 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 16px',
+                borderTop: '1px solid var(--border)',
+                background: 'var(--card)',
+                flexWrap: 'wrap',
+                gap: 8,
+              }}
+            >
+              <button
+                type="button"
+                disabled={page === 1}
+                onClick={() => changePage(page - 1)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: '5px 12px',
+                  borderRadius: 999,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  border: '1px solid var(--border)',
+                  background: 'var(--background)',
+                  color: page === 1 ? 'var(--muted-foreground)' : 'var(--foreground)',
+                  cursor: page === 1 ? 'not-allowed' : 'pointer',
+                  opacity: page === 1 ? 0.5 : 1,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <ChevronLeft size={13} /> Sebelumnya
+              </button>
+
+              <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted-foreground)' }}>
+                Halaman <b style={{ color: 'var(--foreground)' }}>{page}</b> dari <b>{totalPages}</b>
+              </span>
+
+              <button
+                type="button"
+                disabled={page >= totalPages}
+                onClick={() => changePage(page + 1)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: '5px 12px',
+                  borderRadius: 999,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  border: '1px solid var(--border)',
+                  background: 'var(--background)',
+                  color: page >= totalPages ? 'var(--muted-foreground)' : 'var(--foreground)',
+                  cursor: page >= totalPages ? 'not-allowed' : 'pointer',
+                  opacity: page >= totalPages ? 0.5 : 1,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                Berikutnya <ChevronRight size={13} />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
