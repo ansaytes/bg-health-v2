@@ -64,13 +64,18 @@ export default function HraAdminTabs() {
           boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
         }}
       >
-        {/* Left: macOS Traffic Lights + Subtitle */}
+        {/* Left: Brand Orange Accent Dot + Subtitle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#FF5F56', display: 'inline-block', boxShadow: 'inset 0 1px 1px rgba(0,0,0,0.25)' }} />
-            <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#FFBD2E', display: 'inline-block', boxShadow: 'inset 0 1px 1px rgba(0,0,0,0.25)' }} />
-            <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#27C93F', display: 'inline-block', boxShadow: 'inset 0 1px 1px rgba(0,0,0,0.25)' }} />
-          </div>
+          <span
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: 'linear-gradient(180deg, #FF6F1A 0%, #FF4D00 100%)',
+              display: 'inline-block',
+              boxShadow: '0 0 6px rgba(255, 94, 0, 0.45)',
+            }}
+          />
           <div style={{ height: 14, width: 1, background: 'var(--border)', margin: '0 2px' }} />
           <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--foreground)' }}>
             Health Risk Assessment

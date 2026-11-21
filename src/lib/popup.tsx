@@ -92,57 +92,76 @@ export function Popup({ state, closePopup }: {
         onClick={(e) => { if (e.target === e.currentTarget && state.type !== 'confirm') closePopup(); }}
       >
         <motion.div
-          initial={{ scale: 0.92, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.92, opacity: 0 }}
-          transition={{ duration: 0.18, ease: 'easeOut' }}
+          initial={{ scale: 0.94, opacity: 0, y: 8 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.94, opacity: 0, y: 8 }}
+          transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
           style={{
             width: '100%', maxWidth: 440,
             background: 'var(--card, #fff)',
             border: '1px solid var(--border, #e5e7eb)',
-            borderRadius: 12,
-            padding: 20,
-            boxShadow: '0 12px 32px rgba(0,0,0,0.18)',
-            display: 'flex', flexDirection: 'column', gap: 12,
+            borderRadius: 16,
+            padding: '22px 24px',
+            boxShadow: '0 20px 48px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.06)',
+            display: 'flex', flexDirection: 'column', gap: 16,
             fontFamily: 'inherit', color: 'var(--foreground, #111)',
+            backdropFilter: 'blur(20px)',
           }}
           role="dialog" aria-modal="true"
         >
-          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
             <div style={{
-              width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+              width: 42, height: 42, borderRadius: 12, flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: s.color, background: s.bg,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
             }}>{s.icon}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--foreground)' }}>
-                {state.title || (state.type === 'confirm' ? 'Konfirmasi' : 'Informasi')}
-              </p>
-              <p style={{ margin: '4px 0 0', fontSize: 12.5, lineHeight: 1.5, color: 'var(--muted-foreground, #6b7280)', whiteSpace: 'pre-line' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: 'linear-gradient(180deg, #FF6F1A 0%, #FF4D00 100%)',
+                    display: 'inline-block',
+                    boxShadow: '0 0 6px rgba(255, 94, 0, 0.45)',
+                  }}
+                />
+                <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: 'var(--foreground)', letterSpacing: '-0.01em' }}>
+                  {state.title || (state.type === 'confirm' ? 'Konfirmasi' : 'Informasi')}
+                </p>
+              </div>
+              <p style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.55, color: 'var(--muted-foreground, #6b7280)', whiteSpace: 'pre-line' }}>
                 {state.message}
               </p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', paddingTop: 4 }}>
             {(state.type === 'confirm') && (
               <button
                 type="button" onClick={closePopup} disabled={busy}
                 style={{
-                  height: 34, padding: '0 16px', borderRadius: 8,
-                  border: '1px solid var(--border)', background: 'transparent',
+                  height: 34, padding: '0 18px', borderRadius: 999,
+                  border: '1px solid var(--border)', background: 'var(--card)',
                   color: 'var(--foreground)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
                   fontFamily: 'inherit',
+                  transition: 'all 0.15s ease',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                 }}
               >Batal</button>
             )}
             <button
               type="button" onClick={() => void handleOk()} disabled={busy}
               style={{
-                height: 34, padding: '0 18px', borderRadius: 8,
-                border: 'none', background: s.color,
+                height: 34, padding: '0 20px', borderRadius: 999,
+                border: 'none',
+                background: state.type === 'confirm' ? 'linear-gradient(180deg, #FF6F1A 0%, #FF4D00 100%)' : s.color,
                 color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer',
                 fontFamily: 'inherit',
                 opacity: busy ? 0.6 : 1,
+                boxShadow: state.type === 'confirm' ? '0 2px 8px rgba(255, 77, 0, 0.35)' : '0 2px 8px rgba(0,0,0,0.15)',
+                transition: 'all 0.15s ease',
               }}
             >{busy ? 'Menyimpan…' : (state.confirmLabel || 'OK')}</button>
           </div>

@@ -1371,6 +1371,7 @@ export default function Home() {
 
       <aside className={"sidebar" + (mobileOpen ? ' open' : '')}>
         <div className="sidebar-head">
+          <span className="brand-orange-dot" />
           <div className="sidebar-logo-wrap">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={logoPerusahaan} alt="Logo" className="sidebar-logo-img" />
@@ -1438,7 +1439,9 @@ export default function Home() {
       <div className="main">
         <div className="header">
           <div className="header-top">
-            <div className="header-left-spacer" />
+            <div className="header-left-spacer">
+              <span className="brand-orange-dot" />
+            </div>
             <nav className="header-nav">
               {headerNav.map((item) => (
                 <button

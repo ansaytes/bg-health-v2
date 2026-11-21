@@ -6,7 +6,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', var(--font-geist-sans), 'Helvetica Neue', sans-serif;
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -118,15 +118,28 @@
 @layer base {
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', var(--font-geist-sans), 'Helvetica Neue', sans-serif;
     background: var(--background);
     color: var(--foreground);
     display: flex;
     height: 100vh;
     line-height: 1.4;
-    -webkit-font-smoothing: auto;
-    -moz-osx-font-smoothing: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+}
+
+/* ═══════════════════════════════════
+   macOS Brand Orange Accent Dot
+   ═══════════════════════════════════ */
+.brand-orange-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #FF6F1A 0%, #FF4D00 100%);
+  display: inline-block;
+  box-shadow: 0 0 8px rgba(255, 94, 0, 0.5);
+  flex-shrink: 0;
 }
 
 /* ═══════════════════════════════════
@@ -278,26 +291,27 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 10px;
-  border-radius: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
   border: none;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 600;
   color: var(--muted-foreground);
   background: transparent;
   text-align: left;
-  transition: all 0.2s;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
   margin-bottom: 2px;
 }
-.nav-btn:hover {
+.nav-btn:hover:not(.active) {
   background: var(--hover);
   color: var(--foreground);
 }
 .nav-btn.active {
-  background: linear-gradient(180deg, #ff5a10 0%, #ff4d00 100%);
+  background: linear-gradient(180deg, #FF6F1A 0%, #FF4D00 100%);
   color: #fff;
-  box-shadow: 0 1px 4px rgba(255,77,0,0.20), 0 0 0 0.5px rgba(255,77,0,0.10);
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(255, 77, 0, 0.28);
 }
 .nav-btn.active svg { color: #fff; }
 .nav-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
@@ -350,7 +364,7 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px);
   transition: background 0.3s;
   flex-shrink: 0;
   border-bottom: 1px solid var(--border);
@@ -369,7 +383,10 @@
 }
 .header-left-spacer {
   flex-shrink: 0;
-  width: 0;
+  min-width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 .header-right-logo {
   height: 42px;
@@ -388,52 +405,62 @@
     drop-shadow(0 0 3px rgba(255, 255, 255, 0.6));
 }
 
-/* Header Nav — pill buttons */
+/* Header Nav — macOS Segmented Capsule Pill */
 .header-nav {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 2px;
-  flex: 1;
-  justify-content: center;
+  gap: 3px;
+  padding: 3px 4px;
+  border-radius: 999px;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+  margin: 0 auto;
 }
 .header-nav-item {
   padding: 5px 16px;
-  border-radius: 20px;
-  font-size: 11px;
+  border-radius: 999px;
+  font-size: 11.5px;
   font-weight: 600;
   color: var(--muted-foreground);
   border: none;
   background: transparent;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
 }
-.header-nav-item:hover {
-  background: var(--hover);
+.header-nav-item:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.5);
   color: var(--foreground);
 }
+.dark .header-nav-item:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.08);
+}
 .header-nav-item.active {
-  background: linear-gradient(180deg, #ff5a10 0%, #ff4d00 100%);
+  background: linear-gradient(180deg, #FF6F1A 0%, #FF4D00 100%);
   color: #fff;
-  box-shadow: 0 1px 4px rgba(255,77,0,0.20), 0 0 0 0.5px rgba(255,77,0,0.10);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(255, 77, 0, 0.35);
 }
 
 .theme-btn {
-  width: 30px; height: 30px;
-  border-radius: 8px;
+  width: 32px; height: 32px;
+  border-radius: 10px;
   border: 1px solid var(--border);
-  background: var(--accent);
+  background: var(--card);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0;
   color: var(--muted-foreground);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
 .theme-btn:hover {
-  transform: scale(1.06);
-  border-color: rgba(255,77,0,0.3);
+  transform: scale(1.05);
+  border-color: rgba(255, 77, 0, 0.35);
+  color: #FF5E00;
 }
 .theme-btn svg { width: 14px; height: 14px; }
 
@@ -1022,23 +1049,28 @@ select option:active {
    ═══════════════════════════════════ */
 .sidebar-footer {
   margin-top: auto;
-  padding: 10px 16px 12px;
+  padding: 10px 12px 14px;
 }
 .sidebar-account {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
 .sidebar-avatar {
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   background: linear-gradient(135deg, #ff4d00 0%, #ff6b2b 50%, #ff8c42 100%);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
   flex-shrink: 0;
   border: 2px solid var(--card);
@@ -1047,16 +1079,16 @@ select option:active {
   position: relative;
 }
 .sidebar-account:hover .sidebar-avatar {
-  transform: scale(1.08) rotate(-3deg);
-  box-shadow: 0 0 0 3px rgba(255, 77, 0, 0.4), 0 8px 18px rgba(255, 77, 0, 0.3);
+  transform: scale(1.06) rotate(-2deg);
+  box-shadow: 0 0 0 3px rgba(255, 77, 0, 0.4), 0 6px 16px rgba(255, 77, 0, 0.3);
 }
 .sidebar-avatar::after {
   content: '';
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   background: #00B894;
   border: 2px solid var(--card);
   border-radius: 50%;
@@ -1085,17 +1117,21 @@ select option:active {
   justify-content: center;
   gap: 6px;
   padding: 8px;
-  border-radius: 8px;
-  border: 2px solid #b0b0b0;
-  background: transparent;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
   color: var(--foreground);
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 3px 0 0 rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.08);
+  transition: all 0.16s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
 .sidebar-login-btn:hover {
+  background: var(--hover);
+  border-color: rgba(255, 77, 0, 0.35);
+  color: #ff4d00;
+}
   background: var(--hover);
   border-color: rgba(255,77,0,0.3);
   color: #ff4d00;
@@ -1426,11 +1462,12 @@ select option:active {
 .admin-section-header::before {
   content: '';
   display: block;
-  width: 3px;
-  height: 12px;
-  background: #ff4d00;
-  border-radius: 2px;
+  width: 4px;
+  height: 14px;
+  background: linear-gradient(180deg, #FF6F1A 0%, #FF4D00 100%);
+  border-radius: 999px;
   flex-shrink: 0;
+  box-shadow: 0 0 6px rgba(255, 94, 0, 0.4);
 }
 .admin-section-title {
   font-size: 10.5px;
@@ -1535,10 +1572,10 @@ select.admin-input.compact-input {
 }
 .admin-form-card {
   background: var(--card);
-  border: none;
-  border-radius: 10px;
-  padding: 8px 12px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.03);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
   transition: background 0.3s, border 0.3s;
 }
 .dark .admin-form-card {
@@ -1563,36 +1600,38 @@ select.admin-input.compact-input {
 }
 .admin-label {
   display: block;
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 600;
-  color: var(--foreground);
-  margin-bottom: 2px;
+  color: var(--muted-foreground);
+  margin-bottom: 4px;
 }
 .admin-input {
   width: 100%;
-  height: 32px;
-  border-radius: 6px;
+  height: 34px;
+  border-radius: 8px;
   border: 1px solid var(--border);
-  background: var(--muted);
+  background: var(--card);
   padding: 0 10px;
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--foreground);
   outline: none;
   font-family: inherit;
-  transition: border 0.2s;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .admin-form-inner .admin-input {
-  height: 32px !important;
-  border-radius: 6px;
-  font-size: 11px !important;
+  height: 34px !important;
+  border-radius: 8px;
+  font-size: 11.5px !important;
   padding: 0 10px;
 }
 .admin-form-inner .admin-label {
-  font-size: 10px;
-  margin-bottom: 2px;
+  font-size: 10.5px;
+  margin-bottom: 4px;
 }
 .admin-input:focus {
-  border-color: #ff4d00;
+  border-color: #FF5E00;
+  box-shadow: 0 0 0 3px rgba(255, 94, 0, 0.18), inset 0 1px 2px rgba(0,0,0,0.02);
 }
 .admin-input::placeholder {
   color: var(--muted-foreground);
@@ -2617,34 +2656,52 @@ select.admin-input.compact-input {
 }
 .admin-form-btn-primary {
   flex: 1;
-  height: 32px;
-  border-radius: 7px;
+  height: 34px;
+  border-radius: 999px;
   border: none;
-  background: #ff4d00;
+  background: linear-gradient(180deg, #FF6F1A 0%, #FF4D00 100%);
   color: #fff;
   font-size: 11.5px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   font-family: inherit;
-  transition: opacity 0.2s;
+  box-shadow: 0 2px 8px rgba(255, 77, 0, 0.32);
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
-.admin-form-btn-primary:hover { opacity: 0.9; }
+.admin-form-btn-primary:hover {
+  opacity: 0.94;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 77, 0, 0.4);
+}
+.admin-form-btn-primary:active {
+  transform: translateY(0);
+}
 .admin-form-btn-secondary {
-  height: 32px;
-  padding: 0 14px;
-  border-radius: 7px;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 999px;
   border: 1px solid var(--border);
-  background: transparent;
+  background: var(--card);
   color: var(--foreground);
   font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 .admin-form-btn-secondary:hover {
   background: var(--hover);
-  border-color: rgba(255,77,0,0.3);
+  border-color: rgba(255, 77, 0, 0.35);
+  color: #FF5E00;
 }
 /* ═══════════════════════════════════
    Admin Toggle Arrow — fixed right, rotating
@@ -2706,12 +2763,16 @@ select.admin-input.compact-input {
   min-height: 0;
   overflow: hidden;
   gap: 0;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.02);
 }
 .raw-table-header-bar {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
+  padding: 8px 12px;
   font-size: 10px;
   color: var(--muted-foreground);
   flex-shrink: 0;
@@ -2721,7 +2782,7 @@ select.admin-input.compact-input {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 4px 6px 8px;
+  padding: 0 8px 8px 10px;
   flex-wrap: nowrap;
   flex-shrink: 0;
   justify-content: flex-start;
@@ -2729,14 +2790,13 @@ select.admin-input.compact-input {
 .raw-table-filter-bar > .download-btn-wrapper {
   margin-left: auto;
 }
-.raw-table-filter-bar > .download-btn-wrapper {
-  margin-left: auto;
-  margin-right: 0;
-}
 .raw-table-filter-bar select {
-  height: 26px;
-  font-size: 9px;
-  padding: 0 22px 0 6px;
+  height: 28px;
+  font-size: 10.5px;
+  padding: 0 22px 0 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--background);
 }
 .raw-table-scroll {
   flex: 1;
@@ -2757,25 +2817,25 @@ select.admin-input.compact-input {
   background: var(--muted);
 }
 .raw-table-scroll th {
-  padding: 5px 8px;
+  padding: 6px 10px;
   text-align: left;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--muted-foreground);
-  font-size: 9px;
+  font-size: 9.5px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 .raw-table-scroll td {
-  padding: 4px 8px;
+  padding: 6px 10px;
   color: var(--foreground);
   white-space: nowrap;
-  font-size: 10px;
+  font-size: 10.5px;
   border-bottom: 1px solid var(--border);
 }
 .raw-table-scroll tbody tr { transition: background 0.15s; }
-.raw-table-scroll tbody tr:hover { background: var(--hover); }
+.raw-table-scroll tbody tr:hover { background: rgba(255, 94, 0, 0.035); }
 .raw-table-notes {
   flex-shrink: 0;
   padding: 8px 10px;
@@ -4787,51 +4847,59 @@ select option:active {
 .col-filter-footer .is-primary:hover { text-decoration: none; filter: brightness(1.08); }
 
 /* ═══════════════════════════════════════════════════════════════
-   Centered Tabs — tab menu selalu di TENGAH halaman (simetris)
-   (Nama class dipertahankan agar tidak perlu ubah semua pemakai.)
+   Centered Tabs — macOS Segmented Control Capsule Track
    ═══════════════════════════════════════════════════════════════ */
 .centered-tabs {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: flex-start;
-  gap: 5px;
-  padding: 4px 12px 0;
+  padding: 6px 14px;
   flex-shrink: 0;
   border-bottom: 1px solid var(--border);
+  background: var(--card);
   overflow-x: auto;
   scrollbar-width: none;
 }
 .centered-tabs::-webkit-scrollbar { display: none; }
+.centered-tabs-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+}
 .centered-tab {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   height: 28px;
   padding: 0 14px;
-  border-radius: 7px 7px 0 0;
-  border: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  margin-bottom: -1px;
+  border-radius: 999px;
+  border: none;
   background: transparent;
   color: var(--muted-foreground);
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
-  transition: background .15s, color .15s, border-color .15s;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .centered-tab:hover:not(.is-active) {
-  background: var(--hover);
+  background: rgba(255, 255, 255, 0.5);
   color: var(--foreground);
 }
+.dark .centered-tab:hover:not(.is-active) {
+  background: rgba(255, 255, 255, 0.08);
+}
 .centered-tab.is-active {
-  background: var(--card);
-  color: var(--foreground);
+  background: linear-gradient(180deg, #FF6F1A 0%, #FF4D00 100%);
+  color: #ffffff;
   font-weight: 700;
-  border-color: var(--border);
-  border-bottom-color: var(--card);
-  box-shadow: 0 -2px 0 0 #ff4d00 inset;
+  box-shadow: 0 1px 4px rgba(255, 77, 0, 0.35);
 }
 .centered-tab-count {
   display: inline-grid;
@@ -4839,15 +4907,15 @@ select option:active {
   min-width: 18px;
   height: 16px;
   padding: 0 5px;
-  border-radius: 8px;
+  border-radius: 999px;
   background: var(--muted);
   color: var(--muted-foreground);
   font-size: 9.5px;
   font-weight: 800;
 }
 .centered-tab.is-active .centered-tab-count {
-  background: rgba(255, 77, 0, 0.12);
-  color: #ff4d00;
+  background: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
 }
 
 /* Latar semua <select> WAJIB solid (ditaruh paling akhir agar menang atas aturan
