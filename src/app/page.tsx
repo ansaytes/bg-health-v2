@@ -55,6 +55,7 @@ const HcInputPage = lazy(() => import('@/components/administrator/HcInputPage'))
 const HcAudiometriEval = lazy(() => import('@/components/administrator/HcAudiometriEval'));
 const ErgoSurveyForm = lazy(() => import('@/components/administrator/ErgoSurveyForm'));
 const ErgoSurveyTable = lazy(() => import('@/components/administrator/ErgoSurveyTable'));
+const HraAdminTabs = lazy(() => import('@/components/administrator/HraAdminTabs'));
 import CenteredTabs from '@/components/ui/centered-tabs';
 
 /*   Admin sub-tab containers (Layanan Kuratif & Higiene Industri)   */
@@ -100,13 +101,14 @@ function AdminLayananKuratif() {
  * dalam satu menu bertab (sama seperti sisi dashboard).
  */
 function AdminHigieneIndustri() {
-  const [tab, setTab] = useState<'hearing' | 'ergonomi' | 'sanitasi' | 'cahaya' | 'udara' | 'gizi'>('hearing');
+  const [tab, setTab] = useState<'hearing' | 'ergonomi' | 'hra' | 'sanitasi' | 'cahaya' | 'udara' | 'gizi'>('hearing');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       <CenteredTabs
         tabs={[
           { key: 'hearing', label: 'Hearing Conservation' },
           { key: 'ergonomi', label: 'Ergonomi' },
+          { key: 'hra', label: 'HRA (Health Risk)' },
           // Higiene & Sanitasi (STD/005) + Gizi Kerja (AKG 2019) — SOP/028 poin 5.7
           { key: 'sanitasi', label: 'Higiene & Sanitasi' },
           { key: 'cahaya', label: 'Pencahayaan' },
@@ -119,7 +121,9 @@ function AdminHigieneIndustri() {
         compact
       />
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {tab === 'sanitasi' ? (
+        {tab === 'hra' ? (
+          <HraAdminTabs />
+        ) : tab === 'sanitasi' ? (
           <AdminTogglePanel
             formContent={<InspeksiSanitasi />}
             tableContents={[<InspeksiSanitasiTable key="sanitasi-table" />]}
