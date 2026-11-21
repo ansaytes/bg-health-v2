@@ -3,8 +3,9 @@
 // ============================================================
 // Administrator > Higiene Industri > Form Input / Edit HRA
 // Health Hazard Risk Assessment (FORM/069 Rev.001)
-// Dilengkapi Kalkulator Matriks Risiko Interaktif P × E = R
-// (P = Probability / Peluang, E = Effect / Keparahan, R = Risk)
+// P = Tingkat Paparan (Akumulasi jam paparan per minggu sesuai NAB Permenaker 5/2018)
+// E = Efek Kesehatan (Tingkat keparahan dampak kesehatan)
+// R = Skor Risiko (P × E): Low (1-4), Medium (5-12), High (15-25)
 // ============================================================
 
 import React, { useState, useEffect } from 'react';
@@ -16,6 +17,8 @@ import {
   ShieldAlert,
   Info,
   CheckCircle2,
+  Clock,
+  BookOpen,
   ArrowRight,
 } from 'lucide-react';
 import { authFetch } from '@/lib/api-client';
@@ -25,8 +28,9 @@ import {
   normalizeDepartment,
   HAZARD_TYPE_LIST,
   HraHazardEntry,
-  PROBABILITY_LABELS,
-  EFFECT_LABELS,
+  PAPARAN_LABELS,
+  EFEK_LABELS,
+  HRA_RULES,
   hitungSkorRisiko,
   getKategoriRisiko,
   getRiskColor,
@@ -48,6 +52,31 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
   const [departemen, setDepartemen] = useState(initialData?.departemen || 'OPERATION');
   const [deptOptions, setDeptOptions] = useState<DepartemenItem[]>(DEPARTEMEN_LIST);
   const [jenisPekerjaan, setJenisPekerjaan] = useState(initialData?.jenis_pekerjaan || '');
+  const [jenisHazard, setJenisHazard] = useState(initialData?.jenis_hazard || 'Fisika');
+  const [sumberHazard, setSumberHazard] = useState(initialData?.sumber_hazard || '');
+  const [kelompokBeresiko, setKelompokBeresiko] = useState(initialData?.kelompok_beresiko || '');
+  const [efekKesehatan, setEfekKesehatan] = useState(initialData?.efek_kesehatan || '');
+
+  // P = Tingkat Paparan (Akumulasi jam paparan per minggu)
+  const [initP, setInitP] = useState<number>(initialData?.init_p ?? 4);
+  // E = Efek Kesehatan
+  const [initE, setInitE] = useState<number>(initialData?.init_e ?? 4);
+
+  // Kontrol & Pengendalian
+  const [tindakanPencegahan, setTindakanPencegahan] = useState(initialData?.tindakan_pencegahan || '');
+  const [kontrolTingkat, setKontrolTingkat] = useState(initialData?.kontrol_tingkat || 'APD');
+
+  // Residual Risk setelah kontrol
+  const [resP, setResP] = useState<number>(initialData?.res_p ?? 3);
+  const [resE, setResE] = useState<number>(initialData?.res_e ?? 4); // Catatan 5: E residual = E initial
+
+  // Regulasi
+  const [regulasi, setRegulasi] = useState(
+    initialData?.regulasi || 'Permenaker No.5/2018 K3 Lingkungan Kerja; UU No.17/2023 Kesehatan'
+  );
+
+  const [saving, setSaving] = useState(false);
+  const { popup, popupState, closePopup } = usePopup();
 
   // Sinkronisasi daftar departemen dari tabel employees via /api/departments
   useEffect(() => {
@@ -63,32 +92,8 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
       })
       .catch(() => {});
   }, []);
-  const [jenisHazard, setJenisHazard] = useState(initialData?.jenis_hazard || 'Fisika');
-  const [sumberHazard, setSumberHazard] = useState(initialData?.sumber_hazard || '');
-  const [kelompokBeresiko, setKelompokBeresiko] = useState(initialData?.kelompok_beresiko || '');
-  const [efekKesehatan, setEfekKesehatan] = useState(initialData?.efek_kesehatan || '');
 
-  // Initial Risk
-  const [initP, setInitP] = useState<number>(initialData?.init_p ?? 4);
-  const [initE, setInitE] = useState<number>(initialData?.init_e ?? 4);
-
-  // Kontrol & Pengendalian
-  const [tindakanPencegahan, setTindakanPencegahan] = useState(initialData?.tindakan_pencegahan || '');
-  const [kontrolTingkat, setKontrolTingkat] = useState(initialData?.kontrol_tingkat || 'APD');
-
-  // Residual Risk
-  const [resP, setResP] = useState<number>(initialData?.res_p ?? 3);
-  const [resE, setResE] = useState<number>(initialData?.res_e ?? 3);
-
-  // Regulasi
-  const [regulasi, setRegulasi] = useState(
-    initialData?.regulasi || 'Permenaker No.5/2018 K3 Lingkungan Kerja; UU No.17/2023 Kesehatan'
-  );
-
-  const [saving, setSaving] = useState(false);
-  const { popup, popupState, closePopup } = usePopup();
-
-  // Reset form when initialData changes
+  // Update form state saat initialData berubah
   useEffect(() => {
     if (initialData) {
       setDepartemen(initialData.departemen || 'OPERATION');
@@ -102,10 +107,16 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
       setTindakanPencegahan(initialData.tindakan_pencegahan || '');
       setKontrolTingkat(initialData.kontrol_tingkat || 'APD');
       setResP(initialData.res_p ?? 3);
-      setResE(initialData.res_e ?? 3);
+      setResE(initialData.res_e ?? 4);
       setRegulasi(initialData.regulasi || '');
     }
   }, [initialData]);
+
+  // Otomatis sinkronkan E residual dengan E initial sesuai Catatan Penilaian (5)
+  const handleInitEChange = (newE: number) => {
+    setInitE(newE);
+    setResE(newE); // E residual = E initial
+  };
 
   // Kalkulasi Skor Real-Time
   const initR = hitungSkorRisiko(initP, initE);
@@ -127,7 +138,7 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
       setTindakanPencegahan(initialData.tindakan_pencegahan || '');
       setKontrolTingkat(initialData.kontrol_tingkat || 'APD');
       setResP(initialData.res_p ?? 3);
-      setResE(initialData.res_e ?? 3);
+      setResE(initialData.res_e ?? 4);
       setRegulasi(initialData.regulasi || '');
     } else {
       setJenisPekerjaan('');
@@ -214,7 +225,7 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
               {isEdit ? 'Edit Entri Penilaian Risiko (HRA)' : 'Tambah Entri Identifikasi Risiko Baru (HRA)'}
             </h2>
             <p style={{ fontSize: 11.5, color: 'var(--muted-foreground)', margin: '2px 0 0' }}>
-              Dokumen Acuan: BG/QSHE/FORM/069 Rev.001 (Health Hazard Risk Assessment)
+              Dokumen Acuan: BG/QSHE/FORM/069 Rev.001 • P = Tingkat Paparan (Jam/Minggu) • E = Efek Kesehatan
             </p>
           </div>
 
@@ -347,18 +358,19 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
             </div>
           </div>
 
-          {/* Section 2: Penilaian Risiko Awal (Initial Risk Matrix: P x E = R) */}
+          {/* Section 2: Penilaian Initial Risk: P (Tingkat Paparan) x E (Efek) = R */}
           <div className="admin-form-card" style={{ padding: '14px 16px', background: 'var(--card)', borderRadius: 10, border: '1px solid var(--border)' }}>
             <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ width: 4, height: 16, borderRadius: 2, background: getRiskColor(initR) }} />
               2. Penilaian Risiko Awal — Initial Risk (P × E = R)
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 180px', gap: 12, alignItems: 'center' }}>
-              {/* Peluang / Probability P */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 190px', gap: 12, alignItems: 'center' }}>
+              {/* Tingkat Paparan P */}
               <div>
-                <label className="admin-label" style={{ fontSize: 11, fontWeight: 700, display: 'block', marginBottom: 4 }}>
-                  Peluang / Probability (P) : {initP}
+                <label className="admin-label" style={{ fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                  <Clock size={12} style={{ color: 'var(--brand-primary, #ff4d00)' }} />
+                  Tingkat Paparan (P) : Skor {initP} ({PAPARAN_LABELS[initP]?.durasi})
                 </label>
                 <select
                   className="admin-input"
@@ -368,26 +380,26 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
                 >
                   {[1, 2, 3, 4, 5].map((val) => (
                     <option key={val} value={val}>
-                      {val} - {PROBABILITY_LABELS[val]?.title}: {PROBABILITY_LABELS[val]?.desc}
+                      {val} - {PAPARAN_LABELS[val]?.title}: {PAPARAN_LABELS[val]?.durasi} ({PAPARAN_LABELS[val]?.desc})
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Efek / Effect E */}
+              {/* Efek Kesehatan E */}
               <div>
                 <label className="admin-label" style={{ fontSize: 11, fontWeight: 700, display: 'block', marginBottom: 4 }}>
-                  Efek Keparahan / Effect (E) : {initE}
+                  Efek Kesehatan / Severity (E) : Skor {initE}
                 </label>
                 <select
                   className="admin-input"
                   value={initE}
-                  onChange={(e) => setInitE(Number(e.target.value))}
+                  onChange={(e) => handleInitEChange(Number(e.target.value))}
                   style={{ width: '100%', height: 32, fontSize: 11, borderRadius: 6 }}
                 >
                   {[1, 2, 3, 4, 5].map((val) => (
                     <option key={val} value={val}>
-                      {val} - {EFFECT_LABELS[val]?.title}: {EFFECT_LABELS[val]?.desc}
+                      {val} - {EFEK_LABELS[val]?.title}: {EFEK_LABELS[val]?.desc}
                     </option>
                   ))}
                 </select>
@@ -396,21 +408,34 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
               {/* Live Score Display Card */}
               <div
                 style={{
-                  padding: '8px 12px',
-                  borderRadius: 8,
+                  padding: '8px 10px',
+                  borderRadius: 6,
                   background: getRiskBg(initR),
                   border: `1px solid ${getRiskBorder(initR)}`,
                   textAlign: 'center',
                 }}
               >
-                <div style={{ fontSize: 9.5, fontWeight: 800, color: getRiskColor(initR), textTransform: 'uppercase' }}>
-                  Initial Risk (P × E)
+                <div style={{ fontSize: 9.5, fontWeight: 700, color: getRiskColor(initR), textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Initial Risk (Paparan × Efek)
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 900, color: getRiskColor(initR), margin: '2px 0' }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: getRiskColor(initR), margin: '2px 0' }}>
                   R = {initR}
                 </div>
-                <div style={{ fontSize: 10, fontWeight: 800, color: getRiskColor(initR) }}>
-                  Kategori: {initKat.toUpperCase()}
+                <div>
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      padding: '2px 8px',
+                      borderRadius: 999,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      background: 'var(--background)',
+                      color: getRiskColor(initR),
+                      border: `1px solid ${getRiskBorder(initR)}`,
+                    }}
+                  >
+                    {initKat}
+                  </span>
                 </div>
               </div>
             </div>
@@ -420,7 +445,7 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
           <div className="admin-form-card" style={{ padding: '14px 16px', background: 'var(--card)', borderRadius: 10, border: '1px solid var(--border)' }}>
             <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ width: 4, height: 16, borderRadius: 2, background: '#3498DB' }} />
-              3. Tindakan Pencegahan & Hierarki Pengendalian (Control Hierarchy)
+              3. Tindakan Pencegahan & Hierarki Pengendalian (Menurunkan Tingkat Paparan P)
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
@@ -440,7 +465,7 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
 
               <div>
                 <label className="admin-label" style={{ fontSize: 11, fontWeight: 700, display: 'block', marginBottom: 4 }}>
-                  Tingkat Kontrol Utama
+                  Tingkat Kontrol Utama (Catatan 6)
                 </label>
                 <select
                   className="admin-input"
@@ -448,11 +473,11 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
                   onChange={(e) => setKontrolTingkat(e.target.value)}
                   style={{ width: '100%', height: 32, fontSize: 11.5, borderRadius: 6 }}
                 >
-                  <option value="ELIMINASI">Eliminasi (Menghilangkan bahaya)</option>
-                  <option value="SUBSTITUSI">Substitusi (Mengganti bahan/alat lebih aman)</option>
-                  <option value="ENGINEERING">Rekayasa Teknik / Engineering Control</option>
-                  <option value="ADMINISTRATIF">Pengendalian Administratif (SOP, Rotasi)</option>
-                  <option value="APD">Alat Pelindung Diri (APD/APT)</option>
+                  <option value="ELIMINASI">Eliminasi (Menghilangkan paparan)</option>
+                  <option value="SUBSTITUSI">Substitusi (Menurunkan P 2 tingkat)</option>
+                  <option value="ENGINEERING">Rekayasa Teknik / Enclosure (Menurunkan P 2 tingkat)</option>
+                  <option value="ADMINISTRATIF">Pengendalian Administratif / Rotasi (Menurunkan P 1 tingkat)</option>
+                  <option value="APD">Alat Pelindung Diri / APD / APT (Menurunkan P 1 tingkat)</option>
                   <option value="TIDAK_ADA">Belum Ada Pengendalian</option>
                 </select>
               </div>
@@ -473,18 +498,19 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
             </div>
           </div>
 
-          {/* Section 4: Penilaian Residual Risk (Setelah Kontrol: P x E = R) */}
+          {/* Section 4: Penilaian Residual Risk (Setelah Kontrol) */}
           <div className="admin-form-card" style={{ padding: '14px 16px', background: 'var(--card)', borderRadius: 10, border: '1px solid var(--border)' }}>
             <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ width: 4, height: 16, borderRadius: 2, background: getRiskColor(resR) }} />
-              4. Penilaian Residual Risk — Risiko Sisa (P × E = R)
+              4. Penilaian Residual Risk (Risiko Sisa Setelah Pengendalian Diterapkan)
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 180px', gap: 12, alignItems: 'center' }}>
-              {/* Peluang Sisa res_p */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 190px', gap: 12, alignItems: 'center' }}>
+              {/* Tingkat Paparan Sisa res_p */}
               <div>
-                <label className="admin-label" style={{ fontSize: 11, fontWeight: 700, display: 'block', marginBottom: 4 }}>
-                  Peluang Sisa / Probability (P) : {resP}
+                <label className="admin-label" style={{ fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                  <Clock size={12} style={{ color: 'var(--brand-primary, #ff4d00)' }} />
+                  Tingkat Paparan Sisa (P) : Skor {resP} ({PAPARAN_LABELS[resP]?.durasi})
                 </label>
                 <select
                   className="admin-input"
@@ -494,7 +520,7 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
                 >
                   {[1, 2, 3, 4, 5].map((val) => (
                     <option key={val} value={val}>
-                      {val} - {PROBABILITY_LABELS[val]?.title}: {PROBABILITY_LABELS[val]?.desc}
+                      {val} - {PAPARAN_LABELS[val]?.title}: {PAPARAN_LABELS[val]?.durasi} ({PAPARAN_LABELS[val]?.desc})
                     </option>
                   ))}
                 </select>
@@ -503,7 +529,7 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
               {/* Efek Sisa res_e */}
               <div>
                 <label className="admin-label" style={{ fontSize: 11, fontWeight: 700, display: 'block', marginBottom: 4 }}>
-                  Efek Keparahan Sisa / Effect (E) : {resE}
+                  Efek Kesehatan Sisa (E) : Skor {resE} (Sama dengan Efek Awal)
                 </label>
                 <select
                   className="admin-input"
@@ -513,7 +539,7 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
                 >
                   {[1, 2, 3, 4, 5].map((val) => (
                     <option key={val} value={val}>
-                      {val} - {EFFECT_LABELS[val]?.title}: {EFFECT_LABELS[val]?.desc}
+                      {val} - {EFEK_LABELS[val]?.title}: {EFEK_LABELS[val]?.desc}
                     </option>
                   ))}
                 </select>
@@ -522,23 +548,64 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
               {/* Live Residual Score Display Card */}
               <div
                 style={{
-                  padding: '8px 12px',
-                  borderRadius: 8,
+                  padding: '8px 10px',
+                  borderRadius: 6,
                   background: getRiskBg(resR),
                   border: `1px solid ${getRiskBorder(resR)}`,
                   textAlign: 'center',
                 }}
               >
-                <div style={{ fontSize: 9.5, fontWeight: 800, color: getRiskColor(resR), textTransform: 'uppercase' }}>
-                  Residual Risk (P × E)
+                <div style={{ fontSize: 9.5, fontWeight: 700, color: getRiskColor(resR), textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Residual Risk (Paparan × Efek)
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 900, color: getRiskColor(resR), margin: '2px 0' }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: getRiskColor(resR), margin: '2px 0' }}>
                   R = {resR}
                 </div>
-                <div style={{ fontSize: 10, fontWeight: 800, color: getRiskColor(resR) }}>
-                  Kategori: {resKat.toUpperCase()}
+                <div>
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      padding: '2px 8px',
+                      borderRadius: 999,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      background: 'var(--background)',
+                      color: getRiskColor(resR),
+                      border: `1px solid ${getRiskBorder(resR)}`,
+                    }}
+                  >
+                    {resKat}
+                  </span>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Kotak Petunjuk Penilaian HRA Baku (FORM/069) */}
+          <div
+            style={{
+              padding: '12px 14px',
+              borderRadius: 8,
+              background: 'var(--muted)',
+              border: '1px solid var(--border)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 6,
+              fontSize: 11,
+              color: 'var(--muted-foreground)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--foreground)', fontWeight: 800, fontSize: 11.5 }}>
+              <BookOpen size={14} style={{ color: 'var(--brand-primary, #ff4d00)' }} />
+              Petunjuk & Catatan Penilaian HRA (FORM/069 Rev.001):
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 8, marginTop: 4 }}>
+              {HRA_RULES.map((r) => (
+                <div key={r.no} style={{ lineHeight: 1.4 }}>
+                  <b style={{ color: 'var(--foreground)' }}>({r.no}) {r.title}: </b>
+                  <span>{r.rule}</span>
+                </div>
+              ))}
             </div>
           </div>
 

@@ -101,14 +101,13 @@ function AdminLayananKuratif() {
  * dalam satu menu bertab (sama seperti sisi dashboard).
  */
 function AdminHigieneIndustri() {
-  const [tab, setTab] = useState<'hearing' | 'ergonomi' | 'hra' | 'sanitasi' | 'cahaya' | 'udara' | 'gizi'>('hearing');
+  const [tab, setTab] = useState<'hearing' | 'ergonomi' | 'sanitasi' | 'cahaya' | 'udara' | 'gizi'>('hearing');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       <CenteredTabs
         tabs={[
           { key: 'hearing', label: 'Hearing Conservation' },
           { key: 'ergonomi', label: 'Ergonomi' },
-          { key: 'hra', label: 'HRA (Health Risk)' },
           // Higiene & Sanitasi (STD/005) + Gizi Kerja (AKG 2019) — SOP/028 poin 5.7
           { key: 'sanitasi', label: 'Higiene & Sanitasi' },
           { key: 'cahaya', label: 'Pencahayaan' },
@@ -121,9 +120,7 @@ function AdminHigieneIndustri() {
         compact
       />
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {tab === 'hra' ? (
-          <HraAdminTabs />
-        ) : tab === 'sanitasi' ? (
+        {tab === 'sanitasi' ? (
           <AdminTogglePanel
             formContent={<InspeksiSanitasi />}
             tableContents={[<InspeksiSanitasiTable key="sanitasi-table" />]}
@@ -264,6 +261,17 @@ function IconHigiene() {
       <path d="M17.5 5.5c3 1 4.5 3.8 4.5 6.5s-1.5 5.5-4.5 6.5" />
       <path d="M4 21V15" />
       <path d="M2 15h4" />
+    </svg>
+  );
+}
+
+/** Health Risk Assessment — perisai dengan tanda seru + ikon paparan. */
+function IconHra() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2L4 6v6c0 5.5 3.5 10.7 8 12 4.5-1.3 8-6.5 8-12V6z" />
+      <path d="M12 8v4" />
+      <circle cx="12" cy="15" r="0.8" fill="currentColor" />
     </svg>
   );
 }
@@ -456,6 +464,8 @@ const ADMIN_SIDEBAR: SidebarItem[] = [
   { key: 'prokawan-admin', label: 'ProKawan', icon: <IconProKawan /> },
   // Hearing Conservation + Ergonomi masuk ke menu Higiene Industri.
   { key: 'higiene-industri-admin', label: 'Higiene Industri', icon: <IconHigiene /> },
+  // Health Risk Assessment — modul tersendiri (HRA FORM/069 Rev.001)
+  { key: 'hra-admin', label: 'Health Risk Assessment', icon: <IconHra /> },
   { key: 'health-campaign', label: 'Health Campaign', icon: <IconCampaignAdmin /> },
   { key: 'pak-register', label: 'Register PAK', icon: <IconPakRegister /> },
   // Sarana & Prasarana = seluruh inspeksi digital & kelayakan aset kesehatan kerja:
@@ -760,6 +770,10 @@ function AdminContent() {
 
   if (activeAdminSidebar === 'higiene-industri-admin') {
     return <AdminHigieneIndustri />;
+  }
+
+  if (activeAdminSidebar === 'hra-admin') {
+    return <HraAdminTabs />;
   }
 
   if (activeAdminSidebar === 'pak-register') {

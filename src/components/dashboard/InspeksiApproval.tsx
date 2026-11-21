@@ -165,54 +165,61 @@ export default function InspeksiApproval() {
         flex: 1,
         minHeight: 0,
         overflow: 'auto',
-        padding: '16px 20px 24px',
+        padding: '10px 16px 16px',
         display: 'flex',
         flexDirection: 'column',
-        gap: 14,
+        gap: 10,
       }}
     >
-      {/* ── Banner Ringkasan Manager ───────────────────────── */}
+      {/* ── Banner Ringkas Sejajar Logo BDM ───────────────── */}
       <div
         className="card"
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 14,
+          justifyContent: 'space-between',
+          gap: 12,
           flexWrap: 'wrap',
-          padding: '14px 18px',
+          padding: '8px 14px',
           background: `linear-gradient(120deg, ${tone.bg}, transparent 70%)`,
           borderColor: tone.border,
         }}
       >
-        <div
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            flexShrink: 0,
-            display: 'grid',
-            placeItems: 'center',
-            background: tone.bg,
-            border: `1px solid ${tone.border}`,
-            color: tone.text,
-          }}
-        >
-          <ShieldCheck size={24} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img
+            src="/LogoBDM.png"
+            alt="Logo BDM"
+            style={{ height: 32, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+          />
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h1 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: 'var(--foreground)' }}>
+                Approval Inspeksi Lapangan
+              </h1>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  background: tone.bg,
+                  color: tone.text,
+                  border: `1px solid ${tone.border}`,
+                }}
+              >
+                {TABS.find((t) => t.key === tab)?.label}
+              </span>
+            </div>
+            <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: 0, lineHeight: 1.3 }}>
+              Pengesahan laporan checklist fasilitas kesehatan kerja oleh Pengawas Operasional / QSHE Manager / PJO
+              {canApprove && (
+                <> • Penyetuju: <b>{profile?.full_name || profile?.username || 'Pejabat Penyetuju'}</b></>
+              )}
+            </p>
+          </div>
         </div>
 
-        <div style={{ minWidth: 220, flex: 1 }}>
-          <h1 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: 'var(--foreground)' }}>
-            Approval Inspeksi Lapangan
-          </h1>
-          <p style={{ fontSize: 11.5, color: 'var(--muted-foreground)', margin: '3px 0 0', lineHeight: 1.5 }}>
-            Pengesahan laporan checklist fasilitas kesehatan kerja oleh Pengawas Operasional / QSHE Manager / PJO.
-            {canApprove && (
-              <> Masuk sebagai <b>{profile?.full_name || profile?.username || 'Pejabat Penyetuju'}</b>.</>
-            )}
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           {tab === 'menunggu_persetujuan' && canApprove && pendingCount > 0 && (
             <button
               type="button"
@@ -221,23 +228,39 @@ export default function InspeksiApproval() {
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 6,
-                padding: '8px 14px',
-                borderRadius: 8,
+                gap: 5,
+                padding: '5px 12px',
+                borderRadius: 6,
                 background: '#00B894',
                 color: '#fff',
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: 700,
                 border: 'none',
                 cursor: approvingAll ? 'wait' : 'pointer',
-                boxShadow: '0 2px 8px rgba(0,184,148,0.3)',
+                boxShadow: '0 1px 4px rgba(0,184,148,0.3)',
               }}
               title="Setujui seluruh hasil inspeksi yang telah diverifikasi kelengkapannya"
             >
-              <CheckCircle2 size={15} />
+              <CheckCircle2 size={13} />
               {approvingAll ? 'Memproses...' : `Setujui Semua yang Menunggu (${pendingCount})`}
             </button>
           )}
+          <span
+            style={{
+              fontSize: 10.5,
+              fontWeight: 700,
+              padding: '3px 8px',
+              borderRadius: 999,
+              background: 'var(--background)',
+              border: '1px solid var(--border)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            <span style={{ color: 'var(--muted-foreground)' }}>Item:</span>
+            <b style={{ color: tone.text }}>{pendingCount}</b>
+          </span>
         </div>
       </div>
 

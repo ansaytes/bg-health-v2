@@ -1,8 +1,10 @@
 // ============================================================
 // HRA (Health Hazard Risk Assessment) - Types & Utilities
 // Dokumen Acuan: BG/QSHE/FORM/069 Rev.001
-// Standard Formula: P × E = R (Probability × Effect = Risk)
-// Terhubung dengan kolom `department` dan `job_position` pada tabel `employees`
+// Formula: P × E = R
+// P = Tingkat Paparan (Akumulasi jam paparan per minggu sesuai NAB Permenaker 5/2018)
+// E = Efek Kesehatan / Severity (Tingkat keparahan dampak kesehatan)
+// R = Skor Risiko (Klasifikasi: Low 1-4, Medium 5-12, High 15-25)
 // ============================================================
 
 export type DepartemenHra =
@@ -32,10 +34,7 @@ export const DEPARTEMEN_LIST: DepartemenItem[] = [
   { key: 'TDC', label: 'TDC', desc: 'Training & Development Center' },
 ];
 
-/**
- * Normalisasi nama departemen dari tabel `employees` ke kode standar HRA.
- * Contoh: "Operasional Transportasi" -> "OPERATION", "Finance & Accounting" -> "FAT".
- */
+/** Normalisasi departemen dari tabel employees */
 export function normalizeDepartment(deptRaw?: string | null): string {
   if (!deptRaw) return '';
   const d = deptRaw.trim().toUpperCase();
@@ -69,31 +68,113 @@ export const HAZARD_TYPE_LIST: JenisHazard[] = [
   'Biologi',
 ];
 
-/** P (Probability / Peluang) Scale 1 - 5 */
-export const PROBABILITY_LABELS: Record<number, { title: string; desc: string }> = {
-  1: { title: 'Sangat Jarang', desc: 'Hampir tidak pernah terjadi (< 1x setahun)' },
-  2: { title: 'Jarang', desc: 'Jarang terjadi (1-2x setahun)' },
-  3: { title: 'Kadang-kadang', desc: 'Dapat terjadi sewaktu-waktu (bulanan)' },
-  4: { title: 'Sering', desc: 'Terjadi berulang kali (mingguan)' },
-  5: { title: 'Sangat Sering', desc: 'Terpapar terus menerus / harian' },
+/**
+ * Tabel Peluang (P) – Berdasarkan Tingkat Paparan
+ * Sesuai Dokumen BG/QSHE/FORM/069 Rev.001 Catatan (1):
+ * P ditentukan berdasarkan akumulasi jam paparan per minggu (acuan NAB Permenaker 5/2018: 8 jam/hari, 40 jam/minggu).
+ */
+export const PAPARAN_LABELS: Record<number, { title: string; desc: string; durasi: string }> = {
+  1: {
+    title: 'Sangat Jarang',
+    durasi: '< 2 jam/minggu',
+    desc: 'Akumulasi paparan < 2 jam per minggu, atau tugas insidental/non-rutin (≤ 1 kali per bulan)',
+  },
+  2: {
+    title: 'Jarang',
+    durasi: '2 s/d < 8 jam/minggu',
+    desc: 'Akumulasi paparan ≥ 2 jam s/d < 8 jam per minggu',
+  },
+  3: {
+    title: 'Kadang-kadang',
+    durasi: '8 s/d < 20 jam/minggu',
+    desc: 'Akumulasi paparan ≥ 8 jam s/d < 20 jam per minggu',
+  },
+  4: {
+    title: 'Sering',
+    durasi: '20 s/d < 32 jam/minggu',
+    desc: 'Akumulasi paparan ≥ 20 jam s/d < 32 jam per minggu (atau hasil ukur melebihi NAB)',
+  },
+  5: {
+    title: 'Terus-menerus',
+    durasi: '≥ 32 jam/minggu',
+    desc: 'Akumulasi paparan ≥ 32 jam per minggu (hampir sepanjang waktu kerja)',
+  },
 };
 
-/** E (Effect / Efek Keparahan) Scale 1 - 5 */
-export const EFFECT_LABELS: Record<number, { title: string; desc: string }> = {
-  1: { title: 'Sangat Ringan', desc: 'Keluhan sesaat, tanpa perlu istirahat kerja' },
-  2: { title: 'Ringan', desc: 'Membutuhkan P3K / rawat jalan ringan' },
-  3: { title: 'Sedang', desc: 'Lost time illness / reversibel' },
-  4: { title: 'Berat', desc: 'Cacat fungsi organ permanen / penyakit kronis' },
-  5: { title: 'Fatal', desc: 'Kematian / penyakit akibat kerja fatal' },
+/**
+ * Tabel Efek (E) / Severity
+ * Sesuai Dokumen BG/QSHE/FORM/069 Rev.001
+ */
+export const EFEK_LABELS: Record<number, { title: string; desc: string; contoh: string }> = {
+  1: {
+    title: 'Negligible (Sangat Ringan)',
+    desc: 'Ketidaknyamanan sementara yang hilang begitu paparan berhenti, tanpa penanganan medis',
+    contoh: 'Bau menyengat non-toksik',
+  },
+  2: {
+    title: 'Minor (Ringan)',
+    desc: 'Efek ringan yang reversible (pulih penuh), P3K / istirahat, tanpa kehilangan hari kerja',
+    contoh: 'Iritasi mata sementara, pusing ringan, kelelahan otot ringan',
+  },
+  3: {
+    title: 'Moderate (Sedang)',
+    desc: 'Membutuhkan perawatan medis spesifik, terapi, atau Lost Time Illness (reversibel)',
+    contoh: 'Dermatitis kontak, Low Back Pain (LBP), HNP tanpa defisit permanen',
+  },
+  4: {
+    title: 'Major (Berat)',
+    desc: 'Penyakit kronis serius irreversible (cacat sebagian permanen), membatasi fungsi kerja',
+    contoh: 'NIHL permanen, Silikosis, Pneumokoniosis, Kanker kulit non-melanoma',
+  },
+  5: {
+    title: 'Fatal',
+    desc: 'Efek akut mengancam nyawa, cacat total permanen, atau kanker mortalitas tinggi',
+    contoh: 'Keracunan akut fatal, Kanker paru, Mesothelioma, Leukemia',
+  },
 };
 
 // Aliases
-export const PELUANG_LABELS = PROBABILITY_LABELS;
-export const EFEK_LABELS = EFFECT_LABELS;
-export const LIKELIHOOD_LABELS = PROBABILITY_LABELS;
-export const SEVERITY_LABELS = EFFECT_LABELS;
+export const PROBABILITY_LABELS = PAPARAN_LABELS;
+export const EFFECT_LABELS = EFEK_LABELS;
+export const PELUANG_LABELS = PAPARAN_LABELS;
 
-export type LevelRisiko = 'Rendah' | 'Sedang' | 'Tinggi';
+/**
+ * 6 Aturan Catatan Penilaian HRA (FORM/069 Rev.001)
+ */
+export const HRA_RULES = [
+  {
+    no: 1,
+    title: 'Tingkat Paparan (Jam/Minggu)',
+    rule: 'P ditentukan berdasarkan tingkat paparan, yaitu akumulasi jam paparan per minggu (acuan NAB Permenaker 5/2018: 8 jam/hari, 40 jam/minggu). Untuk roster, gunakan rata-rata jam per minggu selama kerja aktif.',
+  },
+  {
+    no: 2,
+    title: 'Hasil Ukur Melebihi NAB',
+    rule: 'Bila tersedia hasil pengukuran lingkungan kerja yang melebihi NAB (Nilai Ambang Batas), nilai P minimal 4.',
+  },
+  {
+    no: 3,
+    title: 'Karsinogen IARC Grup 1',
+    rule: 'Untuk karsinogen IARC Grup 1 (asbes, silika kristalin, asap las, emisi diesel, benzena, asap rokok), nilai P minimal 2 selama paparan masih ada, termasuk pada residual risk.',
+  },
+  {
+    no: 4,
+    title: 'Faktor Merokok Aktif',
+    rule: 'Untuk merokok aktif, P ditentukan dari prevalensi perokok pada jabatan berdasarkan MCU: <10%=1; 10–<25%=2; 25–<40%=3; 40–<60%=4; ≥60%=5.',
+  },
+  {
+    no: 5,
+    title: 'Penentuan Efek (E)',
+    rule: 'E ditentukan dari efek kesehatan yang paling mungkin terjadi (most credible). Kanker mortalitas tinggi = E5, lainnya = E4. E residual = E initial.',
+  },
+  {
+    no: 6,
+    title: 'Penurunan P oleh Pengendalian',
+    rule: 'Pengendalian menurunkan P: APD / administratif menurunkan 1 tingkat; engineering / substitusi menurunkan 2 tingkat (wajib dibuktikan). Nilai P minimal 1. Pengukuran lingkungan kerja bukan pengendalian.',
+  },
+];
+
+export type LevelRisiko = 'Low Risk' | 'Medium Risk' | 'High Risk';
 
 export interface HraHazardEntry {
   id: string;
@@ -104,15 +185,15 @@ export interface HraHazardEntry {
   sumber_hazard: string;
   kelompok_beresiko: string;
   efek_kesehatan: string;
-  // P (Probability) & E (Effect) -> R (Risk)
-  init_p: number; // Probability (P)
-  init_e: number; // Effect (E)
-  init_r: number; // Risk (R = P × E)
+  // P (Tingkat Paparan) & E (Efek) -> R (Tingkat Risiko: P x E)
+  init_p: number; // Tingkat Paparan Awal (1 - 5)
+  init_e: number; // Efek Kesehatan (1 - 5)
+  init_r: number; // Nilai R (P × E)
   tindakan_pencegahan: string;
   kontrol_tingkat?: 'APD' | 'ADMINISTRATIF' | 'ENGINEERING' | 'SUBSTITUSI' | 'ELIMINASI' | 'TIDAK_ADA' | string;
-  res_p: number; // Residual Probability (P)
-  res_e: number; // Residual Effect (E)
-  res_r: number; // Residual Risk (R = P × E)
+  res_p: number; // Tingkat Paparan Sisa (1 - 5)
+  res_e: number; // Efek Kesehatan Sisa (1 - 5)
+  res_r: number; // Nilai R Sisa (P × E)
   regulasi?: string;
   created_at?: string;
   updated_at?: string;
@@ -125,7 +206,7 @@ export interface HraMappingJabatan {
   departemen: string;
   kelompok_pekerja: string;
   nilai_r_tertinggi: number;
-  kategori_risiko: LevelRisiko | string;
+  kategori_risiko: string;
   dasar_pertimbangan: string;
 }
 
@@ -137,15 +218,15 @@ export function hitungSkorRisiko(p: number, e: number): number {
 }
 
 export function getKategoriRisiko(r: number): LevelRisiko {
-  if (r >= 15) return 'Tinggi';
-  if (r >= 5) return 'Sedang';
-  return 'Rendah';
+  if (r >= 15) return 'High Risk';
+  if (r >= 5) return 'Medium Risk';
+  return 'Low Risk';
 }
 
 export function getRiskColor(r: number): string {
-  if (r >= 15) return '#FF2D2D'; // High / Tinggi
-  if (r >= 5) return '#F5A623';  // Medium / Sedang
-  return '#00B894';              // Low / Rendah
+  if (r >= 15) return '#FF2D2D'; // High Risk (15-25)
+  if (r >= 5) return '#F5A623';  // Medium Risk (5-12)
+  return '#00B894';              // Low Risk (1-4)
 }
 
 export function getRiskBg(r: number): string {

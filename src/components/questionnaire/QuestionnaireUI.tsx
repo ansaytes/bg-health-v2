@@ -224,20 +224,11 @@ export function ItemGroup({
 
       {description && <p className="qh-description">{description}</p>}
 
-      <div className="qh-options-header" style={{ gridTemplateColumns: `minmax(0,1fr) ${gridTemplate(columns)}` }}>
-        <span>Pernyataan</span>
-        {(optionLabels ?? resolvedOptions.map((o) => o.label)).map((label, i) => (
-          <span key={`${title}-opt-${i}`} className="qh-options-header-cell">
-            {label}
-          </span>
-        ))}
-      </div>
-
       <ul className="qh-items">
         {items.map((item, index) => {
           const current = values[item.id] ?? '';
           return (
-            <li key={item.id} className="qh-item" style={{ gridTemplateColumns: `minmax(0,1fr) ${gridTemplate(columns)}` }}>
+            <li key={item.id} className="qh-item">
               <label className="qh-item-text" htmlFor={`${item.id}-${current}`}>
                 <span className="qh-item-number">{index + 1}</span>
                 <span>{item.text}</span>

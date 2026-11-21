@@ -90,65 +90,127 @@ export default function ErgoApproval() {
   const validCount = useMemo(() => rows.filter((r) => r.sah).length, [rows]);
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '16px 20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* ── Hero ringkas ─────────────────────────────────── */}
+    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '10px 16px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* ── Header Ringkas Sejajar Logo BDM ─────────────────── */}
       <div
         className="card"
         style={{
-          display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
-          padding: '14px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          flexWrap: 'wrap',
+          padding: '8px 14px',
           background: `linear-gradient(120deg, ${tone.bg}, transparent 70%)`,
           borderColor: tone.border,
         }}
       >
-        <div
-          style={{
-            width: 42, height: 42, borderRadius: 12, flexShrink: 0, display: 'grid', placeItems: 'center',
-            background: tone.bg, border: `1px solid ${tone.border}`, color: tone.text,
-          }}
-        >
-          <ClipboardCheck size={21} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img
+            src="/LogoBDM.png"
+            alt="Logo BDM"
+            style={{ height: 32, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+          />
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h1 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: 'var(--foreground)' }}>
+                Approval Survey Ergonomi
+              </h1>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  background: tone.bg,
+                  color: tone.text,
+                  border: `1px solid ${tone.border}`,
+                }}
+              >
+                {TABS.find((t) => t.key === tab)?.label}
+              </span>
+            </div>
+            <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: 0, lineHeight: 1.3 }}>
+              Hasil survei RULA, ROSA, dan WERA disetujui QSHE Manager / PJO
+              {canApprove && <> • Penyetuju: <b>{profile?.full_name || profile?.username}</b></>}
+            </p>
+          </div>
         </div>
-        <div style={{ minWidth: 220, flex: 1 }}>
-          <h1 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: 'var(--foreground)' }}>Approval Survey Ergonomi</h1>
-          <p style={{ fontSize: 11.5, color: 'var(--muted-foreground)', margin: '3px 0 0', lineHeight: 1.5 }}>
-            Hasil survei RULA, ROSA, dan WERA disetujui oleh QSHE Manager / PJO.
-            {canApprove && <> Anda masuk sebagai <b>{profile?.full_name || profile?.username}</b>; nama &amp; jabatan dicatat otomatis.</>}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           {tab === 'MENUNGGU_PERSETUJUAN' && canApprove && validCount > 0 && (
             <Btn
               kind="primary"
-              size="md"
+              size="sm"
               disabled={approvingAll || loading}
               onClick={actApproveAll}
-              style={{ fontWeight: 700, padding: '8px 14px', borderRadius: 10, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              style={{ fontWeight: 700, padding: '5px 12px', borderRadius: 6, fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 5 }}
             >
-              <CheckCircle2 size={16} />
-              {approvingAll ? 'Menyetujui Semua...' : `Setujui Semua yang Sah (${validCount})`}
+              <CheckCircle2 size={13} />
+              {approvingAll ? 'Menyetujui...' : `Setujui Semua yang Sah (${validCount})`}
             </Btn>
           )}
-          {[
-            { label: 'Menunggu', value: waitCount, color: '#C99A00' },
-            { label: 'Layak disetujui', value: validCount, color: '#00895f' },
-            { label: 'Total halaman', value: rows.length, color: 'var(--foreground)' },
-          ].map((k) => (
-            <div key={k.label} style={{ minWidth: 78, padding: '6px 10px', borderRadius: 10, background: 'var(--background)', border: '1px solid var(--border)', textAlign: 'center' }}>
-              <div style={{ fontSize: 18, fontWeight: 800, color: k.color, lineHeight: 1.1 }}>{k.value}</div>
-              <div style={{ fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)', fontWeight: 700 }}>{k.label}</div>
-            </div>
-          ))}
+          <div style={{ display: 'flex', gap: 6 }}>
+            <span
+              style={{
+                fontSize: 10.5,
+                fontWeight: 700,
+                padding: '3px 8px',
+                borderRadius: 999,
+                background: 'var(--background)',
+                border: '1px solid var(--border)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              <span style={{ color: 'var(--muted-foreground)' }}>Menunggu:</span>
+              <b style={{ color: '#C99A00' }}>{waitCount}</b>
+            </span>
+            <span
+              style={{
+                fontSize: 10.5,
+                fontWeight: 700,
+                padding: '3px 8px',
+                borderRadius: 999,
+                background: 'var(--background)',
+                border: '1px solid var(--border)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              <span style={{ color: 'var(--muted-foreground)' }}>Layak:</span>
+              <b style={{ color: '#00895f' }}>{validCount}</b>
+            </span>
+            <span
+              style={{
+                fontSize: 10.5,
+                fontWeight: 700,
+                padding: '3px 8px',
+                borderRadius: 999,
+                background: 'var(--background)',
+                border: '1px solid var(--border)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              <span style={{ color: 'var(--muted-foreground)' }}>Total:</span>
+              <b>{rows.length}</b>
+            </span>
+          </div>
         </div>
       </div>
 
       {/* ── Tab status (kiri) ─────────────────────────── */}
-      <div style={{ margin: '0 -20px' }}>
+      <div style={{ margin: '0 -16px' }}>
         <CenteredTabs
           tabs={TABS}
           active={tab}
           onChange={(key) => { setTab(key); setOpen(null); }}
           ariaLabel="Status Approval Survey Ergonomi"
+          compact
         />
       </div>
 
