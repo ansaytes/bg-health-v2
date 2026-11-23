@@ -238,20 +238,6 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {/* Brand Orange Accent Dot */}
-            <span
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: '50%',
-                background: 'linear-gradient(180deg, #FF6F1A 0%, #FF4D00 100%)',
-                display: 'inline-block',
-                boxShadow: '0 0 6px rgba(255, 94, 0, 0.45)',
-              }}
-            />
-
-            <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
-
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <h2 style={{ fontSize: 14, fontWeight: 700, margin: 0, letterSpacing: '-0.01em', color: 'var(--foreground)' }}>

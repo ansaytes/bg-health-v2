@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 export default function KuesionerKesehatanMentalPage() {
   return (
     <QuestionnaireRouteGuard>
-    <main style={{ minHeight: '100vh', background: 'var(--background, #f6f6f8)' }}>
+    <main style={{ minHeight: '100vh', background: 'var(--background)' }}>
       <div style={{ padding: '12px 20px 0', maxWidth: 1180, margin: '0 auto' }}>
         <Link href="/kuesioner" style={{ fontSize: 13, color: 'var(--fg-dim, #666)' }}>
           ← Kembali ke daftar kuesioner

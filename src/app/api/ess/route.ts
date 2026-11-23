@@ -9,6 +9,7 @@ import {
   denyUnlessQuestionnaireAccess,
   denyUnlessOwnEmployee,
   findEmployeeIdentity,
+  findEmployeeIdentityForCaller,
   getCaller,
   pesanGalat,
   questionnaireIdentityColumns,
@@ -51,9 +52,10 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const identity = await findEmployeeIdentity(query);
+  // Setiap pengguna (role apapun) selalu mengisi atas namanya sendiri (sesi login aktif)
+  const identity = await findEmployeeIdentityForCaller(caller!);
   if (!identity) {
-    return NextResponse.json({ error: 'Karyawan tidak ditemukan. Gunakan NIK KTP, NIK Karyawan, atau nama.' }, { status: 404 });
+    return NextResponse.json({ error: 'Data profil karyawan untuk akun Anda tidak ditemukan. Hubungi administrator/HR.' }, { status: 404 });
   }
   const identityDenied = denyUnlessOwnEmployee(caller!, identity);
   if (identityDenied) return identityDenied;
@@ -79,9 +81,18 @@ export async function GET(req: NextRequest) {
     .eq('nik_karyawan_hash', identity.nikKaryawanHash);
   const lockedDates = new Set((mcus ?? []).map((m) => String(m.kuesioner_tgl ?? '')).filter(Boolean));
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayEntry = (rows ?? []).find((r) => String(r.tgl_ess ?? '').slice(0, 10) === todayStr);
+
   return NextResponse.json({
     identity,
     historyAvailable: true,
+    serverTime: new Date().toISOString(),
+    todayFilled: todayEntry ? {
+      skor: todayEntry.skor_ess,
+      kategori: String(todayEntry.kategori ?? ''),
+      interpretasi: String(todayEntry.interpretasi ?? ''),
+    } : null,
     history: (rows ?? []).map((row) => ({
       tanggal: String(row.tgl_ess ?? ''),
       skor: row.skor_ess,
@@ -106,18 +117,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Body permintaan tidak valid' }, { status: 400 });
   }
 
-  const query = String(body.query ?? body.nikKaryawan ?? body.nationalId ?? '').trim();
-  const tglEss = String(body.tglEss ?? '').trim();
-  if (!query) {
-    return NextResponse.json({ error: 'NIK KTP, NIK Karyawan, atau nama wajib diisi' }, { status: 400 });
-  }
+  const tglEss = String(body.tglEss ?? '').trim() || new Date().toISOString().slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(tglEss)) {
     return NextResponse.json({ error: 'Tanggal ESS wajib diisi dengan format YYYY-MM-DD' }, { status: 400 });
   }
 
-  const identity = await findEmployeeIdentity(query);
+  // Setiap pengguna (role apapun) selalu mengisi atas namanya sendiri (sesi login aktif)
+  const identity = await findEmployeeIdentityForCaller(caller!);
   if (!identity) {
-    return NextResponse.json({ error: 'Karyawan tidak ditemukan. Gunakan NIK KTP, NIK Karyawan, atau nama.' }, { status: 404 });
+    return NextResponse.json({ error: 'Data profil karyawan untuk akun Anda tidak ditemukan. Hubungi administrator/HR.' }, { status: 404 });
   }
   const identityDenied = denyUnlessOwnEmployee(caller!, identity);
   if (identityDenied) return identityDenied;
@@ -151,6 +159,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Minimal satu item ESS harus diisi.' }, { status: 400 });
   }
 
+  const sesiSkrining = String(body.sesiSkrining ?? '').trim();
+  let catatanFinal = String(body.catatan ?? '').trim() || null;
+  if (sesiSkrining) {
+    catatanFinal = catatanFinal ? `[${sesiSkrining}] ${catatanFinal}` : `[${sesiSkrining}]`;
+  }
+
   const row: Record<string, unknown> = {
     ...questionnaireIdentityColumns(identity),
     tgl_ess: tglEss,
@@ -160,7 +174,7 @@ export async function POST(req: NextRequest) {
     jumlah_terisi: result.answered,
     kategori: result.category,
     interpretasi: result.label,
-    catatan: String(body.catatan ?? '').trim() || null,
+    catatan: catatanFinal,
   };
   for (const item of ESS_ITEMS) {
     row[item.id.replace(/([a-z])(\d+)/, '_$2')] = answers[item.id];

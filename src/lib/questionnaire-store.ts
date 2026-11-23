@@ -20,6 +20,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { decryptEmployee, decryptMCURecord, encryptMCURecord, hashField } from '@/lib/encryption';
+import { verifyQuestionnaireToken } from '@/lib/questionnaire-token';
 import { MCU_FIELDS } from '@/lib/mcu-fields';
 import { applyMCUCalculations } from '@/lib/mcu-calculations';
 import { integrationAdminClient } from '@/lib/integration-settings';
@@ -34,6 +35,9 @@ export interface CallerProfile {
   role: string;
   userId: string;
   employeeNikHash: string | null;
+  username?: string | null;
+  nationalId?: string | null;
+  fullName?: string | null;
   mustChangePassword: boolean;
   /**
    * Site karyawan yang tertaut ke akun PIC.
@@ -48,16 +52,33 @@ const QUESTIONNAIRE_ROLES = [...ALLOWED_ROLES, 'employee'];
 
 /** Mengambil peran pemanggil, atau null bila tidak terautentikasi. */
 export async function getCaller(req: NextRequest): Promise<CallerProfile | null> {
-  const client = adminClient();
-  const token = req.headers.get('authorization')?.replace('Bearer ', '')
+  const token = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
     || req.cookies.get('sb-access-token')?.value;
   if (!token) return null;
+
+  // 1. Cek One-Time Token (maks 30 menit) untuk pengisian kuesioner mandiri
+  const qClaims = verifyQuestionnaireToken(token);
+  if (qClaims) {
+    return {
+      role: 'employee',
+      userId: qClaims.nik,
+      employeeNikHash: qClaims.nikHash,
+      username: qClaims.nik,
+      nationalId: qClaims.nationalId,
+      fullName: qClaims.nama,
+      mustChangePassword: false,
+      site: qClaims.site,
+    };
+  }
+
+  // 2. Fallback autentikasi Supabase standar bila ada
+  const client = adminClient();
   const { data: { user } } = await client.auth.getUser(token);
   if (!user) return null;
   if (user.app_metadata?.approval_pending === true) return null;
   const { data: profile } = await client
     .from('user_profiles')
-    .select('role,employee_nik_hash,site')
+    .select('role,employee_nik_hash,site,username,national_id,full_name')
     .eq('user_id', user.id)
     .single();
   if (!profile) return null;
@@ -78,6 +99,9 @@ export async function getCaller(req: NextRequest): Promise<CallerProfile | null>
     role: profile.role,
     userId: user.id,
     employeeNikHash: profile.employee_nik_hash || null,
+    username: profile.username || null,
+    nationalId: profile.national_id || null,
+    fullName: profile.full_name || null,
     mustChangePassword: user.app_metadata?.must_change_password === true,
     site,
   };
@@ -104,16 +128,17 @@ export function denyUnlessOwnEmployee(
   caller: CallerProfile,
   identity: EmployeeIdentity,
 ): NextResponse | null {
-  if (caller.role === 'pic') {
-    if (!caller.site || !identity.site
-      || caller.site.trim().toLowerCase() !== identity.site.trim().toLowerCase()) {
-      return NextResponse.json({ error: 'PIC hanya dapat mengakses kuesioner karyawan di site sendiri.' }, { status: 403 });
-    }
-    return null;
-  }
-  if (canWriteQuestionnaires(caller)) return null;
-  if (!caller.employeeNikHash || caller.employeeNikHash !== identity.nikKaryawanHash) {
-    return NextResponse.json({ error: 'Akun ini hanya dapat mengakses kuesioner milik sendiri.' }, { status: 403 });
+  // Semua role (superuser, administrator, manager, pic, employee) WAJIB mengisi atas namanya sendiri
+  const isMatch =
+    (caller.employeeNikHash && caller.employeeNikHash === identity.nikKaryawanHash) ||
+    (caller.username && caller.username.trim().toLowerCase() === identity.nikKaryawan.trim().toLowerCase()) ||
+    (caller.nationalId && identity.nationalId && caller.nationalId.trim() === identity.nationalId.trim());
+
+  if (!isMatch) {
+    return NextResponse.json(
+      { error: 'Seluruh kuesioner wajib diisi secara mandiri atas nama akun login Anda sendiri.' },
+      { status: 403 }
+    );
   }
   return null;
 }
@@ -226,6 +251,82 @@ export async function findEmployeeIdentity(query: string): Promise<EmployeeIdent
     tglMCU: String(lastMcu?.tgl_mcu ?? ''),
     mcuRecordId: null,
   };
+}
+
+/**
+ * Mencari identitas karyawan berdasarkan profil akun yang sedang login.
+ * Dipakai untuk auto-lock kuesioner mandiri akun Employee (ESS, SRQ-20, DASS-21, SDS-30).
+ */
+export async function findEmployeeIdentityForCaller(caller: CallerProfile): Promise<EmployeeIdentity | null> {
+  const client = adminClient();
+  const columns = 'nik, national_id, nama, gender, age, job_position, site_name, department, employee_status, employment_status, nik_hash, national_id_hash';
+  let match: Record<string, unknown> | null = null;
+
+  // 1. Cari lewat employeeNikHash yang tertaut pada user_profiles
+  if (caller.employeeNikHash) {
+    const { data } = await client
+      .from('employees')
+      .select(columns)
+      .eq('nik_hash', caller.employeeNikHash)
+      .maybeSingle();
+    if (data) match = data;
+  }
+
+  // 2. Jika belum ketemu, coba cari lewat username (NIK) atau national_id
+  if (!match && caller.username) {
+    const digest = hashField(caller.username.trim());
+    if (digest) {
+      const { data } = await client
+        .from('employees')
+        .select(columns)
+        .eq('nik_hash', digest)
+        .maybeSingle();
+      if (data) match = data;
+    }
+  }
+
+  if (!match && caller.nationalId) {
+    const digest = hashField(caller.nationalId.trim());
+    if (digest) {
+      const { data } = await client
+        .from('employees')
+        .select(columns)
+        .eq('national_id_hash', digest)
+        .maybeSingle();
+      if (data) match = data;
+    }
+  }
+
+  // Jika match ditemukan di tabel employees
+  if (match) {
+    const decrypted = decryptEmployee(match);
+    const nikKaryawan = String(decrypted.nik ?? '');
+    const nationalId = String(decrypted.national_id ?? '');
+
+    const { data: lastMcu } = await client
+      .from('mcu_records')
+      .select('tgl_mcu')
+      .eq('nik_karyawan_hash', hashField(nikKaryawan))
+      .order('tgl_mcu', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    return {
+      nikKaryawan,
+      nationalId,
+      nikKaryawanHash: hashField(nikKaryawan) || '',
+      nationalIdHash: hashField(nationalId) || null,
+      nama: String(decrypted.nama ?? ''),
+      jabatan: String(decrypted.job_position ?? ''),
+      site: String(decrypted.site_name ?? caller.site ?? ''),
+      usia: String(decrypted.age ?? ''),
+      jenisKelamin: String(decrypted.gender ?? ''),
+      tglMCU: String(lastMcu?.tgl_mcu ?? ''),
+      mcuRecordId: null,
+    };
+  }
+
+  return null;
 }
 
 /**

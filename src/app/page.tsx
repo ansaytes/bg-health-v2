@@ -39,6 +39,7 @@ const InputJadwalMCU = lazy(() => import('@/components/administrator/InputJadwal
 const GangguanTidurPage = lazy(() => import('@/components/administrator/GangguanTidurPage'));
 const InputMentalHealthPage = lazy(() => import('@/components/administrator/InputMentalHealthPage'));
 const InputPsikologiLingkunganPage = lazy(() => import('@/components/administrator/InputPsikologiLingkunganPage'));
+const QuestionnaireTokenGate = lazy(() => import('@/components/questionnaire/QuestionnaireTokenGate'));
 const InventoryAdmin = lazy(() => import('@/components/administrator/InventoryAdmin'));
 const DataKesehatanTable = lazy(() => import('@/components/dashboard/DataKesehatanTable'));
 const DataKunjunganTable = lazy(() => import('@/components/dashboard/DataKunjunganTable'));
@@ -508,14 +509,38 @@ function HomeContent() {
 function DataEntryContent() {
   const activeDataEntrySidebar = useMCUStore((s) => s.activeDataEntrySidebar);
   if (activeDataEntrySidebar === 'gangguan-tidur') {
-    return <div className="admin-form-container"><GangguanTidurPage /></div>;
+    return (
+      <div className="admin-form-container">
+        <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)' }}>Memuat...</div>}>
+          <QuestionnaireTokenGate>
+            <GangguanTidurPage />
+          </QuestionnaireTokenGate>
+        </Suspense>
+      </div>
+    );
   }
   if (activeDataEntrySidebar === 'kesehatan-mental') {
-    return <div className="admin-form-container"><InputMentalHealthPage /></div>;
+    return (
+      <div className="admin-form-container">
+        <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)' }}>Memuat...</div>}>
+          <QuestionnaireTokenGate>
+            <InputMentalHealthPage />
+          </QuestionnaireTokenGate>
+        </Suspense>
+      </div>
+    );
   }
   // SDS-30 = faktor psikologi lingkungan kerja → menu sendiri (bukan di Kesehatan Mental).
   if (activeDataEntrySidebar === 'psikologi-lingkungan') {
-    return <div className="admin-form-container"><InputPsikologiLingkunganPage /></div>;
+    return (
+      <div className="admin-form-container">
+        <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)' }}>Memuat...</div>}>
+          <QuestionnaireTokenGate>
+            <InputPsikologiLingkunganPage />
+          </QuestionnaireTokenGate>
+        </Suspense>
+      </div>
+    );
   }
   if (activeDataEntrySidebar === 'persetujuan-ergonomi') {
     return <div className="admin-form-container" style={{ overflow: 'hidden' }}><ErgoApproval /></div>;
@@ -1371,7 +1396,6 @@ export default function Home() {
 
       <aside className={"sidebar" + (mobileOpen ? ' open' : '')}>
         <div className="sidebar-head">
-          <span className="brand-orange-dot" />
           <div className="sidebar-logo-wrap">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={logoPerusahaan} alt="Logo" className="sidebar-logo-img" />

@@ -18,7 +18,8 @@
 // sehingga riwayat lengkapnya tidak pernah tertimpa oleh pemeriksaan baru.
 // ============================================================
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { Clock, ShieldCheck, AlertCircle } from 'lucide-react';
 
 import { ESS_ITEMS } from '@/lib/questionnaire-items';
 import {
@@ -38,13 +39,61 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function getPreShiftSession(): {
+  key: string;
+  title: string;
+  desc: string;
+  isRoutine: boolean;
+  badgeColor: string;
+  badgeBg: string;
+} {
+  const now = new Date();
+  const hour = now.getHours();
+  const min = now.getMinutes();
+  const totalMin = hour * 60 + min;
+
+  // 05:00 - 08:30 -> Pre-Shift Pagi
+  if (totalMin >= 300 && totalMin <= 510) {
+    return {
+      key: 'PRE_SHIFT_PAGI',
+      title: 'Jadwal Rutin: Pre-Shift Pagi (05:00 - 08:30)',
+      desc: 'Sesi resmi skrining kelelahan & kantuk sebelum pengoperasian unit hauling / alat berat shift pagi.',
+      isRoutine: true,
+      badgeColor: '#28a745',
+      badgeBg: 'rgba(40, 167, 69, 0.12)',
+    };
+  }
+  // 17:00 - 20:00 -> Pre-Shift Malam
+  if (totalMin >= 1020 && totalMin <= 1200) {
+    return {
+      key: 'PRE_SHIFT_MALAM',
+      title: 'Jadwal Rutin: Pre-Shift Malam (17:00 - 20:00)',
+      desc: 'Sesi resmi skrining kelelahan & kantuk sebelum pengoperasian unit shift malam.',
+      isRoutine: true,
+      badgeColor: '#007aff',
+      badgeBg: 'rgba(0, 122, 255, 0.12)',
+    };
+  }
+  // Di luar jendela rutin
+  return {
+    key: 'SUSULAN_EVALUASI',
+    title: 'Di Luar Jendela Pre-Shift Rutin',
+    desc: 'Pengisian tercatat sebagai evaluasi klinis mandiri / susulan di luar jadwal pre-shift operasional.',
+    isRoutine: false,
+    badgeColor: '#d97706',
+    badgeBg: 'rgba(217, 119, 6, 0.12)',
+  };
+}
+
 export default function GangguanTidurPage() {
-  const { query, setQuery, identity, searching, error, search } = useEmployeeLookup('/api/ess');
+  const { query, setQuery, identity, searching, error, search, isEmployee } = useEmployeeLookup('/api/ess');
   const submit = useSubmitStatus();
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [tglEss, setTglEss] = useState(today());
   const [resultDialog, setResultDialog] = useState<ResultDialogData | null>(null);
+
+  const sessionInfo = useMemo(() => getPreShiftSession(), []);
 
   const filled = ESS_ITEMS.filter((item) => values[item.id] !== undefined && values[item.id] !== '').length;
 
@@ -76,7 +125,12 @@ export default function GangguanTidurPage() {
       const res = await fetch('/api/ess', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ query, tglEss, ...values }),
+        body: JSON.stringify({
+          query: 'self',
+          tglEss,
+          sesiSkrining: sessionInfo.key,
+          ...values,
+        }),
       });
       const body = await res.json();
       if (!res.ok) {
@@ -116,22 +170,68 @@ export default function GangguanTidurPage() {
 
         <StatusBanner status={error ? 'error' : submit.status} message={error || submit.message} />
 
+        {/* ── Pre-Shift Routine Schedule Badge & Banner ──────────── */}
+        <div
+          style={{
+            padding: '9px 13px',
+            borderRadius: 10,
+            background: sessionInfo.badgeBg,
+            border: `1px solid ${sessionInfo.badgeColor}40`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <Clock size={16} style={{ color: sessionInfo.badgeColor, flexShrink: 0 }} />
+            <div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: sessionInfo.badgeColor }}>
+                {sessionInfo.title}
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--foreground)', opacity: 0.85, marginTop: 1 }}>
+                {sessionInfo.desc}
+              </div>
+            </div>
+          </div>
+          <span
+            style={{
+              fontSize: 9.5,
+              fontWeight: 700,
+              padding: '2.5px 9px',
+              borderRadius: 999,
+              background: 'var(--background)',
+              color: sessionInfo.badgeColor,
+              border: `1px solid ${sessionInfo.badgeColor}60`,
+              letterSpacing: '0.02em',
+            }}
+          >
+            {sessionInfo.isRoutine ? 'JADWAL RUTIN PRE-SHIFT' : 'PENGISIAN SUSULAN'}
+          </span>
+        </div>
+
       <IdentityPanel
         query={query}
         onQueryChange={setQuery}
         onSearch={() => search()}
         searching={searching}
         identity={identity}
+        isEmployee={isEmployee}
       >
         <div className="qh-fields-grid">
           <div>
-            <label className="qh-label" htmlFor="qh-ess-date">Tanggal ESS</label>
+            <label className="qh-label" htmlFor="qh-ess-date">
+              Tanggal ESS {isEmployee && '(Otomatis)'}
+            </label>
             <input
               id="qh-ess-date"
               type="date"
               className="qh-input"
               value={tglEss}
               onChange={(e) => setTglEss(e.target.value)}
+              disabled={isEmployee}
+              title={isEmployee ? 'Tanggal terkunci otomatis pada hari pengisian' : undefined}
             />
           </div>
         </div>

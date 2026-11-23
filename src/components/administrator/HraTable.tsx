@@ -24,6 +24,8 @@ import {
   Layers,
   ArrowRight,
   ExternalLink,
+  ClipboardList,
+  Printer,
 } from 'lucide-react';
 import { authFetch } from '@/lib/api-client';
 import {
@@ -41,6 +43,8 @@ import {
   EFFECT_LABELS,
 } from '@/lib/hra';
 import { usePopup, Popup } from '@/lib/popup';
+import HraPicaModal from './HraPicaModal';
+import HraPrintModal from './HraPrintModal';
 
 interface HraTableProps {
   onEdit?: (entry: HraHazardEntry) => void;
@@ -52,6 +56,8 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [picaEntry, setPicaEntry] = useState<HraHazardEntry | null>(null);
+  const [showPrintModal, setShowPrintModal] = useState(false);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -210,6 +216,29 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                 <Plus size={13} strokeWidth={2.5} /> Tambah Entri HRA
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => setShowPrintModal(true)}
+              title="Cetak atau Ekspor Dokumen Resmi FORM/069 Rev.001"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '6px 13px',
+                borderRadius: 999,
+                fontSize: 11.5,
+                fontWeight: 600,
+                background: 'var(--background)',
+                color: 'var(--foreground)',
+                border: '1px solid var(--border)',
+                cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <Printer size={13} style={{ color: '#FF5E00' }} />
+              Cetak FORM/069
+            </button>
             <button
               type="button"
               onClick={() => void loadData()}
@@ -822,25 +851,52 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                           boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
                         }}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 6 }}>
                           <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>
                             Tindakan Pengendalian yang Ditetapkan
                           </span>
-                          {item.kontrol_tingkat && (
-                            <span
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {item.kontrol_tingkat && (
+                              <span
+                                style={{
+                                  fontSize: 9.5,
+                                  fontWeight: 700,
+                                  padding: '2px 8px',
+                                  borderRadius: 999,
+                                  background: 'rgba(0, 122, 255, 0.12)',
+                                  color: '#007aff',
+                                  border: '1px solid rgba(0, 122, 255, 0.25)',
+                                }}
+                              >
+                                {item.kontrol_tingkat}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPicaEntry(item);
+                              }}
+                              title="Terbitkan tiket tindakan perbaikan (PICA) untuk pengendalian bahaya ini"
                               style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
                                 fontSize: 9.5,
                                 fontWeight: 700,
                                 padding: '2px 8px',
-                                borderRadius: 999,
-                                background: 'rgba(0, 122, 255, 0.12)',
-                                color: '#007aff',
-                                border: '1px solid rgba(0, 122, 255, 0.25)',
+                                borderRadius: 6,
+                                background: 'rgba(255, 94, 0, 0.10)',
+                                color: '#d9480f',
+                                border: '1px solid rgba(255, 94, 0, 0.3)',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
                               }}
                             >
-                              {item.kontrol_tingkat}
-                            </span>
-                          )}
+                              <ClipboardList size={11} />
+                              <span>Buat Tiket PICA</span>
+                            </button>
+                          </div>
                         </div>
                         <div style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--foreground)' }}>
                           {item.tindakan_pencegahan || 'Belum ada catatan pengendalian khusus.'}
@@ -877,6 +933,18 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
           </div>
         )}
       </div>
+      <HraPicaModal
+        entry={picaEntry}
+        isOpen={!!picaEntry}
+        onClose={() => setPicaEntry(null)}
+        onSuccess={(msg) => popup({ type: 'success', title: 'Berhasil', message: msg })}
+      />
+      <HraPrintModal
+        isOpen={showPrintModal}
+        onClose={() => setShowPrintModal(false)}
+        entries={data}
+        currentDept={deptFilter}
+      />
       <Popup state={popupState} closePopup={closePopup} />
     </div>
   );

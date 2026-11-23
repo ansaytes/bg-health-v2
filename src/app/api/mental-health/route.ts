@@ -9,6 +9,7 @@ import {
   denyUnlessQuestionnaireAccess,
   denyUnlessOwnEmployee,
   findEmployeeIdentity,
+  findEmployeeIdentityForCaller,
   getCaller,
   pesanGalat,
   questionnaireIdentityColumns,
@@ -76,9 +77,10 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const identity = await findEmployeeIdentity(query);
+  // Setiap pengguna (role apapun) selalu mengisi atas namanya sendiri (sesi login aktif)
+  const identity = await findEmployeeIdentityForCaller(caller!);
   if (!identity) {
-    return NextResponse.json({ error: 'Karyawan tidak ditemukan. Gunakan NIK KTP, NIK Karyawan, atau nama.' }, { status: 404 });
+    return NextResponse.json({ error: 'Data profil karyawan untuk akun Anda tidak ditemukan. Hubungi administrator/HR.' }, { status: 404 });
   }
   const identityDenied = denyUnlessOwnEmployee(caller!, identity);
   if (identityDenied) return identityDenied;
@@ -134,18 +136,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Body permintaan tidak valid' }, { status: 400 });
   }
 
-  const query = String(body.query ?? body.nikKaryawan ?? body.nationalId ?? '').trim();
-  const tgl = String(body.tglPemeriksaan ?? '').trim();
-  if (!query) {
-    return NextResponse.json({ error: 'NIK KTP, NIK Karyawan, atau nama wajib diisi' }, { status: 400 });
-  }
+  const tgl = String(body.tglPemeriksaan ?? '').trim() || new Date().toISOString().slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(tgl)) {
     return NextResponse.json({ error: 'Tanggal pemeriksaan wajib diisi dengan format YYYY-MM-DD' }, { status: 400 });
   }
 
-  const identity = await findEmployeeIdentity(query);
+  // Setiap pengguna (role apapun) selalu mengisi atas namanya sendiri (sesi login aktif)
+  const identity = await findEmployeeIdentityForCaller(caller!);
   if (!identity) {
-    return NextResponse.json({ error: 'Karyawan tidak ditemukan. Gunakan NIK KTP, NIK Karyawan, atau nama.' }, { status: 404 });
+    return NextResponse.json({ error: 'Data profil karyawan untuk akun Anda tidak ditemukan. Hubungi administrator/HR.' }, { status: 404 });
   }
   const identityDenied = denyUnlessOwnEmployee(caller!, identity);
   if (identityDenied) return identityDenied;

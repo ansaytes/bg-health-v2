@@ -33,9 +33,7 @@ export default function ProgramInspeksiAdminTabs({ initialTab = 'program' }: { i
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div style={{ padding: '8px 16px 0', flexShrink: 0 }}>
-        <CenteredTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Program Inspeksi & Register PICA" compact />
-      </div>
+      <CenteredTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Program Inspeksi & Register PICA" compact />
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {tab === 'program' ? (
           <ProgramInspeksi key="program" />

@@ -14,13 +14,29 @@ import { useEffect, useState } from 'react';
 
 import type { QuestionnaireItem, ScaleOption } from '@/lib/questionnaire-items';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth-context';
 
 export async function questionnaireAuthHeaders(): Promise<Record<string, string>> {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) {
-    throw new Error('Sesi login tidak ditemukan. Silakan masuk kembali.');
+  // 1. One-Time Token kuesioner (maksimal 30 menit) di sessionStorage
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = sessionStorage.getItem('bg_health_qtoken');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.token && typeof parsed.expiresAt === 'number' && parsed.expiresAt > Date.now()) {
+          return { Authorization: `Bearer ${parsed.token}` };
+        }
+      }
+    } catch {}
   }
-  return { Authorization: `Bearer ${session.access_token}` };
+
+  // 2. Fallback sesi Supabase jika tersedia
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    return { Authorization: `Bearer ${session.access_token}` };
+  }
+
+  throw new Error('Sesi kuesioner Anda telah berakhir atau belum terverifikasi. Silakan masukkan NIK dan PIN Anda.');
 }
 
 /* ------------------------------------------------------------------ */
@@ -76,62 +92,73 @@ export interface EmployeeIdentityView {
 }
 
 interface IdentityPanelProps {
-  query: string;
-  onQueryChange: (value: string) => void;
-  onSearch: () => void;
+  query?: string;
+  onQueryChange?: (value: string) => void;
+  onSearch?: () => void;
   searching: boolean;
   identity: EmployeeIdentityView | null;
   /** Baris detail tambahan, mis. lokasi dan petugas. */
   children?: React.ReactNode;
+  /** Apakah akun login merupakan employee (identitas dikunci otomatis) */
+  isEmployee?: boolean;
 }
 
 /**
- * Kolom pencarian karyawan. Setelah karyawan ditemukan, identitasnya
- * ditampilkan sebagai kartu baca-saja: nama, NIK, jabatan, dan unit kerja
- * berasal dari data MCU dan tidak boleh diketik ulang, supaya tidak mungkin
- * salah simpan ke karyawan yang lain.
- *
- * NIK KTP ditampilkan kembali meskipun tidak menjadi kata kunci yang
- * mengandungnya, karena orang yang mencari dengan NIK Karyawan biasanya ingin
- * memastikan NIK KTP-nya cocok — itulah yang mereka ketik pertama kali.
+ * Panel identitas responden kuesioner.
+ * Seluruh kuesioner (ESS, SRQ-20, DASS-21, SDS-30) WAJIB diisi masing-masing
+ * secara mandiri untuk atas nama akun yang sedang aktif login, sehingga
+ * identitas dan data profil otomatis terkunci untuk semua role pengguna.
  */
 export function IdentityPanel({
-  query,
-  onQueryChange,
-  onSearch,
   searching,
   identity,
   children,
 }: IdentityPanelProps) {
   return (
     <div className="qh-card">
-      <h3 className="qh-card-title">Identitas Karyawan</h3>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 6 }}>
+        <h3 className="qh-card-title" style={{ margin: 0 }}>Identitas Responden</h3>
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 5,
+          padding: '3px 10px',
+          borderRadius: 999,
+          background: 'rgba(0,184,148,0.12)',
+          color: '#00806a',
+          fontSize: 11,
+          fontWeight: 700,
+          border: '1px solid rgba(0,184,148,0.3)',
+        }}>
+          🔒 Terkunci Sesuai Akun Login
+        </span>
+      </div>
 
-      {/* SATU BARIS: pencarian di kiri, tanggal pengisian di kanan.
-          Sebelumnya tanggal berada di blok terpisah di bawah kotak pencarian,
-          sehingga memakan satu baris penuh untuk satu input saja. */}
       <div className="qh-identity-search-row">
         <div className="qh-identity-search-field">
-          <label className="qh-label" htmlFor="qh-identity-search">
-            NIK KTP, NIK Karyawan, atau Nama
-          </label>
-          <div className="qh-search-inline">
-            <input
-              id="qh-identity-search"
-              className="qh-input"
-              value={query}
-              onChange={(e) => onQueryChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') onSearch();
-              }}
-              placeholder="NIK KTP, NIK Karyawan, atau Nama"
-            />
-            <button type="button" className="qh-btn qh-btn-primary qh-identity-search-button" onClick={onSearch} disabled={searching}>
-              {searching ? 'Mencari…' : 'Cari'}
-            </button>
+          <label className="qh-label">Akun Responden (Wajib Mengisi Masing-Masing)</label>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '9px 12px',
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            fontSize: 13,
+            color: 'var(--foreground)',
+            fontWeight: 600,
+          }}>
+            {searching ? (
+              <span style={{ color: 'var(--muted-foreground)' }}>Memuat data profil akun Anda…</span>
+            ) : identity ? (
+              <span>{identity.nama} — NIK: {identity.nikKaryawan || identity.nationalId || '—'}</span>
+            ) : (
+              <span style={{ color: '#b3261e' }}>Profil karyawan tidak ditemukan. Hubungi HR/Admin.</span>
+            )}
           </div>
           <p className="qh-hint">
-            Bisa diisi NIK KTP, NIK Karyawan, atau sebagian nama. Identitas lain terisi otomatis.
+            Identitas otomatis dikunci sesuai akun login Anda. Setiap responden wajib mengisi kuesioner untuk dirinya sendiri.
           </p>
         </div>
         {children && <div className="qh-identity-date-field">{children}</div>}
@@ -462,34 +489,43 @@ export function ResultDialog({
 /* ------------------------------------------------------------------ */
 
 /**
- * Pencarian karyawan untuk halaman kuesioner. Mengembalikan identitas
- * yang sudah terisi otomatis, atau null bila pencarian gagal.
+ * Pengambilan identitas responden kuesioner.
+ * Seluruh role (superuser, administrator, manager, pic, employee) otomatis
+ * mengambil dan mengunci data atas nama akun yang sedang aktif login.
  */
 export function useEmployeeLookup(endpoint: string) {
-  const [query, setQuery] = useState('');
-  const [identity, setIdentity] = useState<EmployeeIdentityView | null>(null);
+  const { loading: authLoading } = useAuth();
+
+  const [query, setQuery] = useState('self');
+  const [identity, setIdentity] = useState<EmployeeIdentityView | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = sessionStorage.getItem('bg_health_qtoken');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.identity && parsed.expiresAt > Date.now()) {
+            return parsed.identity;
+          }
+        }
+      } catch {}
+    }
+    return null;
+  });
   const [history, setHistory] = useState<any[]>([]);
   const [historyAvailable, setHistoryAvailable] = useState(true);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
-  /** false untuk akun Employee: hasil hanya untuk petugas (lihat penjelasan di halaman). */
   const [canSeeResult, setCanSeeResult] = useState(true);
 
   async function search(value?: string): Promise<EmployeeIdentityView | null> {
-    const term = (value ?? query).trim();
-    if (!term) {
-      setError('Isi NIK KTP, NIK Karyawan, atau nama terlebih dahulu.');
-      return null;
-    }
-
     setSearching(true);
     setError('');
     try {
       const headers = await questionnaireAuthHeaders();
-      const res = await fetch(`${endpoint}?query=${encodeURIComponent(term)}`, { headers });
+      const res = await fetch(`${endpoint}?query=self`, { headers });
       const body = await res.json();
       if (!res.ok) {
-        setError(body.error ?? 'Karyawan tidak ditemukan.');
+        setError(body.error ?? 'Data profil akun tidak ditemukan.');
         setIdentity(null);
         setHistory([]);
         setHistoryAvailable(false);
@@ -499,7 +535,7 @@ export function useEmployeeLookup(endpoint: string) {
       setHistory(Array.isArray(body.history) ? body.history : []);
       setHistoryAvailable(body.historyAvailable !== false);
       setCanSeeResult(body.canSeeResult !== false);
-      setQuery(term);
+      setQuery(body.identity?.nikKaryawan || 'self');
       return body.identity as EmployeeIdentityView;
     } catch {
       setError('Gagal menghubungi server. Coba lagi.');
@@ -512,16 +548,31 @@ export function useEmployeeLookup(endpoint: string) {
     }
   }
 
+  // Auto-lookup untuk semua role akun saat inisialisasi sesi login
+  useEffect(() => {
+    if (!authLoading && !identity && !searching) {
+      void search('self');
+    }
+  }, [authLoading]);
+
   function reset() {
-    setQuery('');
-    setIdentity(null);
-    setHistory([]);
-    setHistoryAvailable(true);
-    setCanSeeResult(true);
-    setError('');
+    // Identitas terkunci secara otomatis pada akun yang aktif login
   }
 
-  return { query, setQuery, identity, history, historyAvailable, setHistory, searching, error, search, reset, canSeeResult };
+  return {
+    query,
+    setQuery,
+    identity,
+    history,
+    historyAvailable,
+    setHistory,
+    searching,
+    error,
+    search,
+    reset,
+    canSeeResult,
+    isEmployee: true,
+  };
 }
 
 /** Pesan sukses atau galat yang otomatis hilang setelah beberapa detik. */

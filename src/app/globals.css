@@ -2472,7 +2472,7 @@ select.admin-input.compact-input {
 }
 .mcu-records-table tbody tr:hover td.is-frozen,
 .mcu-records-table tbody tr:hover .mcu-records-index {
-  background: var(--accent);
+  background: #FFF5EF !important;
 }
 .dark .mcu-records-table tbody td {
   color: #f4f4f5 !important;
@@ -2497,7 +2497,7 @@ select.admin-input.compact-input {
 .dark .mcu-records-table tbody tr.mcu-zone-belum-lengkap .mcu-records-index { background: #2b3037; }
 .dark .mcu-records-table tbody tr:hover td { background: #292929; }
 .dark .mcu-records-table tbody tr:hover td.is-frozen,
-.dark .mcu-records-table tbody tr:hover .mcu-records-index { background: #352a27; }
+.dark .mcu-records-table tbody tr:hover .mcu-records-index { background: #352a27 !important; }
 .dark .mcu-record-link { color: #ff9a67; }
 
 /* Baris yang dibuka dari notifikasi: sorotan tetap terlihat di atas warna zona
@@ -4822,7 +4822,7 @@ select option:active {
   padding: 8px 16px;
   flex-shrink: 0;
   border-bottom: 1px solid var(--border);
-  background: var(--card);
+  background: var(--background);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -4833,9 +4833,9 @@ select option:active {
   gap: 3px;
   padding: 3px;
   border-radius: 999px;
-  background: var(--muted);
+  background: var(--card);
   border: 1px solid var(--border);
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 .centered-tab {
   position: relative;
@@ -4858,11 +4858,11 @@ select option:active {
   transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .centered-tab:hover:not(.is-active) {
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--muted);
   color: var(--foreground);
 }
 .dark .centered-tab:hover:not(.is-active) {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--muted);
 }
 .centered-tab.is-active {
   background: linear-gradient(180deg, #FF6F1A 0%, #FF4D00 100%);
@@ -4877,7 +4877,7 @@ select option:active {
   height: 16px;
   padding: 0 5px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--muted);
   color: var(--muted-foreground);
   font-size: 9.5px;
   font-weight: 800;

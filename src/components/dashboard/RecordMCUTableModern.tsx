@@ -12,6 +12,8 @@ import { useAuth } from '@/lib/auth-context';
 import { useMCUStore } from '@/lib/store';
 import FormTindakLanjut from '@/components/followup/FormTindakLanjut';
 import { usePopup, Popup } from '@/lib/popup';
+import CenteredTabs from '@/components/ui/centered-tabs';
+import HraRiskProfileCard from '@/components/mcu/HraRiskProfileCard';
 
 type RecordRow = Record<string, any>;
 
@@ -569,22 +571,17 @@ export default function RecordMCUTableModern() {
   return (
     <div className="mcu-records-modern">
       <div className="mcu-records-card">
-        {/* Tab nav — Monitor MCU / Record MCU, di kiri halaman */}
-        <div className="flex border-b border-gray-200 dark:border-gray-800 mb-4" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'monitor'}
-            className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'monitor' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-            onClick={() => setActiveTab('monitor')}
-          >Monitor MCU</button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'record'}
-            className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'record' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-            onClick={() => setActiveTab('record')}
-          >Record MCU</button>
+        {/* Tab nav — Monitor MCU / Record MCU (macOS CenteredTabs) */}
+        <div style={{ marginBottom: 12 }}>
+          <CenteredTabs
+            tabs={[
+              { key: 'monitor', label: 'Monitor MCU' },
+              { key: 'record', label: 'Record MCU' },
+            ]}
+            active={activeTab}
+            onChange={(k) => setActiveTab(k as 'monitor' | 'record')}
+            ariaLabel="Tab Database MCU"
+          />
         </div>
 
         {/* Header */}
@@ -823,6 +820,10 @@ export default function RecordMCUTableModern() {
             <DialogHeader>
               <DialogTitle>Detail MCU — {viewingRow?.nama || '-'}</DialogTitle>
             </DialogHeader>
+            <HraRiskProfileCard
+              jabatan={viewingRow?.jabatan || viewingRow?.posisi}
+              departemen={viewingRow?.departemen || viewingRow?.department}
+            />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
               {MCU_FIELDS.filter(f => {
                 const key = f.id.replace(/([a-z0-9])([A-Z]+)/g, '$1_$2').toLowerCase();

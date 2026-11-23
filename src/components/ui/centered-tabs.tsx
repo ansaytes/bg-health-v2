@@ -40,7 +40,7 @@ export default function CenteredTabs<K extends string>({
               aria-selected={isActive}
               onClick={() => onChange(t.key)}
               className={`centered-tab${isActive ? ' is-active' : ''}`}
-              style={compact ? { height: 26, padding: '0 10px', fontSize: 10.5 } : undefined}
+              style={compact ? { height: 26, padding: '0 12px', fontSize: 10.5, minWidth: 120 } : undefined}
             >
               {t.label}
               {typeof t.count === 'number' && (

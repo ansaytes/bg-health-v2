@@ -66,15 +66,13 @@ export default function SaranaKlinikWithChecklist({
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div style={{ padding: '8px 16px 0', flexShrink: 0 }}>
-        <CenteredTabs
-          tabs={TABS}
-          active={tab}
-          onChange={(k) => setTab(k as UnifiedInspeksiTab)}
-          ariaLabel="Sarana & Program Inspeksi"
-          compact
-        />
-      </div>
+      <CenteredTabs
+        tabs={TABS}
+        active={tab}
+        onChange={(k) => setTab(k as UnifiedInspeksiTab)}
+        ariaLabel="Sarana & Program Inspeksi"
+        compact
+      />
 
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {tab === 'sarana-klinik' && (

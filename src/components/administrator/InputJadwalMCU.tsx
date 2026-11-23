@@ -236,19 +236,22 @@ export default function InputJadwalMCU() {
         flexDirection: 'column',
         overflow: 'hidden',
         background: 'var(--background)',
+        padding: '14px 18px',
+        gap: 12,
       }}
     >
-      {/* ── macOS Control Bar & Toolbar (HRA Style) ─────────────── */}
+      {/* ── macOS Control Bar & Toolbar (HRA Style Card) ─────────── */}
       <div
         style={{
-          padding: '12px 18px',
-          borderBottom: '1px solid var(--border)',
+          padding: '12px 16px',
+          border: '1px solid var(--border)',
+          borderRadius: 12,
           background: 'var(--card)',
           display: 'flex',
           flexDirection: 'column',
           gap: 12,
           flexShrink: 0,
-          boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
         }}
       >
         {/* Top Header: Title + Primary Action */}
@@ -556,7 +559,6 @@ export default function InputJadwalMCU() {
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          padding: '12px 18px',
         }}
       >
         {/* Inline Message Alert */}
@@ -718,16 +720,16 @@ export default function InputJadwalMCU() {
                             value={row.tanggal_jadwal || ''}
                             onChange={(e) => updateDate(row.nik_karyawan, e.target.value)}
                             style={{
-                              height: 28,
-                              borderRadius: 6,
+                              height: 30,
+                              borderRadius: 8,
                               border: '1px solid var(--border)',
-                              background: 'var(--background)',
+                              background: 'var(--card)',
                               color: 'var(--foreground)',
                               fontSize: 11.5,
-                              padding: '0 8px',
+                              padding: '0 10px',
                               outline: 'none',
                               width: '100%',
-                              boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)',
+                              boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.03)',
                             }}
                           />
                         </td>

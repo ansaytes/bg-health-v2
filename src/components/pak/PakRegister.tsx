@@ -19,6 +19,7 @@ import { useMCUStore } from '@/lib/store';
 import { DEFAULT_SETTINGS, mergeSettings, type AppSettings } from '@/lib/app-settings';
 import EmployeeLookupInput from '@/components/administrator/EmployeeLookupInput';
 import { usePopup, Popup } from '@/lib/popup';
+import HraInspectorModal, { HraLiveJabatanPreview } from './HraInspectorModal';
 
 interface PakCase {
   id: string;
@@ -118,6 +119,7 @@ export default function PakRegister() {
   const [filterStatus, setFilterStatus] = useState('semua');
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [inspectingKasus, setInspectingKasus] = useState<PakCase | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -322,29 +324,38 @@ export default function PakRegister() {
                     </td>
                     <td className={td}>
                       {c.hra_verified ? (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '10px', fontWeight: 700, color: '#00895f', cursor: 'help' }}
-                          title={`Diverifikasi oleh ${c.hra_verified_by ?? '-'} pada ${fmtJam(c.hra_verified_tgl)}`}>
+                        <button
+                          type="button"
+                          onClick={() => setInspectingKasus(c)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            color: '#00895f',
+                            cursor: 'pointer',
+                            background: 'transparent',
+                            border: 'none',
+                            padding: 0,
+                            textAlign: 'left',
+                          }}
+                          title={`Diverifikasi oleh ${c.hra_verified_by ?? '-'} pada ${fmtJam(c.hra_verified_tgl)} — Klik untuk melihat rincian bahaya HRA`}
+                        >
                           <ShieldCheck size={12} /> Terverifikasi
                           <div style={{ fontSize: '9px', color: 'var(--muted-foreground)', fontWeight: 400 }}>{c.hra_verified_by}</div>
-                        </span>
+                        </button>
                       ) : (
-                        canWrite && ['BEROBAT_LUAR', 'PIHAK_LAIN', 'KLUSTER_HRA'].includes(c.sumber_dugaan) ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={saving}
-                            style={{ height: 24, fontSize: '10px', padding: '0 6px' }}
-                            title="Klik bila Anda telah memeriksa dokumen HRA dan memastikan pajanan sesuai"
-                            onClick={() => patchCase(c.id, { action: 'verify_hra' })}
-                          >
-                            <ShieldAlert size={11} className="mr-1" /> Konfirmasi HRA
-                          </Button>
-                        ) : (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '9.5px', fontWeight: 700, color: '#9a6b00', cursor: 'help' }}
-                            title="Periksa dokumen HRA (Health Risk Assessment) unit kerja karyawan sebagai rujukan klarifikasi pajanan">
-                            <AlertTriangle size={10} /> Belum diverifikasi
-                          </span>
-                        )
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={saving}
+                          style={{ height: 24, fontSize: '10px', padding: '0 6px' }}
+                          title="Periksa dokumen HRA dan verifikasi kesesuaian pajanan"
+                          onClick={() => setInspectingKasus(c)}
+                        >
+                          <ShieldAlert size={11} className="mr-1 text-amber-600" /> Periksa HRA
+                        </Button>
                       )}
                     </td>
                     <td className={td} style={{ whiteSpace: 'nowrap', fontSize: '11px' }}>{fmtJam(c.tanggal_diterima)}<div style={{ fontSize: '9.5px', color: 'var(--muted-foreground)' }}>{c.diterima_oleh}</div></td>
@@ -411,6 +422,17 @@ export default function PakRegister() {
         </>
       )}
 
+      <HraInspectorModal
+        kasus={inspectingKasus}
+        isOpen={!!inspectingKasus}
+        onClose={() => setInspectingKasus(null)}
+        onVerify={async () => {
+          if (inspectingKasus) {
+            await patchCase(inspectingKasus.id, { action: 'verify_hra' });
+          }
+        }}
+        canWrite={canWrite}
+      />
       <Popup state={popupState} closePopup={closePopup} />
     </div>
   );
@@ -485,6 +507,9 @@ function NewCaseForm({ saving, onCancel, onSubmit }: {
           <span className={label}>Departemen</span>
           <Input value={form.department ?? ''} onChange={(e) => set('department', e.target.value)} className="h-9 rounded-lg text-sm" />
         </label>
+        <div className="sm:col-span-3">
+          <HraLiveJabatanPreview jabatan={form.jabatan} department={form.department} />
+        </div>
         <label className="flex flex-col gap-1 sm:col-span-3">
           <span className={label}>Diagnosis Klinis (bila ada)</span>
           <Input value={form.diagnosis_klinis ?? ''} onChange={(e) => set('diagnosis_klinis', e.target.value)} placeholder="mis. NIHL bilateral, Silikosis" className="h-9 rounded-lg text-sm" />

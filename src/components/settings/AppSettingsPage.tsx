@@ -8,7 +8,7 @@
 // Pola UI mengikuti tema aplikasi (var(--card)/var(--border)).
 
 import { useEffect, useState } from 'react';
-import { Building2, Clock, Hospital, Save, Loader2, Users, Gauge, Image } from 'lucide-react';
+import { Save, Loader2, Users, Image } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/lib/use-app-settings';
@@ -19,13 +19,10 @@ import UserManagement from '@/components/administrator/UserManagement';
 import IntegrationSettings from '@/components/settings/IntegrationSettings';
 import DriveFileUpload from '@/components/settings/DriveFileUpload';
 
-type Tab = 'perusahaan' | 'pak' | 'faskes' | 'integrasi' | 'pengguna' | 'nab';
+type Tab = 'perusahaan' | 'integrasi' | 'pengguna';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'perusahaan', label: 'Perusahaan' },
-  { key: 'pak', label: 'Batas Waktu PAK' },
-  { key: 'faskes', label: 'Faskes & BPJS' },
-  { key: 'nab', label: 'Nilai Ambang Batas' },
   { key: 'integrasi', label: 'Integrasi' },
   { key: 'pengguna', label: 'Kelola Pengguna' },
 ];
@@ -124,35 +121,6 @@ export default function AppSettingsPage() {
         {tab === 'perusahaan' && (
           <div className="flex flex-col gap-4">
             <section style={{ background: 'var(--card)', borderRadius: 12, padding: 16, border: '1px solid var(--border)' }}>
-              <div className="flex items-center gap-2 mb-3">
-                <Building2 className="size-4 text-primary" />
-                <h3 style={{ fontSize: 12.5, fontWeight: 700, margin: 0 }}>Identitas Perusahaan</h3>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label className="flex flex-col gap-1">
-                  <span className={labelCls}>Nama Perusahaan (kop laporan)</span>
-                  <Input className={inputCls} value={draft.perusahaan.nama} disabled={!canEdit} onChange={(e) => set('perusahaan.nama', e.target.value)} />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className={labelCls}>Awalan ID Kasus PAK</span>
-                  <Input className={inputCls} value={draft.perusahaan.prefiksId} disabled={!canEdit} onChange={(e) => set('perusahaan.prefiksId', e.target.value.toUpperCase())} maxLength={4} />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className={labelCls}>Zona Waktu Default</span>
-                  <select className="h-9 rounded-lg border border-input bg-background px-3 text-sm" value={draft.perusahaan.zonaWaktu} disabled={!canEdit} onChange={(e) => set('perusahaan.zonaWaktu', e.target.value)}>
-                    <option value="WIB">WIB</option>
-                    <option value="WITA">WITA</option>
-                    <option value="WIT">WIT</option>
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1 sm:col-span-2">
-                  <span className={labelCls}>Alamat (opsional, untuk kop)</span>
-                  <Input className={inputCls} value={draft.perusahaan.alamat} disabled={!canEdit} onChange={(e) => set('perusahaan.alamat', e.target.value)} />
-                </label>
-              </div>
-            </section>
-
-            <section style={{ background: 'var(--card)', borderRadius: 12, padding: 16, border: '1px solid var(--border)' }}>
               <div className="flex items-center gap-2 mb-1">
                 <Image className="size-4 text-primary" />
                 <h3 style={{ fontSize: 12.5, fontWeight: 700, margin: 0 }}>Branding &amp; Tampilan Visual</h3>
@@ -246,246 +214,6 @@ export default function AppSettingsPage() {
           </div>
         )}
 
-        {tab === 'pak' && (
-          <section style={{ background: 'var(--card)', borderRadius: 12, padding: 16, border: '1px solid var(--border)' }}>
-            <div className="flex items-center gap-2 mb-1">
-              <Clock className="size-4 text-primary" />
-              <h3 style={{ fontSize: 12.5, fontWeight: 700, margin: 0 }}>Rujukan Statutori Batas Waktu Pelaporan PAK</h3>
-            </div>
-            <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: '0 0 12px' }}>
-              Batas waktu pelaporan Penyakit Akibat Kerja (PAK) merupakan kewajiban hukum yang mengikat sesuai peraturan perundang-undangan Republik Indonesia. Sistem menggunakan parameter statutori berikut untuk memonitor kepatuhan dan menghitung tenggat waktu pelaporan otomatis di Register PAK.
-            </p>
-
-            <div style={{
-              background: 'rgba(0,184,148,0.06)',
-              border: '1px solid rgba(0,184,148,0.25)',
-              borderRadius: 8,
-              padding: '10px 14px',
-              marginBottom: 14,
-              fontSize: 11,
-              lineHeight: 1.5,
-              color: 'var(--foreground)',
-            }}>
-              <div style={{ fontWeight: 700, color: '#00895f', marginBottom: 2 }}>
-                ⚖️ Dasar Hukum Wajib (Statutory Compliance):
-              </div>
-              <ul style={{ margin: 0, paddingLeft: 18, listStyleType: 'disc' }}>
-                <li><b>Permenaker No. 01/MEN/1981 Pasal 4 ayat (1):</b> Kewajiban melaporkan Penyakit Akibat Kerja dalam waktu 2 × 24 jam setelah diagnosis ditegakkan.</li>
-                <li><b>PP No. 44 Tahun 2015 Pasal 25 ayat (2):</b> Laporan penyakit akibat kerja wajib disampaikan paling lambat 2 × 24 jam sejak diagnosis ditegakkan ke BPJS Ketenagakerjaan dan Dinas Ketenagakerjaan setempat.</li>
-                <li><b>Kepmen ESDM No. 1827 K/30/MEM/2018 &amp; Kepdirjen Minerba No. 185.K/37.04/DJB/2019:</b> Tata kelola pelaporan PAK dan kejadian berbahaya pada operasional pertambangan mineral dan batubara.</li>
-              </ul>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div style={{ background: 'var(--background)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700 }}>Pelaporan Tahap I ke BPJS &amp; Disnaker</span>
-                  <span style={{ fontSize: 9.5, fontWeight: 700, background: 'rgba(255,45,45,0.12)', color: '#FF2D2D', padding: '2px 6px', borderRadius: 4 }}>
-                    Statutori Wajib
-                  </span>
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--brand-primary)', margin: '4px 0' }}>
-                  2 × 24 Jam (48 Jam)
-                </div>
-                <p style={{ fontSize: 9.5, color: 'var(--muted-foreground)', margin: 0 }}>
-                  Terhitung sejak tanggal diagnosis klinis / okupasi ditegakkan oleh dokter pemeriksa. Formulir 3 KK3 wajib terbit.
-                </p>
-              </div>
-
-              <div style={{ background: 'var(--background)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700 }}>Triase Dokter Perusahaan</span>
-                  <span style={{ fontSize: 9.5, fontWeight: 700, background: 'rgba(0,184,148,0.12)', color: '#00895f', padding: '2px 6px', borderRadius: 4 }}>
-                    SOP Medis
-                  </span>
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--foreground)', margin: '4px 0' }}>
-                  2 Hari Kerja
-                </div>
-                <p style={{ fontSize: 9.5, color: 'var(--muted-foreground)', margin: 0 }}>
-                  Verifikasi dugaan kasus sejak diterima dari hasil MCU, klinik, atau kluster HRA untuk penentuan kelayakan kerja.
-                </p>
-              </div>
-
-              <div style={{ background: 'var(--background)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700 }}>Laporan Medis ke KTT / QSHE</span>
-                  <span style={{ fontSize: 9.5, fontWeight: 700, background: 'rgba(0,184,148,0.12)', color: '#00895f', padding: '2px 6px', borderRadius: 4 }}>
-                    SMKP Minerba
-                  </span>
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--foreground)', margin: '4px 0' }}>
-                  24 Jam
-                </div>
-                <p style={{ fontSize: 9.5, color: 'var(--muted-foreground)', margin: 0 }}>
-                  Laporan hasil diagnosis okupasi dari tim medis internal ke Kepala Teknik Tambang (KTT) &amp; QSHE Manager.
-                </p>
-              </div>
-
-              <div style={{ background: 'var(--background)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700 }}>Target Kesimpulan BPJS TK (Tahap II)</span>
-                  <span style={{ fontSize: 9.5, fontWeight: 700, background: 'rgba(255,122,0,0.12)', color: '#d97706', padding: '2px 6px', borderRadius: 4 }}>
-                    Klaim Asuransi
-                  </span>
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--foreground)', margin: '4px 0' }}>
-                  30 Hari Kalender
-                </div>
-                <p style={{ fontSize: 9.5, color: 'var(--muted-foreground)', margin: 0 }}>
-                  Monitoring penerbitan penetapan jaminan atau rekomendasi medis lanjutan dari BPJS Ketenagakerjaan.
-                </p>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {tab === 'faskes' && (
-          <section style={{ background: 'var(--card)', borderRadius: 12, padding: 16, border: '1px solid var(--border)' }}>
-            <div className="flex items-center gap-2 mb-3">
-              <Hospital className="size-4 text-primary" />
-              <h3 style={{ fontSize: 12.5, fontWeight: 700, margin: 0 }}>Faskes Rekanan & BPJS TK</h3>
-            </div>
-            <div className="grid grid-cols-1 gap-3">
-              <label className="flex flex-col gap-1">
-                <span className={labelCls}>Kantor Cabang BPJS Ketenagakerjaan (pelaporan Tahap I)</span>
-                <Input className={inputCls} value={draft.faskes.bpjsCabang} disabled={!canEdit} placeholder="Nama kantor cabang" onChange={(e) => set('faskes.bpjsCabang', e.target.value)} />
-              </label>
-              <div>
-                <span className={labelCls}>Dinas Provinsi / Pengawas Ketenagakerjaan per Site</span>
-                <div className="space-y-2 mt-1">
-                  {draft.faskes.dinasPerSite.map((row, i) => (
-                    <div key={i} className="flex gap-2">
-                      <Input className={inputCls} placeholder="Site" value={row.site} disabled={!canEdit}
-                        onChange={(e) => setDraft((prev) => {
-                          const next = structuredClone(prev);
-                          next.faskes.dinasPerSite[i].site = e.target.value;
-                          return next;
-                        })} />
-                      <Input className={`${inputCls} flex-1`} placeholder="Instansi" value={row.instansi} disabled={!canEdit}
-                        onChange={(e) => setDraft((prev) => {
-                          const next = structuredClone(prev);
-                          next.faskes.dinasPerSite[i].instansi = e.target.value;
-                          return next;
-                        })} />
-                      {canEdit && (
-                        <Button variant="ghost" size="icon" onClick={() => setDraft((prev) => {
-                          const next = structuredClone(prev);
-                          next.faskes.dinasPerSite.splice(i, 1);
-                          return next;
-                        })}><span className="text-destructive">×</span></Button>
-                      )}
-                    </div>
-                  ))}
-                  {canEdit && (
-                    <Button variant="outline" size="sm" onClick={() => setDraft((prev) => ({
-                      ...prev,
-                      faskes: { ...prev.faskes, dinasPerSite: [...prev.faskes.dinasPerSite, { site: '', instansi: '' }] },
-                    }))}>+ Tambah Site</Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {tab === 'nab' && (
-          <section style={{ background: 'var(--card)', borderRadius: 12, padding: 16, border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div className="flex items-center gap-2">
-              <Gauge className="size-4 text-primary" />
-              <h3 style={{ fontSize: 12.5, fontWeight: 700, margin: 0 }}>Nilai Ambang Batas (NAB)</h3>
-            </div>
-            <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: '-12px 0 0' }}>
-              Batas paparan lingkungan kerja sesuai regulasi. Dipakai sebagai acuan penilaian otomatis pada modul Lingkungan Kerja.
-            </p>
-
-            {/* NAB Pencahayaan */}
-            <div>
-              <p style={{ fontSize: 11, fontWeight: 700, marginBottom: 8, color: 'var(--foreground)' }}>
-                Pencahayaan (lux) <span style={{ fontWeight: 400, color: 'var(--muted-foreground)' }}>(Permenkes 48/2016 Tabel 4)</span>
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {([
-                  { field: 'ruang_kerja',  label: 'Ruang Kerja (lux)',    min: 50, max: 2000 },
-                  { field: 'ruang_gambar', label: 'Ruang Gambar (lux)',   min: 50, max: 2000 },
-                  { field: 'resepsionis',  label: 'Resepsionis (lux)',    min: 50, max: 2000 },
-                  { field: 'ruang_arsip',  label: 'Ruang Arsip (lux)',    min: 50, max: 2000 },
-                  { field: 'ruang_rapat',  label: 'Ruang Rapat (lux)',    min: 50, max: 2000 },
-                  { field: 'ruang_makan',  label: 'Ruang Makan (lux)',    min: 50, max: 2000 },
-                  { field: 'koridor_lobi', label: 'Koridor / Lobi (lux)', min: 50, max: 2000 },
-                ] as { field: keyof typeof draft.nab.lux; label: string; min: number; max: number }[]).map(({ field, label, min, max }) => (
-                  <label key={field} className="flex flex-col gap-1">
-                    <span className={labelCls}>{label}</span>
-                    <Input
-                      type="number" min={min} max={max}
-                      className={inputCls}
-                      value={draft.nab.lux[field]}
-                      disabled={!canEdit}
-                      onChange={(e) => set(`nab.lux.${field}`, Number(e.target.value))}
-                    />
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* NAB Kualitas Udara */}
-            <div>
-              <p style={{ fontSize: 11, fontWeight: 700, marginBottom: 8, color: 'var(--foreground)' }}>
-                Kualitas Udara <span style={{ fontWeight: 400, color: 'var(--muted-foreground)' }}>(Permenkes 48/2016 Pasal 11)</span>
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {([
-                  { field: 'suhuMin',       label: 'Suhu Min (°C)',           min: 10, max: 40,  step: 0.5 },
-                  { field: 'suhuMax',       label: 'Suhu Maks (°C)',          min: 10, max: 40,  step: 0.5 },
-                  { field: 'kelembabanMin', label: 'Kelembaban Min (%)',       min: 10, max: 100, step: 1 },
-                  { field: 'kelembabanMax', label: 'Kelembaban Maks (%)',      min: 10, max: 100, step: 1 },
-                  { field: 'oksigenMin',    label: 'O₂ Min (%)',              min: 10, max: 25,  step: 0.1 },
-                  { field: 'oksigenMax',    label: 'O₂ Maks (%)',             min: 10, max: 25,  step: 0.1 },
-                  { field: 'pm10Max',       label: 'PM10 Maks (mg/m³)',       min: 0,  max: 1,   step: 0.01 },
-                  { field: 'asbesMax',      label: 'Asbes Maks (serat/ml)',   min: 0,  max: 1,   step: 0.01 },
-                ] as { field: keyof typeof draft.nab.udara; label: string; min: number; max: number; step: number }[]).map(({ field, label, min, max, step }) => (
-                  <label key={field} className="flex flex-col gap-1">
-                    <span className={labelCls}>{label}</span>
-                    <Input
-                      type="number" min={min} max={max} step={step}
-                      className={inputCls}
-                      value={draft.nab.udara[field]}
-                      disabled={!canEdit}
-                      onChange={(e) => set(`nab.udara.${field}`, Number(e.target.value))}
-                    />
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* NAB Kebisingan */}
-            <div>
-              <p style={{ fontSize: 11, fontWeight: 700, marginBottom: 8, color: 'var(--foreground)' }}>
-                Kebisingan – dB(A) <span style={{ fontWeight: 400, color: 'var(--muted-foreground)' }}>(Kepmenaker 51/1999)</span>
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {([
-                  { field: 'jam8', label: 'Paparan 8 jam/hari (dB)', min: 70, max: 140 },
-                  { field: 'jam4', label: 'Paparan 4 jam/hari (dB)', min: 70, max: 140 },
-                  { field: 'jam2', label: 'Paparan 2 jam/hari (dB)', min: 70, max: 140 },
-                  { field: 'jam1', label: 'Paparan 1 jam/hari (dB)', min: 70, max: 140 },
-                ] as { field: keyof typeof draft.nab.kebisingan; label: string; min: number; max: number }[]).map(({ field, label, min, max }) => (
-                  <label key={field} className="flex flex-col gap-1">
-                    <span className={labelCls}>{label}</span>
-                    <Input
-                      type="number" min={min} max={max}
-                      className={inputCls}
-                      value={draft.nab.kebisingan[field]}
-                      disabled={!canEdit}
-                      onChange={(e) => set(`nab.kebisingan.${field}`, Number(e.target.value))}
-                    />
-                  </label>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
-
         {tab === 'pengguna' && (
           <section style={{ background: 'var(--card)', borderRadius: 12, padding: 16, border: '1px solid var(--border)' }}>
             <div className="flex items-center gap-2 mb-1">
@@ -499,14 +227,38 @@ export default function AppSettingsPage() {
           </section>
         )}
 
-        {!loading && (
-          <button
-            type="button"
-            onClick={() => setDraft(DEFAULT_SETTINGS)}
-            className="self-start text-[11px] text-muted-foreground underline hover:text-foreground"
-          >
-            Kembalikan ke nilai default (belum tersimpan)
-          </button>
+        {!loading && canEdit && (
+          <div style={{ marginTop: 8 }}>
+            <button
+              type="button"
+              onClick={() => setDraft(DEFAULT_SETTINGS)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 14px',
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 600,
+                border: '1px solid var(--border)',
+                background: 'var(--card)',
+                color: 'var(--muted-foreground)',
+                cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--foreground)';
+                e.currentTarget.style.background = 'var(--muted)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--muted-foreground)';
+                e.currentTarget.style.background = 'var(--card)';
+              }}
+            >
+              Kembalikan ke nilai default (belum tersimpan)
+            </button>
+          </div>
         )}
       </div>
     </div>

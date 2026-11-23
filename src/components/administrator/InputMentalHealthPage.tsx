@@ -114,7 +114,7 @@ function barisHasil(body: any): ScoreLine[] {
 }
 
 export default function InputMentalHealthPage() {
-  const { query, setQuery, identity, searching, error, search } = useEmployeeLookup('/api/mental-health');
+  const { query, setQuery, identity, searching, error, search, isEmployee } = useEmployeeLookup('/api/mental-health');
   const submit = useSubmitStatus();
 
   const [values, setValues] = useState<Record<string, string>>({});
@@ -162,7 +162,7 @@ export default function InputMentalHealthPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify({
-          query,
+          query: 'self',
           tglPemeriksaan,
           ...values,
           // FORM/098 — bukti persetujuan disimpan bersama hasil skrining.
@@ -227,16 +227,21 @@ export default function InputMentalHealthPage() {
         onSearch={() => search()}
         searching={searching}
         identity={identity}
+        isEmployee={isEmployee}
       >
         <div className="qh-fields-grid">
           <div>
-            <label className="qh-label" htmlFor="qh-mh-date">Tanggal Pemeriksaan</label>
+            <label className="qh-label" htmlFor="qh-mh-date">
+              Tanggal Pemeriksaan {isEmployee && '(Otomatis)'}
+            </label>
             <input
               id="qh-mh-date"
               type="date"
               className="qh-input"
               value={tglPemeriksaan}
               onChange={(e) => setTglPemeriksaan(e.target.value)}
+              disabled={isEmployee}
+              title={isEmployee ? 'Tanggal terkunci otomatis pada hari pengisian' : undefined}
             />
           </div>
         </div>
