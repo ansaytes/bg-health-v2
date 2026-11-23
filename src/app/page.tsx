@@ -33,6 +33,7 @@ const InspeksiUdaraDebu = lazy(() => import('@/components/administrator/Inspeksi
 const InspeksiUdaraDebuTable = lazy(() => import('@/components/administrator/InspeksiUdaraDebuTable'));
 const GiziKerjaForm = lazy(() => import('@/components/administrator/GiziKerjaForm'));
 const GiziKerjaTable = lazy(() => import('@/components/administrator/GiziKerjaTable'));
+const GiziKerjaDashboard = lazy(() => import('@/components/dashboard/GiziKerjaDashboard'));
 const ProgramInspeksiAdminTabs = lazy(() => import('@/components/administrator/ProgramInspeksiAdminTabs'));
 const SaranaKlinikWithChecklist = lazy(() => import('@/components/administrator/SaranaKlinikWithChecklist'));
 const InputJadwalMCU = lazy(() => import('@/components/administrator/InputJadwalMCUModern'));
@@ -102,18 +103,17 @@ function AdminLayananKuratif() {
  * dalam satu menu bertab (sama seperti sisi dashboard).
  */
 function AdminHigieneIndustri() {
-  const [tab, setTab] = useState<'hearing' | 'ergonomi' | 'sanitasi' | 'cahaya' | 'udara' | 'gizi'>('hearing');
+  const [tab, setTab] = useState<'hearing' | 'ergonomi' | 'sanitasi' | 'cahaya' | 'udara'>('hearing');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       <CenteredTabs
         tabs={[
           { key: 'hearing', label: 'Hearing Conservation' },
           { key: 'ergonomi', label: 'Ergonomi' },
-          // Higiene & Sanitasi (STD/005) + Gizi Kerja (AKG 2019) — SOP/028 poin 5.7
+          // Higiene & Sanitasi (STD/005) — SOP/028 poin 5.7
           { key: 'sanitasi', label: 'Higiene & Sanitasi' },
           { key: 'cahaya', label: 'Pencahayaan' },
           { key: 'udara', label: 'Kualitas Udara & Debu' },
-          { key: 'gizi', label: 'Gizi Kerja' },
         ]}
         active={tab}
         onChange={setTab}
@@ -142,13 +142,6 @@ function AdminHigieneIndustri() {
             hasTable
             stepLabels={['Input Kualitas Udara', 'Daftar Pemantauan']}
           />
-        ) : tab === 'gizi' ? (
-          <AdminTogglePanel
-            formContent={<GiziKerjaForm />}
-            tableContents={[<GiziKerjaTable key="gizi-table" />]}
-            hasTable
-            stepLabels={['Input Inspeksi Jasaboga', 'Riwayat Inspeksi']}
-          />
         ) : tab === 'hearing' ? (
           <AdminTogglePanel
             formContent={<HcInputPage />}
@@ -166,6 +159,21 @@ function AdminHigieneIndustri() {
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Administrator → Gizi Kerja (Modul Sendiri di Bawah Health Risk Assessment):
+ * Form input Inspeksi Jasaboga/Katering dan Riwayat Database.
+ */
+function AdminGiziKerja() {
+  return (
+    <AdminTogglePanel
+      formContent={<GiziKerjaForm />}
+      tableContents={[<GiziKerjaTable key="gizi-table" />]}
+      hasTable
+      stepLabels={['Input Inspeksi Jasaboga', 'Riwayat Inspeksi']}
+    />
   );
 }
 
@@ -277,6 +285,20 @@ function IconHra() {
   );
 }
 
+/** Gizi Kerja — piring nutrisi dan sendok garpu */
+function IconGizi() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 2v20" />
+      <path d="M22 2v6a4 4 0 0 1-4 4" />
+      <path d="M2 2v8a3 3 0 0 0 3 3v9" />
+      <path d="M6 2v8" />
+      <path d="M4 2v4" />
+      <circle cx="12" cy="12" r="4" />
+    </svg>
+  );
+}
+
 /** Layanan Kuratif — stetoskop. */
 function IconKuratif() {
   return (
@@ -338,6 +360,8 @@ const DASH_SIDEBAR: SidebarItem[] = [
   // berbeda sehingga tidak boleh saling menggantikan.
   { key: 'inspeksi-dashboard', label: 'Program Inspeksi', icon: <IconSarana />, adminOnly: true },
   { key: 'higiene-industri', label: 'Higiene Industri', icon: <IconHigiene />, adminOnly: true },
+  { key: 'hra-dashboard', label: 'Health Risk Assessment', icon: <IconHra />, adminOnly: true },
+  { key: 'gizi-kerja-dashboard', label: 'Gizi Kerja', icon: <IconGizi />, adminOnly: true },
   { key: 'mental-health-dashboard', label: 'Kesehatan Mental', icon: <IconBrain />, adminOnly: true },
 ];
 
@@ -467,6 +491,8 @@ const ADMIN_SIDEBAR: SidebarItem[] = [
   { key: 'higiene-industri-admin', label: 'Higiene Industri', icon: <IconHigiene /> },
   // Health Risk Assessment — modul tersendiri (HRA FORM/069 Rev.001)
   { key: 'hra-admin', label: 'Health Risk Assessment', icon: <IconHra /> },
+  // Gizi Kerja — modul tersendiri (di bawah Health Risk Assessment)
+  { key: 'gizi-kerja-admin', label: 'Gizi Kerja', icon: <IconGizi /> },
   { key: 'health-campaign', label: 'Health Campaign', icon: <IconCampaignAdmin /> },
   { key: 'pak-register', label: 'Register PAK', icon: <IconPakRegister /> },
   // Sarana & Prasarana = seluruh inspeksi digital & kelayakan aset kesehatan kerja:
@@ -601,6 +627,8 @@ function DashContent() {
         import('@/components/dashboard/ProKawanDashboard'),
         import('@/components/dashboard/ProgramInspeksiTabs'),
         import('@/components/dashboard/MentalHealthDashboard'),
+        import('@/components/dashboard/GiziKerjaDashboard'),
+        import('@/components/administrator/HraAdminTabs'),
         import('@/components/administrator/LaggingIndicatorPage'),
         import('@/components/review-mcu/ReviewMCU'),
       ]);
@@ -648,6 +676,8 @@ function DashContent() {
     case 'spip': return <ProgramInspeksiTabs initialTab="kondisi-aset" />;
     case 'inspeksi-dashboard': return <ProgramInspeksiTabs />;
     case 'higiene-industri': return <HigieneIndustriTabs />;
+    case 'hra-dashboard': return <HraAdminTabs />;
+    case 'gizi-kerja-dashboard': return <GiziKerjaDashboard />;
     case 'hearing-dashboard': return <HigieneIndustriTabs initialTab="hearing" />;
     case 'ergonomi-dashboard': return <HigieneIndustriTabs initialTab="ergonomi" />;
     // SDS-30 = faktor psikologi lingkungan kerja → bagian Higiene Industri.
@@ -775,6 +805,10 @@ function AdminContent() {
 
   if (activeAdminSidebar === 'hra-admin') {
     return <HraAdminTabs />;
+  }
+
+  if (activeAdminSidebar === 'gizi-kerja-admin') {
+    return <AdminGiziKerja />;
   }
 
   if (activeAdminSidebar === 'pak-register') {

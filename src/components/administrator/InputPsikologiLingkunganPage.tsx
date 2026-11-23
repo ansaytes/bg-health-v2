@@ -175,24 +175,7 @@ export default function InputPsikologiLingkunganPage() {
         searching={searching}
         identity={identity}
         isEmployee={isEmployee}
-      >
-        <div className="qh-fields-grid">
-          <div>
-            <label className="qh-label" htmlFor="qh-sds-date">
-              Tanggal Pemeriksaan {isEmployee && '(Otomatis)'}
-            </label>
-            <input
-              id="qh-sds-date"
-              type="date"
-              className="qh-input"
-              value={tglPemeriksaan}
-              onChange={(e) => setTglPemeriksaan(e.target.value)}
-              disabled={isEmployee}
-              title={isEmployee ? 'Tanggal terkunci otomatis pada hari pengisian' : undefined}
-            />
-          </div>
-        </div>
-      </IdentityPanel>
+      />
 
       <div className="qh-description">
         {/* Petunjuk diringkas satu baris agar tidak memakan tempat.

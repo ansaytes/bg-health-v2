@@ -169,24 +169,9 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
         {/* Top Header: Title + Primary Action */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <h1 style={{ fontSize: 16, fontWeight: 700, margin: 0, letterSpacing: '-0.02em', color: 'var(--foreground)' }}>
-                Matriks Penilaian Risiko (HRA)
-              </h1>
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 600,
-                  padding: '2px 8px',
-                  borderRadius: 999,
-                  background: 'rgba(255, 94, 0, 0.09)',
-                  color: '#FF5E00',
-                  border: '1px solid rgba(255, 94, 0, 0.22)',
-                }}
-              >
-                FORM/069
-              </span>
-            </div>
+            <h1 style={{ fontSize: 16, fontWeight: 700, margin: 0, letterSpacing: '-0.02em', color: 'var(--foreground)' }}>
+              Health Risk Assesment
+            </h1>
             <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '2px 0 0', lineHeight: 1.3 }}>
               Evaluasi identifikasi bahaya kerja, paparan per minggu, efek kesehatan &amp; hierarki kontrol
             </p>
@@ -531,6 +516,29 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {/* Table Header Columns (Rata Kiri Terstandarisasi) */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '0 14px',
+                fontSize: 10.5,
+                fontWeight: 700,
+                color: 'var(--muted-foreground)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                userSelect: 'none',
+              }}
+            >
+              <div style={{ width: 24, flexShrink: 0 }} />
+              <div style={{ width: 140, flexShrink: 0 }}>Departemen</div>
+              <div style={{ flex: 1, minWidth: 180 }}>Jenis Pekerjaan &amp; Bahaya</div>
+              <div style={{ width: 110, flexShrink: 0 }}>Faktor Bahaya</div>
+              <div style={{ width: 175, flexShrink: 0 }}>Tingkat Risiko</div>
+              <div style={{ width: 64, flexShrink: 0, textAlign: 'right' }}>Aksi</div>
+            </div>
+
             {data.map((item, idx) => {
               const isExpanded = expandedId === item.id;
               const katInit = getKategoriRisiko(item.init_r);
@@ -589,28 +597,33 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                       />
                     </div>
 
-                    {/* Departemen Badge (Apple Capsule) */}
-                    <span
-                      style={{
-                        fontSize: 9.5,
-                        fontWeight: 700,
-                        padding: '2px 9px',
-                        borderRadius: 999,
-                        background: 'rgba(255, 94, 0, 0.08)',
-                        color: '#FF5E00',
-                        border: '1px solid rgba(255, 94, 0, 0.22)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
-                        flexShrink: 0,
-                        minWidth: 80,
-                        textAlign: 'center',
-                      }}
-                    >
-                      {item.departemen}
-                    </span>
+                    {/* Departemen Badge Area (Rata Kiri Terstandarisasi) */}
+                    <div style={{ width: 140, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                      <span
+                        style={{
+                          fontSize: 9.5,
+                          fontWeight: 700,
+                          padding: '2.5px 8px',
+                          borderRadius: 6,
+                          background: 'rgba(255, 94, 0, 0.08)',
+                          color: '#FF5E00',
+                          border: '1px solid rgba(255, 94, 0, 0.22)',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.03em',
+                          textAlign: 'left',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: '100%',
+                        }}
+                        title={item.departemen}
+                      >
+                        {item.departemen}
+                      </span>
+                    </div>
 
-                    {/* Main Title: Jenis Pekerjaan & Kelompok */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    {/* Main Title: Jenis Pekerjaan & Kelompok (Rata Kiri) */}
+                    <div style={{ flex: 1, minWidth: 180, textAlign: 'left' }}>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--foreground)', letterSpacing: '-0.01em' }}>
                           {item.jenis_pekerjaan}
@@ -633,29 +646,36 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                       </div>
                     </div>
 
-                    {/* Hazard Category Tag */}
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 600,
-                        padding: '2px 9px',
-                        borderRadius: 999,
-                        background: 'var(--muted)',
-                        color: 'var(--muted-foreground)',
-                        border: '1px solid var(--border)',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {item.jenis_hazard}
-                    </span>
+                    {/* Hazard Category Tag (Rata Kiri Terstandarisasi) */}
+                    <div style={{ width: 110, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 600,
+                          padding: '2.5px 8px',
+                          borderRadius: 6,
+                          background: 'var(--muted)',
+                          color: 'var(--muted-foreground)',
+                          border: '1px solid var(--border)',
+                          textAlign: 'left',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: '100%',
+                        }}
+                        title={item.jenis_hazard}
+                      >
+                        {item.jenis_hazard}
+                      </span>
+                    </div>
 
-                    {/* Risk Badge (Initial -> Residual: P x E = R) */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    {/* Risk Badge (Initial -> Residual: P x E = R) (Rata Kiri Terstandarisasi) */}
+                    <div style={{ width: 175, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
                       <div
                         title={`Initial Risk: P=${item.init_p} × E=${item.init_e} = R=${item.init_r} (${katInit})`}
                         style={{
-                          padding: '2px 9px',
-                          borderRadius: 999,
+                          padding: '2px 8px',
+                          borderRadius: 6,
                           fontSize: 10,
                           fontWeight: 700,
                           background: getRiskBg(item.init_r),
@@ -665,18 +685,19 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                           alignItems: 'center',
                           gap: 4,
                           boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                          whiteSpace: 'nowrap',
                         }}
                       >
                         <span>Awal: R={item.init_r}</span>
                       </div>
 
-                      <ArrowRight size={11} style={{ color: 'var(--muted-foreground)', opacity: 0.6 }} />
+                      <ArrowRight size={11} style={{ color: 'var(--muted-foreground)', opacity: 0.6, flexShrink: 0 }} />
 
                       <div
                         title={`Residual Risk: P=${item.res_p} × E=${item.res_e} = R=${item.res_r} (${katRes})`}
                         style={{
-                          padding: '2px 9px',
-                          borderRadius: 999,
+                          padding: '2px 8px',
+                          borderRadius: 6,
                           fontSize: 10,
                           fontWeight: 700,
                           background: getRiskBg(item.res_r),
@@ -686,6 +707,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                           alignItems: 'center',
                           gap: 4,
                           boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                          whiteSpace: 'nowrap',
                         }}
                       >
                         <span>Sisa: R={item.res_r}</span>
@@ -693,7 +715,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                     </div>
 
                     {/* macOS Action Buttons */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ width: 64, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }} onClick={(e) => e.stopPropagation()}>
                       {onEdit && (
                         <button
                           type="button"

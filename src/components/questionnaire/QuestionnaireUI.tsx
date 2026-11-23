@@ -116,74 +116,33 @@ export function IdentityPanel({
 }: IdentityPanelProps) {
   return (
     <div className="qh-card">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 6 }}>
-        <h3 className="qh-card-title" style={{ margin: 0 }}>Identitas Responden</h3>
-        <span style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 5,
-          padding: '3px 10px',
-          borderRadius: 999,
-          background: 'rgba(0,184,148,0.12)',
-          color: '#00806a',
-          fontSize: 11,
-          fontWeight: 700,
-          border: '1px solid rgba(0,184,148,0.3)',
-        }}>
-          🔒 Terkunci Sesuai Akun Login
-        </span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <h3 className="qh-card-title" style={{ margin: 0 }}>Identitas Lengkap Karyawan</h3>
+        {searching && (
+          <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>Memuat data profil…</span>
+        )}
       </div>
 
-      <div className="qh-identity-search-row">
-        <div className="qh-identity-search-field">
-          <label className="qh-label">Akun Responden (Wajib Mengisi Masing-Masing)</label>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '9px 12px',
-            background: 'var(--card)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            fontSize: 13,
-            color: 'var(--foreground)',
-            fontWeight: 600,
-          }}>
-            {searching ? (
-              <span style={{ color: 'var(--muted-foreground)' }}>Memuat data profil akun Anda…</span>
-            ) : identity ? (
-              <span>{identity.nama} — NIK: {identity.nikKaryawan || identity.nationalId || '—'}</span>
-            ) : (
-              <span style={{ color: '#b3261e' }}>Profil karyawan tidak ditemukan. Hubungi HR/Admin.</span>
-            )}
-          </div>
-          <p className="qh-hint">
-            Identitas otomatis dikunci sesuai akun login Anda. Setiap responden wajib mengisi kuesioner untuk dirinya sendiri.
-          </p>
-        </div>
-        {children && <div className="qh-identity-date-field">{children}</div>}
-      </div>
-
-      {identity && (
+      {identity ? (
         <div className="qh-identity">
           <div className="qh-identity-row">
-            <span>Nama</span>
+            <span>Nama Karyawan</span>
             <strong>{identity.nama || '—'}</strong>
-          </div>
-          <div className="qh-identity-row">
-            <span>NIK KTP</span>
-            <strong>{identity.nationalId || '—'}</strong>
           </div>
           <div className="qh-identity-row">
             <span>NIK Karyawan</span>
             <strong>{identity.nikKaryawan || '—'}</strong>
           </div>
           <div className="qh-identity-row">
-            <span>Jabatan</span>
+            <span>NIK KTP (Nasional)</span>
+            <strong>{identity.nationalId || '—'}</strong>
+          </div>
+          <div className="qh-identity-row">
+            <span>Jabatan / Posisi</span>
             <strong>{identity.jabatan || '—'}</strong>
           </div>
           <div className="qh-identity-row">
-            <span>Unit Kerja</span>
+            <span>Departemen / Unit Kerja</span>
             <strong>{identity.site || '—'}</strong>
           </div>
           <div className="qh-identity-row">
@@ -195,10 +154,13 @@ export function IdentityPanel({
             <strong>{identity.tglMCU || '—'}</strong>
           </div>
         </div>
-      )}
+      ) : !searching ? (
+        <div style={{ padding: '12px', borderRadius: 8, background: 'rgba(255, 59, 48, 0.08)', color: '#d32f2f', fontSize: 12 }}>
+          Profil karyawan tidak ditemukan. Hubungi HR/Admin.
+        </div>
+      ) : null}
 
-      {/* children SUDAH dirender di baris pencarian (kanan). Jangan diulang di
-          sini — dulu dirender dua kali sehingga field tanggal muncul dobel. */}
+      {children && <div style={{ marginTop: 12 }}>{children}</div>}
     </div>
   );
 }

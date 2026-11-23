@@ -230,24 +230,7 @@ export default function GangguanTidurPage() {
         searching={searching}
         identity={identity}
         isEmployee={isEmployee}
-      >
-        <div className="qh-fields-grid">
-          <div>
-            <label className="qh-label" htmlFor="qh-ess-date">
-              Tanggal ESS {isEmployee && '(Otomatis)'}
-            </label>
-            <input
-              id="qh-ess-date"
-              type="date"
-              className="qh-input"
-              value={tglEss}
-              onChange={(e) => setTglEss(e.target.value)}
-              disabled={isEmployee}
-              title={isEmployee ? 'Tanggal terkunci otomatis pada hari pengisian' : undefined}
-            />
-          </div>
-        </div>
-      </IdentityPanel>
+      />
 
       <ItemGroup
         title="Delapan Situasi Kantuk"
