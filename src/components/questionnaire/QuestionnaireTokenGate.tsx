@@ -138,7 +138,7 @@ export default function QuestionnaireTokenGate({ children }: QuestionnaireTokenG
     );
   }
 
-  // Jika belum ada One-Time Token atau token kadaluarsa: Tampilkan Gate Verifikasi
+  // Jika belum ada One-Time Token atau token kadaluarsa: Tampilkan Gate Verifikasi (macOS Window Style)
   if (!session) {
     return (
       <div
@@ -149,197 +149,275 @@ export default function QuestionnaireTokenGate({ children }: QuestionnaireTokenG
           justifyContent: 'center',
           padding: '24px 16px',
           background: 'var(--background)',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif',
         }}
       >
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Verifikasi Responden"
           style={{
-            maxWidth: 460,
+            maxWidth: 440,
             width: '100%',
             background: 'var(--card)',
-            borderRadius: 16,
+            borderRadius: 14,
             border: '1px solid var(--border)',
-            padding: '28px 24px',
-            boxShadow: '0 8px 30px rgba(0,0,0,0.06)',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.22), 0 2px 10px rgba(0,0,0,0.06)',
+            overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            gap: 18,
           }}
         >
-          {/* Header Icon */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* macOS Window Title Bar */}
+          <div
+            style={{
+              height: 38,
+              padding: '0 14px',
+              borderBottom: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'var(--card)',
+              flexShrink: 0,
+              userSelect: 'none',
+            }}
+          >
+            {/* Traffic Lights */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, width: 60 }}>
+              <span
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: '50%',
+                  background: '#FF5F56',
+                  border: '1px solid #E0443E',
+                  display: 'inline-block',
+                }}
+              />
+              <span
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: '50%',
+                  background: '#FFBD2E',
+                  border: '1px solid #DEA123',
+                  display: 'inline-block',
+                }}
+              />
+              <span
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: '50%',
+                  background: '#27C93F',
+                  border: '1px solid #1AAB29',
+                  display: 'inline-block',
+                }}
+              />
+            </div>
+
+            {/* Centered Window Title */}
             <div
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: 12,
-                background: 'linear-gradient(135deg, #FF6F1A 0%, #FF4D00 100%)',
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(255, 77, 0, 0.3)',
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'var(--foreground)',
+                letterSpacing: '-0.01em',
+                textAlign: 'center',
+                flex: 1,
               }}
             >
-              <Lock size={22} strokeWidth={2.3} />
+              Verifikasi Responden — One-Time Token
             </div>
-            <div>
-              <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: 'var(--foreground)' }}>
-                Verifikasi Responden
-              </h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                <span
-                  style={{
-                    fontSize: 10.5,
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: 999,
-                    background: 'rgba(255, 94, 0, 0.1)',
-                    color: '#FF5E00',
-                  }}
-                >
-                  ⏱️ One-Time Token (30 Menit)
-                </span>
-              </div>
-            </div>
+
+            <div style={{ width: 60 }} />
           </div>
 
-          <p style={{ fontSize: 12, color: 'var(--muted-foreground)', lineHeight: 1.5, margin: 0 }}>
-            Semua pengisian kuesioner wajib dilakukan secara mandiri atas nama akun Anda sendiri. Sesi berlaku aktif maksimal <b>30 menit</b> demi keamanan dan validitas data klinis.
-          </p>
-
-          {error && (
-            <div
-              style={{
-                padding: '10px 14px',
-                borderRadius: 10,
-                background: 'rgba(255, 59, 48, 0.08)',
-                border: '1px solid rgba(255, 59, 48, 0.3)',
-                color: '#d32f2f',
-                fontSize: 12,
-                lineHeight: 1.4,
-                display: 'flex',
-                gap: 8,
-                alignItems: 'flex-start',
-              }}
-            >
-              <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleVerify} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div>
-              <label
+          {/* macOS Window Body */}
+          <div style={{ padding: '22px 24px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Header Badge */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div
                 style={{
-                  display: 'block',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: 'var(--foreground)',
-                  marginBottom: 6,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.03em',
+                  width: 42,
+                  height: 42,
+                  borderRadius: 10,
+                  background: 'rgba(255, 94, 0, 0.1)',
+                  border: '1px solid rgba(255, 94, 0, 0.25)',
+                  color: '#FF5E00',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
                 }}
               >
-                NIK Karyawan atau NIK KTP
-              </label>
-              <input
-                type="text"
-                value={nik}
-                onChange={(e) => setNik(e.target.value)}
-                placeholder="Contoh: 230802778 atau NIK KTP 16 digit"
-                disabled={loading}
-                style={{
-                  width: '100%',
-                  height: 38,
-                  padding: '0 12px',
-                  borderRadius: 10,
-                  border: '1px solid var(--border)',
-                  background: 'var(--background)',
-                  color: 'var(--foreground)',
-                  fontSize: 13,
-                  outline: 'none',
-                }}
-              />
+                <Lock size={20} strokeWidth={2.2} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: 'var(--foreground)' }}>
+                    Verifikasi Responden
+                  </h2>
+                  <span
+                    style={{
+                      fontSize: 10.5,
+                      fontWeight: 600,
+                      padding: '2px 7px',
+                      borderRadius: 6,
+                      background: 'rgba(255, 94, 0, 0.12)',
+                      color: '#FF5E00',
+                    }}
+                  >
+                    ⏱️ 30 Menit
+                  </span>
+                </div>
+                <p style={{ fontSize: 11.5, color: 'var(--muted-foreground)', margin: '2px 0 0', lineHeight: 1.4 }}>
+                  Verifikasi identitas karyawan sebelum pengisian instrumen skrining. Sesi One-Time Token aktif selama 30 menit.
+                </p>
+              </div>
             </div>
 
-            <div>
-              <label
+            {error && (
+              <div
                 style={{
-                  display: 'block',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: 'var(--foreground)',
-                  marginBottom: 6,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.03em',
+                  padding: '9px 12px',
+                  borderRadius: 8,
+                  background: 'rgba(255, 59, 48, 0.08)',
+                  border: '1px solid rgba(255, 59, 48, 0.25)',
+                  color: '#d32f2f',
+                  fontSize: 12,
+                  lineHeight: 1.4,
+                  display: 'flex',
+                  gap: 8,
+                  alignItems: 'center',
                 }}
               >
-                Verifikasi Rahasia (Tanggal Lahir / NIK KTP)
-              </label>
-              <input
-                type="password"
-                value={pin}
-                onChange={(e) => setPin(e.target.value)}
-                placeholder="Format: YYYY-MM-DD, DDMMYYYY, atau NIK KTP"
+                <AlertCircle size={15} style={{ flexShrink: 0 }} />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleVerify} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: 'var(--muted-foreground)',
+                    marginBottom: 5,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.03em',
+                  }}
+                >
+                  NIK Karyawan
+                </label>
+                <input
+                  type="text"
+                  value={nik}
+                  onChange={(e) => setNik(e.target.value)}
+                  placeholder="Contoh: 230802778"
+                  disabled={loading}
+                  autoComplete="username"
+                  style={{
+                    width: '100%',
+                    height: 38,
+                    padding: '0 12px',
+                    borderRadius: 8,
+                    border: '1px solid var(--border)',
+                    background: 'var(--background)',
+                    color: 'var(--foreground)',
+                    fontSize: 13,
+                    outline: 'none',
+                    transition: 'border-color 0.15s, box-shadow 0.15s',
+                  }}
+                />
+                <span style={{ fontSize: 11, color: 'var(--muted-foreground)', marginTop: 4, display: 'block' }}>
+                  Nomor Induk Karyawan PT. Bagong Dekaka Makmur
+                </span>
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: 'var(--muted-foreground)',
+                    marginBottom: 5,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.03em',
+                  }}
+                >
+                  Tanggal Lahir
+                </label>
+                <input
+                  type="password"
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value)}
+                  placeholder="ddmmyyyy (misal: 17081995)"
+                  disabled={loading}
+                  autoComplete="current-password"
+                  style={{
+                    width: '100%',
+                    height: 38,
+                    padding: '0 12px',
+                    borderRadius: 8,
+                    border: '1px solid var(--border)',
+                    background: 'var(--background)',
+                    color: 'var(--foreground)',
+                    fontSize: 13,
+                    outline: 'none',
+                    transition: 'border-color 0.15s, box-shadow 0.15s',
+                  }}
+                />
+                <span style={{ fontSize: 11, color: 'var(--muted-foreground)', marginTop: 4, display: 'block' }}>
+                  Format 8 digit: Hari-Bulan-Tahun (ddmmyyyy)
+                </span>
+              </div>
+
+              <button
+                type="submit"
                 disabled={loading}
                 style={{
-                  width: '100%',
-                  height: 38,
-                  padding: '0 12px',
-                  borderRadius: 10,
-                  border: '1px solid var(--border)',
-                  background: 'var(--background)',
-                  color: 'var(--foreground)',
+                  marginTop: 4,
+                  height: 40,
+                  borderRadius: 8,
+                  background: '#FF5E00',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontWeight: 600,
                   fontSize: 13,
-                  outline: 'none',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  boxShadow: '0 2px 8px rgba(255, 94, 0, 0.25)',
+                  opacity: loading ? 0.7 : 1,
+                  transition: 'opacity 0.15s ease',
                 }}
-              />
-              <span style={{ fontSize: 10.5, color: 'var(--muted-foreground)', marginTop: 4, display: 'block' }}>
-                Gunakan tanggal lahir Anda (misal 1995-10-24 atau 24101995) atau NIK KTP sebagai bukti identitas sah.
+              >
+                {loading ? 'Memverifikasi...' : 'Mulai Pengisian (Sesi 30 Menit)'}
+                {!loading && <ArrowRight size={14} />}
+              </button>
+            </form>
+
+            <div style={{ textAlign: 'center', borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+              <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>
+                🔒 Dilindungi Enkripsi AES-256 Sesuai UU No. 27/2022 (PDP)
               </span>
             </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                marginTop: 6,
-                height: 42,
-                borderRadius: 999,
-                background: 'linear-gradient(180deg, #FF6F1A 0%, #FF4D00 100%)',
-                color: '#fff',
-                border: 'none',
-                fontWeight: 700,
-                fontSize: 13,
-                cursor: loading ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                boxShadow: '0 4px 14px rgba(255, 77, 0, 0.32)',
-                opacity: loading ? 0.7 : 1,
-                transition: 'all 0.15s ease',
-              }}
-            >
-              {loading ? 'Memverifikasi...' : 'Mulai Pengisian (Sesi 30 Menit)'}
-              {!loading && <ArrowRight size={15} />}
-            </button>
-          </form>
-
-          <div style={{ textAlign: 'center', borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-            <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>
-              🔒 Dilindungi Enkripsi AES-256-GCM Sesuai UU Perlindungan Data Pribadi
-            </span>
           </div>
         </div>
       </div>
     );
   }
 
-  // Jika One-Time Token Aktif: Tampilkan Banner Sesi + Render Form Kuesioner
+  // Jika One-Time Token Aktif: Tampilkan Banner Sesi + Render Form Kuesioner (macOS Toolbar)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
-      {/* Banner Sesi 30 Menit yang Menempel di Atas Kuesioner */}
+      {/* Banner Sesi 30 Menit macOS Toolbar Style */}
       <div
         style={{
           background: 'var(--card)',
@@ -355,6 +433,7 @@ export default function QuestionnaireTokenGate({ children }: QuestionnaireTokenG
           top: 0,
           zIndex: 20,
           boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -363,33 +442,33 @@ export default function QuestionnaireTokenGate({ children }: QuestionnaireTokenG
               display: 'inline-flex',
               alignItems: 'center',
               gap: 5,
-              padding: '3px 10px',
-              borderRadius: 999,
+              padding: '3px 9px',
+              borderRadius: 6,
               background: 'rgba(0,184,148,0.12)',
               color: '#00806a',
-              fontWeight: 700,
+              fontWeight: 600,
               fontSize: 11,
             }}
           >
             <CheckCircle2 size={13} /> Sesi Responden Terverifikasi
           </span>
-          <span style={{ fontWeight: 700, color: 'var(--foreground)' }}>
+          <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>
             {session.identity.nama} (NIK: {session.identity.nikKaryawan || session.identity.nationalId})
           </span>
           <span style={{ color: 'var(--muted-foreground)' }}>• {session.identity.site}</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 5,
-              padding: '3px 10px',
-              borderRadius: 999,
+              padding: '3px 9px',
+              borderRadius: 6,
               background: remainingMinutes <= 5 ? 'rgba(255, 59, 48, 0.12)' : 'rgba(255, 149, 0, 0.12)',
               color: remainingMinutes <= 5 ? '#FF3B30' : '#FF9500',
-              fontWeight: 700,
+              fontWeight: 600,
               fontSize: 11,
             }}
           >
@@ -405,14 +484,14 @@ export default function QuestionnaireTokenGate({ children }: QuestionnaireTokenG
               alignItems: 'center',
               gap: 5,
               padding: '4px 10px',
-              borderRadius: 999,
+              borderRadius: 6,
               border: '1px solid var(--border)',
               background: 'var(--background)',
               color: 'var(--foreground)',
               fontSize: 11,
-              fontWeight: 600,
+              fontWeight: 500,
               cursor: 'pointer',
-              transition: 'all 0.15s ease',
+              transition: 'background 0.15s ease',
             }}
           >
             <LogOut size={12} /> Selesai / Ganti Akun

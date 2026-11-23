@@ -63,37 +63,59 @@ export async function POST(req: NextRequest) {
   const employeeNatId = String(decrypted.national_id ?? match.national_id ?? '');
   const employeeBirthDate = String(match.birth_date ?? decrypted.birth_date ?? '');
 
-  // 2. Verifikasi PIN: dicocokkan dengan Tanggal Lahir (YYYY-MM-DD atau DDMMYYYY) atau NIK KTP
+  // 2. Verifikasi Tanggal Lahir (Format: DDMMYYYY)
   const cleanPin = cleanDigits(pinInput);
-  const cleanBirth = cleanDigits(employeeBirthDate);
-  const cleanNatId = cleanDigits(employeeNatId);
-
   let isPinValid = false;
 
-  // Cek kecocokan tanggal lahir (bisa format YYYYMMDD atau DDMMYYYY)
-  if (cleanBirth && cleanPin) {
-    if (cleanPin === cleanBirth) isPinValid = true;
-    // Coba format tanggal terbalik DDMMYYYY vs YYYYMMDD
-    if (cleanBirth.length === 8 && cleanPin.length === 8) {
-      const birthDMY = cleanBirth.slice(6, 8) + cleanBirth.slice(4, 6) + cleanBirth.slice(0, 4);
-      if (cleanPin === birthDMY) isPinValid = true;
+  // Parsing tanggal lahir dari database (YYYY-MM-DD, DD-MM-YYYY, atau ISO timestamp)
+  let birthDateParsed: { d: string; m: string; y: string } | null = null;
+  if (employeeBirthDate) {
+    const isoMatch = employeeBirthDate.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+    if (isoMatch) {
+      birthDateParsed = {
+        y: isoMatch[1],
+        m: isoMatch[2].padStart(2, '0'),
+        d: isoMatch[3].padStart(2, '0'),
+      };
+    } else {
+      const dmyMatch = employeeBirthDate.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+      if (dmyMatch) {
+        birthDateParsed = {
+          d: dmyMatch[1].padStart(2, '0'),
+          m: dmyMatch[2].padStart(2, '0'),
+          y: dmyMatch[3],
+        };
+      }
     }
   }
 
-  // Cek kecocokan NIK KTP (penuh atau 4/6 digit terakhir)
-  if (!isPinValid && cleanNatId && cleanPin) {
-    if (cleanPin === cleanNatId) isPinValid = true;
-    if (cleanPin.length >= 4 && cleanNatId.endsWith(cleanPin)) isPinValid = true;
+  if (birthDateParsed && cleanPin) {
+    const expectedDdmmyyyy = `${birthDateParsed.d}${birthDateParsed.m}${birthDateParsed.y}`;
+    const expectedYyyymmdd = `${birthDateParsed.y}${birthDateParsed.m}${birthDateParsed.d}`;
+    if (cleanPin === expectedDdmmyyyy || cleanPin === expectedYyyymmdd) {
+      isPinValid = true;
+    }
   }
 
-  // Cek kecocokan langsung dengan format string tanggal asli (mis. 1995-10-24)
-  if (!isPinValid && employeeBirthDate && pinInput === employeeBirthDate) {
-    isPinValid = true;
+  // Fallback: perbandingan digit bersih langsung jika parsing regex belum cocok
+  if (!isPinValid && cleanPin) {
+    const cleanBirth = cleanDigits(employeeBirthDate).slice(0, 8);
+    if (cleanBirth.length === 8 && cleanPin.length === 8) {
+      const birthDMY = cleanBirth.slice(6, 8) + cleanBirth.slice(4, 6) + cleanBirth.slice(0, 4);
+      if (cleanPin === cleanBirth || cleanPin === birthDMY) {
+        isPinValid = true;
+      }
+    }
+    // Fallback NIK KTP jika tersedia
+    const cleanNatId = cleanDigits(employeeNatId);
+    if (cleanNatId && cleanPin === cleanNatId) {
+      isPinValid = true;
+    }
   }
 
   if (!isPinValid) {
     return NextResponse.json(
-      { error: 'Verifikasi identitas gagal. Tanggal lahir atau NIK KTP yang dimasukkan tidak cocok dengan data karyawan.' },
+      { error: 'Verifikasi identitas gagal. Tanggal lahir yang dimasukkan (format ddmmyyyy) tidak sesuai dengan data karyawan.' },
       { status: 401 }
     );
   }

@@ -34,6 +34,7 @@ import {
   useSubmitStatus,
   type ResultDialogData,
 } from '@/components/questionnaire/QuestionnaireUI';
+import ConsentGate, { EMPTY_CONSENT, type ConsentState } from '@/components/questionnaire/ConsentGate';
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -92,6 +93,7 @@ export default function GangguanTidurPage() {
   const [values, setValues] = useState<Record<string, string>>({});
   const [tglEss, setTglEss] = useState(today());
   const [resultDialog, setResultDialog] = useState<ResultDialogData | null>(null);
+  const [consent, setConsent] = useState<ConsentState>(EMPTY_CONSENT);
 
   const sessionInfo = useMemo(() => getPreShiftSession(), []);
 
@@ -156,7 +158,17 @@ export default function GangguanTidurPage() {
     }
   }
 
-  const canSave = !!identity && filled > 0 && submit.status !== 'saving';
+  const canSave = !!identity && filled > 0 && consent.accepted && submit.status !== 'saving';
+
+  // Gerbang persetujuan — wajib menyetujui lembar informed consent dulu.
+  if (!consent.accepted) {
+    return (
+      <ConsentGate
+        instrumen="Gangguan Tidur (Epworth Sleepiness Scale)"
+        onAccept={(c) => setConsent(c)}
+      />
+    );
+  }
 
   return (
     <div className="admin-form-container" style={{ padding: '0 16px 8px 16px', height: '100%', minHeight: 0, overflowY: 'auto' }}>

@@ -509,38 +509,14 @@ function HomeContent() {
 function DataEntryContent() {
   const activeDataEntrySidebar = useMCUStore((s) => s.activeDataEntrySidebar);
   if (activeDataEntrySidebar === 'gangguan-tidur') {
-    return (
-      <div className="admin-form-container">
-        <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)' }}>Memuat...</div>}>
-          <QuestionnaireTokenGate>
-            <GangguanTidurPage />
-          </QuestionnaireTokenGate>
-        </Suspense>
-      </div>
-    );
+    return <div className="admin-form-container"><GangguanTidurPage /></div>;
   }
   if (activeDataEntrySidebar === 'kesehatan-mental') {
-    return (
-      <div className="admin-form-container">
-        <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)' }}>Memuat...</div>}>
-          <QuestionnaireTokenGate>
-            <InputMentalHealthPage />
-          </QuestionnaireTokenGate>
-        </Suspense>
-      </div>
-    );
+    return <div className="admin-form-container"><InputMentalHealthPage /></div>;
   }
   // SDS-30 = faktor psikologi lingkungan kerja → menu sendiri (bukan di Kesehatan Mental).
   if (activeDataEntrySidebar === 'psikologi-lingkungan') {
-    return (
-      <div className="admin-form-container">
-        <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--muted-foreground)' }}>Memuat...</div>}>
-          <QuestionnaireTokenGate>
-            <InputPsikologiLingkunganPage />
-          </QuestionnaireTokenGate>
-        </Suspense>
-      </div>
-    );
+    return <div className="admin-form-container"><InputPsikologiLingkunganPage /></div>;
   }
   if (activeDataEntrySidebar === 'persetujuan-ergonomi') {
     return <div className="admin-form-container" style={{ overflow: 'hidden' }}><ErgoApproval /></div>;
@@ -1014,29 +990,153 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.25 }}
+      transition={{ duration: 0.2 }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <motion.div
         className="login-card"
         style={{ position: 'relative' }}
-        initial={{ opacity: 0, scale: 0.88, y: 24 }}
+        initial={{ opacity: 0, scale: 0.95, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.88, y: 24 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+        exit={{ opacity: 0, scale: 0.95, y: 16 }}
+        transition={{ type: 'spring', stiffness: 450, damping: 32 }}
       >
-        <button className="login-close-btn" onClick={onClose}>
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
-        </button>
+        {/* macOS Window Title Bar */}
+        <div
+          style={{
+            height: 38,
+            padding: '0 14px',
+            borderBottom: '1px solid var(--border)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'var(--card)',
+            flexShrink: 0,
+            userSelect: 'none',
+          }}
+        >
+          {/* Traffic Lights */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, width: 60 }}>
+            <button
+              type="button"
+              onClick={onClose}
+              title="Tutup (Esc)"
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: '50%',
+                background: '#FF5F56',
+                border: '1px solid #E0443E',
+                display: 'inline-block',
+                cursor: 'pointer',
+                padding: 0,
+                outline: 'none',
+              }}
+            />
+            <span
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: '50%',
+                background: '#FFBD2E',
+                border: '1px solid #DEA123',
+                display: 'inline-block',
+              }}
+            />
+            <span
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: '50%',
+                background: '#27C93F',
+                border: '1px solid #1AAB29',
+                display: 'inline-block',
+              }}
+            />
+          </div>
 
-        <div style={{ paddingTop: 24, paddingBottom: 4, textAlign: 'center' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/BM.png" alt="BG-Health" className="login-logo-rotating" />
+          {/* Centered Window Title */}
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: 'var(--foreground)',
+              letterSpacing: '-0.01em',
+              textAlign: 'center',
+              flex: 1,
+            }}
+          >
+            {mode === 'login' ? 'Masuk Akun — BG-Health' : 'Registrasi Akun Karyawan'}
+          </div>
+
+          <div style={{ width: 60 }} />
         </div>
 
         <div className="login-card-body">
-          <h2>{mode === 'login' ? 'Masuk' : 'Daftar'}</h2>
-          <p className="login-card-subtitle">{mode === 'login' ? 'Masuk dengan email atau identitas karyawan' : 'Daftar akun baru'}</p>
+          {/* macOS Segmented Control */}
+          <div
+            style={{
+              display: 'flex',
+              padding: 3,
+              background: 'var(--muted)',
+              borderRadius: 8,
+              marginBottom: 16,
+              border: '1px solid var(--border)',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => { setMode('login'); setError(''); }}
+              style={{
+                flex: 1,
+                padding: '6px 0',
+                fontSize: 12,
+                fontWeight: mode === 'login' ? 600 : 500,
+                borderRadius: 6,
+                border: 'none',
+                background: mode === 'login' ? 'var(--card)' : 'transparent',
+                color: mode === 'login' ? 'var(--foreground)' : 'var(--muted-foreground)',
+                boxShadow: mode === 'login' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Masuk
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode('register'); setError(''); }}
+              style={{
+                flex: 1,
+                padding: '6px 0',
+                fontSize: 12,
+                fontWeight: mode === 'register' ? 600 : 500,
+                borderRadius: 6,
+                border: 'none',
+                background: mode === 'register' ? 'var(--card)' : 'transparent',
+                color: mode === 'register' ? 'var(--foreground)' : 'var(--muted-foreground)',
+                boxShadow: mode === 'register' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Daftar Akun
+            </button>
+          </div>
+
+          {/* Header Brand */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/BM.png" alt="BG-Health" style={{ width: 34, height: 34, objectFit: 'contain' }} />
+            <div>
+              <h2 style={{ fontSize: 14.5, fontWeight: 700, margin: 0, textAlign: 'left', color: 'var(--foreground)' }}>
+                {mode === 'login' ? 'Portal Kesehatan Kerja' : 'Pendaftaran Karyawan'}
+              </h2>
+              <p style={{ fontSize: 11.5, color: 'var(--muted-foreground)', margin: '2px 0 0', textAlign: 'left' }}>
+                {mode === 'login' ? 'Gunakan NIK Karyawan atau Email terdaftar' : 'Verifikasi data kepegawaian PT. Bagong Dekaka Makmur'}
+              </p>
+            </div>
+          </div>
 
           {mode === 'login' ? (
           <>
@@ -1083,22 +1183,21 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
               </div>
             </div>
             {error && (
-              <p className="login-error-msg">{error}</p>
+              <p className="login-error-msg" style={{ marginBottom: 12 }}>{error}</p>
             )}
             <button type="submit" className="login-btn" disabled={loading}>
               {loading ? 'Memproses...' : 'Masuk'}
             </button>
           </form>
 
-          <p className="login-footer-text">
-            Perlu akses petugas?{' '}
-            <button type="button" onClick={() => { setMode('register'); setError(''); }} style={{ background: 'none', border: 'none', color: '#ff4d00', fontWeight: 600, cursor: 'pointer', fontSize: 12, padding: 0 }}>
+          <p className="login-footer-text" style={{ marginTop: 14, fontSize: 11, color: 'var(--muted-foreground)', textAlign: 'center' }}>
+            Perlu akses akun baru?{' '}
+            <button type="button" onClick={() => { setMode('register'); setError(''); }} style={{ background: 'none', border: 'none', color: '#ff5e00', fontWeight: 600, cursor: 'pointer', fontSize: 11, padding: 0 }}>
               Daftar di sini
             </button>
           </p>
-          <p className="login-footer-text" style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-            Login menggunakan email atau NIK Karyawan/NIK KTP yang terhubung ke akun. Akun karyawan harus
-            didaftarkan dan disetujui Superuser terlebih dahulu; gunakan password yang ditetapkan untuk akun Anda.
+          <p className="login-footer-text" style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)', fontSize: 10.5, color: 'var(--muted-foreground)', lineHeight: 1.4 }}>
+            Sistem terintegrasi data kepegawaian dan klinik kerja PT. Bagong Dekaka Makmur. Sesuai standar UU Pelindungan Data Pribadi.
           </p>
           </>
           ) : (
