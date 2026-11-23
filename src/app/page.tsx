@@ -360,7 +360,6 @@ const DASH_SIDEBAR: SidebarItem[] = [
   // berbeda sehingga tidak boleh saling menggantikan.
   { key: 'inspeksi-dashboard', label: 'Program Inspeksi', icon: <IconSarana />, adminOnly: true },
   { key: 'higiene-industri', label: 'Higiene Industri', icon: <IconHigiene />, adminOnly: true },
-  { key: 'hra-dashboard', label: 'Health Risk Assessment', icon: <IconHra />, adminOnly: true },
   { key: 'gizi-kerja-dashboard', label: 'Gizi Kerja', icon: <IconGizi />, adminOnly: true },
   { key: 'mental-health-dashboard', label: 'Kesehatan Mental', icon: <IconBrain />, adminOnly: true },
 ];
@@ -628,7 +627,6 @@ function DashContent() {
         import('@/components/dashboard/ProgramInspeksiTabs'),
         import('@/components/dashboard/MentalHealthDashboard'),
         import('@/components/dashboard/GiziKerjaDashboard'),
-        import('@/components/administrator/HraAdminTabs'),
         import('@/components/administrator/LaggingIndicatorPage'),
         import('@/components/review-mcu/ReviewMCU'),
       ]);
@@ -676,7 +674,6 @@ function DashContent() {
     case 'spip': return <ProgramInspeksiTabs initialTab="kondisi-aset" />;
     case 'inspeksi-dashboard': return <ProgramInspeksiTabs />;
     case 'higiene-industri': return <HigieneIndustriTabs />;
-    case 'hra-dashboard': return <HraAdminTabs />;
     case 'gizi-kerja-dashboard': return <GiziKerjaDashboard />;
     case 'hearing-dashboard': return <HigieneIndustriTabs initialTab="hearing" />;
     case 'ergonomi-dashboard': return <HigieneIndustriTabs initialTab="ergonomi" />;
