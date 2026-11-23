@@ -5,7 +5,6 @@ import { ChartJS } from '@/lib/chart-register';
 import { MONTHS, JOBSITES } from '@/lib/lagging-data';
 import { fetchDashboardData } from '@/lib/dashboard-data';
 import { STANDAR_ANIMASI_BAR, BAR_LAYOUT, animasiUlang, skalaBar, useAnimationReady } from '@/lib/chart-standard';
-import HraExecutiveWidget from './HraExecutiveWidget';
 
 const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
@@ -860,9 +859,6 @@ export default function DashboardView() {
           </div>
         </div>
       </div>
-
-      {/* ── HRA Executive Summary Widget (FORM/069 Rev.001) ── */}
-      <HraExecutiveWidget />
     </div>
   );
 }
