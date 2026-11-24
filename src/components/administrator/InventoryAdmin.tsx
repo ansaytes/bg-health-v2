@@ -326,13 +326,12 @@ export default function InventoryAdmin() {
     width: '100%', height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)', padding: '0 8px', fontSize: 11.5, color: 'var(--foreground)', outline: 'none'
   };
   const inventoryHeaderCellStyle: React.CSSProperties = {
-    padding: '6px 10px',
+    padding: '8px 10px',
     borderBottom: '1px solid var(--border)',
-    fontWeight: 600,
+    fontWeight: 700,
     fontSize: '11px',
     whiteSpace: 'nowrap',
-    background: 'var(--background)',
-    color: 'var(--foreground)',
+    letterSpacing: '0.04em',
   };
 
   return (
@@ -347,30 +346,31 @@ export default function InventoryAdmin() {
         <button
           type="button"
           onClick={() => setIsAddOpen(true)}
-          className="admin-form-btn-primary compact-btn"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 30, fontSize: 11.5 }}
+          className="download-btn-trigger"
+          style={{ height: 28, fontSize: 11, padding: '0 12px', borderRadius: 8, marginRight: 0 }}
         >
-          <Plus size={14} /> Tambah Item Master
+          <Plus size={13} />
+          <span>Tambah Item Master</span>
         </button>
       </div>
 
       {/* Toolbar */}
       <div className="mcu-records-toolbar" style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'transparent', padding: '0', border: 'none', flexWrap: 'nowrap' }}>
-        <div className="mcu-records-search" style={{ flex: '1 1 0px', minWidth: 0, display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--card)', padding: '0 10px', height: '30px', borderRadius: '6px', border: '1px solid var(--border)', boxSizing: 'border-box' }}>
-          <Search size={14} className="text-muted-foreground" style={{ flexShrink: 0 }} />
+        <div className="mcu-records-search" style={{ flex: '1 1 0px', minWidth: 0, display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--card)', padding: '0 10px', height: '28px', borderRadius: '8px', border: '1px solid var(--border)', boxSizing: 'border-box' }}>
+          <Search size={13} className="text-muted-foreground" style={{ flexShrink: 0 }} />
           <input
             type="text"
             placeholder="Cari nama obat atau bahan medis..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontSize: '11.5px', height: '100%' }}
+            style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontSize: '11px', height: '100%' }}
           />
         </div>
-        <div style={{ flexShrink: 0, width: '160px' }}>
+        <div style={{ flexShrink: 0, width: '150px' }}>
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            style={{ width: '100%', height: '30px', padding: '0 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card)', fontSize: '11.5px', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
+            style={{ width: '100%', height: '28px', padding: '0 8px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card)', fontSize: '11px', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
           >
             <option value="Semua">Semua Kategori</option>
             <option value="Obat">Obat</option>
@@ -383,7 +383,7 @@ export default function InventoryAdmin() {
             value={stockFilter}
             onChange={(e) => setStockFilter(e.target.value as StockFilter)}
             title="Filter klasifikasi status stok"
-            style={{ width: '100%', height: '30px', padding: '0 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card)', fontSize: '11.5px', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
+            style={{ width: '100%', height: '28px', padding: '0 8px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card)', fontSize: '11px', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
           >
             <option value="Semua">Semua Status Stok</option>
             <option value="Aman">Aman</option>
@@ -452,26 +452,26 @@ export default function InventoryAdmin() {
 
                 return (
                   <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '6px 10px', color: 'var(--muted-foreground)' }}>{idx + 1}</td>
-                    <td style={{ padding: '6px 10px' }}>
-                      <div style={{ fontWeight: 600, fontSize: '12px' }}>{item.name}</div>
-                      <div style={{ fontSize: '10px', color: 'var(--muted-foreground)', marginTop: '1px' }}>{item.category}</div>
+                    <td style={{ padding: '8px 10px', color: 'var(--muted-foreground)', textAlign: 'center', fontSize: '11px' }}>{idx + 1}</td>
+                    <td style={{ padding: '8px 10px' }}>
+                      <div style={{ fontWeight: 600, fontSize: '12px', color: 'var(--foreground)' }}>{item.name}</div>
+                      <div style={{ fontSize: '10.5px', color: 'var(--muted-foreground)', marginTop: '1px' }}>{item.category}</div>
                     </td>
 
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '8px 10px', whiteSpace: 'nowrap', fontSize: '11.5px' }}>
                       {item.tanggal_masuk ? new Date(item.tanggal_masuk).toLocaleDateString('id-ID') : '-'}
                     </td>
 
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '8px 10px', whiteSpace: 'nowrap', fontSize: '11.5px' }}>
                       {item.tanggal_expired ? new Date(item.tanggal_expired).toLocaleDateString('id-ID') : '-'}
                     </td>
 
-                    <td style={{ padding: '6px 10px' }}>
-                      <div style={{ fontWeight: 700, fontSize: '12.5px' }}>{item.stock} <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--muted-foreground)' }}>{item.unit}</span></div>
+                    <td style={{ padding: '8px 10px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '12px' }}>{item.stock} <span style={{ fontSize: '10.5px', fontWeight: 400, color: 'var(--muted-foreground)' }}>{item.unit}</span></div>
                     </td>
 
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <div style={{ fontWeight: 600 }}>{item.avg_monthly_usage || 0} <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--muted-foreground)' }}>{item.unit}</span></div>
+                    <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontWeight: 600, fontSize: '12px' }}>{item.avg_monthly_usage || 0} <span style={{ fontSize: '10.5px', fontWeight: 400, color: 'var(--muted-foreground)' }}>{item.unit}</span></div>
                       {isFastMoving && (
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 2, fontSize: '9.5px', fontWeight: 700, color: '#00838f' }}>
                           <Clock size={9} /> Fast Moving
@@ -480,25 +480,100 @@ export default function InventoryAdmin() {
                     </td>
 
                     <td style={{ padding: '6px 10px', textAlign: 'center' }}>
-                      <span style={{ background: stockBadge.bg, color: stockBadge.color, padding: '2px 6px', borderRadius: 4, fontSize: '9.5px', fontWeight: 800 }}>
-                        {stockStatus.toUpperCase()}
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '2px 8px',
+                        borderRadius: 999,
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        background: stockBadge.bg,
+                        color: stockBadge.color,
+                        border: `1px solid ${stockBadge.color}33`,
+                      }}>
+                        {stockStatus}
                       </span>
                     </td>
 
                     <td style={{ padding: '6px 10px', textAlign: 'center' }}>
-                      <span style={{ background: expBadge.bg, color: expBadge.color, padding: '2px 6px', borderRadius: 4, fontSize: '9.5px', fontWeight: 700 }}>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '2px 8px',
+                        borderRadius: 999,
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        background: expBadge.bg,
+                        color: expBadge.color,
+                        border: `1px solid ${expBadge.color}33`,
+                      }}>
                         {expStatus}
                       </span>
                     </td>
 
                     <td style={{ padding: '6px 10px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                        <Button size="sm" variant="outline" title="Tambah Stok / Restock (Batch Baru)" style={{ padding: '0 6px', height: '26px', fontSize: '11px', background: '#c2410c', color: '#ffffff', border: 'none' }} onClick={() => openRestock(item)}>
-                          <ArchiveRestore size={12} className="mr-1" /> Restock
-                        </Button>
-                        <Button size="sm" variant="ghost" title={`Edit ${item.name}`} style={{ width: '26px', height: '26px', padding: 0 }} onClick={() => openEdit(item)}><Edit size={13} /></Button>
+                      <div style={{ display: 'flex', gap: '5px', justifyContent: 'center', alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={() => openRestock(item)}
+                          className="download-btn-trigger"
+                          style={{
+                            height: 24,
+                            padding: '0 8px',
+                            fontSize: 10.5,
+                            marginRight: 0,
+                            borderRadius: 6,
+                            boxShadow: '0 1px 3px rgba(255, 77, 0, 0.25)',
+                          }}
+                          title="Tambah Stok / Restock (Batch Baru)"
+                        >
+                          <ArchiveRestore size={11} />
+                          <span>Restock</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEdit(item)}
+                          title={`Edit ${item.name}`}
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 6,
+                            border: '1px solid var(--border)',
+                            background: 'var(--card)',
+                            color: 'var(--foreground)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <Edit size={12} />
+                        </button>
                         {isSuperuser && (
-                          <Button size="sm" variant="ghost" title={`Hapus ${item.name}`} disabled={deletingItemId === item.id} style={{ width: '26px', height: '26px', padding: 0 }} className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => void handleDeleteItem(item)}><Trash2 size={13} /></Button>
+                          <button
+                            type="button"
+                            disabled={deletingItemId === item.id}
+                            onClick={() => void handleDeleteItem(item)}
+                            title={`Hapus ${item.name}`}
+                            style={{
+                              width: 24,
+                              height: 24,
+                              borderRadius: 6,
+                              border: '1px solid var(--border)',
+                              background: 'var(--card)',
+                              color: '#ef4444',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <Trash2 size={12} />
+                          </button>
                         )}
                       </div>
                     </td>
@@ -542,8 +617,8 @@ export default function InventoryAdmin() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>Batal</Button>
-              <Button type="submit" disabled={saving}>{saving ? 'Menyimpan...' : 'Simpan'}</Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => setIsAddOpen(false)}>Batal</Button>
+              <Button type="submit" size="sm" disabled={saving}>{saving ? 'Menyimpan...' : 'Simpan'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -581,8 +656,8 @@ export default function InventoryAdmin() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>Batal</Button>
-              <Button type="submit" disabled={editSaving}>{editSaving ? 'Menyimpan...' : 'Simpan Perubahan'}</Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => setIsEditOpen(false)}>Batal</Button>
+              <Button type="submit" size="sm" disabled={editSaving}>{editSaving ? 'Menyimpan...' : 'Simpan Perubahan'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -608,8 +683,8 @@ export default function InventoryAdmin() {
               <input type="date" style={inputStyle} required value={restockForm.tanggal_expired} onChange={e => setRestockForm({...restockForm, tanggal_expired: e.target.value})} />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsRestockOpen(false)}>Batal</Button>
-              <Button type="submit" disabled={restockSaving}>{restockSaving ? 'Menyimpan...' : 'Tambah Batch'}</Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => setIsRestockOpen(false)}>Batal</Button>
+              <Button type="submit" size="sm" disabled={restockSaving}>{restockSaving ? 'Menyimpan...' : 'Tambah Batch'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

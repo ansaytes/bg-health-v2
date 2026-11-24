@@ -1034,32 +1034,19 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
         transition={{ type: 'spring', stiffness: 450, damping: 32 }}
       >
         {/* macOS Window Title Bar */}
-        <div
-          style={{
-            height: 40,
-            padding: '0 14px',
-            borderBottom: '1px solid var(--border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: 'var(--card)',
-            flexShrink: 0,
-            userSelect: 'none',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="brand-orange-dot" aria-hidden="true" />
-            <span
-              style={{
-                fontSize: 12.5,
-                fontWeight: 700,
-                color: 'var(--foreground)',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              {mode === 'login' ? 'Masuk ke BG-Health' : 'Pendaftaran Akun Karyawan'}
-            </span>
-          </div>
+        <div className="login-card-header">
+          <div style={{ width: 28 }} />
+          <span
+            style={{
+              fontSize: 13.5,
+              fontWeight: 700,
+              color: 'var(--foreground)',
+              letterSpacing: '-0.01em',
+              textAlign: 'center',
+            }}
+          >
+            {mode === 'login' ? 'Login' : 'Pendaftaran Baru'}
+          </span>
 
           <button
             type="button"
@@ -1086,57 +1073,6 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="login-card-body">
-          {/* macOS Segmented Control */}
-          <div
-            style={{
-              display: 'flex',
-              padding: 3,
-              background: 'var(--muted)',
-              borderRadius: 8,
-              marginBottom: 16,
-              border: '1px solid var(--border)',
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => { setMode('login'); setError(''); }}
-              style={{
-                flex: 1,
-                padding: '6px 0',
-                fontSize: 12,
-                fontWeight: mode === 'login' ? 700 : 500,
-                borderRadius: 6,
-                border: mode === 'login' ? '1px solid rgba(255, 77, 0, 0.25)' : 'none',
-                background: mode === 'login' ? 'var(--card)' : 'transparent',
-                color: mode === 'login' ? '#FF4D00' : 'var(--muted-foreground)',
-                boxShadow: mode === 'login' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              Masuk
-            </button>
-            <button
-              type="button"
-              onClick={() => { setMode('register'); setError(''); }}
-              style={{
-                flex: 1,
-                padding: '6px 0',
-                fontSize: 12,
-                fontWeight: mode === 'register' ? 700 : 500,
-                borderRadius: 6,
-                border: mode === 'register' ? '1px solid rgba(255, 77, 0, 0.25)' : 'none',
-                background: mode === 'register' ? 'var(--card)' : 'transparent',
-                color: mode === 'register' ? '#FF4D00' : 'var(--muted-foreground)',
-                boxShadow: mode === 'register' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              Daftar Akun
-            </button>
-          </div>
-
           {/* Header Brand */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1191,7 +1127,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
               <p className="login-error-msg" style={{ marginBottom: 12 }}>{error}</p>
             )}
             <button type="submit" className="login-btn" disabled={loading}>
-              {loading ? 'Memproses...' : 'Masuk ke Aplikasi'}
+              {loading ? 'Memproses...' : 'Login'}
             </button>
           </form>
           </>
@@ -1323,7 +1259,37 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
           </>
           )}
 
-          <p className="login-footer-text" style={{ marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--border)', fontSize: 10.5, color: 'var(--muted-foreground)', textAlign: 'center', lineHeight: 1.4 }}>
+          {/* Tab Switcher persis model header-nav (Capsule Pill) */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginTop: 16,
+              width: '100%',
+            }}
+          >
+            <nav className="header-nav" style={{ width: '100%', margin: 0, display: 'flex' }}>
+              <button
+                type="button"
+                onClick={() => { setMode('login'); setError(''); }}
+                className={`header-nav-item${mode === 'login' ? ' active' : ''}`}
+                style={{ flex: 1, minWidth: 0, height: 32 }}
+              >
+                <span>Login</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode('register'); setError(''); }}
+                className={`header-nav-item${mode === 'register' ? ' active' : ''}`}
+                style={{ flex: 1, minWidth: 0, height: 32 }}
+              >
+                <span>Pendaftaran Baru</span>
+              </button>
+            </nav>
+          </div>
+
+          <p className="login-footer-text" style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)', fontSize: 10.5, color: 'var(--muted-foreground)', textAlign: 'center', lineHeight: 1.4 }}>
             System Management OHIH PT. Bagong Dekaka Makmur
           </p>
           <Popup state={popupState} closePopup={closePopup} />
