@@ -77,16 +77,20 @@ export default function KunjunganBerobatForm() {
   const [showRiwayatModal, setShowRiwayatModal] = useState(false);
   const [detectedAllergy, setDetectedAllergy] = useState<string>('');
 
-  const fetchPatientHistory = useCallback(async (nik: string) => {
-    if (!nik || !nik.trim()) {
+  const fetchPatientHistory = useCallback(async (nik?: string, nama?: string) => {
+    const cleanNik = (nik || '').trim();
+    const cleanNama = (nama || '').trim();
+    if (!cleanNik && !cleanNama) {
       setPatientHistory([]);
       setDetectedAllergy('');
       return;
     }
     setLoadingHistory(true);
     try {
-      const res = await fetch(`/api/kunjungan?nik=${encodeURIComponent(nik.trim())}`);
-      const json = await res.json();
+      const params = new URLSearchParams();
+      if (cleanNik) params.set('nik', cleanNik);
+      if (cleanNama) params.set('nama', cleanNama);
+      const json = await authFetch<{ success: boolean; data?: any[] }>(`/api/kunjungan?${params.toString()}`);
       if (json.success && Array.isArray(json.data)) {
         setPatientHistory(json.data);
         let foundAllergy = '';
@@ -175,9 +179,9 @@ export default function KunjunganBerobatForm() {
 
   // 2. Autofill Employee: Jobsite, Jenis Kelamin, Departemen, Usia, Nama
   const handleEmployeeFound = useCallback((data: EmployeeData) => {
-    // NIK & Riwayat
-    if (data.nik) {
-      fetchPatientHistory(data.nik);
+    // NIK, Nama & Riwayat
+    if (data.nik || data.nama) {
+      fetchPatientHistory(data.nik, data.nama);
     }
 
     // Nama
@@ -588,8 +592,8 @@ export default function KunjunganBerobatForm() {
                                 type="button"
                                 className="download-btn-trigger"
                                 onClick={() => {
-                                  if (form.nik && patientHistory.length === 0) {
-                                    fetchPatientHistory(form.nik);
+                                  if ((form.nik || form.nama) && patientHistory.length === 0) {
+                                    fetchPatientHistory(form.nik, form.nama);
                                   }
                                   setShowRiwayatModal(true);
                                 }}

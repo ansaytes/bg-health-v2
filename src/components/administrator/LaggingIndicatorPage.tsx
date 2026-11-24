@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePopup, Popup } from '@/lib/popup';
 import CenteredTabs from '@/components/ui/centered-tabs';
 import { JOBSITES } from '@/lib/lagging-data';
 import { authFetch } from '@/lib/api-client';
@@ -122,6 +123,7 @@ function StatistikKesehatanForm() {
   const [loading, setLoading] = useState(false);
   const [aggregating, setAggregating] = useState(false);
   const [aggregateInfo, setAggregateInfo] = useState<string>('');
+  const { popup, popupState, closePopup } = usePopup();
 
   /** Hitung nilai expected setiap lagging field dari denominator */
   const calcExpected = (r: IndicatorRow): Partial<Record<keyof IndicatorRow, number>> => {
@@ -398,7 +400,7 @@ function StatistikKesehatanForm() {
             className={`admin-form-btn-primary compact-btn${saved ? ' saved' : ''}`}>
             {saving ? 'Menyimpan...' : saved ? 'Tersimpan!' : 'Simpan Data'}
           </button>
-          <button type="button" onClick={() => cetakLaporanSMKP(row)}
+          <button type="button" onClick={() => cetakLaporanSMKP(row, popup)}
             className="admin-form-btn-secondary compact-btn"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--muted)', borderColor: 'var(--border)' }}>
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" /></svg>
@@ -410,6 +412,7 @@ function StatistikKesehatanForm() {
           </button>
         </div>
       </div>
+      <Popup state={popupState} closePopup={closePopup} />
     </form>
   );
 }
@@ -448,13 +451,24 @@ function SectionHeader({ icon, title, subtitle, badge }: { icon: 'calendar' | 'c
   );
 }
 
-function cetakLaporanSMKP(row: IndicatorRow) {
+function cetakLaporanSMKP(row: IndicatorRow, popup: (opts: any) => void) {
   if (!row.jobsite || !row.bulan || !row.tahun) {
-    alert('Pilih periode tahun, bulan, dan jobsite terlebih dahulu.');
+    popup({
+      type: 'warn',
+      title: 'Data Belum Lengkap',
+      message: 'Pilih periode tahun, bulan, dan jobsite terlebih dahulu sebelum mencetak laporan bulanan SMKP.',
+    });
     return;
   }
   const printWindow = window.open('', '_blank');
-  if (!printWindow) return;
+  if (!printWindow) {
+    popup({
+      type: 'error',
+      title: 'Jendela Cetak Terblokir',
+      message: 'Browser memblokir jendela cetak. Harap izinkan pop-up pada peramban Anda untuk mencetak laporan SMKP.',
+    });
+    return;
+  }
 
   const namaBulan = FULL_MONTHS[row.bulan - 1] || String(row.bulan);
   const rkk = (row.rkk * 100).toFixed(2);

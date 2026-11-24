@@ -294,7 +294,7 @@ export default function SaranaKlinik({ onBukaPica }: { onBukaPica?: () => void }
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{ fontWeight: 600, fontSize: 11 }}>{it.nama}</span>
                             {!it.wajib && (
-                              <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
+                              <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
                                 tambahan
                               </span>
                             )}
@@ -311,7 +311,7 @@ export default function SaranaKlinik({ onBukaPica }: { onBukaPica?: () => void }
                               fontSize: 11,
                               fontWeight: 700,
                               padding: '0 20px 0 8px',
-                              borderRadius: 999,
+                              borderRadius: 6,
                               border: `1px solid ${meta.warna}66`,
                               background: `${meta.warna}15`,
                               color: meta.warna,

@@ -74,7 +74,8 @@ export default function DataManPowerTable({ canEdit = false }: DataManPowerTable
       if (monthFilter !== 'Semua') params.set('bulan', String(MONTHS.indexOf(monthFilter)));
       params.set('tahun', yearFilter);
 
-      const res = await fetch(`/api/manpower?${params}`);
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/manpower?${params}`, { headers });
       const json = await res.json();
       if (json.success) setRows(json.data || []);
     } catch {

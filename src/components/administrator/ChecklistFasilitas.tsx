@@ -564,7 +564,7 @@ export default function ChecklistFasilitas({
                       fontSize: 11.5,
                       fontWeight: 700,
                       padding: '0 24px 0 10px',
-                      borderRadius: 999,
+                      borderRadius: 6,
                       border: '1px solid var(--border)',
                       background: (unitStatus[grup]?.kesiapan ?? 'ready') === 'ready' ? 'rgba(0,184,148,0.15)' : (unitStatus[grup]?.kesiapan ?? 'ready') === 'breakdown' ? 'rgba(255,45,45,0.15)' : 'rgba(241,196,15,0.15)',
                       color: (unitStatus[grup]?.kesiapan ?? 'ready') === 'ready' ? '#00B894' : (unitStatus[grup]?.kesiapan ?? 'ready') === 'breakdown' ? '#FF2D2D' : '#C99A00',
@@ -721,7 +721,7 @@ export default function ChecklistFasilitas({
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               <span style={{ fontWeight: 600, fontSize: 11 }}>{b.nama}</span>
                               {!b.wajib && (
-                                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
+                                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
                                   opsional
                                 </span>
                               )}
@@ -749,7 +749,7 @@ export default function ChecklistFasilitas({
                                 fontSize: 11,
                                 fontWeight: 700,
                                 padding: '0 20px 0 8px',
-                                borderRadius: 999,
+                                borderRadius: 6,
                                 border: `1px solid ${meta.warna}66`,
                                 background: `${meta.warna}15`,
                                 color: meta.warna,

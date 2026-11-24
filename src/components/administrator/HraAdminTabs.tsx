@@ -135,7 +135,7 @@ function HraMappingView() {
         </div>
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* Spotlight Search Pill */}
+          {/* Spotlight Search */}
           <div
             style={{
               display: 'flex',
@@ -143,7 +143,7 @@ function HraMappingView() {
               gap: 7,
               background: 'var(--background)',
               border: '1px solid var(--border)',
-              borderRadius: 999,
+              borderRadius: 8,
               padding: '0 12px',
               height: 32,
               minWidth: 200,
@@ -318,7 +318,7 @@ function HraMappingView() {
                           fontSize: 10,
                           fontWeight: 600,
                           padding: '2px 8px',
-                          borderRadius: 999,
+                          borderRadius: 4,
                           background: isJobsite && !isHO ? 'rgba(234, 88, 12, 0.12)' : isHO && !isJobsite ? 'rgba(0, 122, 255, 0.12)' : 'var(--muted)',
                           color: isJobsite && !isHO ? '#ea580c' : isHO && !isJobsite ? '#007aff' : 'var(--foreground)',
                           border: `1px solid ${isJobsite && !isHO ? 'rgba(234, 88, 12, 0.25)' : isHO && !isJobsite ? 'rgba(0, 122, 255, 0.25)' : 'var(--border)'}`,
@@ -335,7 +335,7 @@ function HraMappingView() {
                       <span
                         style={{
                           padding: '2px 9px',
-                          borderRadius: 999,
+                          borderRadius: 4,
                           fontSize: 10,
                           fontWeight: 700,
                           background: bg,

@@ -125,7 +125,8 @@ export default function DataKesehatanTable({ canEdit = false }: DataKesehatanTab
       if (monthFilter !== 'Semua') params.set('bulan', String(MONTHS.indexOf(monthFilter)));
       params.set('tahun', yearFilter);
 
-      const res = await fetch(`/api/sick-employees?${params}`);
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/sick-employees?${params}`, { headers });
       const json = await res.json();
       if (json.success) setRows(json.data || []);
     } catch {

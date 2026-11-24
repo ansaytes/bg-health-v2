@@ -5,6 +5,7 @@
 // Layout A4 Landscape standar audit SMKP, ISO 45001, & Minerba
 
 import React, { useState, useEffect, useRef } from 'react';
+import { usePopup, Popup } from '@/lib/popup';
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,7 @@ export default function HraPrintModal({
     currentDept && currentDept !== 'ALL' ? currentDept : 'OPERATION'
   );
   const [lokasiKerja, setLokasiKerja] = useState('All Area');
+  const { popup, popupState, closePopup } = usePopup();
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -58,7 +60,11 @@ export default function HraPrintModal({
 
     const printWindow = window.open('', '_blank', 'width=1200,height=800');
     if (!printWindow) {
-      alert('Pop-up terblokir. Izinkan pop-up di browser Anda untuk mencetak dokumen.');
+      popup({
+        type: 'error',
+        title: 'Jendela Cetak Terblokir',
+        message: 'Browser memblokir pop-up cetak. Harap izinkan pop-up pada peramban Anda untuk mencetak dokumen FORM/069.',
+      });
       return;
     }
 
@@ -545,6 +551,7 @@ export default function HraPrintModal({
             </div>
           </div>
         </div>
+        <Popup state={popupState} closePopup={closePopup} />
       </DialogContent>
     </Dialog>
   );

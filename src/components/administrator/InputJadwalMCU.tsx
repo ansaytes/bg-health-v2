@@ -267,7 +267,7 @@ export default function InputJadwalMCU() {
                     fontSize: 10,
                     fontWeight: 600,
                     padding: '2px 8px',
-                    borderRadius: 999,
+                    borderRadius: 4,
                     background: 'rgba(255, 94, 0, 0.09)',
                     color: '#FF5E00',
                     border: '1px solid rgba(255, 94, 0, 0.22)',
@@ -293,7 +293,7 @@ export default function InputJadwalMCU() {
                 alignItems: 'center',
                 gap: 5,
                 padding: '6px 14px',
-                borderRadius: 999,
+                borderRadius: 8,
                 fontSize: 11.5,
                 fontWeight: 600,
                 background: 'var(--background)',
@@ -310,20 +310,20 @@ export default function InputJadwalMCU() {
           </div>
         </div>
 
-        {/* macOS Capsule KPI Group (Segmented Badges) */}
+        {/* macOS Segmented KPI Group */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               padding: 3,
-              borderRadius: 999,
+              borderRadius: 8,
               background: 'var(--muted)',
               border: '1px solid var(--border)',
               gap: 3,
             }}
           >
-            {/* Total Pill */}
+            {/* Total */}
             <button
               type="button"
               onClick={() => setScheduleFilter('all')}
@@ -331,7 +331,7 @@ export default function InputJadwalMCU() {
                 border: 'none',
                 cursor: 'pointer',
                 padding: '3px 12px',
-                borderRadius: 999,
+                borderRadius: 6,
                 fontSize: 10.5,
                 fontWeight: 600,
                 background: scheduleFilter === 'all' ? 'var(--card)' : 'transparent',
@@ -347,7 +347,7 @@ export default function InputJadwalMCU() {
               <b style={{ fontWeight: 800 }}>{total}</b>
             </button>
 
-            {/* Sudah Dijadwalkan Pill */}
+            {/* Sudah Dijadwalkan */}
             <button
               type="button"
               onClick={() => setScheduleFilter(scheduleFilter === 'filled' ? 'all' : 'filled')}
@@ -355,7 +355,7 @@ export default function InputJadwalMCU() {
                 border: 'none',
                 cursor: 'pointer',
                 padding: '3px 12px',
-                borderRadius: 999,
+                borderRadius: 6,
                 fontSize: 10.5,
                 fontWeight: 700,
                 background: scheduleFilter === 'filled' ? '#34C759' : 'transparent',
@@ -372,7 +372,7 @@ export default function InputJadwalMCU() {
               {stats.filled > 0 && <span style={{ opacity: 0.85 }}>({stats.filled})</span>}
             </button>
 
-            {/* Belum Dijadwalkan Pill */}
+            {/* Belum Dijadwalkan */}
             <button
               type="button"
               onClick={() => setScheduleFilter(scheduleFilter === 'empty' ? 'all' : 'empty')}
@@ -380,7 +380,7 @@ export default function InputJadwalMCU() {
                 border: 'none',
                 cursor: 'pointer',
                 padding: '3px 12px',
-                borderRadius: 999,
+                borderRadius: 6,
                 fontSize: 10.5,
                 fontWeight: 700,
                 background: scheduleFilter === 'empty' ? '#FF9500' : 'transparent',
@@ -401,7 +401,7 @@ export default function InputJadwalMCU() {
 
         {/* macOS Controls Filter Row */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Spotlight Search Capsule */}
+          {/* Spotlight Search */}
           <div
             style={{
               display: 'flex',
@@ -409,7 +409,7 @@ export default function InputJadwalMCU() {
               gap: 7,
               background: 'var(--background)',
               border: '1px solid var(--border)',
-              borderRadius: 999,
+              borderRadius: 8,
               padding: '0 12px',
               flex: 1,
               minWidth: 220,
@@ -539,7 +539,7 @@ export default function InputJadwalMCU() {
             style={{
               fontSize: 10.5,
               padding: '4px 10px',
-              borderRadius: 999,
+              borderRadius: 6,
               background: 'var(--muted)',
               color: 'var(--muted-foreground)',
               border: '1px solid var(--border)',
@@ -695,7 +695,7 @@ export default function InputJadwalMCU() {
                               fontSize: 10,
                               fontWeight: 600,
                               padding: '2px 8px',
-                              borderRadius: 999,
+                              borderRadius: 4,
                               background: isJobsite ? 'rgba(234, 88, 12, 0.12)' : 'rgba(0, 122, 255, 0.12)',
                               color: isJobsite ? '#ea580c' : '#007aff',
                               border: `1px solid ${isJobsite ? 'rgba(234, 88, 12, 0.25)' : 'rgba(0, 122, 255, 0.25)'}`,
@@ -744,7 +744,7 @@ export default function InputJadwalMCU() {
                               justifyContent: 'center',
                               gap: 5,
                               padding: '4px 12px',
-                              borderRadius: 999,
+                              borderRadius: 6,
                               fontSize: 11,
                               fontWeight: 600,
                               background: 'linear-gradient(180deg, #FF6F1A 0%, #FF4D00 100%)',
@@ -792,7 +792,7 @@ export default function InputJadwalMCU() {
                   alignItems: 'center',
                   gap: 4,
                   padding: '5px 12px',
-                  borderRadius: 999,
+                  borderRadius: 6,
                   fontSize: 11,
                   fontWeight: 600,
                   border: '1px solid var(--border)',
@@ -819,7 +819,7 @@ export default function InputJadwalMCU() {
                   alignItems: 'center',
                   gap: 4,
                   padding: '5px 12px',
-                  borderRadius: 999,
+                  borderRadius: 6,
                   fontSize: 11,
                   fontWeight: 600,
                   border: '1px solid var(--border)',

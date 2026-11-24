@@ -228,7 +228,7 @@ export default function MonitoringKaryawanSakit() {
                     </span>
                     {e.terlambat && <AlertTriangle size={11} color="#FF2D2D" />}
                     <span style={{
-                      fontSize: 8.5, fontWeight: 800, padding: '1px 5px', borderRadius: 999, flexShrink: 0,
+                      fontSize: 8.5, fontWeight: 800, padding: '1px 5px', borderRadius: 4, flexShrink: 0,
                       background: e.status === 'AKTIF' ? 'rgba(255,122,0,0.14)' : 'rgba(0,184,148,0.12)',
                       color: e.status === 'AKTIF' ? '#B35C00' : '#00806a',
                     }}>
@@ -381,7 +381,7 @@ function DetailEpisode({ episode, onBerubah, toast }: {
             </p>
           </div>
           <span style={{
-            fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 999,
+            fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 4,
             background: episode.terlambat ? 'rgba(255,45,45,0.12)' : 'rgba(52,152,219,0.12)',
             color: episode.terlambat ? '#FF2D2D' : '#2471A3',
           }}>

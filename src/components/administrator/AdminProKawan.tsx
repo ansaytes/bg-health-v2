@@ -436,7 +436,7 @@ export default function AdminProKawan() {
                       {p.nama}
                     </span>
                     <span style={{
-                      fontSize: 9, fontWeight: 800, padding: '1px 6px', borderRadius: 999, flexShrink: 0,
+                      fontSize: 9, fontWeight: 800, padding: '1px 6px', borderRadius: 4, flexShrink: 0,
                       background: p.zona === 'Merah' ? 'rgba(255,45,45,0.12)' : 'rgba(255,212,0,0.18)',
                       color: p.zona === 'Merah' ? '#FF2D2D' : '#9a6b00',
                     }}>{p.zona}</span>
@@ -531,7 +531,7 @@ export default function AdminProKawan() {
                   {selected.triggers.length
                     ? selected.triggers.map((t) => (
                       <span key={t} style={{
-                        fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 999,
+                        fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
                         background: selected.zona === 'Merah' ? 'rgba(255,45,45,0.10)' : 'rgba(255,212,0,0.16)',
                         color: selected.zona === 'Merah' ? '#FF2D2D' : '#9a6b00',
                       }}>{t}</span>
@@ -833,7 +833,7 @@ function RiwayatZona({ nik, versi }: { nik: string; versi: string }) {
                   </td>
                   <td style={TD}>
                     <span style={{
-                      fontSize: 9, fontWeight: 800, padding: '1px 6px', borderRadius: 999,
+                      fontSize: 9, fontWeight: 800, padding: '1px 6px', borderRadius: 4,
                       background: h.sumber === 'kontrol' ? 'rgba(52,152,219,0.12)' : 'rgba(119,136,153,0.14)',
                       color: h.sumber === 'kontrol' ? '#2471A3' : '#5a6b7b',
                     }}>

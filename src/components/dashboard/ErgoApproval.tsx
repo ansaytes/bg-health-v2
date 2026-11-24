@@ -22,11 +22,10 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'DITOLAK_ULANG', label: 'Ditolak / Ulang' },
 ];
 
-// Warna lembut per status: kuning (menunggu), hijau (setuju), merah (tolak).
-const STATUS_TONE: Record<TabKey, { bg: string; border: string; text: string }> = {
-  MENUNGGU_PERSETUJUAN: { bg: 'rgba(255, 196, 0, 0.10)', border: 'rgba(255, 196, 0, 0.45)', text: '#9a6b00' },
-  DISETUJUI: { bg: 'rgba(0, 184, 148, 0.10)', border: 'rgba(0, 184, 148, 0.42)', text: '#00795f' },
-  DITOLAK_ULANG: { bg: 'rgba(255, 45, 45, 0.08)', border: 'rgba(255, 45, 45, 0.38)', text: '#b3261e' },
+const STATUS_TONE: Record<TabKey, { border: string; text: string; bg: string }> = {
+  MENUNGGU_PERSETUJUAN: { bg: 'rgba(255, 77, 0, 0.08)', border: 'rgba(255, 77, 0, 0.35)', text: '#FF4D00' },
+  DISETUJUI: { bg: 'rgba(0, 184, 148, 0.10)', border: 'rgba(0, 184, 148, 0.35)', text: '#00795f' },
+  DITOLAK_ULANG: { bg: 'rgba(255, 45, 45, 0.08)', border: 'rgba(255, 45, 45, 0.35)', text: '#b3261e' },
 };
 
 export default function ErgoApproval() {
@@ -85,13 +84,20 @@ export default function ErgoApproval() {
     }
   };
 
-  const tone = STATUS_TONE[tab];
   const waitCount = useMemo(() => rows.filter((r) => r.status === 'MENUNGGU_PERSETUJUAN').length, [rows]);
   const validCount = useMemo(() => rows.filter((r) => r.sah).length, [rows]);
+  const approvedCount = useMemo(() => rows.filter((r) => r.status === 'DISETUJUI').length, [rows]);
+  const rejectedCount = useMemo(() => rows.filter((r) => r.status === 'DITOLAK_ULANG').length, [rows]);
+
+  const tabsWithCount = useMemo(() => [
+    { key: 'MENUNGGU_PERSETUJUAN' as const, label: 'Menunggu Persetujuan', count: waitCount },
+    { key: 'DISETUJUI' as const, label: 'Sudah Disetujui', count: approvedCount },
+    { key: 'DITOLAK_ULANG' as const, label: 'Ditolak / Ulang', count: rejectedCount },
+  ], [waitCount, approvedCount, rejectedCount]);
 
   return (
     <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '10px 16px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {/* ── Header Ringkas Sejajar Logo BDM ─────────────────── */}
+      {/* ── macOS Toolbar Header ─────────────────────────── */}
       <div
         className="card"
         style={{
@@ -100,113 +106,61 @@ export default function ErgoApproval() {
           justifyContent: 'space-between',
           gap: 12,
           flexWrap: 'wrap',
-          padding: '8px 14px',
-          background: `linear-gradient(120deg, ${tone.bg}, transparent 70%)`,
-          borderColor: tone.border,
+          padding: '10px 16px',
+          background: 'var(--card)',
+          border: '1px solid var(--border)',
+          borderRadius: 10,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <img
             src="/LogoBDM.png"
             alt="Logo BDM"
+            width={32}
+            height={32}
             style={{ height: 32, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
           />
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <h1 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: 'var(--foreground)' }}>
-                Approval Survey Ergonomi
-              </h1>
               <span
                 style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  padding: '2px 8px',
-                  borderRadius: 999,
-                  background: tone.bg,
-                  color: tone.text,
-                  border: `1px solid ${tone.border}`,
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: '#FF4D00',
+                  display: 'inline-block',
+                  flexShrink: 0,
                 }}
-              >
-                {TABS.find((t) => t.key === tab)?.label}
-              </span>
+              />
+              <h1 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: 'var(--foreground)' }}>
+                Approval Survey Ergonomi
+              </h1>
             </div>
-            <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: 0, lineHeight: 1.3 }}>
+            <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '2px 0 0', lineHeight: 1.3 }}>
               Hasil survei RULA, ROSA, dan WERA disetujui QSHE Manager / PJO
               {canApprove && <> • Penyetuju: <b>{profile?.full_name || profile?.username}</b></>}
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-          {tab === 'MENUNGGU_PERSETUJUAN' && canApprove && validCount > 0 && (
-            <Btn
-              kind="primary"
-              size="sm"
-              disabled={approvingAll || loading}
-              onClick={actApproveAll}
-              style={{ fontWeight: 700, padding: '5px 12px', borderRadius: 6, fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 5 }}
-            >
-              <CheckCircle2 size={13} />
-              {approvingAll ? 'Menyetujui...' : `Setujui Semua yang Sah (${validCount})`}
-            </Btn>
-          )}
-          <div style={{ display: 'flex', gap: 6 }}>
-            <span
-              style={{
-                fontSize: 10.5,
-                fontWeight: 700,
-                padding: '3px 8px',
-                borderRadius: 999,
-                background: 'var(--background)',
-                border: '1px solid var(--border)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              <span style={{ color: 'var(--muted-foreground)' }}>Menunggu:</span>
-              <b style={{ color: '#C99A00' }}>{waitCount}</b>
-            </span>
-            <span
-              style={{
-                fontSize: 10.5,
-                fontWeight: 700,
-                padding: '3px 8px',
-                borderRadius: 999,
-                background: 'var(--background)',
-                border: '1px solid var(--border)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              <span style={{ color: 'var(--muted-foreground)' }}>Layak:</span>
-              <b style={{ color: '#00895f' }}>{validCount}</b>
-            </span>
-            <span
-              style={{
-                fontSize: 10.5,
-                fontWeight: 700,
-                padding: '3px 8px',
-                borderRadius: 999,
-                background: 'var(--background)',
-                border: '1px solid var(--border)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              <span style={{ color: 'var(--muted-foreground)' }}>Total:</span>
-              <b>{rows.length}</b>
-            </span>
-          </div>
-        </div>
+        {tab === 'MENUNGGU_PERSETUJUAN' && canApprove && validCount > 0 && (
+          <Btn
+            kind="primary"
+            size="sm"
+            disabled={approvingAll || loading}
+            onClick={actApproveAll}
+            style={{ fontWeight: 700, padding: '6px 14px', borderRadius: 8, fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 5 }}
+          >
+            <CheckCircle2 size={13} />
+            {approvingAll ? 'Menyetujui...' : `Setujui Semua yang Sah (${validCount})`}
+          </Btn>
+        )}
       </div>
 
-      {/* ── Tab status (kiri) ─────────────────────────── */}
-      <div style={{ margin: '0 -16px' }}>
+      {/* ── Tab Status ─────────────────────────── */}
+      <div>
         <CenteredTabs
-          tabs={TABS}
+          tabs={tabsWithCount}
           active={tab}
           onChange={(key) => { setTab(key); setOpen(null); }}
           ariaLabel="Status Approval Survey Ergonomi"
@@ -224,6 +178,7 @@ export default function ErgoApproval() {
 
       {rows.map((s, index) => {
         const isOpen = open === s.id;
+        const tone = STATUS_TONE[s.status as TabKey] || STATUS_TONE[tab];
         const rk: Row[] = Array.isArray(s.hasil?.ringkasan) ? s.hasil.ringkasan : [];
         return (
           <motion.div

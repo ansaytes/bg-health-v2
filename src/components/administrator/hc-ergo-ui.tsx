@@ -43,7 +43,7 @@ export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { key:
       {tabs.map((t) => (
         <button key={t.key} type="button" onClick={() => onChange(t.key)}
           style={{
-            padding: '4px 12px', borderRadius: 999, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+            padding: '4px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer',
             border: '1px solid var(--border)',
             background: value === t.key ? 'var(--brand-primary, #ff4d00)' : 'var(--background)',
             color: value === t.key ? '#fff' : 'var(--foreground)',
@@ -55,7 +55,7 @@ export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { key:
 
 export function Chip({ text, color }: { text: string; color: string }) {
   return (
-    <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700,
+    <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700,
       background: `${color}22`, color, border: `1px solid ${color}55`, whiteSpace: 'nowrap' }}>{text}</span>
   );
 }

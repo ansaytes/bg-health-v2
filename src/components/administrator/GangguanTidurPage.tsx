@@ -209,7 +209,7 @@ export default function GangguanTidurPage() {
               fontSize: 9.5,
               fontWeight: 700,
               padding: '2.5px 9px',
-              borderRadius: 999,
+              borderRadius: 4,
               background: 'var(--background)',
               color: sessionInfo.badgeColor,
               border: `1px solid ${sessionInfo.badgeColor}60`,

@@ -185,7 +185,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                   alignItems: 'center',
                   gap: 6,
                   padding: '6px 14px',
-                  borderRadius: 999,
+                  borderRadius: 8,
                   fontSize: 11.5,
                   fontWeight: 600,
                   background: 'linear-gradient(180deg, #FF6F1A 0%, #FF4D00 100%)',
@@ -208,7 +208,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                 alignItems: 'center',
                 gap: 5,
                 padding: '6px 13px',
-                borderRadius: 999,
+                borderRadius: 8,
                 fontSize: 11.5,
                 fontWeight: 600,
                 background: 'var(--background)',
@@ -232,7 +232,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                 alignItems: 'center',
                 gap: 5,
                 padding: '6px 12px',
-                borderRadius: 999,
+                borderRadius: 8,
                 fontSize: 11.5,
                 fontWeight: 500,
                 background: 'var(--background)',
@@ -249,14 +249,14 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
           </div>
         </div>
 
-        {/* macOS Capsule KPI Group (Segmented Badges) */}
+        {/* macOS Segmented KPI Filter Bar */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               padding: 3,
-              borderRadius: 999,
+              borderRadius: 8,
               background: 'var(--muted)',
               border: '1px solid var(--border)',
               gap: 3,
@@ -265,7 +265,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
             <span
               style={{
                 padding: '3px 10px',
-                borderRadius: 999,
+                borderRadius: 6,
                 fontSize: 10.5,
                 fontWeight: 600,
                 color: 'var(--foreground)',
@@ -285,7 +285,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                 border: 'none',
                 cursor: 'pointer',
                 padding: '3px 10px',
-                borderRadius: 999,
+                borderRadius: 6,
                 fontSize: 10.5,
                 fontWeight: 700,
                 background: riskFilter === 'High Risk' ? '#FF3B30' : 'rgba(255, 59, 48, 0.12)',
@@ -309,7 +309,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                 border: 'none',
                 cursor: 'pointer',
                 padding: '3px 10px',
-                borderRadius: 999,
+                borderRadius: 6,
                 fontSize: 10.5,
                 fontWeight: 700,
                 background: riskFilter === 'Medium Risk' ? '#FF9500' : 'rgba(255, 149, 0, 0.12)',
@@ -333,7 +333,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                 border: 'none',
                 cursor: 'pointer',
                 padding: '3px 10px',
-                borderRadius: 999,
+                borderRadius: 6,
                 fontSize: 10.5,
                 fontWeight: 700,
                 background: riskFilter === 'Low Risk' ? '#34C759' : 'rgba(52, 199, 89, 0.12)',
@@ -354,7 +354,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
 
         {/* macOS Controls Filter Row */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Spotlight Search Capsule */}
+          {/* Spotlight Search */}
           <div
             style={{
               display: 'flex',
@@ -362,7 +362,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
               gap: 7,
               background: 'var(--background)',
               border: '1px solid var(--border)',
-              borderRadius: 999,
+              borderRadius: 8,
               padding: '0 12px',
               flex: 1,
               minWidth: 220,
@@ -829,7 +829,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                             </div>
                             <div style={{ fontSize: 10, color: 'var(--foreground)', lineHeight: 1.4 }}>
                               P: <b>{item.init_p}</b> • E: <b>{item.init_e}</b><br />
-                              <span style={{ display: 'inline-block', marginTop: 4, padding: '2px 8px', borderRadius: 999, fontSize: 9.5, fontWeight: 700, background: 'var(--background)', color: getRiskColor(item.init_r), border: `1px solid ${getRiskBorder(item.init_r)}` }}>
+                              <span style={{ display: 'inline-block', marginTop: 4, padding: '2px 8px', borderRadius: 4, fontSize: 9.5, fontWeight: 700, background: 'var(--background)', color: getRiskColor(item.init_r), border: `1px solid ${getRiskBorder(item.init_r)}` }}>
                                 {katInit}
                               </span>
                             </div>
@@ -853,7 +853,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                             </div>
                             <div style={{ fontSize: 10, color: 'var(--foreground)', lineHeight: 1.4 }}>
                               P: <b>{item.res_p}</b> • E: <b>{item.res_e}</b><br />
-                              <span style={{ display: 'inline-block', marginTop: 4, padding: '2px 8px', borderRadius: 999, fontSize: 9.5, fontWeight: 700, background: 'var(--background)', color: getRiskColor(item.res_r), border: `1px solid ${getRiskBorder(item.res_r)}` }}>
+                              <span style={{ display: 'inline-block', marginTop: 4, padding: '2px 8px', borderRadius: 4, fontSize: 9.5, fontWeight: 700, background: 'var(--background)', color: getRiskColor(item.res_r), border: `1px solid ${getRiskBorder(item.res_r)}` }}>
                                 {katRes}
                               </span>
                             </div>
@@ -882,7 +882,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                                   fontSize: 9.5,
                                   fontWeight: 700,
                                   padding: '2px 8px',
-                                  borderRadius: 999,
+                                  borderRadius: 4,
                                   background: 'rgba(0, 122, 255, 0.12)',
                                   color: '#007aff',
                                   border: '1px solid rgba(0, 122, 255, 0.25)',

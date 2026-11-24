@@ -3,6 +3,7 @@ import { integrationAdminClient } from '@/lib/integration-settings';
 import { getServerCaller, STAFF_ROLES, requireServerRole } from '@/lib/server-auth';
 import { potongStokResepKunjungan, type HasilDispensasi } from '@/lib/inventory-dispense';
 import { proteksiDiagnosaUntukRole } from '@/lib/kunjungan-pdp';
+import { orEq, orContains, containsPattern } from '@/lib/sql-safety';
 
 const READ_ROLES = STAFF_ROLES;
 
@@ -25,12 +26,24 @@ export async function GET(request: NextRequest) {
     const tahun = searchParams.get('tahun') || '';
     const rujukRs = searchParams.get('rujuk_rs') || '';
     const nik = searchParams.get('nik') || '';
+    const nama = searchParams.get('nama') || '';
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : 0;
 
     let query = supabase.from('kunjungan_berobat').select('*').order('tanggal', { ascending: false });
 
-    if (nik) {
+    if (nik && nama) {
+      const condNik = orEq('nik', nik);
+      const condNama = orContains('nama', nama);
+      if (condNama) {
+        query = query.or(`${condNik},${condNama}`);
+      } else {
+        query = query.eq('nik', nik);
+      }
+    } else if (nik) {
       query = query.eq('nik', nik);
+    } else if (nama) {
+      const pattern = containsPattern(nama);
+      if (pattern) query = query.ilike('nama', pattern);
     }
     if (limit > 0) {
       query = query.limit(limit);

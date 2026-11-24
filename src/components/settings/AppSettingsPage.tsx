@@ -235,7 +235,7 @@ export default function AppSettingsPage() {
                 alignItems: 'center',
                 gap: 6,
                 padding: '6px 14px',
-                borderRadius: 999,
+                borderRadius: 8,
                 fontSize: 11,
                 fontWeight: 600,
                 border: '1px solid var(--border)',

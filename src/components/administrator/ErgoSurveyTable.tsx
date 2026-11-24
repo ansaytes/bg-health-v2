@@ -94,7 +94,31 @@ export default function ErgoSurveyTable() {
                       {s.status === 'MENUNGGU_PERSETUJUAN' && <div style={{ fontSize: 10, marginTop: 2 }}>Menunggu QSHE Manager</div>}
                       {s.status === 'DITOLAK_ULANG' && s.catatan_persetujuan && <div style={{ fontSize: 10, marginTop: 2, maxWidth: 180 }}>{s.catatan_persetujuan}</div>}</td>
                     <td style={tdStyle}>{s.perlu_pica ? (s.pica_no || <Chip text="BELUM ADA" color="#F5A623" />) : '-'}
-                      {s.perlu_pica && <div style={{ marginTop: 4 }}><Btn onClick={() => { const v = prompt('No. PICA:', s.pica_no || ''); if (v !== null) act(() => authFetch('/api/ergo', { method: 'PATCH', body: JSON.stringify({ resource: 'survey', id: s.id, action: 'pica', pica_no: v }) }), 'No. PICA diperbarui.'); }}>{s.pica_no ? 'Ubah' : 'Isi No.'}</Btn></div>}</td>
+                      {s.perlu_pica && (
+                        <div style={{ marginTop: 4 }}>
+                          <Btn
+                            onClick={() => {
+                              popup({
+                                type: 'prompt',
+                                title: 'Nomor PICA',
+                                message: 'Masukkan nomor PICA untuk temuan survei ini:',
+                                defaultValue: s.pica_no || '',
+                                placeholder: 'Contoh: PICA/2026/001',
+                                onPromptOk: (v) => {
+                                  if (v.trim()) {
+                                    act(
+                                      () => authFetch('/api/ergo', { method: 'PATCH', body: JSON.stringify({ resource: 'survey', id: s.id, action: 'pica', pica_no: v.trim() }) }),
+                                      'No. PICA diperbarui.'
+                                    );
+                                  }
+                                },
+                              });
+                            }}
+                          >
+                            {s.pica_no ? 'Ubah' : 'Isi No.'}
+                          </Btn>
+                        </div>
+                      )}</td>
                     <td style={tdStyle}>
                       <BtnRow>
                         {s.perlu_pica && <Btn onClick={() => toggle(s.id)}>{open === s.id ? 'Tutup' : 'Rekomendasi'}</Btn>}
@@ -113,7 +137,28 @@ export default function ErgoSurveyTable() {
                               <td style={tdStyle}>{fmtDate(r.due_date)} {r.status !== 'CLOSED' && r.due_date < t && <Chip text="LEWAT" color="#E63946" />}</td>
                               <td style={tdStyle}>{fmtDate(r.batas_verifikasi)}</td>
                               <td style={tdStyle}><select style={smallInput} value={r.status} onChange={(e) => patchRec(r, { status: e.target.value })}><option value="OPEN">Open</option><option value="PROGRESS">Progress</option><option value="CLOSED">Closed</option></select></td>
-                              <td style={tdStyle}>{r.status === 'CLOSED' && !r.verifikasi_tgl && <Btn onClick={() => { const k = prompt('Hasil verifikasi efektivitas tindakan:'); if (k) patchRec(r, { verifikasi_tgl: t, verifikasi_ket: k }); }}>Verifikasi</Btn>}{r.verifikasi_tgl && <span style={{ fontSize: 10 }}>Terverifikasi {fmtDate(r.verifikasi_tgl)}</span>}</td></tr>
+                              <td style={tdStyle}>
+                                {r.status === 'CLOSED' && !r.verifikasi_tgl && (
+                                  <Btn
+                                    onClick={() => {
+                                      popup({
+                                        type: 'prompt',
+                                        title: 'Verifikasi Tindakan',
+                                        message: 'Tuliskan catatan hasil verifikasi efektivitas tindakan:',
+                                        placeholder: 'Contoh: Evaluasi postur kerja telah memenuhi standar.',
+                                        onPromptOk: (k) => {
+                                          if (k.trim()) {
+                                            patchRec(r, { verifikasi_tgl: t, verifikasi_ket: k.trim() });
+                                          }
+                                        },
+                                      });
+                                    }}
+                                  >
+                                    Verifikasi
+                                  </Btn>
+                                )}
+                                {r.verifikasi_tgl && <span style={{ fontSize: 10 }}>Terverifikasi {fmtDate(r.verifikasi_tgl)}</span>}
+                              </td></tr>
                           ))}
                           {!recs.length && <tr><td style={tdStyle} colSpan={7}>Belum ada rekomendasi.</td></tr>}
                         </tbody>

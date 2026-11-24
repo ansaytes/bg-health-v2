@@ -201,11 +201,11 @@ export default function HraInspectorModal({
             </div>
 
             {kasus.hra_verified ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#34c759]/15 text-[#28a745] border border-[#34c759]/30">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-[#34c759]/15 text-[#28a745] border border-[#34c759]/30">
                 <ShieldCheck size={13} /> Dokumen HRA Terverifikasi
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#ff9500]/15 text-[#d97706] border border-[#ff9500]/30">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-[#ff9500]/15 text-[#d97706] border border-[#ff9500]/30">
                 <AlertTriangle size={13} /> Belum Diverifikasi
               </span>
             )}
@@ -257,7 +257,7 @@ export default function HraInspectorModal({
                 <span
                   style={{
                     padding: '2px 8px',
-                    borderRadius: 999,
+                    borderRadius: 4,
                     fontSize: 10,
                     fontWeight: 700,
                     background: getRiskBg(mapping.nilai_r_tertinggi),
@@ -280,7 +280,7 @@ export default function HraInspectorModal({
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
               <span>Potensi Bahaya Kesehatan Sesuai Dokumen HRA</span>
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-muted font-semibold">
+              <span className="px-1.5 py-0.2 rounded text-[10px] bg-muted font-semibold">
                 {matchedHazards.length}
               </span>
             </h4>
@@ -316,14 +316,14 @@ export default function HraInspectorModal({
                 >
                   <div className="flex items-start justify-between gap-2 flex-wrap mb-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-muted text-muted-foreground border border-border">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-muted text-muted-foreground border border-border">
                         {item.jenis_hazard}
                       </span>
                       <span className="font-semibold text-foreground text-xs">
                         {item.jenis_pekerjaan}
                       </span>
                       {(item as any).isKausalitasMatch && (
-                        <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-[#ff5e00] text-white flex items-center gap-1 shadow-sm">
+                        <span className="px-2 py-0.5 rounded text-[9.5px] font-bold bg-[#ff5e00] text-white flex items-center gap-1 shadow-sm">
                           <CheckCircle2 size={10} /> Kausalitas Selaras
                         </span>
                       )}
@@ -331,7 +331,7 @@ export default function HraInspectorModal({
 
                     <div className="flex items-center gap-1.5 text-[10px]">
                       <span
-                        className="px-2 py-0.5 rounded-full font-bold"
+                        className="px-2 py-0.5 rounded font-bold"
                         style={{
                           background: getRiskBg(item.init_r),
                           color: getRiskColor(item.init_r),
@@ -342,7 +342,7 @@ export default function HraInspectorModal({
                       </span>
                       <ArrowRight size={10} className="text-muted-foreground" />
                       <span
-                        className="px-2 py-0.5 rounded-full font-bold"
+                        className="px-2 py-0.5 rounded font-bold"
                         style={{
                           background: getRiskBg(item.res_r),
                           color: getRiskColor(item.res_r),

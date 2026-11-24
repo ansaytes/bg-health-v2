@@ -45,9 +45,9 @@ const TABS: { key: TabKey; label: string }[] = [
 ];
 
 const STATUS_TONE: Record<TabKey, { bg: string; border: string; text: string }> = {
-  menunggu_persetujuan: { bg: 'rgba(255, 196, 0, 0.10)', border: 'rgba(255, 196, 0, 0.45)', text: '#9a6b00' },
-  selesai: { bg: 'rgba(0, 184, 148, 0.10)', border: 'rgba(0, 184, 148, 0.42)', text: '#00795f' },
-  ditolak: { bg: 'rgba(255, 45, 45, 0.08)', border: 'rgba(255, 45, 45, 0.38)', text: '#b3261e' },
+  menunggu_persetujuan: { bg: 'rgba(255, 77, 0, 0.08)', border: 'rgba(255, 77, 0, 0.35)', text: '#FF4D00' },
+  selesai: { bg: 'rgba(0, 184, 148, 0.10)', border: 'rgba(0, 184, 148, 0.35)', text: '#00795f' },
+  ditolak: { bg: 'rgba(255, 45, 45, 0.08)', border: 'rgba(255, 45, 45, 0.35)', text: '#b3261e' },
 };
 
 export default function InspeksiApproval() {
@@ -154,8 +154,13 @@ export default function InspeksiApproval() {
     }
   };
 
-  const tone = STATUS_TONE[tab];
   const pendingCount = useMemo(() => rows.length, [rows]);
+
+  const tabsWithCount = useMemo(() => [
+    { key: 'menunggu_persetujuan' as const, label: 'Menunggu Persetujuan', count: tab === 'menunggu_persetujuan' ? rows.length : undefined },
+    { key: 'disetujui' as const, label: 'Sudah Disetujui', count: tab === 'disetujui' ? rows.length : undefined },
+    { key: 'ditolak_perbaikan' as const, label: 'Ditolak / Perbaikan', count: tab === 'ditolak_perbaikan' ? rows.length : undefined },
+  ], [tab, rows.length]);
 
   return (
     <div
@@ -169,7 +174,7 @@ export default function InspeksiApproval() {
         gap: 10,
       }}
     >
-      {/* ── Banner Ringkas Sejajar Logo BDM ───────────────── */}
+      {/* ── macOS Toolbar Header ─────────────────────────── */}
       <div
         className="card"
         style={{
@@ -178,37 +183,37 @@ export default function InspeksiApproval() {
           justifyContent: 'space-between',
           gap: 12,
           flexWrap: 'wrap',
-          padding: '8px 14px',
-          background: `linear-gradient(120deg, ${tone.bg}, transparent 70%)`,
-          borderColor: tone.border,
+          padding: '10px 16px',
+          background: 'var(--card)',
+          border: '1px solid var(--border)',
+          borderRadius: 10,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <img
             src="/LogoBDM.png"
             alt="Logo BDM"
+            width={32}
+            height={32}
             style={{ height: 32, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
           />
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <h1 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: 'var(--foreground)' }}>
-                Approval Inspeksi Lapangan
-              </h1>
               <span
                 style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  padding: '2px 8px',
-                  borderRadius: 999,
-                  background: tone.bg,
-                  color: tone.text,
-                  border: `1px solid ${tone.border}`,
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: '#FF4D00',
+                  display: 'inline-block',
+                  flexShrink: 0,
                 }}
-              >
-                {TABS.find((t) => t.key === tab)?.label}
-              </span>
+              />
+              <h1 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: 'var(--foreground)' }}>
+                Approval Inspeksi Lapangan
+              </h1>
             </div>
-            <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: 0, lineHeight: 1.3 }}>
+            <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '2px 0 0', lineHeight: 1.3 }}>
               Pengesahan laporan checklist fasilitas kesehatan kerja oleh Pengawas Operasional / QSHE Manager / PJO
               {canApprove && (
                 <> • Penyetuju: <b>{profile?.full_name || profile?.username || 'Pejabat Penyetuju'}</b></>
@@ -217,49 +222,31 @@ export default function InspeksiApproval() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-          {tab === 'menunggu_persetujuan' && canApprove && pendingCount > 0 && (
-            <button
-              type="button"
-              disabled={approvingAll || loading}
-              onClick={() => void actApproveAll()}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                padding: '5px 12px',
-                borderRadius: 6,
-                background: '#00B894',
-                color: '#fff',
-                fontSize: 11,
-                fontWeight: 700,
-                border: 'none',
-                cursor: approvingAll ? 'wait' : 'pointer',
-                boxShadow: '0 1px 4px rgba(0,184,148,0.3)',
-              }}
-              title="Setujui seluruh hasil inspeksi yang telah diverifikasi kelengkapannya"
-            >
-              <CheckCircle2 size={13} />
-              {approvingAll ? 'Memproses...' : `Setujui Semua yang Menunggu (${pendingCount})`}
-            </button>
-          )}
-          <span
+        {tab === 'menunggu_persetujuan' && canApprove && pendingCount > 0 && (
+          <button
+            type="button"
+            disabled={approvingAll || loading}
+            onClick={() => void actApproveAll()}
             style={{
-              fontSize: 10.5,
-              fontWeight: 700,
-              padding: '3px 8px',
-              borderRadius: 999,
-              background: 'var(--background)',
-              border: '1px solid var(--border)',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 4,
+              gap: 5,
+              padding: '6px 14px',
+              borderRadius: 8,
+              background: '#00B894',
+              color: '#fff',
+              fontSize: 11.5,
+              fontWeight: 700,
+              border: 'none',
+              cursor: approvingAll ? 'wait' : 'pointer',
+              boxShadow: '0 1px 3px rgba(0,184,148,0.25)',
             }}
+            title="Setujui seluruh hasil inspeksi yang telah diverifikasi kelengkapannya"
           >
-            <span style={{ color: 'var(--muted-foreground)' }}>Item:</span>
-            <b style={{ color: tone.text }}>{pendingCount}</b>
-          </span>
-        </div>
+            <CheckCircle2 size={13} />
+            {approvingAll ? 'Memproses...' : `Setujui Semua (${pendingCount})`}
+          </button>
+        )}
       </div>
 
       {/* ── Notifikasi Aksi ───────────────────────────────── */}
@@ -291,7 +278,7 @@ export default function InspeksiApproval() {
 
       {/* ── Filter Bar & Tab Navigasi ─────────────────────── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <CenteredTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Status Approval Inspeksi" compact />
+        <CenteredTabs tabs={tabsWithCount} active={tab} onChange={setTab} ariaLabel="Status Approval Inspeksi" compact />
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <select
@@ -300,10 +287,11 @@ export default function InspeksiApproval() {
             style={{
               padding: '5px 10px',
               fontSize: 11,
-              borderRadius: 6,
+              borderRadius: 8,
               border: '1px solid var(--border)',
               background: 'var(--background)',
               color: 'var(--foreground)',
+              minHeight: 30,
             }}
           >
             <option value="">Semua Site</option>
@@ -320,10 +308,11 @@ export default function InspeksiApproval() {
             style={{
               padding: '5px 10px',
               fontSize: 11,
-              borderRadius: 6,
+              borderRadius: 8,
               border: '1px solid var(--border)',
               background: 'var(--background)',
               color: 'var(--foreground)',
+              minHeight: 30,
             }}
           >
             <option value="">Semua Jenis Fasilitas</option>
@@ -370,6 +359,7 @@ export default function InspeksiApproval() {
             const isOpen = openId === row.id;
             const meta = JENIS_META[row.jenis as JenisInspeksi] ?? { label: row.jenis, area: 'Fasilitas' };
             const isBusy = busyId === row.id;
+            const tone = STATUS_TONE[tab];
 
             return (
               <div

@@ -1,5 +1,6 @@
 'use client';
 import NotificationBell from '@/components/header/NotificationBell';
+import { X, Eye, EyeOff } from 'lucide-react';
 
 import { useState, useEffect , useCallback} from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -1035,7 +1036,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
         {/* macOS Window Title Bar */}
         <div
           style={{
-            height: 38,
+            height: 40,
             padding: '0 14px',
             borderBottom: '1px solid var(--border)',
             display: 'flex',
@@ -1046,18 +1047,17 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
             userSelect: 'none',
           }}
         >
-          {/* Header without fake traffic lights */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className="brand-orange-dot" aria-hidden="true" />
             <span
               style={{
-                fontSize: 12,
-                fontWeight: 600,
+                fontSize: 12.5,
+                fontWeight: 700,
                 color: 'var(--foreground)',
                 letterSpacing: '-0.01em',
               }}
             >
-              {mode === 'login' ? 'Masuk Akun: BG-Health' : 'Registrasi Akun Karyawan'}
+              {mode === 'login' ? 'Masuk ke BG-Health' : 'Pendaftaran Akun Karyawan'}
             </span>
           </div>
 
@@ -1067,23 +1067,21 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
             aria-label="Tutup dialog"
             title="Tutup (Esc)"
             style={{
-              width: 36,
-              height: 36,
-              minWidth: 36,
-              minHeight: 36,
+              width: 28,
+              height: 28,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: 8,
+              borderRadius: 6,
               border: 'none',
               background: 'transparent',
               color: 'var(--muted-foreground)',
               cursor: 'pointer',
-              fontSize: 16,
               padding: 0,
+              transition: 'background 0.15s ease, color 0.15s ease',
             }}
           >
-            ✕
+            <X size={15} />
           </button>
         </div>
 
@@ -1106,12 +1104,12 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
                 flex: 1,
                 padding: '6px 0',
                 fontSize: 12,
-                fontWeight: mode === 'login' ? 600 : 500,
+                fontWeight: mode === 'login' ? 700 : 500,
                 borderRadius: 6,
-                border: 'none',
+                border: mode === 'login' ? '1px solid rgba(255, 77, 0, 0.25)' : 'none',
                 background: mode === 'login' ? 'var(--card)' : 'transparent',
-                color: mode === 'login' ? 'var(--foreground)' : 'var(--muted-foreground)',
-                boxShadow: mode === 'login' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                color: mode === 'login' ? '#FF4D00' : 'var(--muted-foreground)',
+                boxShadow: mode === 'login' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
               }}
@@ -1125,12 +1123,12 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
                 flex: 1,
                 padding: '6px 0',
                 fontSize: 12,
-                fontWeight: mode === 'register' ? 600 : 500,
+                fontWeight: mode === 'register' ? 700 : 500,
                 borderRadius: 6,
-                border: 'none',
+                border: mode === 'register' ? '1px solid rgba(255, 77, 0, 0.25)' : 'none',
                 background: mode === 'register' ? 'var(--card)' : 'transparent',
-                color: mode === 'register' ? 'var(--foreground)' : 'var(--muted-foreground)',
-                boxShadow: mode === 'register' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                color: mode === 'register' ? '#FF4D00' : 'var(--muted-foreground)',
+                boxShadow: mode === 'register' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
               }}
@@ -1140,15 +1138,15 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Header Brand */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/BM.png" alt="BG-Health" width={34} height={34} style={{ width: 34, height: 34, objectFit: 'contain' }} />
+            <img src="/BM.png" alt="BG-Health" width={32} height={32} style={{ width: 32, height: 32, objectFit: 'contain' }} />
             <div>
-              <h2 style={{ fontSize: 14.5, fontWeight: 700, margin: 0, textAlign: 'left', color: 'var(--foreground)' }}>
-                {mode === 'login' ? 'Portal Kesehatan Kerja' : 'Pendaftaran Karyawan'}
+              <h2 style={{ fontSize: 13.5, fontWeight: 700, margin: 0, textAlign: 'left', color: 'var(--foreground)' }}>
+                {mode === 'login' ? 'Portal Kesehatan Kerja' : 'Pendaftaran Akun Karyawan'}
               </h2>
-              <p style={{ fontSize: 11.5, color: 'var(--muted-foreground)', margin: '2px 0 0', textAlign: 'left' }}>
-                {mode === 'login' ? 'Gunakan NIK Karyawan atau Email terdaftar' : 'Verifikasi data kepegawaian PT. Bagong Dekaka Makmur'}
+              <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '1px 0 0', textAlign: 'left' }}>
+                {mode === 'login' ? 'Masukkan NIK Karyawan atau email resmi' : 'Verifikasi data kepegawaian PT Bagong Dekaka Makmur'}
               </p>
             </div>
           </div>
@@ -1157,23 +1155,23 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
           <>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
             <div className="login-input-group">
-              <label className="login-input-label">NIK Karyawan / National ID / Email</label>
+              <label className="login-input-label">NIK Karyawan atau Email</label>
               <input
                 type="text"
                 className="login-input"
-                placeholder="NIK Karyawan, NIK KTP, atau email"
+                placeholder="Contoh: 12345678 atau email@bagong.id"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
               />
             </div>
             <div className="login-input-group">
-              <label className="login-input-label">Password</label>
+              <label className="login-input-label">Kata Sandi</label>
               <div style={{ position: 'relative' }}>
                 <input
                   type={showLoginPassword ? 'text' : 'password'}
                   className="login-input"
-                  placeholder="Masukkan password"
+                  placeholder="Masukkan kata sandi"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
@@ -1185,15 +1183,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
                   className="password-toggle-btn"
                   aria-label={showLoginPassword ? 'Sembunyikan sandi' : 'Tampilkan sandi'}
                 >
-                  {showLoginPassword ? (
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" />
-                    </svg>
-                  ) : (
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
-                    </svg>
-                  )}
+                  {showLoginPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
             </div>
@@ -1201,19 +1191,9 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
               <p className="login-error-msg" style={{ marginBottom: 12 }}>{error}</p>
             )}
             <button type="submit" className="login-btn" disabled={loading}>
-              {loading ? 'Memproses...' : 'Masuk'}
+              {loading ? 'Memproses...' : 'Masuk ke Aplikasi'}
             </button>
           </form>
-
-          <p className="login-footer-text" style={{ marginTop: 14, fontSize: 11, color: 'var(--muted-foreground)', textAlign: 'center' }}>
-            Perlu akses akun baru?{' '}
-            <button type="button" onClick={() => { setMode('register'); setError(''); }} style={{ background: 'none', border: 'none', color: '#ff5e00', fontWeight: 600, cursor: 'pointer', fontSize: 11, padding: 0 }}>
-              Daftar di sini
-            </button>
-          </p>
-          <p className="login-footer-text" style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)', fontSize: 10.5, color: 'var(--muted-foreground)', lineHeight: 1.4 }}>
-            Sistem terintegrasi data kepegawaian dan klinik kerja PT. Bagong Dekaka Makmur. Sesuai standar UU Pelindungan Data Pribadi.
-          </p>
           </>
           ) : (
           <>
@@ -1331,28 +1311,21 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
                   className="password-toggle-btn"
                   aria-label={showRegPassword ? 'Sembunyikan sandi' : 'Tampilkan sandi'}
                 >
-                  {showRegPassword ? (
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" />
-                    </svg>
-                  ) : (
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
-                    </svg>
-                  )}
+                  {showRegPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
             </div>
             {error && <p className="login-error-msg">{error}</p>}
             <button type="submit" className="login-btn" disabled={loading}>
-              {loading ? 'Memproses...' : 'Daftar'}
-            </button>
-            <button type="button" onClick={() => { setMode('login'); setError(''); }} style={{ marginTop: 8, background: 'none', border: 'none', color: 'var(--muted-foreground)', fontSize: 12, cursor: 'pointer', padding: 0 }}>
-              ← Kembali ke Login
+              {loading ? 'Memproses...' : 'Daftarkan Akun'}
             </button>
           </form>
           </>
           )}
+
+          <p className="login-footer-text" style={{ marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--border)', fontSize: 10.5, color: 'var(--muted-foreground)', textAlign: 'center', lineHeight: 1.4 }}>
+            System Management OHIH PT. Bagong Dekaka Makmur
+          </p>
           <Popup state={popupState} closePopup={closePopup} />
         </div>
       </motion.div>

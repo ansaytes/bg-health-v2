@@ -26,6 +26,7 @@ import DownloadButton from '@/components/ui/download-button';
 import EmployeeLookupInput, { type EmployeeData } from '@/components/administrator/EmployeeLookupInput';
 import { invalidateKunjunganDashboardData } from '@/lib/dashboard-data';
 import { JOBSITES } from '@/lib/lagging-data';
+import { authFetch } from '@/lib/api-client';
 
 const MONTHS = ['Semua','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const YEARS = ['Semua','2024','2025','2026','2027'];
@@ -147,8 +148,7 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
   const [auditError, setAuditError] = useState('');
 
   useEffect(() => {
-    fetch('/api/inventory')
-      .then(res => res.json())
+    authFetch<{ success: boolean; data?: any[] }>('/api/inventory')
       .then(json => {
         if (json.success && Array.isArray(json.data)) {
           setInventoryList(json.data);

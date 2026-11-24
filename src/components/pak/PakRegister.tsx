@@ -98,7 +98,7 @@ function DeadlineBadge({ sisaJam: sisa, label }: { sisaJam: number | null; label
   const color = sisa < 0 ? '#FF2D2D' : sisa <= 24 ? '#FF7A00' : '#00B894';
   const text = sisa < 0 ? `Lewat ${Math.abs(sisa)} jam` : sisa <= 24 ? `${sisa} jam lagi` : `${Math.round(sisa / 24)} hari lagi`;
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: `${color}15`, color }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: `${color}15`, color }}>
       {sisa < 0 && <AlertTriangle size={11} />}
       {label}: {text}
     </span>
@@ -374,7 +374,7 @@ export default function PakRegister() {
                       </div>
                     </td>
                     <td className={td}>
-                      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 999, fontSize: '9.5px', fontWeight: 800, background: `${STATUS_COLOR[c.status] ?? '#778899'}18`, color: STATUS_COLOR[c.status] ?? '#778899' }}>
+                      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: '9.5px', fontWeight: 800, background: `${STATUS_COLOR[c.status] ?? '#778899'}18`, color: STATUS_COLOR[c.status] ?? '#778899' }}>
                         {STATUS_LABEL[c.status] ?? c.status}
                       </span>
                     </td>

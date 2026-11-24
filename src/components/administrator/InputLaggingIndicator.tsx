@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import EmployeeLookupInput, { type EmployeeData } from './EmployeeLookupInput';
 import { JOBSITES } from '@/lib/lagging-data';
+import { authFetch } from '@/lib/api-client';
 
 // Full month names (lagging-data exports short abbreviations; keep full names here)
 const MONTHS = [
@@ -177,9 +178,8 @@ export default function InputLaggingIndicator() {
     try {
       const siteVal = form.jobsite === '__custom__' ? customSite : form.jobsite;
       const bulanVal = form.bulan || '';
-      const res = await fetch('/api/sick-employees', {
+      const json = await authFetch<{ success: boolean; error?: string }>('/api/sick-employees', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nik: form.nik, nama: form.nama, jobsite: siteVal,
           jabatan: form.jabatan, bulan: bulanVal, tahun: form.tahun || '2026',
@@ -193,7 +193,6 @@ export default function InputLaggingIndicator() {
           jumlah_spell: String(calcSpell()),
         }),
       });
-      const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Gagal menyimpan');
       setSaved(true);
       setForm({});
