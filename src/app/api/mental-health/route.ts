@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
 
   const invalid: string[] = [];
 
-  // ── SRQ-20: boolean, true berarti "Ya" ───────────────────────
+//  SRQ-20: boolean, true berarti "Ya"
   const srqAnswers: Record<string, string | number | null> = {};
   for (const item of SRQ20_ITEMS) {
     const raw = body[item.id];
@@ -186,7 +186,7 @@ export async function POST(req: NextRequest) {
     row.skor_srq20 = srq.score;
   }
 
-  // ── DASS-21: smallint 0-3 ────────────────────────────────────
+//  DASS-21: smallint 0-3
   const dassAnswers: Record<string, string | number | null> = {};
   for (const item of DASS21_ITEMS) {
     const raw = body[item.id];
@@ -213,7 +213,7 @@ export async function POST(req: NextRequest) {
     row.dass_tertinggi = dass.highest.domain;
   }
 
-  // ── SDS-30: 30 item, skala 1-7, 6 indikator ────────────────
+//  SDS-30: 30 item, skala 1-7, 6 indikator
   const sdsAnswers: Record<string, string | number | null> = {};
   for (const item of SDS_ITEMS) {
     const raw = body[item.id];

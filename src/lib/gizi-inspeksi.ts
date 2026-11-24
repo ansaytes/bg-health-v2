@@ -1,6 +1,4 @@
-// ============================================================
 // Gizi Kerja & Higiene Sanitasi Jasaboga / Kantin
-// ============================================================
 // Acuan Regulasi:
 //   1. Kepmen ESDM No. 1827 K/30/MEM/2018 Lampiran IV (Kesehatan Kerja Pertambangan)
 //   2. Permenkes No. 1096/MENKES/PER/VI/2011 tentang Higiene Sanitasi Jasaboga

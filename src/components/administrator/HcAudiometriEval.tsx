@@ -75,7 +75,7 @@ export default function HcAudiometriEval() {
                   <td style={tdStyle}><b>{r.nama}</b><div style={{ color: 'var(--muted-foreground)', fontSize: 10 }}>{r.nik}</div></td>
                   <td style={tdStyle}>{r.site}</td><td style={tdStyle}>{r.kategori}</td>
                   <td style={tdStyle}>{r.latest ? fmtDate(r.latest.tanggal) : <Chip text="BELUM ADA" color="#778899" />}{r.latest && !r.tahunIni && <div><Chip text="BUKAN TAHUN INI" color="#F5A623" /></div>}
-                    {r.latest && r.lengkap === false && <div title={`Catatan: frekuensi belum terisi — ${r.kurang.join(', ')}. Data tetap dievaluasi.`}><Chip text={`TIDAK LENGKAP ${r.terisi}/14`} color="#F5A623" /></div>}</td>
+                    {r.latest && r.lengkap === false && <div title={`Catatan: frekuensi belum terisi : ${r.kurang.join(', ')}. Data tetap dievaluasi.`}><Chip text={`TIDAK LENGKAP ${r.terisi}/14`} color="#F5A623" /></div>}</td>
                   <td style={tdStyle}>{kelasChip(r.kelasKanan)}<div style={{ fontSize: 10 }}>{r.avg4Kanan ?? '-'} dB</div></td>
                   <td style={tdStyle}>{kelasChip(r.kelasKiri)}<div style={{ fontSize: 10 }}>{r.avg4Kiri ?? '-'} dB</div></td>
                   <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>

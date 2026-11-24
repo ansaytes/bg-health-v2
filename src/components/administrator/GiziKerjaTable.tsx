@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Administrator > Higiene Industri > Riwayat Inspeksi Jasaboga & Gizi
-// ============================================================
 // Rekapitulasi hasil penilaian kelaikan jasaboga/kantin dan kalori menu.
 // Ditampilkan di panel tabel melalui tombol panah navigasi (AdminTogglePanel).
 
@@ -127,7 +125,7 @@ export default function GiziKerjaTable() {
 
           <div style={BADGE_CARD}>
             <span style={BADGE_LABEL}>Rata-rata Kalori Menu</span>
-            <div style={{ ...BADGE_VALUE, color: '#3498DB' }}>{avgKalori || '—'} <span style={{ fontSize: 11, fontWeight: 500 }}>kkal</span></div>
+            <div style={{ ...BADGE_VALUE, color: '#3498DB' }}>{avgKalori || '-'} <span style={{ fontSize: 11, fontWeight: 500 }}>kkal</span></div>
             <span style={BADGE_SUB}>Standar: 2.600 - 3.200 kkal</span>
           </div>
         </div>
@@ -162,10 +160,10 @@ export default function GiziKerjaTable() {
                       <td style={{ ...tdStyle, whiteSpace: 'nowrap', fontWeight: 600 }}>{fmtDate(r.tanggal)}</td>
                       <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{r.site}</td>
                       <td style={tdStyle}>
-                        <div style={{ fontWeight: 600 }}>{r.vendor || '—'}</div>
+                        <div style={{ fontWeight: 600 }}>{r.vendor || '-'}</div>
                         {r.nama_kantin && <div style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>{r.nama_kantin}</div>}
                       </td>
-                      <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{r.inspektur || '—'}</td>
+                      <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{r.inspektur || '-'}</td>
                       <td style={tdStyle}>
                         <div style={{ fontSize: 11 }}>{r.no_slhs || 'Belum Ada'}</div>
                         {r.tgl_kadaluwarsa_slhs && (
@@ -184,7 +182,7 @@ export default function GiziKerjaTable() {
                       </td>
                       <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                         <span style={{ fontWeight: 800, color: totalKkal >= 2600 ? '#00B894' : '#FF7A00' }}>
-                          {totalKkal ? `${totalKkal} kkal` : '—'}
+                          {totalKkal ? `${totalKkal} kkal` : '-'}
                         </span>
                       </td>
                       <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
@@ -192,7 +190,7 @@ export default function GiziKerjaTable() {
                           <span style={{ fontWeight: 800, color: isLaik ? '#00B894' : isBersyarat ? '#FF7A00' : '#FF2D2D' }}>
                             {rk.persenSkor}%
                           </span>
-                        ) : '—'}
+                        ) : '-'}
                       </td>
                       <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                         {rk ? (
@@ -212,10 +210,10 @@ export default function GiziKerjaTable() {
                             {isLaik ? <ShieldCheck size={12} /> : isBersyarat ? <ShieldAlert size={12} /> : <ShieldAlert size={12} />}
                             {isLaik ? 'Laik Operasional' : isBersyarat ? 'Laik Bersyarat' : 'Tidak Laik'}
                           </span>
-                        ) : '—'}
+                        ) : '-'}
                       </td>
                       <td style={{ ...tdStyle, maxWidth: 220, fontSize: 10.5, color: 'var(--muted-foreground)' }}>
-                        {r.catatan || '—'}
+                        {r.catatan || '-'}
                       </td>
                     </tr>
                   );

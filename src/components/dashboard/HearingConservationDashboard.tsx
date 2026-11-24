@@ -252,7 +252,7 @@ export default function HearingConservationDashboard() {
 
   return (
     <div className="dashboard hc-dash" style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* Top bar — mengikuti pola Monitoring MCU */}
+      {/* Top bar : mengikuti pola Monitoring MCU */}
       <div className="mcu-live-top-bar" style={{ flexShrink: 0 }}>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <select className="admin-filter-select" value={site} onChange={(e) => { setErr(''); setSite(e.target.value); }}>
@@ -276,17 +276,17 @@ export default function HearingConservationDashboard() {
         </span>
       </div>
 
-      {/* Enam grafik mengisi seluruh sisa frame — tanpa scroll halaman */}
+      {/* Enam grafik mengisi seluruh sisa frame : tanpa scroll halaman */}
       <div className="mcu-live-chart-row mcu-live-chart-row--two-rows">
         <MCUChartCard title="Zona Kebisingan Area" subtitle="Area per zona hasil pengukuran terakhir" className="glow-coral"><canvas ref={zonaRef} /></MCUChartCard>
         <MCUChartCard title="Karyawan Terpajan" subtitle="A rutin · B insidental · C tidak terpajan" className="glow-amber"><canvas ref={kategoriRef} /></MCUChartCard>
-        <MCUChartCard title="Cakupan Audiometri Tahun Ini" subtitle="Kategori A & B — sudah vs belum diperiksa" className="glow-teal"><canvas ref={cakupanRef} /></MCUChartCard>
+        <MCUChartCard title="Cakupan Audiometri Tahun Ini" subtitle="Kategori A & B : sudah vs belum diperiksa" className="glow-teal"><canvas ref={cakupanRef} /></MCUChartCard>
         <MCUChartCard title="Derajat Gangguan Pendengaran" subtitle="WHO · telinga yang lebih baik" className="glow-steel"><canvas ref={kelasRef} /></MCUChartCard>
         <MCUChartCard title="Kasus STS" subtitle="Suspek, retest, terkonfirmasi, terlambat" className="glow-orange"><canvas ref={stsRef} /></MCUChartCard>
         <MCUChartCard title="Leq Maks per Area" subtitle="Titik tertinggi (dB(A)) · warna titik = zona" className="glow-coral"><canvas ref={trendRef} /></MCUChartCard>
       </div>
 
-      {/* Evaluasi efektivitas tahunan — SOP/028 poin 4.3.5:
+      {/* Evaluasi efektivitas tahunan : SOP/028 poin 4.3.5:
           QSHE Manager "melakukan evaluasi tahunan terhadap efektivitas
           Program Konservasi Pendengaran". Indikator diambil dari data yang
           sudah ada di dashboard ini, sehingga tidak perlu input baru. */}

@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Administrator > Sarana & Prasarana Klinik
-// ============================================================
 //
 // DASAR: BG/QSHE/SOP/028 poin 5.5 — daftar ruangan, peralatan medis, sarana
 // penunjang, dan alat evakuasi. Dokumen menutup dengan catatan:
@@ -342,7 +340,7 @@ export default function SaranaKlinik({ onBukaPica }: { onBukaPica?: () => void }
                           <input
                             defaultValue={it.kondisi ?? ''}
                             onBlur={(e) => { if (e.target.value !== (it.kondisi ?? '')) void simpan(it, { kondisi: e.target.value }); }}
-                            placeholder="—"
+                            placeholder="-"
                             style={{ ...cellInput, width: '100%', minWidth: 140 }}
                           />
                         </td>
@@ -369,7 +367,7 @@ export default function SaranaKlinik({ onBukaPica }: { onBukaPica?: () => void }
                           <input
                             defaultValue={it.catatan ?? ''}
                             onBlur={(e) => { if (e.target.value !== (it.catatan ?? '')) void simpan(it, { catatan: e.target.value }); }}
-                            placeholder="—"
+                            placeholder="-"
                             style={{ ...cellInput, width: '100%', minWidth: 160 }}
                           />
                         </td>

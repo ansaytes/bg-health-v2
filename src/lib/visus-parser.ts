@@ -1,9 +1,6 @@
-// ============================================================
 // Parser visus OD / OS — data nyata lapangan
-// ============================================================
 //
 // MASALAH
-// ----------------------------------------------------------------
 // `parseVisualAcuity()` lama hanya mengambil SATU rasio dari string, lalu
 // mengabaikan sisanya. Padahal data MCU di lapangan menulis kedua mata dalam
 // satu sel, dengan variasi penulisan yang sangat banyak:
@@ -26,7 +23,6 @@
 //   2. Menormalkan notasi 6/x dan 20/y ke desimal yang sama.
 //   3. Memilih MATA TERBAIK untuk klasifikasi zona (STD/006 Bab 7).
 //   4. Menyimpan keduanya agar bisa dicetak: "OD : 6/20 OS : 6/15".
-// ============================================================
 
 import { parseVisualAcuity, type VisionResult } from '@/lib/clinical-classification';
 

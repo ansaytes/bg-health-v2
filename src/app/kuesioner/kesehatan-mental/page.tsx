@@ -4,16 +4,13 @@ import Link from 'next/link';
 import InputMentalHealthPage from '@/components/administrator/InputMentalHealthPage';
 import QuestionnaireRouteGuard from '@/components/questionnaire/QuestionnaireRouteGuard';
 
-// ============================================================
 // Halaman kuesioner Kesehatan Mental
-// ============================================================
 //
 // Halaman kuesioner ini wajib login dan membatasi akun Employee pada data
 // miliknya sendiri. Aturan skornya tetap sama dengan halaman petugas QSHE.
-// ============================================================
 
 export const metadata: Metadata = {
-  title: 'Kuesioner Kesehatan Mental — BG-Health',
+  title: 'Kuesioner Kesehatan Mental: BG-Health',
   description: 'SRQ-20 dan DASS-21 untuk skrining kesehatan mental karyawan.',
 };
 

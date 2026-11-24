@@ -1,11 +1,9 @@
 'use client';
 
-// ============================================================
 // Administrator > Higiene Industri > Health Risk Assessment (HRA)
 // Container Tabs: Matriks HRA (Tabel Expandable), Form Input, dan Mapping Jabatan
 // Acuan: Dokumen BG/QSHE/FORM/069 Rev.001
 // Seluruh data dimuat dinamis dari database Supabase melalui API /api/hra
-// ============================================================
 
 import React, { useState, useEffect } from 'react';
 import CenteredTabs from '@/components/ui/centered-tabs';

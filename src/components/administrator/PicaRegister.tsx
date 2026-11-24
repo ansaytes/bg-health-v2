@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Administrator > Register PICA — temuan ketidaksesuaian
-// ============================================================
 //
 // PICA adalah sisi "penutupan" dari inspeksi: setiap temuan harus punya
 // penanggung jawab, tenggat, dan bukti selesai. Dashboard membaca tabel ini
@@ -13,7 +11,7 @@
 // daripada angka bawaan.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, RefreshCw, CheckCircle2, XCircle, Wand2 } from 'lucide-react';
+import { Plus, RefreshCw, CheckCircle2, XCircle, FolderDown } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -221,7 +219,7 @@ export default function PicaRegister() {
     popup({
       type: 'confirm',
       title: 'Tutup PICA ini?',
-      message: `${p.deskripsi ?? 'Temuan'} — pastikan perbaikan sudah diverifikasi sebelum ditutup.`,
+      message: `${p.deskripsi ?? 'Temuan'} : pastikan perbaikan sudah diverifikasi sebelum ditutup.`,
       confirmLabel: 'Tutup PICA',
       onOk: async () => {
         await kirim({ aksi: 'tutup', id: p.id, tanggal_closed: tanggalISO(new Date()) }, 'PICA ditutup');
@@ -279,7 +277,7 @@ export default function PicaRegister() {
                   style={{ height: 32, fontSize: 11 }}
                   title="Tarik otomatis dari temuan inspeksi P3K, ambulans, ergonomi, dan sarana klinik"
                 >
-                  <Wand2 size={13} className="mr-1" />
+                  <FolderDown size={13} className="mr-1" />
                   Tarik Temuan Otomatis{pratinjau?.total ? ` (${pratinjau.total})` : ''}
                 </Button>
                 <Button size="sm" onClick={() => setFormBuka(true)} disabled={bekerja} style={{ height: 32, fontSize: 11 }}>
@@ -305,7 +303,7 @@ export default function PicaRegister() {
                 Overdue <b style={{ color: ringkas.overdue ? '#FF2D2D' : 'inherit' }}>{ringkas.overdue}</b>
               </span>
               <span style={{ fontSize: 11 }}>
-                Rata-rata Penyelesaian (MTTR): <b>{ringkas.mttr === null ? '—' : `${ringkas.mttr} hari`}</b>
+                Rata-rata Penyelesaian (MTTR): <b>{ringkas.mttr === null ? '-' : `${ringkas.mttr} hari`}</b>
               </span>
             </div>
 
@@ -344,23 +342,23 @@ export default function PicaRegister() {
                       <tr key={String(p.id ?? i)}>
                         <td className="mcu-records-index">{i + 1}</td>
                         <td title={String(p.objek_nama ?? '')}>
-                          {p.objek_nama ?? '—'}
+                          {p.objek_nama ?? '-'}
                           <div style={{ fontSize: 9.5, color: 'var(--muted-foreground)' }}>
-                            {JENIS_META[p.jenis_inspeksi as keyof typeof JENIS_META]?.label ?? p.sumber ?? '—'}
+                            {JENIS_META[p.jenis_inspeksi as keyof typeof JENIS_META]?.label ?? p.sumber ?? '-'}
                             {p.site ? ` · ${p.site}` : ''}
                           </div>
                         </td>
-                        <td title={String(p.deskripsi ?? '')}>{p.deskripsi ?? '—'}</td>
+                        <td title={String(p.deskripsi ?? '')}>{p.deskripsi ?? '-'}</td>
                         <td>
                           <span style={{ padding: '2px 7px', borderRadius: 5, fontSize: 10, fontWeight: 700, color: t.warna, background: t.bg }}>
                             {t.label}
                           </span>
                         </td>
-                        <td>{p.departemen ?? '—'}</td>
-                        <td>{p.tanggal_dibuat ?? '—'}</td>
-                        <td>{p.due_date ?? '—'}</td>
+                        <td>{p.departemen ?? '-'}</td>
+                        <td>{p.tanggal_dibuat ?? '-'}</td>
+                        <td>{p.due_date ?? '-'}</td>
                         <td style={{ color: overdue ? '#FF2D2D' : 'inherit', fontWeight: overdue ? 700 : 400 }}>
-                          {selesai || sisa === null ? '—' : sisa < 0 ? `+${Math.abs(sisa)}h` : `${sisa}h`}
+                          {selesai || sisa === null ? '-' : sisa < 0 ? `+${Math.abs(sisa)}h` : `${sisa}h`}
                         </td>
                         <td>
                           <span style={{ padding: '2px 7px', borderRadius: 5, fontSize: 10, fontWeight: 700, color: s.warna, background: s.bg }}>
@@ -486,7 +484,7 @@ export default function PicaRegister() {
                 onChange={e => setForm(f => ({ ...f, tingkat: e.target.value, due_date: '' }))}
               >
                 {Object.entries(TENGGAT_PICA_HARI).map(([k, hari]) => (
-                  <option key={k} value={k}>{TINGKAT_STYLE[k]?.label ?? k} — tenggat {hari} hari</option>
+                  <option key={k} value={k}>{TINGKAT_STYLE[k]?.label ?? k} : tenggat {hari} hari</option>
                 ))}
               </select>
             </label>

@@ -76,7 +76,7 @@ function getSickPeriodRange(bulan: number, tahun: number) {
   };
 }
 
-// ─── Evaluasi Target vs Realisasi KPI (Kepdirjen Minerba No. 185.K/37.04/DJB/2019) ───
+//  Evaluasi Target vs Realisasi KPI (Kepdirjen Minerba No. 185.K/37.04/DJB/2019)
 function getRagRkk(val: number) {
   if (val >= 95) return { color: '#00B894', badge: 'Target (≥95%)', bg: 'rgba(0,184,148,0.12)' };
   if (val >= 90) return { color: '#FF7A00', badge: 'Waspada (<95%)', bg: 'rgba(255,122,0,0.12)' };
@@ -112,7 +112,7 @@ function getRagKaptk(val: number) {
 }
 
 /* ──────────────────────────────────────────────────────────────
-   Main Component — pure Supabase, no static fallback
+   Main Component : pure Supabase, no static fallback
    ────────────────────────────────────────────────────────────── */
 
 export default function DashboardView() {
@@ -202,7 +202,7 @@ export default function DashboardView() {
       ]);
       if (cancelled) return;
 
-      // ── KPI ──
+//  KPI
       if (kpiRes.status === 'fulfilled' && kpiRes.value.success && Array.isArray(kpiRes.value.data)) {
         setKpiData(kpiRes.value.data);
       } else {
@@ -210,7 +210,7 @@ export default function DashboardView() {
       }
       setLoadingKpi(false);
 
-      // ── Peringkat ASR ──
+//  Peringkat ASR
       if (asrRes.status === 'fulfilled' && asrRes.value.success) {
         let rows: AsrRankRow[] = asrRes.value.data || [];
         if (fetchBulan === null) {
@@ -240,7 +240,7 @@ export default function DashboardView() {
       }
       setLoadingAsr(false);
 
-      // ── Karyawan sakit ──
+//  Karyawan sakit
       if (sickRes.status === 'fulfilled' && sickRes.value && sickRes.value.success) {
         setSickList(sickRes.value.data || []);
       } else {
@@ -673,7 +673,7 @@ export default function DashboardView() {
                 <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat statistik kesehatan">
                   <div className="bm-loading-spinner">
                     <div className="bm-loading-ring" aria-hidden="true" />
-                    <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                    <img src="/BM.png" alt="" width={48} height={48} className="bm-loading-logo" aria-hidden="true" />
                   </div>
                   <p className="bm-loading-label">Memuat statistik kesehatan…</p>
                 </div>
@@ -795,7 +795,7 @@ export default function DashboardView() {
                   <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat ranking ASR">
                     <div className="bm-loading-spinner">
                       <div className="bm-loading-ring" aria-hidden="true" />
-                      <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                      <img src="/BM.png" alt="" width={48} height={48} className="bm-loading-logo" aria-hidden="true" />
                     </div>
                     <p className="bm-loading-label">Memuat ranking ASR…</p>
                   </div>
@@ -810,7 +810,7 @@ export default function DashboardView() {
           </div>
         </div>
 
-        {/* RIGHT column — peringkat karyawan sakit (diagram) */}
+        {/* RIGHT column : peringkat karyawan sakit (diagram) */}
         <div className="card glow-coral sick-list-card">
           <div className="card-head" style={{ flexShrink: 0 }}>
             <div className="card-icon" style={{ background: 'rgba(255,99,71,.1)' }}>
@@ -845,7 +845,7 @@ export default function DashboardView() {
               <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data karyawan sakit">
                 <div className="bm-loading-spinner">
                   <div className="bm-loading-ring" aria-hidden="true" />
-                  <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                  <img src="/BM.png" alt="" width={48} height={48} className="bm-loading-logo" aria-hidden="true" />
                 </div>
                 <p className="bm-loading-label">Memuat data karyawan sakit…</p>
               </div>

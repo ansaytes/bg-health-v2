@@ -1,10 +1,8 @@
 'use client';
 
-// ============================================================
 // Administrator > Higiene Industri > Health Risk Assessment (HRA)
 // Tabel Evaluasi Risiko Kesehatan Kerja Modern (Expandable Rows)
 // Acuan: Dokumen BG/QSHE/FORM/069 Rev.001
-// ============================================================
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {

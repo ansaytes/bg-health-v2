@@ -1,9 +1,6 @@
-// ============================================================
 // Pencahayaan & Kualitas Udara Dalam Ruangan — K3 Lingkungan Kerja
-// ============================================================
 //
 // ACUAN PERATURAN YANG BERLAKU
-// ----------------------------------------------------------------
 // 1. **Permenaker No. 5 Tahun 2018** tentang Keselamatan dan Kesehatan Kerja
 //    Lingkungan Kerja — Pasal 40–42 (Kualitas Udara Dalam Ruang Kerja/KUDR):
 //      • suhu kering            23–26 °C
@@ -26,14 +23,12 @@
 // sehingga angka di modul ini SAMA dengan dokumen internal — bukan tafsiran baru.
 //
 // MENGAPA PENGUKURAN DIPISAH DARI CHECKLIST SANITASI
-// ----------------------------------------------------------------
 // Pencahayaan dan kualitas udara tidak dapat dinilai dari satu angka per site:
 //   • Pencahayaan bergantung peruntukan ruang (arsip 150 lux vs gambar 750 lux)
 //     dan harus diukur pada BIDANG KERJA (0,85 m untuk meja kerja).
 //   • PM10 diukur sebagai RATA-RATA 8 JAM, bukan sekali tembak.
 //   • Debu, asbes, dan gas memerlukan alat berbeda.
 // Karena itu datanya per RUANG dan per TITIK, bukan per site.
-// ============================================================
 
 export type PeruntukanRuang =
   | 'ruang_kerja' | 'ruang_gambar' | 'resepsionis' | 'ruang_arsip'

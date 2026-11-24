@@ -326,7 +326,7 @@ export default function DataKesehatanTable({ canEdit = false }: DataKesehatanTab
                     <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data kesehatan">
                       <div className="bm-loading-spinner">
                         <div className="bm-loading-ring" aria-hidden="true" />
-                        <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                        <img src="/BM.png" alt="" width={48} height={48} className="bm-loading-logo" aria-hidden="true" />
                       </div>
                       <p className="bm-loading-label">Memuat data kesehatan…</p>
                     </div>
@@ -397,7 +397,7 @@ export default function DataKesehatanTable({ canEdit = false }: DataKesehatanTab
         <DialogContent className="sm:max-w-lg" style={{ maxHeight: '85vh', overflowY: 'auto' }}>
           <DialogHeader>
             <DialogTitle style={{ fontSize: 15 }}>Edit Data Karyawan Sakit</DialogTitle>
-            <DialogDescription>NIK: {editRow?.nik} — {editRow?.nama}</DialogDescription>
+            <DialogDescription>NIK: {editRow?.nik} : {editRow?.nama}</DialogDescription>
           </DialogHeader>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {EDITABLE_FIELDS.map(f => (
@@ -445,7 +445,7 @@ export default function DataKesehatanTable({ canEdit = false }: DataKesehatanTab
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus Data Absensi</AlertDialogTitle>
             <AlertDialogDescription>
-              Yakin ingin menghapus data <strong>{deleteRow?.nik} — {deleteRow?.nama}</strong>? Tindakan ini tidak dapat dibatalkan.
+              Yakin ingin menghapus data <strong>{deleteRow?.nik} : {deleteRow?.nama}</strong>? Tindakan ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

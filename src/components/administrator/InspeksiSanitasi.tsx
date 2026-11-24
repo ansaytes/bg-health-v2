@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Administrator > Higiene Industri > Form Inspeksi Higiene & Sanitasi
-// ============================================================
 //
 // 4 Pilar Sanitasi Tempat Kerja:
 //   1. Toilet & Fasilitas Sanitasi (Rasio, Kebersihan, Ventilasi, Air Mengalir/Sabun)
@@ -41,7 +39,7 @@ interface HasilItem {
 export default function InspeksiSanitasi() {
   const store = useMCUStore();
   const { profile } = useAuth();
-  const namaInspektur = profile?.full_name || profile?.username || '—';
+  const namaInspektur = profile?.full_name || profile?.username || '-';
 
   const [site, setSite] = useState('Head Office');
   const [tanggal, setTanggal] = useState(new Date().toISOString().slice(0, 10));
@@ -95,7 +93,7 @@ export default function InspeksiSanitasi() {
           </p>
         </div>
 
-        {/* Section 1: Parameter & Identitas Sesi — Baris Lurus Sempurna */}
+        {/* Section 1: Parameter & Identitas Sesi : Baris Lurus Sempurna */}
         <Section title="Informasi Sesi Inspeksi">
           <div style={grid4}>
             <Field label="Job Site">
@@ -212,7 +210,7 @@ export default function InspeksiSanitasi() {
                           className="admin-input"
                           style={{ ...smallInput, height: 30 }}
                         >
-                          <option value="">— Belum Dinilai —</option>
+                          <option value="">- Belum Dinilai -</option>
                           <option value="SESUAI">Sesuai</option>
                           <option value="TIDAK_SESUAI">Tidak Sesuai</option>
                           <option value="TIDAK_ADA">Tidak Ada / N/A</option>

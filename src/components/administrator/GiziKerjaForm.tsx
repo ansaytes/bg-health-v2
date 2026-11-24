@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Administrator > Higiene Industri > Form Inspeksi Gizi & Jasaboga
-// ============================================================
 //
 // Standar Evaluasi Kelaikan Jasaboga & Gizi Kerja:
 //   1. Legalitas SLHS & Higiene Penjamah Makanan (Permenkes 1096/2011)
@@ -23,7 +21,7 @@ import {
   Scale,
   Save,
   ShieldCheck,
-  Sparkles,
+  CheckCheck,
   Trash2,
   UserRound,
   UtensilsCrossed,
@@ -46,7 +44,7 @@ import { Btn, Field, Section, SITES, grid4, smallInput } from './hc-ergo-ui';
 export default function GiziKerjaForm() {
   const store = useMCUStore();
   const { profile } = useAuth();
-  const namaInspektur = profile?.full_name || profile?.username || '—';
+  const namaInspektur = profile?.full_name || profile?.username || '-';
 
   // Sesi
   const [site, setSite] = useState('Head Office');
@@ -691,7 +689,7 @@ export default function GiziKerjaForm() {
                   >
                     {masterDkbm.map((b) => (
                       <option key={b.id} value={b.id}>
-                        [{b.kategori}] {b.nama} — ({b.kaloriPer100g} kkal/100g)
+                        [{b.kategori}] {b.nama} : ({b.kaloriPer100g} kkal/100g)
                       </option>
                     ))}
                   </select>
@@ -844,7 +842,7 @@ export default function GiziKerjaForm() {
             </span>
             <div style={{ display: 'flex', gap: 8 }}>
               <Btn type="button" onClick={handleIsiSemuaSesuai} style={{ fontSize: 11, padding: '4px 8px' }}>
-                <Sparkles size={12} /> Set Semua Sesuai
+                <CheckCheck size={12} /> Set Semua Sesuai
               </Btn>
               <Btn type="button" onClick={() => setJawaban({})} style={{ fontSize: 11, padding: '4px 8px' }}>
                 Reset Isian

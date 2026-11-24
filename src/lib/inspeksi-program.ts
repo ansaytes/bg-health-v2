@@ -1,6 +1,4 @@
-// ============================================================
 // Program Inspeksi — rencana, realisasi & temuan (PICA)
-// ============================================================
 //
 // MASALAH YANG DISELESAIKAN
 // Modul inspeksi sebelumnya (Sarana Klinik, Higiene & Sanitasi) hanya
@@ -19,7 +17,6 @@
 // Keduanya sengaja TIDAK menyimpan ulang hasil pemeriksaan. `jenis` menunjuk
 // modul pemeriksaan yang sudah ada, sehingga angka di dashboard selalu berasal
 // dari satu sumber data.
-// ============================================================
 
 /** Modul pemeriksaan yang dijadwalkan. `p3k` dan `ambulans` ditambahkan di sini. */
 export type JenisInspeksi =
@@ -197,7 +194,7 @@ export function statusEfektif(
   if (status === 'dibatalkan') return 'dibatalkan';
   if (status === 'ditolak') return 'ditolak';
   if (status === 'menunggu_persetujuan') return 'menunggu_persetujuan';
-  if (status === 'selesai' || (baris.tanggal_selesai && status !== 'rencana')) return 'selesai';
+  if (status === 'selesai' || Boolean(baris.tanggal_selesai)) return 'selesai';
   const sisa = selisihHari(baris.tanggal_rencana, sekarang);
   // H+0 masih boleh diselesaikan hari itu; terlewat mulai H+1.
   if (sisa !== null && sisa < 0) return 'terlewat';

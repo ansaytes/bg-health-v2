@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Administrator > Higiene Industri > Form Kualitas Udara & Debu
-// ============================================================
 //
 // Standar: Permenaker 5/2018 Pasal 40–42 & Permenkes 48/2016.
 // - Parameter fisik: Suhu (23–26°C), RH (40–60%).
@@ -291,7 +289,7 @@ export default function InspeksiUdaraDebu() {
 
         {/* Form Pengukuran Udara & Debu */}
         <form onSubmit={simpan}>
-          {/* Section 1: Informasi Sesi & Pengukur — Baris Lurus */}
+          {/* Section 1: Informasi Sesi & Pengukur : Baris Lurus */}
           <Section title="Informasi Sesi &amp; Pengukur">
             <div style={grid4}>
               <Field label="Job Site">
@@ -330,7 +328,7 @@ export default function InspeksiUdaraDebu() {
             </div>
           </Section>
 
-          {/* Section 2: Spesifikasi Ruangan & Ventilasi — Baris Lurus */}
+          {/* Section 2: Spesifikasi Ruangan & Ventilasi : Baris Lurus */}
           <Section title="Spesifikasi Ruangan &amp; Ventilasi">
             <div style={grid4}>
               <Field label="Nama Ruangan / Area">
@@ -383,7 +381,7 @@ export default function InspeksiUdaraDebu() {
           <datalist id="noise-points-ref-udara">
             {refTitikNoise.map((r, idx) => (
               <option key={idx} value={r.kode}>
-                {r.area ? `${r.area} — ` : ''}{r.deskripsi}
+                {r.area ? `${r.area} : ` : ''}{r.deskripsi}
               </option>
             ))}
           </datalist>

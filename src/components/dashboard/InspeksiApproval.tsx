@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Data Entry / Dashboard > Approval Checklist Inspeksi Lapangan
-// ============================================================
 // Verifikasi & Pengesahan Hasil Pemeriksaan Fasilitas Kesehatan Kerja:
 //   - Kotak P3K (Permenaker 15/2008)
 //   - Ambulans & Tanggap Darurat Medis Tambang
@@ -417,10 +415,10 @@ export default function InspeksiApproval() {
                         {row.objek_nama || 'Inspeksi Fasilitas'}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--muted-foreground)', display: 'flex', gap: 14, marginTop: 2, flexWrap: 'wrap' }}>
-                        <span>Site: <b>{row.site || '—'}</b></span>
-                        <span>Rencana: <b>{row.tanggal_rencana || '—'}</b></span>
-                        <span>Realisasi: <b>{row.tanggal_selesai || '—'}</b></span>
-                        <span>Petugas: <b>{row.petugas_nama || row.petugas || '—'}</b></span>
+                        <span>Site: <b>{row.site || '-'}</b></span>
+                        <span>Rencana: <b>{row.tanggal_rencana || '-'}</b></span>
+                        <span>Realisasi: <b>{row.tanggal_selesai || '-'}</b></span>
+                        <span>Petugas: <b>{row.petugas_nama || row.petugas || '-'}</b></span>
                       </div>
                     </div>
                   </div>
@@ -489,7 +487,7 @@ export default function InspeksiApproval() {
                         </div>
                         <div>
                           <span style={{ color: 'var(--muted-foreground)', display: 'block', fontSize: 10 }}>Inspektur / Pelapor</span>
-                          <b>{row.petugas_nama || row.petugas || '—'}</b>
+                          <b>{row.petugas_nama || row.petugas || '-'}</b>
                         </div>
                       </div>
 

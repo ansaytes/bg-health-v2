@@ -4,16 +4,13 @@ import Link from 'next/link';
 import GangguanTidurPage from '@/components/administrator/GangguanTidurPage';
 import QuestionnaireRouteGuard from '@/components/questionnaire/QuestionnaireRouteGuard';
 
-// ============================================================
 // Halaman kuesioner Gangguan Tidur
-// ============================================================
 //
 // Route terpisah dari tab Input MCU. Halaman ini wajib login dan membatasi
 // akun Employee pada data miliknya sendiri.
-// ============================================================
 
 export const metadata: Metadata = {
-  title: 'Kuesioner Gangguan Tidur — BG-Health',
+  title: 'Kuesioner Gangguan Tidur: BG-Health',
   description: 'Epworth Sleepiness Scale untuk penilaian kantuk berlebihan di siang hari.',
 };
 

@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Halaman Input Kesehatan Mental — SRQ-20 dan DASS-21
-// ============================================================
 //
 // Keduanya menilai gejala klinis yang sama dan sering diisi dalam satu sesi,
 // jadi digabung dalam satu halaman dengan dua bagian. Assessor boleh mengisi
@@ -16,7 +14,6 @@
 // Pengukuran ulang pada tanggal yang sama menimpa baris lama. Setelah
 // tersimpan, skor terakhir disalin ke MCU terbaru dan zonasi dihitung ulang.
 //
-// ============================================================
 
 import { useState } from 'react';
 
@@ -64,7 +61,7 @@ function barisHasil(body: any): ScoreLine[] {
   if (body.srq20?.answered > 0) {
     lines.push({
       label: 'SRQ-20',
-      value: `${body.srq20.score} — ${body.srq20.label}`,
+      value: `${body.srq20.score} : ${body.srq20.label}`,
       tone: toneFor(body.srq20.category),
     });
   }
@@ -73,17 +70,17 @@ function barisHasil(body: any): ScoreLine[] {
   if (dass?.answered > 0) {
     lines.push({
       label: 'DASS-21 depresi',
-      value: `${dass.depresi.score} — ${dass.depresi.label}`,
+      value: `${dass.depresi.score} : ${dass.depresi.label}`,
       tone: toneFor(dass.depresi.category),
     });
     lines.push({
       label: 'DASS-21 ansietas',
-      value: `${dass.ansietas.score} — ${dass.ansietas.label}`,
+      value: `${dass.ansietas.score} : ${dass.ansietas.label}`,
       tone: toneFor(dass.ansietas.category),
     });
     lines.push({
       label: 'DASS-21 stres',
-      value: `${dass.stres.score} — ${dass.stres.label}`,
+      value: `${dass.stres.score} : ${dass.stres.label}`,
       tone: toneFor(dass.stres.category),
     });
   }
@@ -98,7 +95,7 @@ function barisHasil(body: any): ScoreLine[] {
     for (const ind of (body.sds.indicators || [])) {
       lines.push({
         label: `· ${ind.title}`,
-        value: `${ind.score}/35 — ${ind.label}`,
+        value: `${ind.score}/35 : ${ind.label}`,
         tone: toneFor(ind.category),
       });
     }
@@ -269,7 +266,7 @@ export default function InputMentalHealthPage() {
           {DASS21_SECTIONS.map((section) => (
             <ItemGroup
               key={section.id}
-              title={`DASS-21 — ${section.title}`}
+              title={`DASS-21 : ${section.title}`}
               subtitle={section.subtitle}
               items={DASS21_ITEMS.filter((item) => {
                 const number = Number(item.id.replace('dass', ''));

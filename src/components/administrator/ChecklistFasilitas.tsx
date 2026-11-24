@@ -1,9 +1,7 @@
 'use client';
 
-// ============================================================
 // Administrator > Checklist Kelaikan Fasilitas & Aset
 // (Kotak P3K · Ambulans · Sarana Ergonomi)
-// ============================================================
 // Mengikuti model checklist "Sarana Klinik":
 //   • Tampilan kartu per kategori yang rapi & terorganisir
 //   • Kolom seragam: Item, Status (Pill dropdown), Jumlah, Kondisi, Tanggal Periksa/Expired, Catatan
@@ -814,7 +812,7 @@ export default function ChecklistFasilitas({
                               onBlur={(e) => {
                                 if (e.target.value !== b.catatan) void simpan(b, { catatan: e.target.value });
                               }}
-                              placeholder="—"
+                              placeholder="-"
                               style={{ ...cellInput, width: '100%', minWidth: 160 }}
                             />
                           </td>

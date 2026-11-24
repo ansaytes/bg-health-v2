@@ -33,11 +33,9 @@ function short(val: any) {
   return CIPHERTEXT_PATTERN.test(text) ? '-' : text;
 }
 
-// ---------------------------------------------------------------------------
 // Filter kolom ala spreadsheet: daftar nilai unik + checkbox + pencarian.
 // Panel dirender lewat portal (position: fixed) supaya tidak terpotong oleh
 // area scroll tabel.
-// ---------------------------------------------------------------------------
 interface FilterOption { value: string; count: number }
 
 interface ColFilterDropdownProps {
@@ -172,7 +170,7 @@ function ColFilterDropdown({ label, selected, getOptions, onChange }: ColFilterD
             ))}
             {visible.length === 0 && <div className="col-filter-empty">Tidak ditemukan</div>}
             {visible.length > MAX_RENDERED_OPTIONS && (
-              <div className="col-filter-empty">Menampilkan {MAX_RENDERED_OPTIONS} dari {visible.length} nilai — persempit dengan pencarian.</div>
+              <div className="col-filter-empty">Menampilkan {MAX_RENDERED_OPTIONS} dari {visible.length} nilai : persempit dengan pencarian.</div>
             )}
           </div>
           <div className="col-filter-footer">
@@ -187,9 +185,7 @@ function ColFilterDropdown({ label, selected, getOptions, onChange }: ColFilterD
   );
 }
 
-// ---------------------------------------------------------------------------
 // Main component
-// ---------------------------------------------------------------------------
 export default function RecordMCUTableModern() {
   const { isSuperuser, isAdmin } = useAuth();
   const { popup, popupState, closePopup } = usePopup();
@@ -350,7 +346,7 @@ export default function RecordMCUTableModern() {
     }
   }, [activeTab]);
 
-  // ── Permintaan "buka baris ini" dari notifikasi ───────────────────────────
+//  Permintaan "buka baris ini" dari notifikasi
   // Notifikasi MCU mengirim target ke store; di sini tabel pindah ke tab
   // Record MCU, menyaring NIK tersebut, melompat ke halaman yang memuatnya,
   // lalu menyorot barisnya. Tanpa ini, klik notifikasi hanya membuka menu.
@@ -571,7 +567,7 @@ export default function RecordMCUTableModern() {
   return (
     <div className="mcu-records-modern">
       <div className="mcu-records-card">
-        {/* Tab nav — Monitor MCU / Record MCU (macOS CenteredTabs) */}
+        {/* Tab nav : Monitor MCU / Record MCU (macOS CenteredTabs) */}
         <div style={{ marginBottom: 12 }}>
           <CenteredTabs
             tabs={[
@@ -629,13 +625,13 @@ export default function RecordMCUTableModern() {
           </div>
         </div>
 
-        {/* Baris yang dibuka dari notifikasi — jelaskan kenapa tabel tersaring. */}
+        {/* Baris yang dibuka dari notifikasi : jelaskan kenapa tabel tersaring. */}
         {focusNik && activeTab === 'record' && (
           <div className="flex items-center gap-2 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs">
             <span className="flex-1">
               Menampilkan baris dari notifikasi
               {focusRequest?.sumber ? ` (${focusRequest.sumber.replace(/-/g, ' ')})` : ''}: <b>{focusNik}</b>
-              {focusRowId ? ' — baris disorot di bawah.' : ' — data tidak ditemukan di tabel.'}
+              {focusRowId ? ' : baris disorot di bawah.' : ' : data tidak ditemukan di tabel.'}
             </span>
             <Button
               size="sm"
@@ -720,7 +716,7 @@ export default function RecordMCUTableModern() {
                     <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data">
                       <div className="bm-loading-spinner">
                         <div className="bm-loading-ring" aria-hidden="true" />
-                        <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                        <img src="/BM.png" alt="" width={48} height={48} className="bm-loading-logo" aria-hidden="true" />
                       </div>
                     </div>
                     {activeTab === 'record' && loadProgress && (
@@ -814,11 +810,11 @@ export default function RecordMCUTableModern() {
           </Button>
         </div>
 
-        {/* View dialog — detail record + menu Edit / Follow Up / Hapus */}
+        {/* View dialog : detail record + menu Edit / Follow Up / Hapus */}
         <Dialog open={!!viewingRow} onOpenChange={open => !open && setViewingRow(null)}>
           <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Detail MCU — {viewingRow?.nama || '-'}</DialogTitle>
+              <DialogTitle>Detail MCU : {viewingRow?.nama || '-'}</DialogTitle>
             </DialogHeader>
             <HraRiskProfileCard
               jabatan={viewingRow?.jabatan || viewingRow?.posisi}
@@ -857,10 +853,10 @@ export default function RecordMCUTableModern() {
           </DialogContent>
         </Dialog>
 
-        {/* Tindak lanjut — form bersama dengan halaman ProKawan */}
+        {/* Tindak lanjut : form bersama dengan halaman ProKawan */}
         <Dialog open={!!tindakLanjutRow} onOpenChange={open => !open && setTindakLanjutRow(null)}>
           <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>Tindak Lanjut — {tindakLanjutRow?.nama || '-'}</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Tindak Lanjut : {tindakLanjutRow?.nama || '-'}</DialogTitle></DialogHeader>
             {tindakLanjutRow && (
               <FormTindakLanjut
                 key={String(tindakLanjutRow.nik_karyawan)}
@@ -876,11 +872,11 @@ export default function RecordMCUTableModern() {
           </DialogContent>
         </Dialog>
 
-        {/* Edit dialog — field & tipe input mengikuti form input Review MCU */}
+        {/* Edit dialog : field & tipe input mengikuti form input Review MCU */}
         <Dialog open={!!editingRow} onOpenChange={open => !open && setEditingRow(null)}>
           <DialogContent className="max-w-5xl max-h-[88vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Edit MCU — {editingRow?.nama || '-'}</DialogTitle>
+              <DialogTitle>Edit MCU : {editingRow?.nama || '-'}</DialogTitle>
             </DialogHeader>
             <p className="text-[11px] text-muted-foreground">
               Field identitas dan hasil perhitungan otomatis dikunci. Parameter lain memakai input yang sama dengan form Review MCU.

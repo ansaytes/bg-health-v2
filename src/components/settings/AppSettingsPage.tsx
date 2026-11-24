@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Halaman Setting — bertab, superuser-only untuk mengubah
-// ============================================================
 //
 // Tab: Perusahaan · Dokumen · Batas PAK · Faskes & BPJS.
 // Pola UI mengikuti tema aplikasi (var(--card)/var(--border)).
@@ -91,7 +89,7 @@ export default function AppSettingsPage() {
           marginBottom: 12, padding: '8px 12px', borderRadius: 8, fontSize: 11.5,
           background: 'rgba(255,196,0,0.10)', border: '1px solid rgba(255,196,0,0.4)', color: '#9a6b00',
         }}>
-          Anda masuk sebagai <b>{role}</b> — pengaturan hanya dapat diubah oleh superuser. Nilai di bawah bersifat baca.
+          Anda masuk sebagai <b>{role}</b> : pengaturan hanya dapat diubah oleh superuser. Nilai di bawah bersifat baca.
         </div>
       )}
       {settingsError && (

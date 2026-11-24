@@ -55,7 +55,7 @@ function fmtDuration(secs: number): string {
 }
 
 /* ── Normalize image URLs ──
-   Google Drive share links cannot be used directly as <img src>.
+   Google Drive share links cannot be used directly as image source.
    Convert to a direct image URL. Returns null if input is empty/invalid. */
 function normalizeImageUrl(raw: string | null | undefined): string | null {
   if (!raw) return null;
@@ -270,23 +270,23 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
           </button>
           <div className="ig-modal-inner">
-            {/* Image section — full size, scrollable to view entire image */}
+            {/* Image section : full size, scrollable to view entire image */}
             <div className="ig-modal-image-section">
               {item.video_url ? (
                 <video src={item.video_url} controls autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }} />
               ) : thumbnail ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={thumbnail} alt={item.title || ''} />
+                <img src={thumbnail} alt={item.title || 'Media feed'} width={400} height={300} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#fff' }}>Tidak ada media</div>
               )}
             </div>
-            {/* Caption section — scrollable, IG-style */}
+            {/* Caption section : scrollable, IG-style */}
             <div className="ig-modal-caption-section">
               <div className="ig-modal-header">
                 <div className="ig-modal-avatar">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/BM.png" alt="Admin" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }} />
+                  <img src="/BM.png" alt="Admin" width={32} height={32} style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }} />
                 </div>
                 <div>
                   <div className="ig-modal-username">{item.type === 'news' ? '@BagongNews' : 'Admin'}</div>
@@ -340,7 +340,7 @@ function ContentModal({ item, onClose }: { item: FeedItem | null; onClose: () =>
             <video src={videoUrl} controls autoPlay style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', background: '#000' }} />
           ) : thumbnail ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={thumbnail} alt={item.title || ''} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', background: '#000' }} />
+            <img src={thumbnail} alt={item.title || 'Thumbnail media'} width={640} height={360} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', background: '#000' }} />
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted-foreground)' }}>Tidak ada media</div>
           )}
@@ -479,7 +479,7 @@ export default function HomeView({ activeTab }: { activeTab: FeedCategory }) {
         <div className="bm-loading" role="status" aria-live="polite" aria-label="Memuat feed home">
           <div className="bm-loading-spinner">
             <div className="bm-loading-ring" aria-hidden="true" />
-            <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+            <img src="/BM.png" alt="" width={48} height={48} className="bm-loading-logo" aria-hidden="true" />
           </div>
           <p className="bm-loading-label">Memuat feed Home…</p>
           <p className="bm-loading-sub">Menarik data Health Talk, Podcast, News & Health Campaign.</p>

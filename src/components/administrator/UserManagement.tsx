@@ -308,12 +308,12 @@ export default function UserManagement() {
                         : ROLE_OPTIONS.find((option) => option.value === u.role)?.label || u.role;
                   return (
                     <tr key={u.id}>
-                      <td style={{ fontFamily: 'monospace', fontSize: 10 }}>{u.employee_nik || '—'}</td>
-                      <td style={{ fontFamily: 'monospace', fontSize: 10 }}>{u.employee_national_id || '—'}</td>
-                      <td>{u.employee_name || u.full_name || '—'}</td>
-                      <td>{u.employee_department || '—'}</td>
-                      <td>{u.employee_job_position || '—'}</td>
-                      <td>{u.employee_site || '—'}</td>
+                      <td style={{ fontFamily: 'monospace', fontSize: 10 }}>{u.employee_nik || '-'}</td>
+                      <td style={{ fontFamily: 'monospace', fontSize: 10 }}>{u.employee_national_id || '-'}</td>
+                      <td>{u.employee_name || u.full_name || '-'}</td>
+                      <td>{u.employee_department || '-'}</td>
+                      <td>{u.employee_job_position || '-'}</td>
+                      <td>{u.employee_site || '-'}</td>
                       <td style={{ fontWeight: 500 }}>{u.username}</td>
                       <td>
                         {isSuperuser && u.role !== 'disabled' && u.role !== 'viewer' ? (

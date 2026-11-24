@@ -568,7 +568,7 @@ export default function ReviewMCU() {
               </div>
             )}
 
-            {/* Identity Card — always visible */}
+            {/* Identity Card : always visible */}
             {!store.searchingEmployee && (
               <div style={{
                 background: 'var(--card)',
@@ -645,7 +645,7 @@ export default function ReviewMCU() {
                   )}
                 </div>
 
-                {/* Saklar lampu untuk form scan OCR — default padam, tanpa teks. */}
+                {/* Saklar lampu untuk form scan OCR : default padam, tanpa teks. */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
                   <button
                     type="button"
@@ -796,7 +796,7 @@ export default function ReviewMCU() {
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             className="space-y-4 pb-4"
           >
-            {/* Back button — kembali ke langkah sebelumnya yang BENAR-BENAR ada.
+            {/* Back button : kembali ke langkah sebelumnya yang BENAR-BENAR ada.
                 Bila saklar OCR padam, langkah OCR tidak di-render; menuju ke sana
                 akan menampilkan halaman kosong tanpa jalan keluar. */}
             <motion.div {...buttonTap}>
@@ -917,7 +917,7 @@ export default function ReviewMCU() {
   );
 }
 
-// ─── Field Renderer Component ───
+//  Field Renderer Component
 // Dipakai juga oleh popup "Edit MCU" di tabel record, supaya tipe input
 // (teks / angka / dropdown / multi-pilih / tanggal) selalu sama dengan form
 // input Review MCU dan tidak perlu didefinisikan dua kali.
@@ -1117,7 +1117,7 @@ export function FieldRenderer({
   );
 }
 
-// ─── Zonasi Card Component ───
+//  Zonasi Card Component
 function ZonasiCard({
   zona,
   triggers,

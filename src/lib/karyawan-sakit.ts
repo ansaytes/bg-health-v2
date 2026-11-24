@@ -1,6 +1,4 @@
-// ============================================================
 // Fase pemantauan karyawan sakit — BG/QSHE/SOP/027 Rev.002
-// ============================================================
 //
 // Tabel fase diambil dari SOP/027 poin 6.5 (Ringkasan Jadwal Pemantauan):
 //

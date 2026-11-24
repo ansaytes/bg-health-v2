@@ -1,6 +1,4 @@
-// ============================================================
 // Format teks hasil follow up untuk surat kontrol
-// ============================================================
 //
 // TUJUAN
 // Menghasilkan satu baris ringkas yang bisa langsung dicetak pada surat
@@ -126,7 +124,7 @@ export function formatSuratKontrol(
   for (const id of urutan) {
     if (sudahDitulis.has(id)) continue;
 
-    // ── Kasus khusus: tekanan darah digabung ─────────────────────
+//  Kasus khusus: tekanan darah digabung
     if (id === 'tdS') {
       const s = formatNilai('tdS', nilai.tdS);
       const d = formatNilai('tdD', nilai.tdD);
@@ -150,7 +148,7 @@ export function formatSuratKontrol(
     });
   }
 
-  // ── Rangkai menjadi satu baris ─────────────────────────────────
+//  Rangkai menjadi satu baris
   // Format acuan (sesuai surat pengantar Faskes):
   //   "TD : 131/79 mmHg, HDL : 35 mg/dL, Visus Jauh OD : 6/20 OS : 6/15"
   // Untuk visus, label sudah memuat "OD"/"OS" sehingga titik dua setelah

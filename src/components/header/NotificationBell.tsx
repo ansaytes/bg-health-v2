@@ -312,14 +312,14 @@ export default function NotificationBell({ isSuperuser, canMedic = false }: {
               )}
             </div>
 
-            {/* SATU area scroll untuk SEMUA isi — header kelompok ikut di dalam
+            {/* SATU area scroll untuk SEMUA isi : header kelompok ikut di dalam
                 agar tidak memakan ruang dan semua notifikasi terbaca. */}
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
               {loading ? (
                 <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat notifikasi">
                   <div className="bm-loading-spinner">
                     <div className="bm-loading-ring" aria-hidden="true" />
-                    <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                    <img src="/BM.png" alt="" width={48} height={48} className="bm-loading-logo" aria-hidden="true" />
                   </div>
                   <p className="bm-loading-label">Memuat notifikasi…</p>
                 </div>
@@ -372,7 +372,7 @@ export default function NotificationBell({ isSuperuser, canMedic = false }: {
                             {n.keterangan}
                           </div>
                           <div style={{ fontSize: 9, fontWeight: 700, color: '#ff4d00', marginTop: 2 }}>
-                            {n.aksi} →
+                            {n.aksi}
                           </div>
                         </button>
                       ))}
@@ -415,12 +415,12 @@ export default function NotificationBell({ isSuperuser, canMedic = false }: {
                               </p>
                             </div>
                           </div>
-                          <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+                          <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                             <button
                               onClick={() => handleApprove(a.id)}
                               style={{
-                                flex: 1, height: 28, borderRadius: 7, border: 'none',
-                                background: '#00B894', color: '#fff', fontSize: 11,
+                                flex: 1, minHeight: 38, height: 38, borderRadius: 8, border: 'none',
+                                background: '#00B894', color: '#fff', fontSize: 12,
                                 fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                               }}
                             >
@@ -429,9 +429,9 @@ export default function NotificationBell({ isSuperuser, canMedic = false }: {
                             <button
                               onClick={() => handleReject(a.id)}
                               style={{
-                                height: 28, padding: '0 12px', borderRadius: 7,
+                                minHeight: 38, height: 38, padding: '0 16px', borderRadius: 8,
                                 border: '1px solid var(--border)', background: 'transparent',
-                                color: 'var(--muted-foreground)', fontSize: 11, fontWeight: 600,
+                                color: 'var(--muted-foreground)', fontSize: 12, fontWeight: 600,
                                 cursor: 'pointer', fontFamily: 'inherit',
                               }}
                             >

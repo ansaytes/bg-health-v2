@@ -1,6 +1,4 @@
-// ============================================================
 // Pembantu bersama untuk endpoint kuesioner (ESS & kesehatan mental)
-// ============================================================
 //
 // Kedua kuesioner butuh hal yang sama:
 //
@@ -15,7 +13,6 @@
 //      parameter zonasi ikut berubah begitu kuesioner diisi.
 //
 // Semua modul ini dipakai bersama oleh /api/ess dan /api/mental-health.
-// ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 

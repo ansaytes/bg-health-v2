@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Dashboard > Higiene Industri > Gizi Kerja & Jasaboga
-// ============================================================
 //
 // ACUAN STANDAR:
 //   - Permenkes No. 28 Tahun 2019 tentang Angka Kecukupan Gizi (AKG)
@@ -90,7 +88,7 @@ export default function GiziKerjaDashboard({ site: initialSite }: { site?: strin
     : 0;
   const rataImtNasional = sitesData.length
     ? (sitesData.reduce((acc, s) => acc + s.rataImt, 0) / sitesData.length).toFixed(1)
-    : '—';
+    : '-';
   const totalObesitas = sitesData.length
     ? Math.round(sitesData.reduce((acc, s) => acc + s.persenObesitas, 0) / sitesData.length)
     : 0;

@@ -1,11 +1,8 @@
-﻿// ============================================================
 // MCU Field Definitions
-// ============================================================
 // Satu-satunya definisi field MCU: label, tipe, opsi, nilai normal, dan
 // pengelompokan di form Review MCU. Id field = nama kolom tabel mcu_records
 // (camelCase -> snake_case, lihat api/mcu/save), jadi urutan di sini TIDAK
 // memengaruhi database; yang menentukan hanya urutan tampil di form.
-// ============================================================
 
 import {
   ECG_OPTIONS as STANDARD_ECG_OPTIONS,
@@ -481,7 +478,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   f('tibc', 'TIBC', 'chemistry', 'number', normal('250-450', 'µg/dL')),
   f('ferritin', 'Ferritin', 'chemistry', 'number', { unit: 'ng/mL', normalMale: '30-400', normalFemale: '13-150' }),
 
-  // ── URINE LENGKAP ─────────────────────────────────────────────
+//  URINE LENGKAP
   // 19 parameter disimpan di kolom terpisah (ul_*) agar bisa di-query per
   // parameter. Kolom `ul` lama tetap dipertahankan sebagai ringkasan
   // komposit autoCalc untuk engine zonasi, diagnosis, dan Eksel.
@@ -600,7 +597,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   // pembaca langsung melihat temuan tanpa membaca 19 baris.
   f('ul', 'Kesimpulan Urinalisis', 'urinalysis', 'textarea', { autoCalc: true }),
 
-  // ── SEROLOGI / IMUNOLOGI ──────────────────────────────────────
+//  SEROLOGI / IMUNOLOGI
   // Hepatitis
   ...([
     ['hbsag', 'HBsAg'], ['antiHbs', 'Anti-HBs'], ['antiHbc', 'Anti-HBc Total'],
@@ -619,7 +616,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
     allowCustom: true,
   }),
 
-  // ── TES NAPZA (URINE) ─────────────────────────────────────────
+//  TES NAPZA (URINE)
   ...([
     ['drugAmp', 'Amfetamin'], ['drugMeth', 'Metamfetamin'],
     ['drugMorph', 'Morfin'], ['drugCanna', 'THC (Marijuana)'],
@@ -627,13 +624,13 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
     ['drugCaris', 'Carisoprodol'],
   ] as const).map(([id, label]) => f(id, label, 'drug', 'select', { ...select(['Negatif', 'Positif']), normalHint: 'Negatif' })),
 
-  // ── PEMERIKSAAN PENUNJANG LAIN ────────────────────────────────
+//  PEMERIKSAAN PENUNJANG LAIN
   // PSA (Prostate-Specific Antigen) adalah penanda tumor prostat — bukan tes
   // NAPZA. Id `psa` tidak berubah sehingga kolom database dan klasifikasi
   // Urologi tetap berjalan.
   f('psa', 'PSA (Prostate-Specific Antigen)', 'other', 'number', { unit: 'ng/mL', normalRange: '<4' }),
 
-  // ── LOGAM BERAT / TOKSIKOLOGI ─────────────────────────────────
+//  LOGAM BERAT / TOKSIKOLOGI
   ...([
     ['pb', 'Timbal (Pb)'], ['hg', 'Merkuri (Hg)'], ['as', 'Arsen (As)'],
     ['cd', 'Kadmium (Cd)'], ['cr', 'Kromium (Cr)'], ['mn', 'Mangan (Mn)'],
@@ -693,7 +690,7 @@ export const MCU_FIELD_DEFINITION: MCUFieldDef[] = [
   }),
 
 
-  // ── SPIROMETRI ────────────────────────────────────────────────
+//  SPIROMETRI
   // Metode penilaian menentukan RUMUS interpretasi yang dipakai engine.
   // Referensi yang beredar berbeda ambangnya (PDPI, GOLD, ATS/ERS, dll.),
   // sehingga hasil bisa berubah hanya karena metode yang dipilih berbeda.
@@ -760,7 +757,7 @@ f('fev1FvcAct', 'Spirometry FEV1%G ACT (rasio)', 'spirometry', 'number', { autoC
   f('kontraPatrick', 'Kontra Patrick Test', 'neuro', 'select', neurologicalSelect(['Normal', 'Negatif', 'Positif'])),
   f('laseque', 'Laseque Test', 'neuro', 'select', neurologicalSelect(['Normal', 'Negatif', 'Positif'])),
   f('kernig', 'Kernig Test', 'neuro', 'select', neurologicalSelect(['Normal', 'Negatif', 'Positif'])),
-  // ── KEBUGARAN ─────────────────────────────────────────────────
+//  KEBUGARAN
   // Setiap jenis tes punya SATUAN dan cara penilaian sendiri, jadi tidak
   // boleh digabung dalam satu field. Kolom `tesKebugaran` lama tetap ada
   // sebagai ringkasan otomatis agar data & laporan lama tidak hilang.
@@ -973,9 +970,7 @@ export function getFieldsBySection(sectionId: string): MCUFieldDef[] {
   return MCU_FIELDS.filter(field => field.section === sectionId);
 }
 
-// ============================================================
 // Urinalisis — 19 parameter per kolom (ul_*) + ringkasan komposit `ul`
-// ============================================================
 // Setiap parameter disimpan di kolom database sendiri (ul_warna, ul_protein,
 // dst.) supaya bisa di-query per parameter. Kolom `ul` lama tetap diisi
 // otomatis sebagai ringkasan komposit "Label: nilai" untuk engine zonasi,

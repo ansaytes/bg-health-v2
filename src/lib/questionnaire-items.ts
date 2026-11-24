@@ -1,6 +1,4 @@
-// ============================================================
 // Definisi Item Kuesioner — STD-006 Rev001
-// ============================================================
 //
 // Naskah di bawah ini memakai rumusan instrumen asli, bukan adaptasi:
 //
@@ -21,7 +19,6 @@
 // Catatan klinis: ESS, SRQ-20, dan DASS-21 adalah INSTRUMEN SKRINING, bukan
 // alat diagnosis. SDS-30 adalah PENGUKURAN FAKTOR PSIKOLOGI KERJA. Sesuai
 // STD-006, konfirmasi diagnosis dan keputusan klinis ditetapkan dokter.
-// ============================================================
 
 export interface ScaleOption {
   value: number;
@@ -35,9 +32,7 @@ export interface QuestionnaireItem {
   options: ScaleOption[];
 }
 
-// ────────────────────────────────────────────────────────────
 // Epworth Sleepiness Scale — 8 item, skala 0–4, skor 0–32
-// ────────────────────────────────────────────────────────────
 //
 // ESS menilai kantuk berlebihan di siang hari, bukan keseluruhan
 // umum. Official scale anchorages: 0 = tidak pernah, 1 = jarang (kurang dari
@@ -63,9 +58,7 @@ export const ESS_ITEMS: QuestionnaireItem[] = [
   { id: 'ess8', text: 'Mengendarai kendaraan, misal pada perjalanan jauh yang membosankan atau perjalanan pulang setelah shift panjang', options: ESS_OPTIONS },
 ];
 
-// ────────────────────────────────────────────────────────────
 // SRQ-20 — 20 item Ya/Tidak, skor 0–20, ambang batas ≥6
-// ────────────────────────────────────────────────────────────
 //
 // Menanyakan gejala dalam 30 HARI terakhir. Nilai 1 untuk "Ya", 0 untuk
 // "Tidak". Skor ≥6 berarti kemungkinan gangguan mental emosional yang perlu
@@ -99,9 +92,7 @@ export const SRQ20_ITEMS: QuestionnaireItem[] = [
   { id: 'srq20', text: 'Apakah Anda mudah lelah?', options: SRQ20_OPTIONS },
 ];
 
-// ────────────────────────────────────────────────────────────
 // DASS-21 — 21 item, skala 0–3, tiga subskala
-// ────────────────────────────────────────────────────────────
 //
 // Jawab untuk kondisi MINGGUAN TERAKHIR. Anchor skala memakai rumusan asli
 // Lovibond & Lovibond, karena labelnya memengaruhi pelaporan: angka 2 berarti
@@ -150,11 +141,9 @@ export const DASS21_SECTIONS = [
   { id: 'stres' as const, title: 'Stres', subtitle: 'Stress', items: [1, 7, 8, 11, 14] },
 ];
 
-// ────────────────────────────────────────────────────────────
 // SDS-30 — Survei Diagnosis Stres, 30 item
 // Lampiran Permenaker No. 5 Tahun 2018 (K3 Lingkungan Kerja)
 // Skala 1–7 · 6 indikator × 5 item · skor indikator 5–35
-// ────────────────────────────────────────────────────────────
 //
 // Instrumen ini mengukur FAKTOR PSIKOLOGI KERJA (ketaksaan peran, konflik
 // peran, beban kerja berlebih, pengembangan karir, tanggung jawab terhadap

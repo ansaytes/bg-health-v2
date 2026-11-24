@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Lock, ShieldCheck, Clock, AlertCircle, ArrowRight, LogOut, CheckCircle2 } from 'lucide-react';
+import { Lock, ShieldCheck, Clock, AlertCircle, LogOut, CheckCircle2 } from 'lucide-react';
 import type { EmployeeIdentityView } from './QuestionnaireUI';
 
 const STORAGE_KEY = 'bg_health_qtoken';
@@ -51,7 +51,6 @@ export default function QuestionnaireTokenGate({ children }: QuestionnaireTokenG
   const [mounted, setMounted] = useState(false);
   const [remainingMinutes, setRemainingMinutes] = useState(30);
 
-  // Form State
   const [nik, setNik] = useState('');
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
@@ -66,7 +65,6 @@ export default function QuestionnaireTokenGate({ children }: QuestionnaireTokenG
     }
   }, []);
 
-  // Timer countdown 30 menit
   useEffect(() => {
     if (!session) return;
     const interval = setInterval(() => {
@@ -182,55 +180,20 @@ export default function QuestionnaireTokenGate({ children }: QuestionnaireTokenG
               userSelect: 'none',
             }}
           >
-            {/* Traffic Lights */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, width: 60 }}>
+            {/* macOS Window Header without fake traffic lights */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="brand-orange-dot" aria-hidden="true" />
               <span
                 style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: '50%',
-                  background: '#FF5F56',
-                  border: '1px solid #E0443E',
-                  display: 'inline-block',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: 'var(--foreground)',
+                  letterSpacing: '-0.01em',
                 }}
-              />
-              <span
-                style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: '50%',
-                  background: '#FFBD2E',
-                  border: '1px solid #DEA123',
-                  display: 'inline-block',
-                }}
-              />
-              <span
-                style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: '50%',
-                  background: '#27C93F',
-                  border: '1px solid #1AAB29',
-                  display: 'inline-block',
-                }}
-              />
+              >
+                Verifikasi Responden: One-Time Token
+              </span>
             </div>
-
-            {/* Centered Window Title */}
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: 'var(--foreground)',
-                letterSpacing: '-0.01em',
-                textAlign: 'center',
-                flex: 1,
-              }}
-            >
-              Verifikasi Responden — One-Time Token
-            </div>
-
-            <div style={{ width: 60 }} />
           </div>
 
           {/* macOS Window Body */}
@@ -319,15 +282,17 @@ export default function QuestionnaireTokenGate({ children }: QuestionnaireTokenG
                   placeholder="Contoh: 230802778"
                   disabled={loading}
                   autoComplete="username"
+                  className="focus-visible:ring-2 focus-visible:ring-[#FF5E00]/40 focus-visible:border-[#FF5E00]"
                   style={{
                     width: '100%',
-                    height: 38,
-                    padding: '0 12px',
+                    height: 44,
+                    minHeight: 44,
+                    padding: '0 14px',
                     borderRadius: 8,
                     border: '1px solid var(--border)',
                     background: 'var(--background)',
                     color: 'var(--foreground)',
-                    fontSize: 13,
+                    fontSize: 14,
                     outline: 'none',
                     transition: 'border-color 0.15s, box-shadow 0.15s',
                   }}
@@ -358,15 +323,17 @@ export default function QuestionnaireTokenGate({ children }: QuestionnaireTokenG
                   placeholder="ddmmyyyy (misal: 17081995)"
                   disabled={loading}
                   autoComplete="current-password"
+                  className="focus-visible:ring-2 focus-visible:ring-[#FF5E00]/40 focus-visible:border-[#FF5E00]"
                   style={{
                     width: '100%',
-                    height: 38,
-                    padding: '0 12px',
+                    height: 44,
+                    minHeight: 44,
+                    padding: '0 14px',
                     borderRadius: 8,
                     border: '1px solid var(--border)',
                     background: 'var(--background)',
                     color: 'var(--foreground)',
-                    fontSize: 13,
+                    fontSize: 14,
                     outline: 'none',
                     transition: 'border-color 0.15s, box-shadow 0.15s',
                   }}
@@ -380,14 +347,15 @@ export default function QuestionnaireTokenGate({ children }: QuestionnaireTokenG
                 type="submit"
                 disabled={loading}
                 style={{
-                  marginTop: 4,
-                  height: 40,
+                  marginTop: 6,
+                  height: 44,
+                  minHeight: 44,
                   borderRadius: 8,
                   background: '#FF5E00',
                   color: '#ffffff',
                   border: 'none',
                   fontWeight: 600,
-                  fontSize: 13,
+                  fontSize: 14,
                   cursor: loading ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -399,7 +367,6 @@ export default function QuestionnaireTokenGate({ children }: QuestionnaireTokenG
                 }}
               >
                 {loading ? 'Memverifikasi...' : 'Mulai Pengisian (Sesi 30 Menit)'}
-                {!loading && <ArrowRight size={14} />}
               </button>
             </form>
 

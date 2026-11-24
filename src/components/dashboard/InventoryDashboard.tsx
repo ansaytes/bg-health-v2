@@ -594,7 +594,7 @@ export default function InventoryDashboard() {
                 </div>
               </div>
 
-              {/* Grid grafik — dua baris, memenuhi satu halaman */}
+              {/* Grid grafik : dua baris, memenuhi satu halaman */}
               <div key="charts-grid" style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 10 }}>
         {/* Chart 1: Top Sudah Expired */}
         <div className="card mcu-dashboard-card glow-coral" data-chart="expired" style={{ padding: '3px 6px' }}>

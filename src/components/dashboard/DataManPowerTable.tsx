@@ -220,7 +220,7 @@ export default function DataManPowerTable({ canEdit = false }: DataManPowerTable
                   <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data man power">
                     <div className="bm-loading-spinner">
                       <div className="bm-loading-ring" aria-hidden="true" />
-                      <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                      <img src="/BM.png" alt="" width={48} height={48} className="bm-loading-logo" aria-hidden="true" />
                     </div>
                     <p className="bm-loading-label">Memuat data man power…</p>
                   </div>
@@ -283,7 +283,7 @@ export default function DataManPowerTable({ canEdit = false }: DataManPowerTable
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle style={{ fontSize: 15 }}>Edit Data Σ Man Power</DialogTitle>
-            <DialogDescription>{editRow?.jobsite} — {MONTHS[editRow?.bulan]} {editRow?.tahun}</DialogDescription>
+            <DialogDescription>{editRow?.jobsite} : {MONTHS[editRow?.bulan]} {editRow?.tahun}</DialogDescription>
           </DialogHeader>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {EDITABLE_FIELDS.map(f => (
@@ -322,7 +322,7 @@ export default function DataManPowerTable({ canEdit = false }: DataManPowerTable
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus Data Σ Man Power</AlertDialogTitle>
             <AlertDialogDescription>
-              Yakin ingin menghapus data <strong>{deleteRow?.jobsite} — {MONTHS[deleteRow?.bulan]} {deleteRow?.tahun}</strong>? Tindakan ini tidak dapat dibatalkan.
+              Yakin ingin menghapus data <strong>{deleteRow?.jobsite} : {MONTHS[deleteRow?.bulan]} {deleteRow?.tahun}</strong>? Tindakan ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

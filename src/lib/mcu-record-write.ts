@@ -1,6 +1,4 @@
-// ============================================================
 // Penulisan mcu_records yang tahan selisih skema
-// ============================================================
 //
 // MASALAH
 // PostgREST menolak SELURUH payload update/insert bila satu kolom saja tidak

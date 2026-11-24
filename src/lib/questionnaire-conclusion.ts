@@ -1,6 +1,4 @@
-// ============================================================
 // Kesimpulan hasil kuesioner dalam bahasa sehari-hari
-// ============================================================
 //
 // Modul ini mengubah angka hasil kuesioner menjadi kalimat yang bisa dibaca
 // karyawan yang mengisinya sendiri. Dipisah dari route API supaya aturannya
@@ -37,7 +35,6 @@
 //
 // Ambang DASS-21 ditentukan dari KATEGORI, bukan angka tetap, karena batas
 // "berat" tiap subskala berbeda: depresi mulai 22, ansietas 20, stres 26.
-// ============================================================
 
 import type { DassCategory } from '@/lib/questionnaire-scores';
 

@@ -5,7 +5,7 @@ import InputPsikologiLingkunganPage from '@/components/administrator/InputPsikol
 import QuestionnaireRouteGuard from '@/components/questionnaire/QuestionnaireRouteGuard';
 
 export const metadata: Metadata = {
-  title: 'Kuesioner Psikologi Lingkungan Kerja — BG-Health',
+  title: 'Kuesioner Psikologi Lingkungan Kerja: BG-Health',
   description: 'SDS-30 untuk skrining faktor psikologi lingkungan kerja.',
 };
 

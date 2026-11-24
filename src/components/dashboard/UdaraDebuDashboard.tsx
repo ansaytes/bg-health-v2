@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Dashboard > Higiene Industri > Kualitas Udara & Debu Industri
-// ============================================================
 //
 // ACUAN STANDAR:
 // 1. Permenaker 5/2018 Pasal 40–42 (KUDR: Suhu 23–26°C, RH 40–60%, O2 19.5–23.5%, Volume 10 m3/org)

@@ -352,7 +352,7 @@ export default function KunjunganBerobatForm() {
         infoList.push(...json.dispense.catatan);
       }
 
-      // ── TINDAK LANJUT OTOMATIS ─────────────────────────────────────────
+//  TINDAK LANJUT OTOMATIS
       // Surat izin/absen atau rujukan → episode Monitoring Karyawan Sakit.
       // Kategori Penyakit Akibat Kerja → kasus baru di Register PAK.
       // Kegagalan integrasi TIDAK menggagalkan penyimpanan kunjungan; hasilnya

@@ -1,6 +1,4 @@
-// ============================================================
 // AI account config — normalisasi & pembacaan akun tersimpan
-// ============================================================
 
 import type { AiAccount, AiAccountWithKey, AiProviderKind } from '@/lib/ai-types';
 

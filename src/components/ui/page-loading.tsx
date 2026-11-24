@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Loading halaman — logo spinner, satu per HALAMAN
-// ============================================================
 //
 // Kenapa satu per halaman: sebelumnya tiap diagram punya spinner sendiri,
 // sehingga halaman dengan enam grafik menampilkan enam spinner sekaligus —
@@ -19,7 +17,7 @@ export default function PageLoading({ label = 'Memuat data' }: { label?: string 
         <div className="bm-loading-spinner">
           <div className="bm-loading-ring" aria-hidden="true" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+          <img src="/BM.png" alt="" width={48} height={48} className="bm-loading-logo" aria-hidden="true" />
         </div>
         <p className="bm-loading-label">{label}…</p>
       </div>

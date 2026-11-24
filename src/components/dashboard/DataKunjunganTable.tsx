@@ -346,7 +346,7 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
     || EDITABLE_FIELDS.find((field) => field.key === key)?.label
     || key;
   const auditValue = (value: unknown) => {
-    if (value === null || value === undefined || value === '') return '—';
+    if (value === null || value === undefined || value === '') return '-';
     if (typeof value === 'string') {
       try {
         const parsed: unknown = JSON.parse(value);
@@ -460,7 +460,7 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
                   <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data kunjungan berobat">
                     <div className="bm-loading-spinner">
                       <div className="bm-loading-ring" aria-hidden="true" />
-                      <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                      <img src="/BM.png" alt="" width={48} height={48} className="bm-loading-logo" aria-hidden="true" />
                     </div>
                     <p className="bm-loading-label">Memuat data kunjungan berobat…</p>
                   </div>
@@ -936,7 +936,7 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus Data Kunjungan</AlertDialogTitle>
             <AlertDialogDescription>
-              Yakin ingin menghapus kunjungan <strong>{deleteRow?.nik} — {deleteRow?.nama}</strong>? Tindakan ini tidak dapat dibatalkan.
+              Yakin ingin menghapus kunjungan <strong>{deleteRow?.nik} : {deleteRow?.nama}</strong>? Tindakan ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -241,10 +241,10 @@ export default function PemetaanPsikologisDashboard() {
         </select>
         {/* Baseline: periode pembanding. Kosong = tanpa pembanding. */}
         <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }} title="Periode pembanding untuk melihat perubahan skor">Baseline</span>
-        <input type="date" value={baselineDari} onChange={(e) => setBaselineDari(e.target.value)} title="Baseline — tanggal mulai"
+        <input type="date" value={baselineDari} onChange={(e) => setBaselineDari(e.target.value)} title="Baseline : tanggal mulai"
           style={dateStyle} />
         <span style={{ fontSize: 10, color: 'var(--muted-foreground)', fontWeight: 700 }}>s.d.</span>
-        <input type="date" value={baselineSampai} onChange={(e) => setBaselineSampai(e.target.value)} title="Baseline — tanggal akhir"
+        <input type="date" value={baselineSampai} onChange={(e) => setBaselineSampai(e.target.value)} title="Baseline : tanggal akhir"
           style={dateStyle} />
         {(baselineDari || baselineSampai) && (
           <button type="button" onClick={() => { setBaselineDari(''); setBaselineSampai(''); }}

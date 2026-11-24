@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
   const sekarang = new Date();
   const hariIni = tanggalISO(sekarang);
 
-  // ── Kumpulkan temuan dari semua sumber ────────────────────────────────────
+//  Kumpulkan temuan dari semua sumber
   const temuan: (TemuanMasuk & { tingkat: string })[] = [];
 
   for (const sumber of SUMBER) {
@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, dibuat: 0, dilewati: 0, pesan: 'Tidak ada temuan baru.' });
   }
 
-  // ── Lewati temuan yang sudah punya PICA (belum closed/dismissed) ──────────
+//  Lewati temuan yang sudah punya PICA (belum closed/dismissed)
   let qPica = client.from('pica').select('id,kunci_berulang,site,status');
   if (siteFilter) qPica = qPica.eq('site', siteFilter);
   const { data: picaAda, error: picaError } = await qPica;

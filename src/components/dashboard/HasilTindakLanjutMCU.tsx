@@ -247,7 +247,7 @@ export default function HasilTindakLanjutMCU() {
         <div className="bm-loading is-card" role="status" aria-live="polite" aria-label="Memuat data analisa dan tindak lanjut MCU">
           <div className="bm-loading-spinner">
             <div className="bm-loading-ring" aria-hidden="true" />
-            <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+            <img src="/BM.png" alt="" width={48} height={48} className="bm-loading-logo" aria-hidden="true" />
           </div>
         </div>
       )

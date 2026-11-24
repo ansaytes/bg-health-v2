@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Administrator > Sarana & Program Inspeksi (Halaman Tunggal Terintegrasi)
-// ============================================================
 // Menggabungkan seluruh alur digitalisasi inspeksi fasilitas & aset:
 //   1. Sarana Klinik   — Ruangan, alkes, APD, evakuasi klinik (SOP/028)
 //   2. Kotak P3K       — Checklist kelaikan kotak P3K per lokasi (Permenaker 15/2008)

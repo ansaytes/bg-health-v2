@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Dashboard > ProKawan — AGREGAT, pola tampilan Monitoring MCU
-// ============================================================
 //
 // Dasar:
 //  • INK/016 poin 4.6.4 — rekapitulasi kepada manajemen AGREGAT, tanpa identitas.
@@ -98,7 +96,7 @@ export default function ProKawanDashboard() {
 
   return (
     <div className="dashboard mcu-live-dashboard" style={{ overflow: 'hidden', gap: 8 }}>
-      {/* Filter bar — mengikuti pola Monitoring MCU */}
+      {/* Filter bar : mengikuti pola Monitoring MCU */}
       <div className="mcu-live-top-bar" style={{ flexShrink: 0 }}>
         <div className="mcu-dashboard-filters">
           <label>
@@ -126,7 +124,7 @@ export default function ProKawanDashboard() {
         {error && <span style={{ fontSize: 10, color: '#b3261e' }}>{error}</span>}
       </div>
 
-      {/* Baris 1 — komposisi (donut) + kepatuhan (bar horizontal), 3 kolom */}
+      {/* Baris 1 : komposisi (donut) + kepatuhan (bar horizontal), 3 kolom */}
       <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, flex: 1, minHeight: 0 }}>
         <div className="card mcu-dashboard-card">
           <div className="card-head">
@@ -179,7 +177,7 @@ export default function ProKawanDashboard() {
         </div>
       </div>
 
-      {/* Baris 2 — peringkat (2 diagram) + Status Jadwal dipindah paling akhir.
+      {/* Baris 2 : peringkat (2 diagram) + Status Jadwal dipindah paling akhir.
           Dua diagram penuh lebar (kard Kelayakan Kerja dihapus: status
           kelayakan kerja sudah terefleksi lewat jalur & status kepatuhan,
           dan menampilkannya lagi di sini justru redundan untuk laporan

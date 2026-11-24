@@ -153,7 +153,7 @@ export default function FormTindakLanjut({ peserta, jenis, onSelesai }: {
       });
       setHasilSimpan({
         zonaSebelum: (r.zonaSebelum as string | null) ?? null,
-        zonaSesudah: String(r.zonaSesudah ?? '—'),
+        zonaSesudah: String(r.zonaSesudah ?? '-'),
         arah: String(r.arah ?? ''),
         ringkasanSurat: String(r.ringkasanSurat ?? ''),
         ditutup: r.ditutup === true,
@@ -210,11 +210,11 @@ export default function FormTindakLanjut({ peserta, jenis, onSelesai }: {
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-            <InfoMini label="Zona baseline" value={String(data.baseline.zona ?? '—')} />
+            <InfoMini label="Zona baseline" value={String(data.baseline.zona ?? '-')} />
             <span style={{ fontSize: 14, color: 'var(--muted-foreground)' }}>&rarr;</span>
             <InfoMini
               label="Zona efektif"
-              value={String(data.zonaEfektif?.zona ?? data.baseline.zona ?? '—')}
+              value={String(data.zonaEfektif?.zona ?? data.baseline.zona ?? '-')}
               warna={String(data.zonaEfektif?.zona ?? '') === 'Merah' ? '#FF2D2D' : String(data.zonaEfektif?.zona ?? '') === 'Kuning' ? '#C99A00' : '#00B894'}
             />
           </div>
@@ -226,7 +226,7 @@ export default function FormTindakLanjut({ peserta, jenis, onSelesai }: {
         )}
       </div>
 
-      {/* Form field — dilipat per kelompok */}
+      {/* Form field : dilipat per kelompok */}
       <div className="card" style={{ padding: '10px 12px', flexShrink: 0 }}>
         <div className="card-head" style={{ marginBottom: 8 }}>
           <span style={{ width: 3, height: 18, borderRadius: 2, background: '#ff4d00', flexShrink: 0 }} />
@@ -273,7 +273,7 @@ export default function FormTindakLanjut({ peserta, jenis, onSelesai }: {
               {buka && (
                 <div style={{ padding: 10, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
                   {k.fields.map((f) => {
-                    // ── TEKANAN DARAH: DUA KOTAK ───────────────────────
+//  TEKANAN DARAH: DUA KOTAK
                     // tdS = Sistole, tdD = Diastole. Keduanya WAJIB terisi
                     // supaya engine bisa mengklasifikasi (classifyBloodPressure
                     // membutuhkan dua angka). Dulu hanya satu field sehingga
@@ -305,7 +305,7 @@ export default function FormTindakLanjut({ peserta, jenis, onSelesai }: {
                             />
                           </div>
                           <span style={{ fontSize: 8, color: 'var(--muted-foreground)', lineHeight: 1.3 }}>
-                            {f.klasifikasi ? `${f.klasifikasi} · ` : ''}Sistole/Diastole — isi keduanya
+                            {f.klasifikasi ? `${f.klasifikasi} · ` : ''}Sistole/Diastole : isi keduanya
                           </span>
                         </div>
                       );
@@ -339,7 +339,7 @@ export default function FormTindakLanjut({ peserta, jenis, onSelesai }: {
           <Input value={catatan} onChange={(e) => setCatatan(e.target.value)} placeholder={tutupParamedis ? 'Alasan penutupan (wajib)' : ''} className="h-8 rounded-lg text-sm" />
         </label>
 
-        {/* Konfirmasi QSHE Medic — penutupan manual. Tanpa ini, FU ditutup otomatis
+        {/* Konfirmasi QSHE Medic : penutupan manual. Tanpa ini, FU ditutup otomatis
             bila zona Hijau dan semua parameter sudah normal. */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', marginBottom: 8,
@@ -374,7 +374,7 @@ export default function FormTindakLanjut({ peserta, jenis, onSelesai }: {
           </span>
         </div>
 
-        {/* Pratinjau surat kontrol — bisa disalin untuk ditempel ke surat pengantar */}
+        {/* Pratinjau surat kontrol : bisa disalin untuk ditempel ke surat pengantar */}
         <div style={{ padding: '8px 10px', borderRadius: 8, background: 'var(--muted)', fontSize: 10.5, lineHeight: 1.5 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
             <span style={{ fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>
@@ -390,7 +390,7 @@ export default function FormTindakLanjut({ peserta, jenis, onSelesai }: {
                   setTersalin(true);
                   setTimeout(() => setTersalin(false), 1800);
                 } catch {
-                  store.showToast('Gagal menyalin — salin manual dari kotak teks', 'error');
+                  store.showToast('Gagal menyalin : salin manual dari kotak teks', 'error');
                 }
               }}
               style={{
@@ -405,18 +405,18 @@ export default function FormTindakLanjut({ peserta, jenis, onSelesai }: {
             </button>
           </div>
           <div style={{ fontFamily: 'Consolas, monospace', wordBreak: 'break-word' }}>
-            {pratinjauSurat || data.ringkasanSurat || '—'}
+            {pratinjauSurat || data.ringkasanSurat || '-'}
           </div>
         </div>
 
         {hasilSimpan && (
           <div style={{ marginTop: 8, padding: '7px 10px', borderRadius: 8, background: `${ARAH_WARNA[hasilSimpan.arah] ?? '#778899'}12`, border: `1px solid ${ARAH_WARNA[hasilSimpan.arah] ?? '#778899'}44`, fontSize: 10.5 }}>
-            <b>Zona: {hasilSimpan.zonaSebelum ?? '—'} &rarr; {hasilSimpan.zonaSesudah}</b>
+            <b>Zona: {hasilSimpan.zonaSebelum ?? '-'} &rarr; {hasilSimpan.zonaSesudah}</b>
             <span style={{ color: ARAH_WARNA[hasilSimpan.arah] ?? '#778899', fontWeight: 800 }}> ({hasilSimpan.arah})</span>
             <div style={{ marginTop: 2 }}>
               {hasilSimpan.ditutup
                 ? <b style={{ color: '#00806a' }}>Tindak lanjut ditutup {hasilSimpan.paramedis ? '(Konfirmasi QSHE Medic)' : '(otomatis: semua parameter normal)'}</b>
-                : <b style={{ color: '#9a6b00' }}>Masih terbuka — {hasilSimpan.sisaAbnormal} parameter abnormal tersisa</b>}
+                : <b style={{ color: '#9a6b00' }}>Masih terbuka : {hasilSimpan.sisaAbnormal} parameter abnormal tersisa</b>}
             </div>
           </div>
         )}

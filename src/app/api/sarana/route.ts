@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  // ── OBAT TIDAK DITAMPILKAN DI SARANA ──────────────────────────────────────
+//  OBAT TIDAK DITAMPILKAN DI SARANA
   // Persediaan obat & BHP dikelola tersendiri di halaman Inventory (batch, ED,
   // pemakaian). Sebelumnya sebuah baris virtual "Persediaan Obat & BHP"
   // ditambahkan di sini — itu yang membuat obat tetap muncul di Sarana.
@@ -163,7 +163,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Gagal menyimpan data sarana.' }, { status: 500 });
   }
 
-  // ── Otomatis Sinkronisasi Realisasi ke inspeksi_jadwal ──────────────────
+//  Otomatis Sinkronisasi Realisasi ke inspeksi_jadwal
   const tglInspeksi = body.tanggalInspeksi
     ? String(body.tanggalInspeksi).slice(0, 10)
     : new Date().toISOString().slice(0, 10);

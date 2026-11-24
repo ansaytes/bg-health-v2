@@ -1,6 +1,4 @@
-// ============================================================
 // Site master list — dipakai dropdown site di seluruh halaman
-// ============================================================
 //
 // Sumber: GET /api/sites (DISTINCT site dari monitor_mcu, fallback JOBSITES).
 // Cache per module instance (bukan per komponen) agar halaman yang berbeda

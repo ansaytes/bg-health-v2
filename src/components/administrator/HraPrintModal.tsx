@@ -1,10 +1,8 @@
 'use client';
 
-// ============================================================
 // HraPrintModal.tsx — Dokumen Cetak Resmi FORM/069 Rev.001
 // PT. BAGONG DEKAKA MAKMUR — HEALTH HAZARD RISK ASSESSMENT (HRA)
 // Layout A4 Landscape standar audit SMKP, ISO 45001, & Minerba
-// ============================================================
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -347,7 +345,7 @@ export default function HraPrintModal({
                       letterSpacing: '0.4px',
                     }}
                   >
-                    PT. BAGONG DEKAKA MAKMUR — HEALTH HAZARD RISK ASSESSMENT (HRA)
+                    PT. BAGONG DEKAKA MAKMUR : HEALTH HAZARD RISK ASSESSMENT (HRA)
                   </td>
                 </tr>
                 <tr style={{ fontSize: '7.5pt' }}>

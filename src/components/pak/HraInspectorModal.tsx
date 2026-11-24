@@ -1,10 +1,8 @@
 'use client';
 
-// ============================================================
 // HraInspectorModal.tsx — Pemeriksaan Pajanan HRA Terpadu untuk Kasus PAK
 // Standar: INK/017 Lampiran 1 & Dokumen BG/QSHE/FORM/069 Rev.001
 // Membaca matriks HRA dinamis dari /api/hra sesuai Jabatan/Departemen karyawan
-// ============================================================
 
 import React, { useState, useEffect, useMemo } from 'react';
 import {
@@ -223,15 +221,15 @@ export default function HraInspectorModal({
             </div>
             <div>
               <span className="text-[10px] text-muted-foreground block font-medium">Karyawan</span>
-              <span className="font-bold text-foreground">{kasus.nama_enc ?? '—'}</span>
+              <span className="font-bold text-foreground">{kasus.nama_enc ?? '-'}</span>
             </div>
             <div>
               <span className="text-[10px] text-muted-foreground block font-medium">Jabatan</span>
-              <span className="font-semibold text-foreground">{kasus.jabatan ?? '—'}</span>
+              <span className="font-semibold text-foreground">{kasus.jabatan ?? '-'}</span>
             </div>
             <div>
               <span className="text-[10px] text-muted-foreground block font-medium">Departemen</span>
-              <span className="font-semibold text-foreground">{kasus.department ?? '—'}</span>
+              <span className="font-semibold text-foreground">{kasus.department ?? '-'}</span>
             </div>
           </div>
 

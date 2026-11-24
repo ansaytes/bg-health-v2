@@ -234,7 +234,7 @@ export default function ErgonomiDashboard() {
 
   return (
     <div className="dashboard" style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* Top bar — mengikuti pola Monitoring MCU */}
+      {/* Top bar : mengikuti pola Monitoring MCU */}
       <div className="mcu-live-top-bar" style={{ flexShrink: 0 }}>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <select className="admin-filter-select" value={site} onChange={(e) => { setErr(''); setSite(e.target.value); }}>
@@ -258,7 +258,7 @@ export default function ErgonomiDashboard() {
         </span>
       </div>
 
-      {/* Grafik utama — jumlah dan jenis diagram sama di desktop maupun mobile. */}
+      {/* Grafik utama : jumlah dan jenis diagram sama di desktop maupun mobile. */}
       <div className="mcu-live-chart-row mcu-live-chart-row--two-rows" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
         <MCUChartCard title="Distribusi Klasifikasi Risiko" subtitle="Seluruh survei disetujui, semua metode" className="glow-coral"><canvas ref={klasRef} /></MCUChartCard>
         <MCUChartCard title="Klasifikasi per Metode" subtitle="RULA · ROSA · WERA" className="glow-amber"><canvas ref={metodeRef} /></MCUChartCard>
@@ -275,7 +275,7 @@ export default function ErgonomiDashboard() {
               <thead><tr>{['Tanggal', 'Metode', 'Site / Area', 'Skor', 'Klasifikasi'].map((h) => <th key={h} style={thStyle}>{h}</th>)}</tr></thead>
               <tbody>
                 {d.risikoTinggi.map((r: D) => (
-                  <tr key={r.id}><td style={tdStyle}>{fmtDate(r.tanggal)}</td><td style={tdStyle}>{r.metode}</td><td style={tdStyle}>{r.site} — {r.area_kerja}</td><td style={tdStyle}>{r.skor_akhir}</td>
+                  <tr key={r.id}><td style={tdStyle}>{fmtDate(r.tanggal)}</td><td style={tdStyle}>{r.metode}</td><td style={tdStyle}>{r.site} : {r.area_kerja}</td><td style={tdStyle}>{r.skor_akhir}</td>
                     <td style={tdStyle}><Chip text={String(r.klasifikasi).replace('_', ' ')} color={KLAS_COLOR[r.klasifikasi as Klasifikasi]} /></td></tr>
                 ))}
                 {!d.risikoTinggi.length && <tr><td style={tdStyle} colSpan={5}>Tidak ada.</td></tr>}

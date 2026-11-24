@@ -1,6 +1,4 @@
-// ============================================================
 // Resolver NIK → record mcu_records
-// ============================================================
 //
 // MASALAH DATA YANG DITEMUKAN (bukan dibuat oleh perubahan ini):
 //
@@ -27,7 +25,6 @@
 //   4. Bila masih gagal, pindai terbatas + dekripsi (fallback terakhir).
 //
 // Tidak ada data yang diubah. Resolver hanya MEMBACA.
-// ============================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -81,20 +78,20 @@ export async function cariMcuByNik(
     return (data?.[0] as unknown as Record<string, unknown> | undefined) ?? null;
   };
 
-  // ── 1. Jalur normal ───────────────────────────────────────────────
+//  1. Jalur normal
   const h = hashField(bersih);
   if (h) {
     const r = await cari('nik_karyawan_hash', h);
     if (r) return { record: r, strategi: 'hash-nik', nikTerbaca: bersih };
   }
 
-  // ── 2. national_id_hash ───────────────────────────────────────────
+//  2. national_id_hash
   if (h) {
     const r = await cari('national_id_hash', h);
     if (r) return { record: r, strategi: 'national-id-hash', nikTerbaca: bersih };
   }
 
-  // ── 3. Lewat employees → NIK KTP ──────────────────────────────────
+//  3. Lewat employees → NIK KTP
   if (h) {
     const { data: emp } = await client
       .from('employees')
@@ -112,7 +109,7 @@ export async function cariMcuByNik(
     }
   }
 
-  // ── 4. Pindai terbatas + dekripsi ─────────────────────────────────
+//  4. Pindai terbatas + dekripsi
   // Hanya untuk NIK yang benar-benar ada di data lama. Dibatasi 2.000 baris
   // terbaru agar tidak membebani database.
   // Pemindaian memakai `select('*')` karena daftar kolom dinamis tidak dapat

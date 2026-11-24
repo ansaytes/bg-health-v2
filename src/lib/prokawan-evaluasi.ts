@@ -1,9 +1,6 @@
-// ============================================================
 // Evaluasi ulang zona dari HASIL KONTROL + riwayat baseline
-// ============================================================
 //
 // MENGAPA MODUL INI ADA
-// ----------------------------------------------------------------
 // Sebelumnya `kunjungan_kontrol` hanya menyimpan tanggal + link evidence.
 // Akibatnya "kontrol" berhenti jadi cap tanggal: tidak ada nilai parameter,
 // sehingga zona tidak bisa dihitung ulang dan keberhasilan program tidak bisa
@@ -28,7 +25,6 @@
 // PENTING — KERAHASIAAN
 // Hasil per parameter adalah data medis. Riwayat hanya boleh keluar lewat
 // endpoint berotorisasi QSHE Medic; dashboard publik/manajemen tetap agregat.
-// ============================================================
 
 /** Parameter yang diukur ulang saat kontrol, dikelompokkan per blok form. */
 export interface DefinisiParameterKontrol {

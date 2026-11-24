@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     }
     const client = integrationAdminClient();
 
-    // ── 1. Aggregate from kunjungan_berobat ────────────────────
+//  1. Aggregate from kunjungan_berobat
     // NOTE: Kunjungan Berobat form is only filled for Head Office.
     // For other sites, the kunjungan_klinik field must be input manually
     // (the form auto-aggregate will leave it at 0).
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
       kunjungan_klinik = kunjRows?.length || 0;
     }
 
-    // ── 2. Aggregate from sick_employees ────────────────────────
+//  2. Aggregate from sick_employees
     let sickQuery = client
       .from('sick_employees')
       .select('id, nik, jobsite, hari_a, hari_b, hari_c, jumlah_spell, is_pak')

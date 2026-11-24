@@ -142,7 +142,7 @@ export async function GET(req: NextRequest) {
       }
       perKategori.set(kategori, agg);
 
-      // ── Kalibrasi ─────────────────────────────────────────────────
+//  Kalibrasi
       if (k.perlu_kalibrasi) {
         const bulan = bulanLalu(r.tanggal_kalibrasi as string | null);
         if (bulan === null) {

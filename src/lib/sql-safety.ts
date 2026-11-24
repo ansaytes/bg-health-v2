@@ -1,6 +1,4 @@
-// ============================================================
 // Perlindungan SQL / filter injection
-// ============================================================
 //
 // Aplikasi ini TIDAK menulis SQL mentah. Semua akses data lewat Supabase
 // (PostgREST), yang selalu memakai parameter terikat untuk `.eq()`, `.in()`,
@@ -100,9 +98,7 @@ export function inHexList(column: string, values: string[]): string {
   return `${assertIdentifier(column)}.in.(${safe.join(',')})`;
 }
 
-// ────────────────────────────────────────────────────────────
 // Detektor pola serangan (defense in depth)
-// ────────────────────────────────────────────────────────────
 
 const ATTACK_PATTERNS: RegExp[] = [
   /\bunion\b[\s\S]{0,40}\bselect\b/i,

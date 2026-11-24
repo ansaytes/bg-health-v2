@@ -1,27 +1,24 @@
-// ============================================================
 // Penentu field tindak lanjut — DUA acuan
-// ============================================================
 //
 // Nilai rujukan yang berlaku di aplikasi hanya dua. Engine (clinical-classification,
 // zonasi-engine) bukan sumber rujukan sendiri: ia hanya menghitung berdasarkan
 // kedua acuan ini.
 //
-// ┌─────────────────────────────────────────────────────────────────────┐
+// ┌┐
 // │ 1. TRIGGER ZONA (BG/QSHE/STD/006 Bab 7)                             │
 // │    Parameter yang menentukan Zona Risiko PTM. WAJIB dikendalikan    │
 // │    lewat ProKawan. Contoh: Hypertension Grade I (145/92).           │
-// ├─────────────────────────────────────────────────────────────────────┤
+// ├┤
 // │ 2. TEMUAN ABNORMAL (rujukan nasional Indonesia)                     │
 // │    Nilai di luar rentang rujukan klinis/laboratorium Indonesia      │
 // │    (MCU_FIELDS normalRange), plus parameter yang melewati ambang    │
 // │    STD/006 tetapi bukan trigger zona. Menangkap LEBIH LUAS dari     │
 // │    STD/006. Contoh: TD 120/80 = pre-hipertensi → abnormal, tetapi   │
 // │    bukan peserta ProKawan.                                          │
-// └─────────────────────────────────────────────────────────────────────┘
+// └┘
 //
 // Keduanya menjadi dasar `perlu_fu` otomatis (hitungTemuanAbnormal) dan
 // penutupan follow up otomatis (hitungSisaTindakLanjut).
-// ============================================================
 
 import {
   classifyBloodPressure, classifyBmi, classifyChestXr, classifyEgfr, classifyGlucose,
@@ -287,7 +284,7 @@ export function tentukanFieldTindakLanjut(
     const nilaiMcu = (baseline[field.id] ?? null) as string | number | null;
     if (nilaiMcu === null || String(nilaiMcu).trim() === '') continue;
 
-    // ── Sumber 1: trigger zona ───────────────────────────────────
+//  Sumber 1: trigger zona
     if (fieldTrigger.has(field.id)) {
       const k = klasifikasiKlinis(field.id, baseline, gender);
       daftar.push({
@@ -303,9 +300,9 @@ export function tentukanFieldTindakLanjut(
       continue;
     }
 
-    // ── Sumber 2: di luar rentang standar Indonesia ──────────────
+//  Sumber 2: di luar rentang standar Indonesia
     if (field.type === 'number') {
-      // ── IMT: ambang khusus IMT ≥30 ──────────────────────────────
+//  IMT: ambang khusus IMT ≥30
       // `MCU_FIELDS.normalRange` untuk BMI adalah '<30' — naikkan ke sini
       // supaya IMT 25,6 (Hijau menurut STD/006) TIDAK dianggap temuan.
       // Sesuai arahan: hanya IMT ≥30 yang masuk temuan.
@@ -338,7 +335,7 @@ export function tentukanFieldTindakLanjut(
       }
     }
 
-    // ── Visus: teks, tetapi ada dua acuan berbeda ────────────────
+//  Visus: teks, tetapi ada dua acuan berbeda
     //
     // STD/006 (zona PTM)   : Hijau bila ≥6/9 → 6/9 TIDAK masuk zona.
     // Standar kesehatan ID : 6/9 adalah batas PENERIMAAN, sehingga 6/9 tepat
@@ -365,7 +362,7 @@ export function tentukanFieldTindakLanjut(
       }
     }
 
-    // ── Sumber 2 (lanjutan): klasifikasi klinis non-hijau ────────
+//  Sumber 2 (lanjutan): klasifikasi klinis non-hijau
     const k = klasifikasiKlinis(field.id, baseline, gender);
     if (k && k.severity !== 'hijau' && k.severity !== 'normal' && k.severity !== 'tidak-dinilai') {
       if (sudah.has(field.id)) continue;

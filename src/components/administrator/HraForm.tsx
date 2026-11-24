@@ -1,12 +1,10 @@
 'use client';
 
-// ============================================================
 // Administrator > Higiene Industri > Form Input / Edit HRA
 // Health Hazard Risk Assessment (FORM/069 Rev.001)
 // P = Tingkat Paparan (Akumulasi jam paparan per minggu sesuai NAB Permenaker 5/2018)
 // E = Efek Kesehatan (Tingkat keparahan dampak kesehatan)
 // R = Skor Risiko (P × E): Low (1-4), Medium (5-12), High (15-25)
-// ============================================================
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -52,7 +50,6 @@ interface HraFormProps {
 export default function HraForm({ initialData, onSuccess, onCancel }: HraFormProps) {
   const isEdit = Boolean(initialData && initialData.id);
 
-  // Form State
   const [departemen, setDepartemen] = useState(initialData?.departemen || 'OPERATION');
   const [deptOptions, setDeptOptions] = useState<DepartemenItem[]>(DEPARTEMEN_LIST);
   const [jenisPekerjaan, setJenisPekerjaan] = useState(initialData?.jenis_pekerjaan || '');
@@ -356,7 +353,7 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
                 >
                   {deptOptions.map((d) => (
                     <option key={d.key} value={d.key}>
-                      {d.label} {d.desc ? `— ${d.desc}` : ''}
+                      {d.label} {d.desc ? `- ${d.desc}` : ''}
                     </option>
                   ))}
                 </select>
@@ -518,7 +515,7 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
                 </div>
                 <div>
                   <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--foreground)' }}>
-                    Penilaian Risiko Awal — Initial Risk (P × E = R)
+                    Penilaian Risiko Awal : Initial Risk (P × E = R)
                   </div>
                   <div style={{ fontSize: 10.5, color: 'var(--muted-foreground)' }}>
                     Tingkat Paparan (P) dihitung dari akumulasi jam paparan per minggu sesuai NAB Permenaker No.5/2018

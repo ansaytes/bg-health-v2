@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Administrator > Higiene Industri > Riwayat Kualitas Udara & Debu
-// ============================================================
 // Rekapitulasi hasil pemantauan kualitas udara dan debu industri per ruangan.
 // Ditampilkan di panel tabel melalui tombol panah navigasi.
 
@@ -135,17 +133,17 @@ export default function InspeksiUdaraDebuTable() {
                                   fontWeight: 600,
                                 }}
                               >
-                                {u.label}: {u.nilai ?? '—'}{u.satuan}
+                                {u.label}: {u.nilai ?? '-'}{u.satuan}
                               </span>
                             ))}
                           </div>
-                        ) : '—'}
+                        ) : '-'}
                       </td>
                       <td style={{ ...tdStyle, fontWeight: 700, color: warna }}>
                         {!p ? 'Belum Diukur' : gagal === 0 ? '✓ Sesuai Standar' : `✗ ${gagal} Parameter Gagal`}
                       </td>
                       <td style={tdStyle}>
-                        {r.pengukuranTerakhir?.tanggal ? fmtDate(String(r.pengukuranTerakhir.tanggal)) : '—'}
+                        {r.pengukuranTerakhir?.tanggal ? fmtDate(String(r.pengukuranTerakhir.tanggal)) : '-'}
                       </td>
                     </tr>
                   );

@@ -1,6 +1,4 @@
-// ============================================================
 // Klasifikasi Klinis — BG/QSHE/STD/006 Rev001 (Penyakit Tidak Menular)
-// ============================================================
 //
 // SATU-SATUNYA sumber angka ambang batas untuk:
 //   • diagnosa_medis   (istilah diagnosis bahasa Inggris)
@@ -23,7 +21,6 @@
 //
 // Ambang batas di bawah TIDAK diubah oleh kode. Perbaikan harus lewat
 // revisi dokumen SOP, bukan lewat perubahan program.
-// ============================================================
 
 import { audiogramFromRecord, evaluateAudiogram, type Ear } from './hc-ergo';
 
@@ -40,9 +37,7 @@ export interface Classification {
   detail?: string;
 }
 
-// ────────────────────────────────────────────────────────────
 // Helper
-// ────────────────────────────────────────────────────────────
 
 export function detectGender(value: string | number | null | undefined): Gender {
   const v = String(value ?? '').toLowerCase();
@@ -65,11 +60,9 @@ export function fmt(value: number, decimals = 1): string {
   return value.toFixed(decimals).replace('.', ',');
 }
 
-// ────────────────────────────────────────────────────────────
 // 1. Tekanan Darah
 //    SOP Hijau <140/90 · Kuning 140–159/90–99 · Merah ≥160/≥100
 //    Penamaan memakai "Grade" sesuai dokumen SOP (bukan "Stage").
-// ────────────────────────────────────────────────────────────
 
 export function classifyBloodPressure(
   systolic: number | null,
@@ -94,10 +87,8 @@ export function classifyBloodPressure(
   return { severity: 'hijau', label: 'Blood Pressure Within Normal Limit', detail: value };
 }
 
-// ────────────────────────────────────────────────────────────
 // 2. Indeks Massa Tubuh
 //    SOP Hijau <23 · Kuning 23–24,9 · Kuning ≥25 · Merah ≥30 + komorbid
-// ────────────────────────────────────────────────────────────
 
 export function classifyBmi(bmi: number | null): Classification | null {
   if (bmi === null) return null;
@@ -109,12 +100,10 @@ export function classifyBmi(bmi: number | null): Classification | null {
   return { severity: 'normal', label: 'Underweight', detail: `BMI ${fmt(bmi)} kg/m²` };
 }
 
-// ────────────────────────────────────────────────────────────
 // 3. Hemoglobin — STD/006 Rev.002 (Bab 7)
 //    Hijau : pria ≥13,5 · wanita ≥12,0
 //    Kuning: pria 11,0–13,4 · wanita 10,0–11,9
 //    Merah : Hb <10,0 (anemia sedang–berat)
-// =============================================================
 // Celah SOP: pria 10,0–10,9 tidak masuk Hijau/Kuning/Merah.
 // Dikembalikan severity 'tidak-dinilai' agar caller bisa memberi
 // peringatan tanpa memaksa zona.
@@ -140,7 +129,6 @@ export function classifyHemoglobin(hb: number | null, gender: Gender): Classific
   return { severity: 'hijau', label: 'Hemoglobin Within Normal Limit', detail: value };
 }
 
-// ────────────────────────────────────────────────────────────
 // 4. Gula Darah — STD/006 Rev.002 + KMK HK.01.07/MENKES/302/2026
 //    HbA1c adalah acuan UTAMA kendali diabetes; GDS hanya untuk skrining
 //    dan mengenali hiperglikemia berat (>300 mg/dL).
@@ -156,7 +144,6 @@ export function classifyHemoglobin(hb: number | null, gender: Gender): Classific
 // Rev.002 menetapkan rentang Zona Kuning HbA1c 7,0–7,9% (Rev.001 memakai
 // 7,0–<7,5). Karyawan terdiagnosis DM yang MCU-nya tidak memuat HbA1c
 // ditetapkan minimal Zona Kuning (poin 6.1.6) lewat flag `sudahDiagnosisDM`.
-// ============================================================
 
 export function classifyGlucose(
   gdp: number | null,
@@ -221,11 +208,9 @@ export function classifyGlucose(
   return { severity: 'hijau', label: 'Blood Glucose Within Normal Limit', detail: parts.join(', ') };
 }
 
-// ────────────────────────────────────────────────────────────
 // 5. Profil Lipid — PAPDI
 //    SOP Hijau LDL <100 · Kuning 100–189 · Merah ≥190
 //    SOP Hijau TG <150 · Kuning 200–499 · Merah ≥500 (celah 150–199)
-// ============================================================
 export function classifyLdl(ldl: number | null): Classification | null {
   if (ldl === null) return null;
   if (ldl >= 190) return { severity: 'merah', label: 'Very High LDL Cholesterol', detail: `LDL ${fmt(ldl, 0)} mg/dL` };
@@ -259,10 +244,8 @@ export function classifyHdl(hdl: number | null, gender: Gender): Classification 
   return { severity: 'hijau', label: 'HDL Cholesterol Normal', detail: `HDL ${fmt(hdl, 0)} mg/dL` };
 }
 
-// ────────────────────────────────────────────────────────────
 // 6. Asam Urat
 //    SOP Kuning 7–9 mg/dL · Merah >9 mg/dL
-// ============================================================
 
 export function classifyUricAcid(au: number | null): Classification | null {
   if (au === null) return null;
@@ -271,10 +254,8 @@ export function classifyUricAcid(au: number | null): Classification | null {
   return { severity: 'hijau', label: 'Uric Acid Normal', detail: `Uric Acid ${fmt(au)} mg/dL` };
 }
 
-// ────────────────────────────────────────────────────────────
 // 7. Fungsi Ginjal — PNPK CKD / KDIGO
 //    SOP Hijau ≥60 · Kuning 45–59 (G2–G3a) · Merah <45 (≥G3b)
-// ============================================================
 
 export function classifyEgfr(egfr: number | null): Classification | null {
   if (egfr === null) return null;
@@ -287,12 +268,10 @@ export function classifyEgfr(egfr: number | null): Classification | null {
   return { severity: 'hijau', label: 'Normal Kidney Function (eGFR G1)', detail: value };
 }
 
-// ────────────────────────────────────────────────────────────
 // 8. Fungsi Hati — Kemenkes RI
 //    SOP Hijau <1,5x batas atas normal & HBsAg negatif
 //    Kuning 1,5–3x batas atas normal atau HBsAg+ fungsi hati normal
 //    Merah >3x batas atas normal atau hepatitis aktif
-// ============================================================
 
 export const LIVER_ULN = { sgot: 40, sgpt: 41 } as const;
 
@@ -320,12 +299,10 @@ export function classifyLiver(
   return { severity: 'hijau', label: 'Normal Liver Function', detail: parts.join(', ') };
 }
 
-// ────────────────────────────────────────────────────────────
 // 9. Fungsi Paru — PDPI 2016
 //    SOP Hijau FEV1/FVC ≥70% & FVC ≥80% prediksi
 //    Kuning FEV1/FVC <70% dengan FEV1 50–79% prediksi
 //    Merah FEV1 <50% prediksi
-// ============================================================
 
 /** Ambang derajat obstruksi per metode, dari ringan ke berat. */
 const SPIROMETRY_THRESHOLDS: Record<string, { mild: number; moderate: number; severe: number }> = {
@@ -398,7 +375,6 @@ export function classifyLung(
   return { severity: 'hijau', label: 'Normal Lung Function', detail: interp || undefined };
 }
 
-// ────────────────────────────────────────────────────────────
 // Teks interpretasi spirometri (terisi otomatis di form MCU)
 //
 // Memakai ambang SPIROMETRY_THRESHOLDS yang sama dengan classifyLung, jadi
@@ -407,7 +383,6 @@ export function classifyLung(
 //  • teks abnormal TIDAK boleh memuat kata "normal": abnormal() di
 //    mcu-calculations.ts menganggap teks berkata itu sebagai normal.
 // Spirometri saja tidak dapat memastikan restriksi (perlu TLC), maka "suspek".
-// ────────────────────────────────────────────────────────────
 type RawValues = Record<string, string | number | null | undefined>;
 
 function numberOrNull(value: unknown): number | null {
@@ -458,10 +433,8 @@ export function interpretSpirometry(values: RawValues): string {
   return `Normal${suffix}`;
 }
 
-// ────────────────────────────────────────────────────────────
 // 10. Pendengaran / NIHL — FKUI & Kemenkes RI 2011
 //     SOP Hijau ≤25 dB · Kuning 26–40 · Merah 41–90 atau >90
-// =============================================================
 export function classifyHearing(pta: number | null, interpretasi: string | number | null | undefined): Classification | null {
   const interp = String(interpretasi ?? '').toLowerCase();
   if (pta === null && !interp) return null;
@@ -482,7 +455,6 @@ export function classifyHearing(pta: number | null, interpretasi: string | numbe
   return { severity: 'hijau', label: 'Normal Hearing', detail: interp || undefined };
 }
 
-// ────────────────────────────────────────────────────────────
 // Teks interpretasi audiometri (terisi otomatis di form MCU)
 //
 // Mengikuti STD/033 6.4 lewat hc-ergo.ts (modul Konservasi Pendengaran):
@@ -490,7 +462,6 @@ export function classifyHearing(pta: number | null, interpretasi: string | numbe
 // 26–40 | Sedang 41–60 | Berat 61–80 | Sangat Berat ≥81; derajat menurut WHO
 // diambil dari telinga yang LEBIH BAIK. Aturan "jangan memuat kata normal
 // pada teks abnormal" sama seperti interpretSpirometry.
-// ────────────────────────────────────────────────────────────
 
 /** Takik (notch) khas bising: ambang 3/4/6 kHz ≥25 dB, ≥10 dB lebih buruk dari 1–2 kHz, pulih ≥10 dB di 8 kHz. */
 function findNoiseNotch(ear: Ear): string | null {
@@ -550,12 +521,10 @@ export const AUTO_INTERPRETATION_FIELDS: Record<string, (values: RawValues) => s
   audInterp: interpretAudiometry,
 };
 
-// ────────────────────────────────────────────────────────────
 // 11. Penglihatan
 //     SOP Hijau visus terkoreksi ≥6/9 · Kuning 6/9–6/18 · Merah <6/18
 //     Data MCU bisa tertulis 6/6, 6/9, 20/20, 20/30, atau 1,0 →
 //     diseragamkan lebih dulu ke desimal (1,0 = 20/20 = 6/6).
-// =============================================================
 
 export interface VisionResult {
   /** Ketajaman dalam skala desimal (1,0 = normal). */
@@ -615,7 +584,7 @@ export function parseVisualAcuity(raw: string | number | null | undefined): Visi
   //   Hijau  ≥6/9  (≥0,67)
   //   Kuning 6/12–6/18 (0,33–<0,67)  — 6/9 tepat sudah Hijau sesuai catatan SOP
   //   Merah  <6/18 (<0,33)
-  // ── Ambang perbandingan SILANG, bebas galat float ──────────────────
+//  Ambang perbandingan SILANG, bebas galat float
   //
   // 6/9 = 0,6666… dan 6/18 = 0,3333… tidak dapat dibandingkan dengan aman
   // memakai `>= 0.67` atau `>= 0.333`: hasil pembagian berbeda jalur (parse →
@@ -635,7 +604,7 @@ export function parseVisualAcuity(raw: string | number | null | undefined): Visi
   else if (decimal * 18 >= 6 - EPS) category = 'ringan';  // 6/18 – 6/12
   else category = 'berat';                                // < 6/18
 
-  // ── Presisi desimal ─────────────────────────────────────────────────
+//  Presisi desimal
   // Dulu `toFixed(2)`: 6/18 = 0,3333 → 0,33. Masalahnya ambang KUNING adalah
   // TEPAT 6/18 = 0,3333, sehingga 0,33 < 0,3333 dan 6/18 jatuh ke MERAH
   // padahal STD/006 menempatkannya di Zona Kuning.
@@ -661,10 +630,8 @@ export function classifyVision(visusJauh: string | number | null | undefined): C
   return { severity: 'hijau', label: 'Normal Visual Acuity', detail };
 }
 
-// ────────────────────────────────────────────────────────────
 // 12. Pneumokoniosis — Klasifikasi ILO pada foto toraks
 //     SOP Hijau foto normal · Kuning ILO 1/0–1/1 · Merah ≥2/1 atau PMF
-// =============================================================
 export function classifyChestXr(chestXr: string | number | null | undefined): Classification | null {
   const raw = String(chestXr ?? '').trim();
   if (!raw || /^(n\/a|normal|dbn)$/i.test(raw)) return null;
@@ -689,12 +656,10 @@ export function classifyChestXr(chestXr: string | number | null | undefined): Cl
   return { severity: 'normal', label: 'Chest X-Ray Abnormal (Non-Specific Finding)', detail: raw };
 }
 
-// =============================================================
 // 13. Electrocardiogram (ECG) dan Exercise Treadmill Test
 //     SOP STD-006 Rev001 tidak memuat parameter ini. Klasifikasi
 //     di bawah mengikuti istilah bacaan yang lazim dipakai pada
 //     laporan EKG 12-lead dan Treadmill Bruce.
-// =============================================================
 //
 //  MENAPA KLASIFIKASI INI ADA, BUKAN CUMA "NORMAL / ABNORMAL"
 //
@@ -793,7 +758,7 @@ const TINGKAT: Record<Severity, number> = {
 function classifyTemuanEcg(frasa: string): Temuan | null {
   if (!frasa) return null;
 
-  // ── Merah ──
+//  Merah
   if (/\bami\b|acute myocardial|myocardial infarct|\bomi\b|infark miokard/.test(frasa)) {
     return { severity: 'merah', label: 'Acute Myocardial Infarction' };
   }
@@ -823,7 +788,7 @@ function classifyTemuanEcg(frasa: string): Temuan | null {
     return { severity: 'merah', label: 'Left Bundle Branch Block' };
   }
 
-  // ── Kuning ──
+//  Kuning
   if (/brady|bradik|bradicar|bradich|bradic|bradikard/.test(frasa)) {
     return { severity: 'kuning', label: 'Sinus Bradycardia' };
   }
@@ -972,10 +937,8 @@ export function classifyTreadmill(tm: string | number | null | undefined): Class
   return { severity: 'normal', label: 'Exercise Treadmill Test Other Finding (Non-Specific)', detail: raw };
 }
 
-// ────────────────────────────────────────────────────────────
 // 13. Riwayat penyakit (dropdown multi-pilih di mcu_records)
 //     Nilai kosong = tidak ada (= normal), sesuai instruksi QSHE.
-// =============================================================
 
 export const EPILEPSY_OPTIONS = [
   'Tidak Ada Riwayat Epilepsi',
@@ -1074,9 +1037,7 @@ export function hasChronicLbp(value: MultiValue): boolean {
   return matchesAny(value, /nyeri punggung bawah/i) || matchesAny(value, /\bLBP\b/i);
 }
 
-// ────────────────────────────────────────────────────────────
 // 14. Laboratorium lain (di luar parameter zonasi, tetap didiagnosis)
-// =============================================================
 
 export function classifyLeukosit(value: number | null): Classification | null {
   if (value === null) return null;
@@ -1195,9 +1156,7 @@ export function classifyFitnessTest(value: string | null | undefined): Classific
   return { severity: 'kuning', label: 'Impaired Physical Fitness', detail: raw };
 }
 
-// ────────────────────────────────────────────────────────────
 // 15. Kualifikasi Klinis Tambahan — STD-006 Rev.002
-// ============================================================
 
 export const DM_KOMPLIKASI_OPTIONS = [
   'Tidak Ada',

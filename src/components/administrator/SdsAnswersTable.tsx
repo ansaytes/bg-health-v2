@@ -144,8 +144,8 @@ export default function SdsAnswersTable() {
                   <div style={{ fontWeight: 700 }}>{r.nama}</div>
                   <div style={{ fontSize: 9, color: 'var(--muted-foreground)' }}>{r.nik} · {r.jabatan}</div>
                 </td>
-                <td style={{ ...td, fontSize: 10 }}>{r.department || r.site || '—'}</td>
-                <td style={{ ...td, textAlign: 'center', fontWeight: 700 }}>{r.indeks ?? '—'}</td>
+                <td style={{ ...td, fontSize: 10 }}>{r.department || r.site || '-'}</td>
+                <td style={{ ...td, textAlign: 'center', fontWeight: 700 }}>{r.indeks ?? '-'}</td>
                 {r.jawaban.map((v, i) => (
                   <td key={i} style={{ ...td, textAlign: 'center', color: v === null ? 'var(--muted-foreground)' : 'var(--foreground)' }}>
                     {v ?? '·'}

@@ -2,16 +2,13 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import QuestionnaireRouteGuard from '@/components/questionnaire/QuestionnaireRouteGuard';
 
-// ============================================================
 // Halaman daftar kuesioner karyawan
-// ============================================================
 //
 // Halaman ini hanya tersedia untuk pengguna yang sudah masuk. Akun Employee
 // hanya dapat melihat Home dan halaman kuesioner.
-// ============================================================
 
 export const metadata: Metadata = {
-  title: 'Kuesioner Mandiri — BG-Health',
+  title: 'Kuesioner Mandiri: BG-Health',
   description: 'Kuesioner Gangguan Tidur dan Kesehatan Mental PT. Bagong Dekaka Makmur.',
 };
 
@@ -19,7 +16,7 @@ const KUESIONER = [
   {
     href: '/kuesioner/gangguan-tidur',
     title: 'Gangguan Tidur',
-    subtitle: 'Epworth Sleepiness Scale — 8 pertanyaan',
+    subtitle: 'Epworth Sleepiness Scale (8 pertanyaan)',
     detail: 'Mengukur kantuk berlebihan di siang hari pada delapan situasi sehari-hari. '
       + 'ESS di atas 15 berarti tidak layak mengoperasikan alat berat atau bekerja pada shift malam.',
     waktu: 'sekitar 2 menit',
@@ -36,7 +33,7 @@ const KUESIONER = [
   {
     href: '/kuesioner/psikologi-lingkungan',
     title: 'Psikologi Lingkungan Kerja',
-    subtitle: 'Survei Diagnosis Stres — 30 pertanyaan',
+    subtitle: 'Survei Diagnosis Stres (30 pertanyaan)',
     detail: 'Skrining faktor psikologi kerja. Hasil digunakan dalam pemetaan kelompok, bukan sebagai diagnosis individu.',
     waktu: 'sekitar 5 menit',
   },
@@ -63,7 +60,7 @@ export default function KuesionerLandingPage() {
         <h3 className="qh-card-title">Yang perlu disiapkan</h3>
         <ul className="qh-description" style={{ paddingLeft: 20, margin: 0, display: 'grid', gap: 6 }}>
           <li>Gunakan akun Employee dan pilih kuesioner yang ingin diisi.</li>
-          <li>Tanggal pengisian — biarkan apa adanya bila memakai tanggal hari ini.</li>
+          <li>Tanggal pengisian: biarkan apa adanya bila memakai tanggal hari ini.</li>
           <li>
             Ingat kembali kondisimu dalam dua minggu terakhir, karena sebagian besar pertanyaan
             menanyakan rentang itu.

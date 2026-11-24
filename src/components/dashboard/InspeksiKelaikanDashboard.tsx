@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Dashboard > Program Inspeksi > Tab 2: Kelaikan Fasilitas
-// ============================================================
 //
 // Memantau kondisi fisik & kesiapan riil seluruh sarana kesehatan kerja:
 //   • Setiap diagram donut murni 100% homogen (Ambulans dihitung per unit,

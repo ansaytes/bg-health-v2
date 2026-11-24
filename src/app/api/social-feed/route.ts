@@ -280,7 +280,7 @@ async function fetchYouTubeVideos(): Promise<FeedItem[]> {
 }
 
 async function fetchInstagramPosts(): Promise<FeedItem[]> {
-  // ── Method 1: RapidAPI Instagram Bulk Scraper (primary) ──
+//  Method 1: RapidAPI Instagram Bulk Scraper (primary)
   const rapidApiKey = process.env.RAPIDAPI_KEY;
   if (!rapidApiKey) return [];
   const username = 'bagongnews';
@@ -354,7 +354,7 @@ async function fetchInstagramPosts(): Promise<FeedItem[]> {
     }
   }
 
-  // ── Method 2: Alternative RapidAPI — Instagram Scraper (fallback) ──
+//  Method 2: Alternative RapidAPI — Instagram Scraper (fallback)
   try {
     const altUrl = `https://instagram-scraper-api2.p.rapidapi.com/instagram/handle/${username}`;
     const res = await fetch(altUrl, {

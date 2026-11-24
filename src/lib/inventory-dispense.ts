@@ -1,6 +1,4 @@
-// ============================================================
 // Otomatisasi Dispensasi Resep Obat & Pengurangan Stok Inventory
-// ============================================================
 // Menerapkan prinsip FEFO (First Expired, First Out):
 //  1. Mencari item di inventory_items berdasarkan nama obat.
 //  2. Mengurangi sisa_stok pada inventory_batches yang memiliki

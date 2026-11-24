@@ -1,10 +1,8 @@
-// ============================================================================
 // Logika Tabel Monitor MCU (server-side)
 //
 // Port dari skrip Google Apps Script `updateDataMCU`, tetapi sumber datanya
 // Supabase (employees + mcu_records + mcu_schedules), bukan spreadsheet.
 // Semua fungsi di sini murni (tanpa I/O) supaya mudah dites.
-// ============================================================================
 
 export type RecordLike = Record<string, any>;
 

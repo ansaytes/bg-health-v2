@@ -1,7 +1,5 @@
-// ============================================================
 // Pelindungan Data Pribadi (UU No. 27 Tahun 2022 / UU PDP)
 // Modul Pelayanan Kuratif & Rekam Medis Kunjungan
-// ============================================================
 //
 // Pasal 4 ayat (2) huruf d UU PDP:
 //   "Data dan informasi kesehatan merupakan Data Pribadi yang bersifat Spesifik"

@@ -1,6 +1,4 @@
-// ============================================================
 // Evaluasi zona dari hasil kontrol — sisi server
-// ============================================================
 //
 // Memisahkan pengambilan BASELINE (dari mcu_records / kontrol sebelumnya) dari
 // perhitungan zona. Pemisahan ini penting karena:
@@ -96,7 +94,7 @@ export async function evaluateFromKontrol(opsi: {
 }): Promise<HasilEvaluasiServer> {
   const { client, nikHash, aktualTanggal } = opsi;
 
-  // ── 1. Record MCU terakhir peserta = sumber profil & default baseline ────
+//  1. Record MCU terakhir peserta = sumber profil & default baseline
   //
   // Urutan prioritas sama dengan pemuat peserta: record yang punya zonasi,
   // lalu yang punya tgl_mcu terbaru.
@@ -119,7 +117,7 @@ export async function evaluateFromKontrol(opsi: {
 
   const draftMcu = barisKeDraft(mcu as Record<string, unknown>);
 
-  // ── 2. Baseline: kontrol sebelumnya bila ada, selain itu nilai MCU ───────
+//  2. Baseline: kontrol sebelumnya bila ada, selain itu nilai MCU
   //
   // Memakai kontrol sebelumnya lebih tepat bila peserta sudah pernah kontrol:
   // perubahan diukur antar-kontrol, bukan dari MCU yang bisa berumur setahun.
@@ -147,7 +145,7 @@ export async function evaluateFromKontrol(opsi: {
     ?? String(mcu.zonasi ?? '').trim()
     ?? null) as 'Kuning' | 'Merah' | null;
 
-  // ── 3. Evaluasi memakai engine yang sama dengan MCU ─────────────────────
+//  3. Evaluasi memakai engine yang sama dengan MCU
   const profil: Record<string, unknown> = {};
   for (const k of PROFIL_MCU) profil[k] = draftMcu[k];
   profil.usia = draftMcu.usia;
@@ -162,7 +160,7 @@ export async function evaluateFromKontrol(opsi: {
     profil: profil as never,
   });
 
-  // ── 4. Simpan ke followups_prokawan (buat baris baru bila belum ada) ─────
+//  4. Simpan ke followups_prokawan (buat baris baru bila belum ada)
   const payload = {
     nik_hash: nikHash,
     aktual_tanggal: aktualTanggal,

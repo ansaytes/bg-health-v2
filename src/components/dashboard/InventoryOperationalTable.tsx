@@ -294,7 +294,7 @@ function KritisItems({ items }: { items: InventoryItem[] }) {
               <td style={{ ...td, color: 'var(--muted-foreground)' }}>{item.category}</td>
               <td style={{ ...tdR, fontWeight: 800, color: isKritis ? '#FF4444' : '#FF9800' }}>{item.stock} {item.unit}</td>
               <td style={tdR}>{item.avg_monthly_usage} {item.unit}</td>
-              <td style={tdR}>{monthsLeft !== null ? Math.round(monthsLeft * 10) / 10 + ' bln' : '—'}</td>
+              <td style={tdR}>{monthsLeft !== null ? Math.round(monthsLeft * 10) / 10 + ' bln' : '-'}</td>
               <td style={tdC}>
                 <span style={{
                   background: isKritis ? 'rgba(255,68,68,0.15)' : 'rgba(255,152,0,0.15)',

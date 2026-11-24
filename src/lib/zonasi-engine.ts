@@ -1,6 +1,4 @@
-// ============================================================
 // Zonasi Assessment Engine — BG/QSHE/STD/006 Rev001
-// ============================================================
 //
 // Menentukan zona risiko kesehatan kerja: Hijau, Kuning, atau Merah,
 // memakai ambang batas pada Standar Parameter PTM Rev001 Bab 8.
@@ -27,7 +25,6 @@
 // Semua angka ambang batas dan istilah berasal dari
 // clinical-classification.ts. Modul ini tidak mendefinisikan ulang
 // angka klinis apa pun.
-// ============================================================
 
 import { classifyBmi, classifyBloodPressure, classifyChestXr, classifyEgfr, classifyGlucose, classifyHemoglobin, classifyHearing, classifyLdl, classifyLiver, classifyLung, classifyTriglyceride, classifyUricAcid, classifyVision, detectGender, hasActiveLiverDisease, hasArtritisUrat, hasAnyCardiacHistory, hasAnyStroke, hasAsthma, hasChronicLbp, hasControlledEpilepsy, hasDmKomplikasi, hasFunctionalObesityLimitation, hasInactiveLiverCarrier, hasLbpWithNeurologicalDeficit, hasResidualCardiacSymptom, hasResidualStroke, hasSleepApnea, hasUncontrolledEpilepsy, isEpilepsyCompliantAndSeizureFree, isEpilepsyNonCompliantOrRecentSeizure, isEssTreatedAndControlled, isMentalConfirmedStable, isMentalConfirmedUnstable, isReactive, toNumber, type Classification } from '@/lib/clinical-classification';
 import { dassBandLabel, dassCategory, isDassActionable, SRQ20_THRESHOLD, type DassDomain } from '@/lib/questionnaire-scores';
@@ -53,9 +50,7 @@ export interface MCUDraft {
   [key: string]: string | number | undefined;
 }
 
-// ═══════════════════════════════════════════
 // PARAMETER WAJIB
-// ═══════════════════════════════════════════
 
 /** Definisi parameter objektif yang tidak boleh kosong untuk bisa menilai zona. */
 interface RequiredParameter {
@@ -120,9 +115,7 @@ export function getMissingZonasiInputs(d: MCUDraft): string[] {
     .map((parameter) => parameter.label);
 }
 
-// ═══════════════════════════════════════════
 // ZONASI
-// ═══════════════════════════════════════════
 
 interface Finding {
   label: string;
@@ -502,9 +495,7 @@ function hasComorbidity(d: MCUDraft, gender: string | number | undefined): strin
   return reasons.length > 0 ? reasons.join(', ') : null;
 }
 
-// ═══════════════════════════════════════════
 // FUNGSI PERHITUNGAN DASAR
-// ═══════════════════════════════════════════
 
 /**
  * eGFR dengan CKD-EPI 2021 (Inker et al., 2021), rumus yang dipakai
@@ -560,9 +551,7 @@ export function calcDiabetes(gdp: number | null, gdpSeSATA: number | null, hba1c
   return 'Tidak';
 }
 
-// ═══════════════════════════════════════════
 // FRAMINGHAM RISK SCORE
-// ═══════════════════════════════════════════
 
 /**
  * Riwayat penyakit kardiovaskular yang sudah ditegakkan dokter.
@@ -592,7 +581,7 @@ export function calcFramingham(d: MCUDraft): { score: number; prob: string; kat:
   const dm = d.diabetes === 'Ya';
   const isMale = detectGender(d.jenisKelamin) === 'male';
 
-  // ── Kriteria PENERAPAN FRS — BG/QSHE/INK/012 Rev.002 poin 4.2.6 ──────────
+//  Kriteria PENERAPAN FRS — BG/QSHE/INK/012 Rev.002 poin 4.2.6
   //
   // Dokumen TIDAK menghitung FRS untuk semua karyawan. Tiga batasan:
   //

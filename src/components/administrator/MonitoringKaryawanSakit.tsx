@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Administrator > Monitoring Karyawan Sakit (BG/QSHE/SOP/027 Rev.002)
-// ============================================================
 //
 // HUBUNGAN DENGAN KELAYAKAN KERJA MCU
 //  • `mcu_records.kes_vendor` = kesimpulan vendor MCU. SAH, tidak diubah.
@@ -75,7 +73,7 @@ interface Ringkasan {
 }
 
 const fmt = (v: string | null | undefined) =>
-  v ? new Date(`${String(v).slice(0, 10)}T00:00:00`).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  v ? new Date(`${String(v).slice(0, 10)}T00:00:00`).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 
 export default function MonitoringKaryawanSakit() {
   const store = useMCUStore();
@@ -238,7 +236,7 @@ export default function MonitoringKaryawanSakit() {
                     </span>
                   </div>
                   <div style={{ fontSize: 9.5, color: 'var(--muted-foreground)', marginTop: 1 }}>
-                    {e.faseLabel ?? '—'} · {e.site ?? '—'}
+                    {e.faseLabel ?? '-'} · {e.site ?? '-'}
                   </div>
                   <div style={{ fontSize: 9.5, marginTop: 1, fontWeight: 700, color: e.terlambat ? '#FF2D2D' : 'var(--muted-foreground)' }}>
                     {e.status === 'AKTIF'
@@ -377,9 +375,9 @@ function DetailEpisode({ episode, onBerubah, toast }: {
       <div className="card" style={kartu}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 200 }}>
-            <h2 style={{ fontSize: 14, fontWeight: 800, margin: 0 }}>{episode.nama ?? '—'}</h2>
+            <h2 style={{ fontSize: 14, fontWeight: 800, margin: 0 }}>{episode.nama ?? '-'}</h2>
             <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: '2px 0 0' }}>
-              NIK {episode.nik ?? '—'} · {episode.site ?? '—'} · {episode.department ?? 'Departemen tidak tercatat'}
+              NIK {episode.nik ?? '-'} · {episode.site ?? '-'} · {episode.department ?? 'Departemen tidak tercatat'}
             </p>
           </div>
           <span style={{
@@ -387,17 +385,17 @@ function DetailEpisode({ episode, onBerubah, toast }: {
             background: episode.terlambat ? 'rgba(255,45,45,0.12)' : 'rgba(52,152,219,0.12)',
             color: episode.terlambat ? '#FF2D2D' : '#2471A3',
           }}>
-            Hari ke-{episode.hariKe} · {episode.faseLabel ?? '—'}
+            Hari ke-{episode.hariKe} · {episode.faseLabel ?? '-'}
           </span>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, marginTop: 10 }}>
           <Info label="Mulai sakit" value={fmt(episode.tanggalMulaiSakit)} />
           <Info label="SKS pertama" value={fmt(episode.tanggalSksPertama)} />
-          <Info label="Diagnosis awal" value={episode.diagnosisAwal ?? '—'} />
-          <Info label="Faskes pemeriksa" value={episode.dokterFaskes ?? '—'} />
-          <Info label="Jenis sakit" value={episode.jenisSakit ? JENIS_SAKIT_LABEL[episode.jenisSakit] ?? episode.jenisSakit : '—'} />
-          <Info label="Sumber laporan" value={episode.sumberLaporan ? SUMBER_LAPORAN_LABEL[episode.sumberLaporan] ?? episode.sumberLaporan : '—'} />
+          <Info label="Diagnosis awal" value={episode.diagnosisAwal ?? '-'} />
+          <Info label="Faskes pemeriksa" value={episode.dokterFaskes ?? '-'} />
+          <Info label="Jenis sakit" value={episode.jenisSakit ? JENIS_SAKIT_LABEL[episode.jenisSakit] ?? episode.jenisSakit : '-'} />
+          <Info label="Sumber laporan" value={episode.sumberLaporan ? SUMBER_LAPORAN_LABEL[episode.sumberLaporan] ?? episode.sumberLaporan : '-'} />
           {episode.kunjunganId && (
             <Info
               label="Kunjungan klinik"
@@ -408,7 +406,7 @@ function DetailEpisode({ episode, onBerubah, toast }: {
           <Info label="Kontak terakhir" value={fmt(episode.kontakTerakhir)} />
         </div>
 
-        {/* Jadwal — fokus utama modul ini */}
+        {/* Jadwal : fokus utama modul ini */}
         <div style={{
           marginTop: 10, padding: '8px 10px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
           background: episode.terlambat ? 'rgba(255,45,45,0.08)' : 'rgba(0,184,148,0.08)',
@@ -417,10 +415,10 @@ function DetailEpisode({ episode, onBerubah, toast }: {
           <CalendarClock size={14} color={episode.terlambat ? '#FF2D2D' : '#00806a'} />
           <span style={{ fontSize: 11, fontWeight: 700, color: episode.terlambat ? '#FF2D2D' : '#00806a' }}>
             {episode.status !== 'AKTIF'
-              ? 'Episode selesai — tidak ada jadwal pemantauan'
+              ? 'Episode selesai : tidak ada jadwal pemantauan'
               : episode.jadwalBerikutnya
                 ? `Jadwal evaluasi berikutnya: ${fmt(episode.jadwalBerikutnya)}${episode.sisaHari !== null
-                  ? ` — ${episode.sisaHari < 0 ? `TERLAMBAT ${Math.abs(episode.sisaHari)} hari` : `${episode.sisaHari} hari lagi`}`
+                  ? ` : ${episode.sisaHari < 0 ? `TERLAMBAT ${Math.abs(episode.sisaHari)} hari` : `${episode.sisaHari} hari lagi`}`
                   : ''}`
                 : 'Jadwal belum dihitung'}
           </span>
@@ -492,7 +490,7 @@ function DetailEpisode({ episode, onBerubah, toast }: {
             <h2 style={{ fontSize: 12 }}>Riwayat Pemantauan</h2>
             <p style={{ fontSize: 9.5 }}>
               {pemantauan.length} kontak · jeda terpanjang {episode.jedaTerpanjang} hari
-              {episode.jedaTerpanjang > 30 && <span style={{ color: '#FF7A00' }}> — melebihi interval fase</span>}
+              {episode.jedaTerpanjang > 30 && <span style={{ color: '#FF7A00' }}> : melebihi interval fase</span>}
             </p>
           </div>
         </div>
@@ -520,10 +518,10 @@ function DetailEpisode({ episode, onBerubah, toast }: {
                   return (
                     <tr key={String(p.id)}>
                       <td style={TD}>{fmt(String(p.tanggal ?? ''))}</td>
-                      <td style={TD}>{MEDIA_LABEL[String(p.media ?? '')] ?? p.media ?? '—'}</td>
-                      <td style={{ ...TD, color: warna, fontWeight: 700 }}>{String(p.perkembangan ?? '—')}</td>
-                      <td style={{ ...TD, maxWidth: 200 }}>{String(p.keluhan ?? '—')}</td>
-                      <td style={{ ...TD, maxWidth: 160 }}>{String(p.tatalaksana ?? '—')}</td>
+                      <td style={TD}>{MEDIA_LABEL[String(p.media ?? '')] ?? p.media ?? '-'}</td>
+                      <td style={{ ...TD, color: warna, fontWeight: 700 }}>{String(p.perkembangan ?? '-')}</td>
+                      <td style={{ ...TD, maxWidth: 200 }}>{String(p.keluhan ?? '-')}</td>
+                      <td style={{ ...TD, maxWidth: 160 }}>{String(p.tatalaksana ?? '-')}</td>
                     </tr>
                   );
                 })}
@@ -539,7 +537,7 @@ function DetailEpisode({ episode, onBerubah, toast }: {
           <div>
             <h2 style={{ fontSize: 12 }}>Surat Rekomendasi Karyawan Sakit</h2>
             <p style={{ fontSize: 9.5 }}>
-              Penilaian ulang QSHE Medic — TERPISAH dari kesimpulan vendor MCU
+              Penilaian ulang QSHE Medic : TERPISAH dari kesimpulan vendor MCU
             </p>
           </div>
         </div>
@@ -564,7 +562,7 @@ function DetailEpisode({ episode, onBerubah, toast }: {
                       <td style={{ ...TD, fontWeight: 800, color: STATUS_KELAYAKAN_WARNA[s] ?? '#778899' }}>
                         {STATUS_KELAYAKAN_LABEL[s] ?? s}
                       </td>
-                      <td style={{ ...TD, maxWidth: 180 }}>{String(r.diagnosis_terkini ?? '—')}</td>
+                      <td style={{ ...TD, maxWidth: 180 }}>{String(r.diagnosis_terkini ?? '-')}</td>
                       <td style={TD}>{fmt(String(r.tanggal_mulai_kembali_kerja ?? ''))}</td>
                     </tr>
                   );

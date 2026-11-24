@@ -1,6 +1,15 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -39,9 +48,7 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* ═══════════════════════════════════
-   Light Mode
-   ═══════════════════════════════════ */
+/* Light Mode */
 :root {
   --radius: 0.75rem;
   --background: #ECECEC;
@@ -73,16 +80,14 @@
   --sidebar-accent-foreground: #1A1A1A;
   --sidebar-border: #E0E0E0;
   --sidebar-ring: rgba(255,77,0,0.3);
-  --fg-dim: #999999;
+  --fg-dim: #555555;
   --shadow: 0 2px 8px rgba(0,0,0,0.06);
   --hover: rgba(255,77,0,0.04);
   --chart-grid: rgba(0,0,0,0.06);
   --chart-tick: #666666;
 }
 
-/* ═══════════════════════════════════
-   Dark Mode
-   ═══════════════════════════════════ */
+/* Dark Mode */
 .dark {
   --background: #111111;
   --foreground: #F0F0F0;
@@ -118,6 +123,12 @@
 
 @layer base {
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  a[href], button, summary, select, label[for], input[type="checkbox"], input[type="radio"], [role="button"], [role="tab"], [role="switch"] {
+    cursor: pointer;
+  }
+  :disabled, [aria-disabled="true"], button:disabled, input:disabled, select:disabled {
+    cursor: not-allowed;
+  }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', var(--font-geist-sans), 'Helvetica Neue', sans-serif;
     background: var(--background);
@@ -130,9 +141,7 @@
   }
 }
 
-/* ═══════════════════════════════════
-   macOS Brand Orange Accent Dot
-   ═══════════════════════════════════ */
+/* macOS Brand Orange Accent Dot */
 .brand-orange-dot {
   width: 10px;
   height: 10px;
@@ -143,17 +152,13 @@
   flex-shrink: 0;
 }
 
-/* ═══════════════════════════════════
-   Scrollbar
-   ═══════════════════════════════════ */
+/* Scrollbar */
 * { scrollbar-width: thin; scrollbar-color: rgba(255,77,0,0.25) transparent; }
 *::-webkit-scrollbar { width: 5px; height: 5px; }
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb { background: rgba(255,77,0,0.25); border-radius: 3px; }
 
-/* ═══════════════════════════════════
-   App Shell
-   ═══════════════════════════════════ */
+/* App Shell */
 .app-shell {
   display: flex;
   width: 100%;
@@ -162,9 +167,7 @@
   overflow: hidden;
 }
 
-/* ═══════════════════════════════════
-   Sidebar — 240px, page-specific
-   ═══════════════════════════════════ */
+/* Sidebar — 240px, page-specific */
 .sidebar {
   width: 240px;
   flex-shrink: 0;
@@ -330,9 +333,10 @@
 .hamburger {
   display: none;
   position: fixed;
-  top: 14px; left: 14px;
+  top: 10px; left: 10px;
   z-index: 60;
-  width: 36px; height: 36px;
+  width: 44px; height: 44px;
+  min-width: 44px; min-height: 44px;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--card);
@@ -342,9 +346,7 @@
   color: var(--foreground);
 }
 
-/* ═══════════════════════════════════
-   Main Area
-   ═══════════════════════════════════ */
+/* Main Area */
 .main {
   flex: 1;
   margin-left: 240px;
@@ -356,9 +358,7 @@
   background: var(--background);
 }
 
-/* ═══════════════════════════════════
-   Header — nav center, BGBEST logo right
-   ═══════════════════════════════════ */
+/* Header — nav center, BGBEST logo right */
 .header {
   height: 52px;
   background: var(--card);
@@ -478,9 +478,7 @@
 }
 .theme-btn svg { width: 14px; height: 14px; }
 
-/* ═══════════════════════════════════
-   Page Content — centers default, .has-content stretches
-   ═══════════════════════════════════ */
+/* Page Content — centers default, .has-content stretches */
 .page-content {
   flex: 1;
   display: flex;
@@ -495,9 +493,7 @@
   overflow: hidden;
 }
 
-/* ═══════════════════════════════════
-   Dashboard Container
-   ═══════════════════════════════════ */
+/* Dashboard Container */
 .dashboard {
   padding: 16px;
   overflow-x: hidden;
@@ -511,9 +507,7 @@
   overflow-y: auto;
 }
 
-/* ═══════════════════════════════════
-   Card System
-   ═══════════════════════════════════ */
+/* Card System */
 .card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -552,9 +546,7 @@
 }
 .card-icon svg { width: 11px; height: 11px; }
 
-/* ═══════════════════════════════════
-   Chart Box
-   ═══════════════════════════════════ */
+/* Chart Box */
 /*
  * TINGGI MINIMUM CHART — penyebab label sumbu "selang-seling".
  *
@@ -573,18 +565,14 @@
   overflow: visible;
 }
 
-/* ═══════════════════════════════════
-   Glow Variants (dark mode only)
-   ═══════════════════════════════════ */
+/* Glow Variants (dark mode only) */
 .dark .glow-orange { box-shadow: 0 0 25px rgba(255,77,0,0.10); }
 .dark .glow-amber  { box-shadow: 0 0 25px rgba(255,140,66,0.10); }
 .dark .glow-coral  { box-shadow: 0 0 25px rgba(255,99,71,0.10); }
 .dark .glow-teal   { box-shadow: 0 0 25px rgba(0,184,148,0.10); }
 .dark .glow-steel  { box-shadow: 0 0 25px rgba(119,136,153,0.10); }
 
-/* ═══════════════════════════════════
-   Stats Grid — 2-col, stat-wide spans full width
-   ═══════════════════════════════════ */
+/* Stats Grid — 2-col, stat-wide spans full width */
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -645,9 +633,7 @@
   flex-shrink: 0;
 }
 
-/* ═══════════════════════════════════
-   Health Main Grid (62fr 38fr)
-   ═══════════════════════════════════ */
+/* Health Main Grid (62fr 38fr) */
 .health-main-grid {
   display: grid;
   grid-template-columns: 62fr 38fr;
@@ -701,9 +687,7 @@
   min-width: 0;
 }
 
-/* ═══════════════════════════════════
-   Filter Bar
-   ═══════════════════════════════════ */
+/* Filter Bar */
 .header-filter {
   display: flex;
   align-items: center;
@@ -771,9 +755,7 @@ select option:active {
   color: #ffffff !important;
 }
 
-/* ═══════════════════════════════════
-   MCU Total Bar
-   ═══════════════════════════════════ */
+/* MCU Total Bar */
 .mcu-total-bar {
   display: flex;
   align-items: center;
@@ -787,9 +769,7 @@ select option:active {
 .mcu-total-label { font-weight: 700; }
 .mcu-total-num { font-size: 14px; font-weight: 800; color: #ff4d00; }
 
-/* ═══════════════════════════════════
-   MCU Grid — 3-col, viewport-fit cards
-   ═══════════════════════════════════ */
+/* MCU Grid — 3-col, viewport-fit cards */
 .mcu-grid-3 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -812,9 +792,7 @@ select option:active {
   height: auto;
 }
 
-/* ═══════════════════════════════════
-   MCU Row1 / Row2 (Hasil Tindak Lanjut) — viewport-fit
-   ═══════════════════════════════════ */
+/* MCU Row1 / Row2 (Hasil Tindak Lanjut) — viewport-fit */
 .mcu-row1 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -843,9 +821,7 @@ select option:active {
   height: auto;
 }
 
-/* ═══════════════════════════════════
-   Kunjungan Berobat
-   ═══════════════════════════════════ */
+/* Kunjungan Berobat */
 .kunjungan-top-bar {
   display: flex;
   align-items: center;
@@ -881,9 +857,7 @@ select option:active {
 /* Rujuk RS Section — scroll-up to show */
 
 
-/* ═══════════════════════════════════
-   Home Feed
-   ═══════════════════════════════════ */
+/* Home Feed */
 .home-feed {
   padding: 12px;
   overflow-y: auto;
@@ -1058,9 +1032,7 @@ select option:active {
   opacity: 0.7;
 }
 
-/* ═══════════════════════════════════
-   Sidebar Footer — Account / Login
-   ═══════════════════════════════════ */
+/* Sidebar Footer — Account / Login */
 .sidebar-footer {
   margin-top: auto;
   padding: 10px 12px 14px;
@@ -1186,9 +1158,7 @@ select option:active {
   height: 14px;
 }
 
-/* ═══════════════════════════════════
-   Login Popup (macOS Window Style)
-   ═══════════════════════════════════ */
+/* Login Popup (macOS Window Style) */
 .login-overlay {
   position: fixed;
   inset: 0;
@@ -1388,9 +1358,7 @@ select option:active {
   opacity: 0.8;
 }
 
-/* ═══════════════════════════════════
-   Lagging Indicator — Tab & Section Headers (original style)
-   ═══════════════════════════════════ */
+/* Lagging Indicator — Tab & Section Headers (original style) */
 .admin-tab-row {
   display: flex;
   gap: 0;
@@ -1470,9 +1438,7 @@ select.admin-input.compact-input {
   margin-bottom: 4px;
 }
 
-/* ═══════════════════════════════════
-   Sick list — scrollable table (matches original raw-table style)
-   ═══════════════════════════════════ */
+/* Sick list — scrollable table (matches original raw-table style) */
 .sick-list-card {
   display: flex;
   flex-direction: column;
@@ -1512,9 +1478,7 @@ select.admin-input.compact-input {
   min-height: 0;
 }
 
-/* ═══════════════════════════════════
-   Admin Form System
-   ═══════════════════════════════════ */
+/* Admin Form System */
 .admin-form-container {
   flex: 1;
   display: flex;
@@ -2666,9 +2630,7 @@ select.admin-input.compact-input {
   border-color: rgba(255, 77, 0, 0.35);
   color: #FF5E00;
 }
-/* ═══════════════════════════════════
-   Admin Toggle Arrow — fixed right, rotating
-   ═══════════════════════════════════ */
+/* Admin Toggle Arrow — fixed right, rotating */
 .admin-toggle-arrow {
   position: fixed;
   right: 12px;
@@ -2696,9 +2658,7 @@ select.admin-input.compact-input {
   transform: scale(0.85);
 }
 
-/* ═══════════════════════════════════
-   Sidebar Tuwuh Lan Ngrembaka — above footer
-   ═══════════════════════════════════ */
+/* Sidebar Tuwuh Lan Ngrembaka — above footer */
 .sidebar-tuwuh-wrap {
   display: flex;
   justify-content: center;
@@ -2716,9 +2676,7 @@ select.admin-input.compact-input {
   border-radius: 6px;
 }
 
-/* ═══════════════════════════════════
-   Raw Data Table — fill body height, bottom notes area
-   ═══════════════════════════════════ */
+/* Raw Data Table — fill body height, bottom notes area */
 .raw-table-container {
   flex: 1;
   display: flex;
@@ -2815,9 +2773,7 @@ select.admin-input.compact-input {
   margin-top: 1px;
 }
 
-/* ═══════════════════════════════════
-   Responsive — Tablet <=1023px
-   ═══════════════════════════════════ */
+/* Responsive — Tablet <=1023px */
 @media (max-width: 1023px) {
   .sidebar { transform: translateX(-100%); }
   .sidebar.open { transform: translateX(0); }
@@ -2835,9 +2791,7 @@ select.admin-input.compact-input {
   }
 }
 
-/* ═══════════════════════════════════
-   Responsive — Phone <=900px
-   ═══════════════════════════════════ */
+/* Responsive — Phone <=900px */
 @media (max-width: 900px) {
   .mcu-live-dashboard {
     overflow-y: auto !important;
@@ -2862,9 +2816,7 @@ select.admin-input.compact-input {
   }
 }
 
-/* ═══════════════════════════════════
-   Responsive — Small Phone <=640px
-   ═══════════════════════════════════ */
+/* Responsive — Small Phone <=640px */
 @media (max-width: 640px) {
   body { height: auto; min-height: 100vh; overflow-y: auto; overflow-x: hidden; }
   .main { height: auto; min-height: 100vh; overflow: visible; margin-left: 0 !important; }
@@ -2895,8 +2847,8 @@ select.admin-input.compact-input {
   .header-filter { gap: 4px; }
   .header-filter select { height: 28px; font-size: 11px; padding: 0 22px 0 8px; min-width: 0; flex: 1 1 auto; }
   .filter-tag { font-size: 8px; white-space: nowrap; }
-  .theme-btn { width: 34px; height: 34px; }
-  .theme-btn svg { width: 16px; height: 16px; }
+  .theme-btn { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
+  .theme-btn svg { width: 18px; height: 18px; }
   .card { padding: 8px; border-radius: 8px; overflow: hidden; }
   .card-head { gap: 4px; }
   .card-head h2 { font-size: 9px; }
@@ -2920,7 +2872,7 @@ select.admin-input.compact-input {
   
   .sick-list { overflow-x: auto; min-height: 120px; }
   .sidebar { width: 260px; }
-  .hamburger { width: 40px; height: 52px; top: 10px; left: 10px; border-radius: 10px; }
+  .hamburger { width: 44px; height: 44px; min-width: 44px; min-height: 44px; top: 10px; left: 10px; border-radius: 10px; }
   /* Admin forms mobile */
   .admin-form-inner { padding: 10px 10px 8px; }
   .admin-form-inner .admin-input { height: 40px !important; font-size: 14px !important; }
@@ -2937,17 +2889,13 @@ select.admin-input.compact-input {
   .user-register-grid { grid-template-columns: 1fr; }
 }
 
-/* ═══════════════════════════════════
-   Employee Lookup Spinner
-   ═══════════════════════════════════ */
+/* Employee Lookup Spinner */
 @keyframes emp-lookup-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-/* ═══════════════════════════════════
-   User Management — Register Form Grid
-   ═══════════════════════════════════ */
+/* User Management — Register Form Grid */
 .user-register-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2959,9 +2907,7 @@ select.admin-input.compact-input {
 }
 
 
-/* ═══════════════════════════════════
-   Theme button — glow effect di dark mode
-   ═══════════════════════════════════ */
+/* Theme button — glow effect di dark mode */
 .dark .theme-btn {
   border: 1px solid rgba(255, 140, 66, 0.30);
   box-shadow: 0 0 8px rgba(255, 140, 66, 0.15), inset 0 0 4px rgba(255, 140, 66, 0.05);
@@ -2971,9 +2917,7 @@ select.admin-input.compact-input {
   box-shadow: 0 0 12px rgba(255, 140, 66, 0.25), inset 0 0 6px rgba(255, 140, 66, 0.10);
 }
 
-/* ═══════════════════════════════════
-   Notification Dropdown — solid, tidak transparan
-   ═══════════════════════════════════ */
+/* Notification Dropdown — solid, tidak transparan */
 .notification-dropdown {
   background-color: #ffffff !important;
   border: 1px solid #E0E0E0 !important;
@@ -2983,9 +2927,7 @@ select.admin-input.compact-input {
   border: 1px solid #2a2a2a !important;
 }
 
-/* ═══════════════════════════════════
-   Dark mode — solid background untuk semua tabel header
-   ═══════════════════════════════════ */
+/* Dark mode — solid background untuk semua tabel header */
 
 /* Daftar pilihan <select> bawaan browser: selalu solid, light maupun dark. */
 select option,
@@ -3004,9 +2946,7 @@ select option:active {
 }
 
 
-/* ═══════════════════════════════════════════════════════════
-   Content Modal — zoom popup for video/image feed items
-   ═══════════════════════════════════════════════════════════ */
+/* Content Modal — zoom popup for video/image feed items */
 .content-modal-overlay {
   position: fixed;
   inset: 0;
@@ -3094,22 +3034,16 @@ select option:active {
   
 }
 
-/* ═══════════════════════════════════════════════════════════
-   Uniform card aspect-ratio for feed cards
-   ═══════════════════════════════════════════════════════════ */
+/* Uniform card aspect-ratio for feed cards */
 /* Campaign cards use auto aspect-ratio to show full image, others use 4/3 */
 
 
-/* ═══════════════════════════════════════════════════════════
-   Dashboard Total info — right-aligned, inline with filters
-   ═══════════════════════════════════════════════════════════ */
+/* Dashboard Total info — right-aligned, inline with filters */
 @media (max-width: 768px) {
 }
 
 
-/* ═══════════════════════════════════════════════════════════
-   Download Button — attractive dropdown + animated progress
-   ═══════════════════════════════════════════════════════════ */
+/* Download Button — attractive dropdown + animated progress */
 .download-btn-wrapper {
   position: relative;
   display: inline-block;
@@ -3304,9 +3238,7 @@ select option:active {
 
 /* Container row when injected before filter bar */
 
-/* ═══════════════════════════════════════════════════════════
-   Attractive button system — universal hover animations
-   ═══════════════════════════════════════════════════════════ */
+/* Attractive button system — universal hover animations */
 .admin-form-btn-primary,
 .admin-form-btn-secondary,
 .login-btn,
@@ -3342,12 +3274,12 @@ select option:active {
   transform: translateY(-1px);
 }
 
-/* Theme button — spin animation on hover */
+/* Theme button — subtle transition without generic spin */
 .theme-btn {
-  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), background 0.18s, border-color 0.18s;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
 .theme-btn:hover {
-  transform: rotate(180deg);
+  border-color: rgba(255, 77, 0, 0.4);
 }
 
 /* Sidebar nav buttons — slide-in effect */
@@ -3375,9 +3307,7 @@ select option:active {
   transform: scaleY(1);
 }
 
-/* ═══════════════════════════════════════════════════════════
-   Mobile optimization — global improvements
-   ═══════════════════════════════════════════════════════════ */
+/* Mobile optimization — global improvements */
 @media (max-width: 640px) {
   /* Login card mobile */
   .login-card {
@@ -3487,19 +3417,17 @@ select option:active {
     height: 30px;
   }
   .theme-btn {
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
   }
 }
 
 
-/* ═══════════════════════════════════════════════════════════
-   Content Modal — fix image full display + no caption overlap
-   ═══════════════════════════════════════════════════════════ */
+/* Content Modal — fix image full display + no caption overlap */
 
-/* ═══════════════════════════════════════════════════════════
-   GLOBAL UNIFORM LOADING — BM logo berputar halus (seragam)
-   ═══════════════════════════════════════════════════════════ */
+/* GLOBAL UNIFORM LOADING — BM logo berputar halus (seragam) */
 
 .bm-loading {
   display: flex;
@@ -3657,9 +3585,7 @@ select option:active {
 }
 
 
-/* ═════════════════════════════════════════════════════════════
-   Employee Lookup Suggestions Dropdown — Modern Design
-   ═══════════════════════════════════════════════════════════════ */
+/* Employee Lookup Suggestions Dropdown — Modern Design */
 .emp-suggestions {
   font-family: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   animation: empSuggestionIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
@@ -3737,9 +3663,7 @@ select option:active {
 }
 
 
-/* ═══════════════════════════════════════════════════════════════
-   Content Modal — IG-style for campaigns + full video player
-   ═══════════════════════════════════════════════════════════════ */
+/* Content Modal — IG-style for campaigns + full video player */
 
 /* IG-style modal (for Health Campaign) — image full, caption scrollable */
 .content-modal.ig-style {
@@ -3895,9 +3819,7 @@ select option:active {
 }
 
 
-/* ═══════════════════════════════════════════════════════════════
-   Dashboard Top Bar — filter kiri + total kanan, satu baris
-   ═══════════════════════════════════════════════════════════════ */
+/* Dashboard Top Bar — filter kiri + total kanan, satu baris */
 .dashboard-top-bar {
   display: flex;
   align-items: center;
@@ -3939,9 +3861,7 @@ select option:active {
 }
 
 
-/* ═══════════════════════════════════════════════════════════════
-   Share Button — Apple-style SVG icons
-   ═══════════════════════════════════════════════════════════════ */
+/* Share Button — Apple-style SVG icons */
 .share-btn-wrapper {
   position: relative;
   display: inline-flex;
@@ -4023,9 +3943,7 @@ select option:active {
 }
 
 
-/* ═══════════════════════════════════════════════════════════════
-   Raw Table — Sticky Header with Crisp Contrast
-   ═══════════════════════════════════════════════════════════════ */
+/* Raw Table — Sticky Header with Crisp Contrast */
 .raw-table-scroll table {
   border-collapse: collapse;
 }
@@ -4045,19 +3963,13 @@ select option:active {
 }
 
 
-/* ═══════════════════════════════════════════════════════════════
-   Kunjungan Berobat — Grid (same pattern as mcu-grid-3)
-   ═══════════════════════════════════════════════════════════════ */
+/* Kunjungan Berobat — Grid (same pattern as mcu-grid-3) */
 
 
-/* ═══════════════════════════════════════════════════════════════
-   Kunjungan Berobat — Layout (dari referensi GAS)
-   ═══════════════════════════════════════════════════════════════ */
+/* Kunjungan Berobat — Layout (dari referensi GAS) */
 
 
-/* ═══════════════════════════════════════════════════════════════
-   Kunjungan Berobat — Layout (dari referensi GAS)
-   ═══════════════════════════════════════════════════════════════ */
+/* Kunjungan Berobat — Layout (dari referensi GAS) */
 .kunjungan-scroll-content {
   display: flex;
   flex-direction: column;
@@ -4767,9 +4679,7 @@ select option:active {
 }
 .col-filter-footer .is-primary:hover { text-decoration: none; filter: brightness(1.08); }
 
-/* ═══════════════════════════════════════════════════════════════
-   Centered Tabs — macOS Segmented Control Capsule Track (Uniform Width)
-   ═══════════════════════════════════════════════════════════════ */
+/* Centered Tabs — macOS Segmented Control Capsule Track (Uniform Width) */
 .centered-tabs {
   display: flex;
   align-items: center;

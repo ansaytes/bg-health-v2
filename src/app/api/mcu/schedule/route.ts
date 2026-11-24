@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
       .filter((condition): condition is string => Boolean(condition));
     if (conditions.length) employeeQuery = employeeQuery.or(conditions.join(','));
   }
-  // ── OPTIMASI (perbaikan "canceling statement due to statement timeout") ──
+//  OPTIMASI (perbaikan "canceling statement due to statement timeout")
   //
   // Versi lama mengambil SELURUH tabel `mcu_schedules` dan SELURUH VIEW
   // `monitor_mcu` (yang menggabungkan employees + mcu_records + mcu_schedules)

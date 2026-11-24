@@ -343,7 +343,7 @@ export async function GET(req: NextRequest) {
     // Modul karyawan sakit belum dimigrasi → lewati.
   }
 
-  // ── FILTER SESUAI ROLE ─────────────────────────────────────────────────
+//  FILTER SESUAI ROLE
   // Notifikasi hanya boleh muncul bila pengguna memang dapat membuka halaman
   // tujuannya. Tanpa ini, PIC melihat notifikasi yang membawa ke halaman
   // admin yang kemudian menolak aksesnya — membingungkan dan membocorkan

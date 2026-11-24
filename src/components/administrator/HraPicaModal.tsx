@@ -1,10 +1,8 @@
 'use client';
 
-// ============================================================
 // HraPicaModal.tsx — Ekspor Pengendalian Risiko HRA ke Register PICA
 // Standar: BG/QSHE/FORM/069 Rev.001 & FORM-039 (Tindakan Korektif K3)
 // Mengonversi rekomendasi mitigasi bahaya residual menjadi tiket PICA
-// ============================================================
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -47,7 +45,6 @@ export default function HraPicaModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Form State
   const [site, setSite] = useState('Head Office');
   const [tingkat, setTingkat] = useState<'major' | 'moderate' | 'minor'>('moderate');
   const [deskripsi, setDeskripsi] = useState('');

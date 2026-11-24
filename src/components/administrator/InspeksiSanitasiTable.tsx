@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Administrator > Higiene Industri > Riwayat Inspeksi Sanitasi
-// ============================================================
 // Rekapitulasi hasil penilaian higiene & sanitasi per job site.
 // Ditampilkan di panel tabel melalui tombol panah navigasi.
 
@@ -107,11 +105,11 @@ export default function InspeksiSanitasiTable() {
                     <tr key={r.id}>
                       <td style={tdStyle}>{fmtDate(r.tanggal)}</td>
                       <td style={{ ...tdStyle, fontWeight: 700 }}>{r.site}</td>
-                      <td style={tdStyle}>{r.inspektur ?? '—'}</td>
-                      <td style={{ ...tdStyle, fontWeight: 800, color: warna }}>{k ? `${k.persenSesuai.toFixed(1)}%` : '—'}</td>
-                      <td style={{ ...tdStyle, color: '#00B894' }}>{k?.sesuai ?? '—'}</td>
-                      <td style={{ ...tdStyle, color: k?.tidakSesuai ? '#FF2D2D' : 'inherit' }}>{k?.tidakSesuai ?? '—'}</td>
-                      <td style={{ ...tdStyle, color: 'var(--muted-foreground)' }}>{k?.belumDinilai ?? '—'}</td>
+                      <td style={tdStyle}>{r.inspektur ?? '-'}</td>
+                      <td style={{ ...tdStyle, fontWeight: 800, color: warna }}>{k ? `${k.persenSesuai.toFixed(1)}%` : '-'}</td>
+                      <td style={{ ...tdStyle, color: '#00B894' }}>{k?.sesuai ?? '-'}</td>
+                      <td style={{ ...tdStyle, color: k?.tidakSesuai ? '#FF2D2D' : 'inherit' }}>{k?.tidakSesuai ?? '-'}</td>
+                      <td style={{ ...tdStyle, color: 'var(--muted-foreground)' }}>{k?.belumDinilai ?? '-'}</td>
                     </tr>
                   );
                 })}

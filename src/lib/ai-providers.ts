@@ -1,6 +1,4 @@
-// ============================================================
 // AI multi-profil dengan failover otomatis (server-only)
-// ============================================================
 //
 // Satu "profil" = satu akun/API key + model. Ekstraksi MCU mencoba profil
 // BERURUTAN sesuai prioritas. Bila sebuah profil gagal karena kuota/token
@@ -81,9 +79,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-// ────────────────────────────────────────────────────────────
 // Validasi
-// ────────────────────────────────────────────────────────────
 
 /**
  * Base URL harus HTTP(S) tanpa kredensial/query/fragment. Alamat metadata
@@ -164,9 +160,7 @@ export function validateProfileInput(raw: unknown, position: number): { profile:
   };
 }
 
-// ────────────────────────────────────────────────────────────
 // Penyimpanan
-// ────────────────────────────────────────────────────────────
 
 function readStoredProfiles(config: Record<string, unknown>, secrets: Record<string, unknown>): StoredAiProfile[] {
   const list = Array.isArray(config.profiles) ? config.profiles : [];
@@ -236,9 +230,7 @@ export async function saveAiProfiles(
   });
 }
 
-// ────────────────────────────────────────────────────────────
 // Klasifikasi kegagalan
-// ────────────────────────────────────────────────────────────
 
 export class AiCallError extends Error {
   constructor(
@@ -295,9 +287,7 @@ const REASON_TEXT: Record<AiFailureKind, string> = {
   cooldown: 'Dilewati: baru saja gagal, menunggu masa tunggu',
 };
 
-// ────────────────────────────────────────────────────────────
 // Pemanggilan model dengan gambar (vision)
-// ────────────────────────────────────────────────────────────
 
 export interface VisionImage {
   data: string; // base64 tanpa prefix data:
@@ -467,9 +457,7 @@ export function extractJsonObject(text: string): Record<string, unknown> {
   throw new AiCallError('Balasan bukan JSON', 'invalid_output');
 }
 
-// ────────────────────────────────────────────────────────────
 // Failover
-// ────────────────────────────────────────────────────────────
 
 /**
  * Masa tunggu per profil, disimpan di memori proses. Profil yang baru gagal
@@ -605,9 +593,7 @@ export function summariseAttempts(attempts: AiAttempt[]): string {
     .join('; ');
 }
 
-// ────────────────────────────────────────────────────────────
 // Daftar model (hanya yang bisa membaca gambar)
-// ────────────────────────────────────────────────────────────
 
 const NON_VISION_PATTERNS = [
   /embedding/i, /^text-embedding/i, /aqa/i, /imagen/i, /image-generation/i,

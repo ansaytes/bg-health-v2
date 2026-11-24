@@ -1,10 +1,8 @@
 'use client';
 
-// ============================================================
 // HraRiskProfileCard.tsx — Profil Bahaya Kerja HRA pada Tinjauan MCU
 // Standar: BG/QSHE/FORM/069 Rev.001 & Kepmen ESDM 1827 K/30/MEM/2018
 // Menghubungkan riwayat jabatan pekerja dengan bahaya target organ pada MCU
-// ============================================================
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { authFetch } from '@/lib/api-client';
@@ -182,7 +180,7 @@ export default function HraRiskProfileCard({
               Profil Bahaya Kesehatan Kerja (FORM/069 Rev.001)
             </div>
             <div style={{ fontSize: 10.5, color: 'var(--muted-foreground)' }}>
-              Jabatan: <b>{jabatan || '—'}</b> · Departemen: <b>{departemen || '—'}</b>
+              Jabatan: <b>{jabatan || '-'}</b> · Departemen: <b>{departemen || '-'}</b>
             </div>
           </div>
         </div>

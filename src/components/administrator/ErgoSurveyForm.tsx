@@ -122,7 +122,7 @@ export default function ErgoSurveyForm() {
           {/* Progres */}
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--muted-foreground)', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
             <b style={{ color: 'var(--foreground)' }}>{def.title}</b>
-            <span>{step === 0 ? 'Identitas pengukuran' : step === last ? 'Hasil & keabsahan' : `Pertanyaan ${step} dari ${n} — ${q?.group}`}</span>
+            <span>{step === 0 ? 'Identitas pengukuran' : step === last ? 'Hasil & keabsahan' : `Pertanyaan ${step} dari ${n} : ${q?.group}`}</span>
           </div>
           <div style={{ height: 6, background: 'var(--muted)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
             <div style={{ width: `${progress}%`, height: '100%', background: BRAND, transition: 'width 0.25s' }} />
@@ -155,7 +155,7 @@ export default function ErgoSurveyForm() {
                 <Field label="Departemen / Bagian"><input className="admin-input" style={inputStyle} value={id.departemen} onChange={(e) => setI('departemen', e.target.value)} /></Field>
                 <Field label={metode === 'ROSA' ? 'Pekerjaan / Jabatan yang Dinilai' : 'Aktivitas / Tugas yang Dinilai'}><input className="admin-input" style={inputStyle} value={id.aktivitas} onChange={(e) => setI('aktivitas', e.target.value)} /></Field>
                 <Field label="Nama Personil Pengukur" hint="(Otomatis Login)"><input className="admin-input" style={{ ...inputStyle, background: 'var(--muted)', cursor: 'not-allowed' }} readOnly value={id.personil_pengukur || namaPengukur} title="Otomatis dari pengguna yang sedang login" /></Field>
-                <Field label="Jabatan / Kualifikasi Pengukur"><input className="admin-input" style={inputStyle} value={id.kualifikasi_pengukur} onChange={(e) => setI('kualifikasi_pengukur', e.target.value)} placeholder="mis. Personil QSHE — sertifikat ergonomi" /></Field>
+                <Field label="Jabatan / Kualifikasi Pengukur"><input className="admin-input" style={inputStyle} value={id.kualifikasi_pengukur} onChange={(e) => setI('kualifikasi_pengukur', e.target.value)} placeholder="mis. Personil QSHE : sertifikat ergonomi" /></Field>
                 <div style={{ gridColumn: '1 / -1' }}>
                   {id.pekerja_diamati ? (
                     <Field label="Nama Pekerja yang Diamati">
@@ -205,7 +205,7 @@ export default function ErgoSurveyForm() {
                           </div>
                           {c.img ? (
                             <div style={{ background: '#fff', borderRadius: 6, margin: '8px 0', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                              <img src={c.img} alt={c.label} style={{ width: '100%', height: 'auto', maxHeight: 230, objectFit: 'contain', display: 'block' }} />
+                              <img src={c.img} alt={c.label} width={300} height={200} style={{ width: '100%', height: 'auto', maxHeight: 230, objectFit: 'contain', display: 'block' }} />
                             </div>
                           ) : <div style={{ height: 8 }} />}
                           <span style={{ fontWeight: 600 }}>{c.label}</span>
@@ -223,7 +223,7 @@ export default function ErgoSurveyForm() {
                             <button key={m.id} type="button" onClick={() => toggleMod(q, m.id)} style={{ ...card(on), flexDirection: 'column', alignItems: 'stretch' }}>
                               {m.img && (
                                 <div style={{ background: '#fff', borderRadius: 6, marginBottom: 6 }}>
-                                  <img src={m.img} alt={m.label} style={{ width: '100%', height: 'auto', maxHeight: 130, objectFit: 'contain', display: 'block' }} />
+                                  <img src={m.img} alt={m.label} width={200} height={130} style={{ width: '100%', height: 'auto', maxHeight: 130, objectFit: 'contain', display: 'block' }} />
                                 </div>
                               )}
                               <span style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
@@ -239,7 +239,7 @@ export default function ErgoSurveyForm() {
                     <details style={{ marginTop: 14, fontSize: 11 }}>
                       <summary style={{ cursor: 'pointer', color: BRAND, fontWeight: 600 }}>Lihat gambar referensi instrumen</summary>
                       <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 8, padding: 8, marginTop: 6 }}>
-                        <img src={q.image} alt={q.imageCaption || q.title} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                        <img src={q.image} alt={q.imageCaption || q.title} width={600} height={350} style={{ width: '100%', height: 'auto', display: 'block' }} />
                         <div style={{ fontSize: 10, color: '#667', marginTop: 4 }}>{def.source}</div>
                       </div>
                     </details>
@@ -259,7 +259,7 @@ export default function ErgoSurveyForm() {
                 </div>
               )}
               <div style={{ marginTop: 14, fontSize: 13 }}>
-                Skor langkah ini: <b style={{ fontSize: 20, color: values[q.key] === null ? 'var(--muted-foreground)' : BRAND }}>{values[q.key] ?? '—'}</b>
+                Skor langkah ini: <b style={{ fontSize: 20, color: values[q.key] === null ? 'var(--muted-foreground)' : BRAND }}>{values[q.key] ?? '-'}</b>
                 {q.mods && q.mods.length > 0 && values[q.key] !== null && <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}> (dibatasi {q.min}–{q.max} sesuai tabel formulir)</span>}
               </div>
             </div>
@@ -334,7 +334,7 @@ export default function ErgoSurveyForm() {
 function ScoreTable({ metode, hasil }: { metode: Metode; hasil: Record<string, any> }) {
   const rows: [string, string | number][] =
     metode === 'RULA' ? [['Posture Score A (Table A)', hasil.skorA], ['Posture Score B (Table B)', hasil.skorB], ['Wrist & Arm Score = A + otot + beban (baris Table C)', hasil.skorC], ['Neck, Trunk & Leg Score = B + otot + beban (kolom Table C)', hasil.skorD], ['Grand Score (Table C)', hasil.akhir]]
-    : metode === 'ROSA' ? [['Section A — kursi', hasil.sectionA], ['Section B — phone × monitor', hasil.sectionB], ['Section C — mouse × keyboard', hasil.sectionC], ['Peripherals and Monitor Score', hasil.periph], ['ROSA Final Score', hasil.akhir]]
+    : metode === 'ROSA' ? [['Section A (kursi)', hasil.sectionA], ['Section B (phone × monitor', hasil.sectionB], ['Section C: mouse × keyboard', hasil.sectionC], ['Peripherals and Monitor Score', hasil.periph], ['ROSA Final Score', hasil.akhir]]
     : [['1. Bahu', hasil.faktor[0]], ['2. Pergelangan tangan', hasil.faktor[1]], ['3. Punggung', hasil.faktor[2]], ['4. Leher', hasil.faktor[3]], ['5. Kaki', hasil.faktor[4]], ['6. Kuat', hasil.faktor[5]], ['7. Getaran', hasil.faktor[6]], ['8. Menekan langsung', hasil.faktor[7]], ['9. Durasi kerja', hasil.faktor[8]], ['Final Score (jumlah 9 faktor)', hasil.akhir]];
   return (
     <table style={{ borderCollapse: 'collapse', fontSize: 12, minWidth: 320 }}>

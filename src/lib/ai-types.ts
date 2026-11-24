@@ -1,9 +1,6 @@
-// ============================================================
 // AI Vision Provider — tipe & konfigurasi akun AI
-// ============================================================
 //
 // MENGAPA MODUL INI ADA
-// ----------------------------------------------------------------
 // Ekstraksi MCU membutuhkan model yang bisa MEMBACA GAMBAR (vision).
 // Kuota sebuah API key bisa habis di tengah pekerjaan (429
 // RESOURCE_EXHAUSTED / rate limit / kredit habis). Sebelumnya kondisi

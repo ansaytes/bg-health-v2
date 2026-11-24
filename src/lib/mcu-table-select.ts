@@ -1,6 +1,4 @@
-// ============================================================
 // Pemilihan kolom mcu_records yang aman
-// ============================================================
 //
 // Seluruh 172 kolom mcu_records sudah diperiksa langsung ke database.
 // Daftar ini hanya mengambil yang dibutuhkan untuk:

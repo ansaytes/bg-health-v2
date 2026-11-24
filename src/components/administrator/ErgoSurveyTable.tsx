@@ -90,7 +90,7 @@ export default function ErgoSurveyTable() {
                     <td style={tdStyle}><Chip text={String(s.klasifikasi).replace('_', ' ')} color={KLAS_COLOR[s.klasifikasi as Klasifikasi]} />{s.batas_tindak_hari_kerja && <div style={{ fontSize: 10 }}>≤ {s.batas_tindak_hari_kerja} hari kerja</div>}</td>
                     <td style={tdStyle}>{s.sah ? 'Ya' : <Chip text="TIDAK" color="#E63946" />}</td>
                     <td style={tdStyle}><Chip text={STATUS[s.status].t} color={STATUS[s.status].c} />
-                      {s.status === 'DISETUJUI' && <div style={{ fontSize: 10, marginTop: 2 }}>{s.disetujui_oleh}{s.disetujui_jabatan ? ` — ${s.disetujui_jabatan}` : ''}<br />{fmtDate(s.tgl_disetujui)}</div>}
+                      {s.status === 'DISETUJUI' && <div style={{ fontSize: 10, marginTop: 2 }}>{s.disetujui_oleh}{s.disetujui_jabatan ? ` : ${s.disetujui_jabatan}` : ''}<br />{fmtDate(s.tgl_disetujui)}</div>}
                       {s.status === 'MENUNGGU_PERSETUJUAN' && <div style={{ fontSize: 10, marginTop: 2 }}>Menunggu QSHE Manager</div>}
                       {s.status === 'DITOLAK_ULANG' && s.catatan_persetujuan && <div style={{ fontSize: 10, marginTop: 2, maxWidth: 180 }}>{s.catatan_persetujuan}</div>}</td>
                     <td style={tdStyle}>{s.perlu_pica ? (s.pica_no || <Chip text="BELUM ADA" color="#F5A623" />) : '-'}

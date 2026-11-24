@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
 
   const client = adminClient();
 
-  // ── 1. Record MCU terakhir = baseline ─────────────────────────────
+//  1. Record MCU terakhir = baseline
   // Memakai resolver: `nik_karyawan_hash` pada sebagian record dihitung dari
   // ciphertext, bukan NIK asli, sehingga `.eq('nik_karyawan_hash', hash)`
   // tidak menemukan apa pun. Lihat lib/mcu-nik-resolver.ts.
@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
   // konversi ini tekanan darah dan visus HILANG dari form.
   const baseline = barisKeDraft(mcu);
 
-  // ── 2. Riwayat tindak lanjut ──────────────────────────────────────
+//  2. Riwayat tindak lanjut
   const { data: riwayat, error: riwayatError } = await client
     .from('followups_prokawan')
     .select('*')
@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
 
   const rows = (riwayat ?? []) as Record<string, unknown>[];
 
-  // ── 3. Dataset efektif (baseline + follow up sesudah MCU ini) ─────
+//  3. Dataset efektif (baseline + follow up sesudah MCU ini)
   // Satu-satunya tempat perhitungan: followup-apply.ts, dipakai juga oleh POST.
   const hasil = await buildDatasetEfektifDanZona({ client, nikHash, mcu, nilaiBaru: {} });
   const nilaiTerbaru = hasil.nilaiTerbaru;
@@ -113,7 +113,7 @@ export async function GET(req: NextRequest) {
     frekuensi: hasil.frekuensi,
   };
 
-  // ── 4. Field tindak lanjut — dua acuan: trigger STD/006 & rujukan nasional ─
+//  4. Field tindak lanjut — dua acuan: trigger STD/006 & rujukan nasional ─
   const kelompok: KelompokField[] = tentukanFieldTindakLanjut(
     baseline,
     String(mcu.trigger_zona ?? ''),

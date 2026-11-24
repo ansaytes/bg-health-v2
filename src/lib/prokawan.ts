@@ -1,6 +1,4 @@
-// ============================================================
 // ProKawan — Program Kesehatan Karyawan
-// ============================================================
 //
 // Dasar: BG/QSHE/INK/016 Rev.000, dengan kriteria zona dari
 // BG/QSHE/STD/006 Rev.002.
@@ -66,9 +64,7 @@ export const STATUS_WARNA: Record<StatusKepatuhan, string> = {
   selesai: '#778899',
 };
 
-// ────────────────────────────────────────────────────────────
 // Jalur & frekuensi per parameter (STD/006 Rev.002 Bab 7)
-// ────────────────────────────────────────────────────────────
 
 
 
@@ -140,9 +136,7 @@ export function rencanaDariTriggers(triggers: string[], zona?: 'Kuning' | 'Merah
   };
 }
 
-// ────────────────────────────────────────────────────────────
 // Kepatuhan & jadwal
-// ────────────────────────────────────────────────────────────
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -189,9 +183,7 @@ export function statusKepatuhan(jatuhTempo: string | null, sekarang: Date = new 
   return 'sesuai-jadwal';
 }
 
-// ────────────────────────────────────────────────────────────
 // Ringkasan agregat
-// ────────────────────────────────────────────────────────────
 
 export interface PesertaProKawan {
   nama: string;
@@ -217,9 +209,7 @@ export interface PesertaProKawan {
   kelayakanKerja: string | null;
 }
 
-// ────────────────────────────────────────────────────────────
 // Pelaporan agregat ProKawan
-// ────────────────────────────────────────────────────────────
 //
 // DASAR DOKUMEN
 //  • INK/016 poin 4.6.4: "QSHE Medic menyampaikan rekapitulasi pelaksanaan

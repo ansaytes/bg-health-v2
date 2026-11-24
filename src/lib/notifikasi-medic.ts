@@ -1,6 +1,4 @@
-// ============================================================
 // Notifikasi in-app untuk QSHE Medic
-// ============================================================
 //
 // CARA KERJA: ON-DEMAND, BUKAN CRON
 // Notifikasi dihitung SAAT halaman dibuka, bukan oleh proses terjadwal.

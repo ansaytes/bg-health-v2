@@ -1,9 +1,6 @@
-// ============================================================
 // Penjadwalan kontrol ProKawan — turunan otomatis STD/006 Bab 7
-// ============================================================
 //
 // SIAPA YANG MENETAPKAN JADWAL?
-// ----------------------------------------------------------------
 // Bukan PIC Site, dan bukan Karyawan. INK/016 poin 4.1.4:
 //
 //   "QSHE Medic memberitahukan kepesertaan ProKawan kepada karyawan yang
@@ -16,7 +13,6 @@
 // Paramedic Site dan/atau QSHE Medic").
 //
 // MENGAPA OTOMATIS?
-// ----------------------------------------------------------------
 // Dokumen SUDAH menetapkan tanggalnya, hanya secara berelatif bukan absolut:
 //
 //   frekuensi = kolom Pengendalian parameter (Bab 7)
@@ -32,7 +28,6 @@
 // dan dijadikan dasar pengingat WhatsApp — bukan sekadar angka di layar.
 //
 // TIDAK SEMUA PARAMETER PUNYA TANGGAL
-// ----------------------------------------------------------------
 // Bab 7 menyatakan tegas untuk IMT 23–30 tanpa komorbid dan hiperurisemia
 // ringan: "TIDAK diwajibkan kontrol dokter berkala; pemantauan dilakukan oleh
 // Paramedic site/QSHE Medic". Untuk peserta seperti itu TIDAK ADA tanggal
@@ -40,7 +35,6 @@
 // tanggal. Tanggal "evaluasi ulang zona" (3 bulan) bukan jadwal kontrol dokter.
 //
 // SUMBER EVALUASI ULANG ZONA — BUKAN MCU
-// ----------------------------------------------------------------
 // INK/016 poin 4.4.5: "Hasil pemeriksaan dari Fasilitas Kesehatan Rekanan
 // disampaikan kepada QSHE Medic sebagai BAHAN EVALUASI dan pembaruan Zona
 // Risiko PTM."
@@ -54,7 +48,6 @@
 // dari data kontrol itu. Dokumen juga menegaskan pada poin 4.3.4: HbA1c
 // diperiksa setiap 3 bulan selama peserta berada di Zona Kuning/Merah —
 // pemeriksaan kontrol, bukan MCU.
-// ============================================================
 
 import { hashField } from '@/lib/encryption';
 import { adminClient } from '@/lib/questionnaire-store';

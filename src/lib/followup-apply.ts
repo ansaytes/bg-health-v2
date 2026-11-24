@@ -1,6 +1,4 @@
-// ============================================================
 // Terapkan hasil tindak lanjut ke dataset efektif
-// ============================================================
 //
 // INTI LOGIKA YANG DIMINTA OWNER:
 //
@@ -15,7 +13,6 @@
 //
 // Baseline tetap utuh di mcu_records sehingga riwayat "dulu 165/102, sekarang
 // 125/80" dapat ditelusuri kapan saja.
-// ============================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -63,12 +60,12 @@ export async function buildDatasetEfektifDanZona(opsi: {
 }): Promise<HasilTerap> {
   const { client, nikHash, mcu, nilaiBaru } = opsi;
 
-  // ── 1. Baseline MCU → nama field engine ───────────────────────────
+//  1. Baseline MCU → nama field engine
   // Kolom DB snake_case (`td_s`, `visus_jauh`) HARUS dikonversi ke camelCase
   // (`tdS`, `visusJauh`); engine dan overlay follow up memakai nama itu.
   const baseline = barisKeDraft(mcu);
 
-  // ── 2. Nilai follow up sebelumnya (kronologis) ────────────────────
+//  2. Nilai follow up sebelumnya (kronologis)
   // Hanya follow up SESUDAH MCU baseline ini: hasil follow up dari MCU yang lebih
   // lama tidak boleh menimpa baseline MCU yang lebih baru.
   const tglMcu = String(mcu.tgl_mcu ?? '').slice(0, 10);
@@ -87,7 +84,7 @@ export async function buildDatasetEfektifDanZona(opsi: {
     }
   }
 
-  // ── 3. Dataset efektif: baseline ditimpa semua follow up ──────────
+//  3. Dataset efektif: baseline ditimpa semua follow up
   const efektif: Record<string, string | number | undefined> = {};
   for (const [k, v] of Object.entries(baseline)) {
     if (v !== null && v !== undefined && String(v) !== '') efektif[k] = v as string | number;
@@ -99,7 +96,7 @@ export async function buildDatasetEfektifDanZona(opsi: {
   const tb = Number(String(efektif.tb ?? '').replace(',', '.'));
   if (bb > 0 && tb > 0) efektif.bmi = Number((bb / ((tb / 100) ** 2)).toFixed(1));
 
-  // ── 4. Hitung zona dari dataset efektif ───────────────────────────
+//  4. Hitung zona dari dataset efektif
   const hitung = applyMCUCalculations(efektif as never);
 
   const zonaSebelum = String(mcu.zonasi ?? '').trim() || null;
@@ -112,7 +109,7 @@ export async function buildDatasetEfektifDanZona(opsi: {
     arah = b < a ? 'membaik' : b > a ? 'memburuk' : 'tetap';
   }
 
-  // ── 5. Teks surat dari field yang ditindaklanjuti ─────────────────
+//  5. Teks surat dari field yang ditindaklanjuti
   const nilaiGabungan: Record<string, string | number | null> = {};
   for (const [k, v] of Object.entries(efektif)) {
     nilaiGabungan[k] = (v ?? null) as string | number | null;

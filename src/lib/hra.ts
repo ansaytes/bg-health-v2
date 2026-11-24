@@ -1,11 +1,9 @@
-// ============================================================
 // HRA (Health Hazard Risk Assessment) - Types & Utilities
 // Dokumen Acuan: BG/QSHE/FORM/069 Rev.001
 // Formula: P × E = R
 // P = Tingkat Paparan (Akumulasi jam paparan per minggu sesuai NAB Permenaker 5/2018)
 // E = Efek Kesehatan / Severity (Tingkat keparahan dampak kesehatan)
 // R = Skor Risiko (Klasifikasi: Low 1-4, Medium 5-12, High 15-25)
-// ============================================================
 
 export type DepartemenHra =
   | 'OPERATION'

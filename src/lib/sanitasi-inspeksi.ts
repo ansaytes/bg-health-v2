@@ -1,6 +1,4 @@
-// ============================================================
 // Checklist Inspeksi Higiene & Sanitasi — BG/QSHE/STD/005 Rev.001
-// ============================================================
 //
 // DASAR: SOP/028 poin 5.7 menempatkan "Fasilitas Higiene Sanitasi dan Gizi
 // Kerja" sebagai bagian pengelolaan kesehatan kerja, merujuk BG/QSHE/STD/005.
@@ -20,7 +18,6 @@
 // pengukuran (rasio toilet, kecukupan jamban, indeks vektor). Sebagian lagi
 // hanya kualitatif (label tempat sampah, kelengkapan toilet disabilitas) dan
 // harus dinilai inspektur. Keduanya dibedakan lewat `tipe`.
-// ============================================================
 
 export type TipeItem = 'hitung' | 'nilai';
 
@@ -57,7 +54,7 @@ export const KATEGORI_LABEL: Record<KategoriInspeksi, string> = {
 };
 
 export const ITEM_INSPEKSI: ItemInspeksi[] = [
-  // ── Toilet (dihitung dari jumlah pekerja & fasilitas) ──────────────
+//  Toilet (dihitung dari jumlah pekerja & fasilitas)
   { key: 'pekerja_pria', kategori: 'toilet', label: 'Jumlah pekerja pria', tipe: 'hitung', satuan: 'orang', acuan: '—', sumber: 'Input' },
   { key: 'pekerja_wanita', kategori: 'toilet', label: 'Jumlah pekerja wanita', tipe: 'hitung', satuan: 'orang', acuan: '—', sumber: 'Input' },
   { key: 'toilet_pria', kategori: 'toilet', label: 'Jumlah toilet pria', tipe: 'hitung', satuan: 'unit', acuan: 'Rasio 1:40', sumber: 'Permenkes 48/2016 Tabel A3' },
@@ -68,7 +65,7 @@ export const ITEM_INSPEKSI: ItemInspeksi[] = [
   { key: 'toilet_disabilitas', kategori: 'toilet', label: 'Toilet disabilitas tersedia', tipe: 'nilai', acuan: '152,5 × 227,5 cm, pintu ≥90 cm', sumber: 'Permenaker 5/2018 Pasal 35' },
   { key: 'kebersihan_toilet', kategori: 'toilet', label: 'Kebersihan toilet', tipe: 'nilai', acuan: 'Tidak berbau, tidak ada genangan', sumber: 'Permenaker 5/2018' },
 
-  // ── Air minum ──────────────────────────────────────────────────────
+//  Air minum
   { key: 'air_uji_terakhir', kategori: 'air_minum', label: 'Tanggal uji air terakhir', tipe: 'nilai', acuan: 'Minimal 2× per tahun', sumber: 'Permenkes 48/2016 Tabel C' },
   { key: 'air_koliform', kategori: 'air_minum', label: 'Total koliform', tipe: 'hitung', satuan: 'per 100 ml', acuan: '0', sumber: 'Permenkes 48/2016 Tabel C' },
   { key: 'air_kekeruhan', kategori: 'air_minum', label: 'Kekeruhan', tipe: 'hitung', satuan: 'NTU', acuan: '≤5', sumber: 'Permenkes 48/2016 Tabel C' },
@@ -77,7 +74,7 @@ export const ITEM_INSPEKSI: ItemInspeksi[] = [
   { key: 'air_rasa_bau', kategori: 'air_minum', label: 'Rasa & bau', tipe: 'nilai', acuan: 'Tidak berasa, tidak berbau', sumber: 'Permenkes 48/2016 Tabel C' },
   { key: 'air_titik_sampel', kategori: 'air_minum', label: 'Titik sampel (sumber/bak/kran terjauh)', tipe: 'nilai', acuan: 'Ketiga titik diuji', sumber: 'Permenkes 48/2016 Tabel C' },
 
-  // ── Kebisingan ─────────────────────────────────────────────────────
+//  Kebisingan
   // TIDAK LAGI DIINPUT DI SINI. Pengukuran kebisingan sudah dikelola lengkap
   // di modul Hearing Conservation (area, titik ukur, alat, tanggal). Tab
   // sanitasi hanya MENAMPILKAN hasilnya secara read-only lewat
@@ -86,25 +83,25 @@ export const ITEM_INSPEKSI: ItemInspeksi[] = [
   //
   // Kategori `kebisingan` dipertahankan agar data inspeksi lama tetap terbaca.
 
-  // ── Pencahayaan ────────────────────────────────────────────────────
+//  Pencahayaan
   // DIPINDAH ke tab "Pencahayaan & Udara" (lib/lingkungan-kerja.ts).
   // Alasan: pencahayaan diukur PER RUANG pada bidang kerja dengan luxmeter,
   // dan NAB-nya bergantung peruntukan ruang (arsip 150 vs gambar 750 lux).
   // Satu angka per site tidak bisa mewakili itu. Kategori dipertahankan agar
   // data inspeksi lama tetap dapat dibaca.
 
-  // ── Vektor ─────────────────────────────────────────────────────────
+//  Vektor
   { key: 'vektor_lalat', kategori: 'vektor', label: 'Indeks lalat', tipe: 'hitung', satuan: 'ekor/fly grill', acuan: '≤8 per 30 menit', sumber: 'Permenkes 48/2016 Tabel F' },
   { key: 'vektor_kecoa', kategori: 'vektor', label: 'Indeks kecoa', tipe: 'hitung', satuan: 'ekor/plate', acuan: '≤2 per 24 jam', sumber: 'Permenkes 48/2016 Tabel F' },
   { key: 'vektor_nyamuk', kategori: 'vektor', label: 'Container Index nyamuk', tipe: 'hitung', satuan: '%', acuan: '≤5', sumber: 'Permenkes 48/2016 Tabel F' },
   { key: 'vektor_tikus', kategori: 'vektor', label: 'Indeks tikus', tipe: 'hitung', satuan: 'indeks', acuan: '0 (nihil)', sumber: 'Permenkes 48/2016 Tabel F' },
 
-  // ── Udara ──────────────────────────────────────────────────────────
+//  Udara
   // DIPINDAH ke tab "Pencahayaan & Udara". Kualitas udara diukur per titik
   // dengan alat berbeda, dan PM10 sebagai rata-rata 8 jam — tidak mungkin
   // ditangkap satu angka per site.
 
-  // ── Sampah ─────────────────────────────────────────────────────────
+//  Sampah
   { key: 'sampah_organik', kategori: 'sampah', label: 'Wadah sampah organik', tipe: 'nilai', acuan: 'Kedap air, bertutup, berlabel, terpisah', sumber: 'Permenaker 5/2018 Pasal 37' },
   { key: 'sampah_anorganik', kategori: 'sampah', label: 'Wadah sampah non-organik', tipe: 'nilai', acuan: 'Kedap air, bertutup, berlabel, terpisah', sumber: 'Permenaker 5/2018 Pasal 37' },
   { key: 'sampah_b3', kategori: 'sampah', label: 'Wadah sampah B3', tipe: 'nilai', acuan: 'Sesuai ketentuan B3, kedap air', sumber: 'Permenaker 5/2018 Pasal 37' },

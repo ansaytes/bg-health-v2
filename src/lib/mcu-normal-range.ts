@@ -1,9 +1,6 @@
-// ============================================================
 // Parser rentang nilai normal — Jalur 1 (standar Indonesia)
-// ============================================================
 //
 // MENGAPA MODUL INI ADA
-// ----------------------------------------------------------------
 // `MCU_FIELDS` menyimpan nilai normal sebagai TEKS: '90-119', '<200', '≥50',
 // '4,5-6,2'. Fungsi lama `isAbnormalRecord()` hanya membaca `field.low` /
 // `field.high` — dan ternyata hanya 2 dari 65 field numerik yang punya keduanya
@@ -70,7 +67,7 @@ export function parseRentang(teks: string | null | undefined): AmbangNormal | nu
   // Buang satuan/embel-embel setelah spasi: '90-119 mmHg' → '90-119'
   const bersih = raw.split(/\s+/)[0];
 
-  // ── Rentang 'a-b' ────────────────────────────────────────────
+//  Rentang 'a-b'
   // Pola harus menyertakan tanda minus DI ANTARA dua angka, bukan minus
   // sebagai tanda negatif.
   const rentang = bersih.match(/^(-?\d+(?:[.,]\d+)?)\s*[-–—]\s*(-?\d+(?:[.,]\d+)?)$/);
@@ -81,7 +78,7 @@ export function parseRentang(teks: string | null | undefined): AmbangNormal | nu
     return { low, high, lowInclusive: true, highInclusive: true, sumber: raw };
   }
 
-  // ── Batas atas: '<200', '≤200', '<=200' ──────────────────────
+//  Batas atas: '<200', '≤200', '<=200'
   const kurang = bersih.match(/^(<|≤|<=)\s*(-?\d+(?:[.,]\d+)?)$/);
   if (kurang) {
     const high = angkaDari(kurang[2]);
@@ -97,7 +94,7 @@ export function parseRentang(teks: string | null | undefined): AmbangNormal | nu
     };
   }
 
-  // ── Batas bawah: '≥50', '>50', '>=50' ────────────────────────
+//  Batas bawah: '≥50', '>50', '>=50'
   const lebih = bersih.match(/^(≥|>|>=)\s*(-?\d+(?:[.,]\d+)?)$/);
   if (lebih) {
     const low = angkaDari(lebih[2]);

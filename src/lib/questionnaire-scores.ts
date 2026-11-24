@@ -1,6 +1,4 @@
-// ============================================================
 // Engine Skor Kuesioner Kesehatan Karyawan — STD-006 Rev001
-// ============================================================
 //
 // Empat instrumen yang disebut STD-006 Rev001 Bab 7 sebagai parameter
 // zonasi, ditambah satu instrumen pelengkap:
@@ -20,13 +18,10 @@
 // Kolom snapshot di mcu_records mengizinkan modul ini tetap murni
 // (tanpa akses database), sehingga pipeline import Excel dan engine
 // aplikasi memakai perhitungan yang persis sama.
-// ============================================================
 
 import { DASS21_SECTIONS, SDS_SECTIONS } from '@/lib/questionnaire-items';
 
-// ────────────────────────────────────────────────────────────
 // Epworth Sleepiness Scale (ESS)
-// ────────────────────────────────────────────────────────────
 
 export const ESS_ITEM_COUNT = 8;
 
@@ -79,9 +74,7 @@ export function scoreEss(answers: Record<string, string | number | null | undefi
   return { score, category: 'normal', label: 'No Sleep Disorder Symptom', answered, total: ESS_ITEM_COUNT };
 }
 
-// ────────────────────────────────────────────────────────────
 // SRQ-20 (Self-Reporting Questionnaire, WHO)
-// ────────────────────────────────────────────────────────────
 
 export const SRQ20_ITEM_COUNT = 20;
 export const SRQ20_THRESHOLD = 6;
@@ -160,9 +153,7 @@ export function scoreSrq20(answers: Record<string, string | number | null | unde
   return { score, category: 'normal', label: 'No Significant Psychological Distress', answered, total: SRQ20_ITEM_COUNT, danger };
 }
 
-// ────────────────────────────────────────────────────────────
 // DASS-21
-// ────────────────────────────────────────────────────────────
 
 export const DASS21_ITEM_COUNT = 21;
 
@@ -334,10 +325,8 @@ export function scoreDass21(answers: Record<string, string | number | null | und
   };
 }
 
-// ────────────────────────────────────────────────────────────
 // SDS-30 — Survei Diagnosis Stres (Lampiran Permenaker 5/2018)
 // 30 item, skala 1–7, 6 indikator × 5 item, skor indikator 5–35
-// ────────────────────────────────────────────────────────────
 
 export const SDS_ITEM_COUNT = 30;
 export const SDS_SCALE_MIN = 1;
@@ -443,9 +432,7 @@ export function scoreSds(answers: Record<string, string | number | null | undefi
   return { rawIndex: total, category: worst, label: sdsBandLabel(worst === 'berat' ? 25 : worst === 'sedang' ? 10 : 5), answered, total: SDS_ITEM_COUNT, indicators };
 }
 
-// ────────────────────────────────────────────────────────────
 // Ringkasan untuk kolom snapshot di mcu_records
-// ────────────────────────────────────────────────────────────
 
 export interface QuestionnaireSnapshot {
   essScore: number | null;
@@ -505,9 +492,7 @@ export function summariseQuestionnaires(input: QuestionnaireSnapshot): string {
   return parts.join(', ');
 }
 
-// ────────────────────────────────────────────────────────────
 // Helper pembacaan jawaban
-// ────────────────────────────────────────────────────────────
 
 /**
  * Membaca nilai skala dari berbagai bentuk input: angka langsung,

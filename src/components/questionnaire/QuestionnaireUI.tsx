@@ -1,14 +1,11 @@
 'use client';
 
-// ============================================================
 // Komponen bersama untuk halaman kuesioner STD-006
-// ============================================================
 //
 // ESS dan Kesehatan Mental memakai potongan-potongan yang sama: pencarian
 // karyawan dengan autofill identitas, kartu identitas yang terkunci setelah
 // karyawan ditemukan, kelompok item dengan skala pilihan, dan panel hasil.
 // Komponen ini dipisah supaya keduanya tidak mengulang markup yang sama.
-// ============================================================
 
 import { useEffect, useState } from 'react';
 
@@ -127,31 +124,31 @@ export function IdentityPanel({
         <div className="qh-identity">
           <div className="qh-identity-row">
             <span>Nama Karyawan</span>
-            <strong>{identity.nama || '—'}</strong>
+            <strong>{identity.nama || '-'}</strong>
           </div>
           <div className="qh-identity-row">
             <span>NIK Karyawan</span>
-            <strong>{identity.nikKaryawan || '—'}</strong>
+            <strong>{identity.nikKaryawan || '-'}</strong>
           </div>
           <div className="qh-identity-row">
             <span>NIK KTP (Nasional)</span>
-            <strong>{identity.nationalId || '—'}</strong>
+            <strong>{identity.nationalId || '-'}</strong>
           </div>
           <div className="qh-identity-row">
             <span>Jabatan / Posisi</span>
-            <strong>{identity.jabatan || '—'}</strong>
+            <strong>{identity.jabatan || '-'}</strong>
           </div>
           <div className="qh-identity-row">
             <span>Departemen / Unit Kerja</span>
-            <strong>{identity.site || '—'}</strong>
+            <strong>{identity.site || '-'}</strong>
           </div>
           <div className="qh-identity-row">
             <span>Jenis Kelamin / Usia</span>
-            <strong>{identity.jenisKelamin || '—'} · {identity.usia || '—'}</strong>
+            <strong>{identity.jenisKelamin || '-'} · {identity.usia || '-'}</strong>
           </div>
           <div className="qh-identity-row">
             <span>MCU Terakhir</span>
-            <strong>{identity.tglMCU || '—'}</strong>
+            <strong>{identity.tglMCU || '-'}</strong>
           </div>
         </div>
       ) : !searching ? (
@@ -382,7 +379,7 @@ export function ResultDialog({
 
         <div className="qh-modal-body">
           <p className="qh-modal-subject">
-            <strong>{data.nama || '—'}</strong>
+            <strong>{data.nama || '-'}</strong>
             <span>{data.tanggal}</span>
           </p>
 
@@ -422,7 +419,7 @@ export function ResultDialog({
                 <dt>MCU yang ikut diperbarui</dt>
                 <dd>
                   {data.mcuUpdated} record
-                  {data.mcuUpdated === 0 && ' — tidak ada MCU pada atau setelah tanggal ini'}
+                  {data.mcuUpdated === 0 && ' : tidak ada MCU pada atau setelah tanggal ini'}
                 </dd>
               </div>
             </dl>

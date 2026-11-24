@@ -79,7 +79,7 @@ function AdminLayananKuratif() {
         ]}
         active={tab}
         onChange={setTab}
-        ariaLabel="Layanan Kuratif — Input"
+        ariaLabel="Layanan Kuratif: Input"
         compact
       />
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -117,7 +117,7 @@ function AdminHigieneIndustri() {
         ]}
         active={tab}
         onChange={setTab}
-        ariaLabel="Higiene Industri — Input"
+        ariaLabel="Higiene Industri: Input"
         compact
       />
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -581,7 +581,7 @@ function PageFallback() {
         <div className="bm-loading-spinner">
           <div className="bm-loading-ring" aria-hidden="true" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+          <img src="/BM.png" alt="" width={48} height={48} className="bm-loading-logo" aria-hidden="true" />
         </div>
         <p className="bm-loading-label">Memuat halaman…</p>
       </div>
@@ -1046,61 +1046,45 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
             userSelect: 'none',
           }}
         >
-          {/* Traffic Lights */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, width: 60 }}>
-            <button
-              type="button"
-              onClick={onClose}
-              title="Tutup (Esc)"
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: '50%',
-                background: '#FF5F56',
-                border: '1px solid #E0443E',
-                display: 'inline-block',
-                cursor: 'pointer',
-                padding: 0,
-                outline: 'none',
-              }}
-            />
+          {/* Header without fake traffic lights */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="brand-orange-dot" aria-hidden="true" />
             <span
               style={{
-                width: 12,
-                height: 12,
-                borderRadius: '50%',
-                background: '#FFBD2E',
-                border: '1px solid #DEA123',
-                display: 'inline-block',
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'var(--foreground)',
+                letterSpacing: '-0.01em',
               }}
-            />
-            <span
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: '50%',
-                background: '#27C93F',
-                border: '1px solid #1AAB29',
-                display: 'inline-block',
-              }}
-            />
+            >
+              {mode === 'login' ? 'Masuk Akun: BG-Health' : 'Registrasi Akun Karyawan'}
+            </span>
           </div>
 
-          {/* Centered Window Title */}
-          <div
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Tutup dialog"
+            title="Tutup (Esc)"
             style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: 'var(--foreground)',
-              letterSpacing: '-0.01em',
-              textAlign: 'center',
-              flex: 1,
+              width: 36,
+              height: 36,
+              minWidth: 36,
+              minHeight: 36,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 8,
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--muted-foreground)',
+              cursor: 'pointer',
+              fontSize: 16,
+              padding: 0,
             }}
           >
-            {mode === 'login' ? 'Masuk Akun — BG-Health' : 'Registrasi Akun Karyawan'}
-          </div>
-
-          <div style={{ width: 60 }} />
+            ✕
+          </button>
         </div>
 
         <div className="login-card-body">
@@ -1158,7 +1142,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
           {/* Header Brand */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/BM.png" alt="BG-Health" style={{ width: 34, height: 34, objectFit: 'contain' }} />
+            <img src="/BM.png" alt="BG-Health" width={34} height={34} style={{ width: 34, height: 34, objectFit: 'contain' }} />
             <div>
               <h2 style={{ fontSize: 14.5, fontWeight: 700, margin: 0, textAlign: 'left', color: 'var(--foreground)' }}>
                 {mode === 'login' ? 'Portal Kesehatan Kerja' : 'Pendaftaran Karyawan'}
@@ -1318,7 +1302,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
               )}
               {regNama && (
                 <div style={{ marginTop: 6, fontSize: 11, color: 'var(--muted-foreground)', background: 'var(--muted)', padding: '4px 8px', borderRadius: 6 }}>
-                  ✓ {regNama} — {regJabatan} — {regJobsite}
+                  ✓ {regNama} : {regJabatan} : {regJobsite}
                 </div>
               )}
               {regLookupError && (
@@ -1520,22 +1504,22 @@ export default function Home() {
   return (
     <div className="app-shell">
       <div className={"sidebar-overlay" + (mobileOpen ? ' show' : '')} onClick={() => setMobileOpen(false)} />
-      <button className="hamburger" onClick={() => setMobileOpen(!mobileOpen)}>
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+      <button className="hamburger" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Buka menu navigasi">
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
       </button>
 
       <aside className={"sidebar" + (mobileOpen ? ' open' : '')}>
         <div className="sidebar-head">
           <div className="sidebar-logo-wrap">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={logoPerusahaan} alt="Logo" className="sidebar-logo-img" />
+            <img src={logoPerusahaan} alt="Logo Perusahaan" width={160} height={44} className="sidebar-logo-img" />
           </div>
         </div>
 
         {/* Bus image - full width, reduced height, 85% opacity */}
         <div style={{ padding: '0 12px', flexShrink: 0 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logoBus} alt="" style={{ width: '100%', height: 80, objectFit: 'cover', objectPosition: 'center', opacity: 0.85, borderRadius: 6, display: 'block' }} />
+          <img src={logoBus} alt="Armada Bus Bagong" width={216} height={80} style={{ width: '100%', height: 80, objectFit: 'cover', objectPosition: 'center', opacity: 0.85, borderRadius: 6, display: 'block' }} />
         </div>
 
         <div className="sidebar-label">{appTitle}</div>
@@ -1552,10 +1536,10 @@ export default function Home() {
           ))}
         </nav>
 
-        {/* Slogan / Tuwuh image — above login */}
+        {/* Slogan / Tuwuh image : above login */}
         <div className="sidebar-tuwuh-wrap">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logoTuwuh} alt="" className="sidebar-tuwuh-img" />
+          <img src={logoTuwuh} alt="Logo Tuwuh" width={120} height={40} className="sidebar-tuwuh-img" />
         </div>
 
         <div className="sidebar-footer">
@@ -1607,16 +1591,21 @@ export default function Home() {
             </nav>
             <div className="header-right">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={logoBestK3} alt="BestK3" className="header-right-logo" />
+              <img src={logoBestK3} alt="BestK3" width={75} height={28} className="header-right-logo" />
               <NotificationBell
                 isSuperuser={isSuperuser}
                 // Notifikasi tindak lanjut hanya untuk QSHE Medic.
                 canMedic={['superuser', 'administrator', 'pic'].includes(role ?? '')}
               />
-              <button className="theme-btn" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+              <button
+                className="theme-btn"
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                aria-label="Ganti Tema"
+                title="Ganti Tema"
+              >
                 {theme === 'dark'
-                  ? <svg viewBox="0 0 24 24" fill="none" stroke="#FDCB6E" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>
-                  : <svg viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" /></svg>
+                  ? <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="#FDCB6E" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>
+                  : <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" /></svg>
                 }
               </button>
             </div>

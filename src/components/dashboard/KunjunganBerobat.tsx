@@ -271,9 +271,7 @@ export default function KunjunganBerobat() {
       const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
       const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
-      // ───────────────────────────────────────────────
       // 1. TREN KUNJUNGAN PER BULAN (Line Chart)
-      // ───────────────────────────────────────────────
       if (trendCanvasRef.current) {
 
       // Group by month (1..12) from all or filtered dataset
@@ -366,9 +364,7 @@ export default function KunjunganBerobat() {
       });
     }
 
-      // ───────────────────────────────────────────────
       // 2. PASIEN KUNJUNGAN BERULANG (Horizontal Bar)
-      // ───────────────────────────────────────────────
       if (ulangCanvasRef.current) {
 
       const patientCounts: Record<string, { nama: string; dept: string; count: number }> = {};
@@ -459,9 +455,7 @@ export default function KunjunganBerobat() {
         });
     }
 
-    // ───────────────────────────────────────────────
     // 3. TOP 10 DIAGNOSA (Horizontal Bar)
-    // ───────────────────────────────────────────────
     if (diagCanvasRef.current) {
 
       const diagCounts: Record<string, number> = {};
@@ -544,9 +538,7 @@ export default function KunjunganBerobat() {
         });
     }
 
-    // ───────────────────────────────────────────────
     // 4. TOP 10 JENIS OBAT KELUAR (Horizontal Bar)
-    // ───────────────────────────────────────────────
     if (obatCanvasRef.current) {
 
       const obatCounts: Record<string, number> = {};
@@ -639,9 +631,7 @@ export default function KunjunganBerobat() {
         });
     }
 
-    // ───────────────────────────────────────────────
     // 5. DISTRIBUSI DEPARTMENT (Horizontal Bar)
-    // ───────────────────────────────────────────────
     if (deptCanvasRef.current) {
 
       const deptCounts: Record<string, number> = {};
@@ -837,9 +827,9 @@ export default function KunjunganBerobat() {
 
       {/* Main Content Area */}
       <div className="kunjungan-scroll-content">
-        {/* Fill wrapper — 2 rows of charts */}
+        {/* Fill wrapper : 2 rows of charts */}
         <div className="kunjungan-chart-layout" style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: 0 }}>
-          {/* Row 1 — 2 cards: Tren & Pasien Berulang */}
+          {/* Row 1 : 2 cards: Tren & Pasien Berulang */}
           <div className="kunjungan-trend-row">
             <div className="card glow-orange">
               <div className="card-head">
@@ -881,7 +871,7 @@ export default function KunjunganBerobat() {
             </div>
           </div>
 
-          {/* Row 2 — 3 cards: Top Diagnosa, Top Obat, Distribusi Dept */}
+          {/* Row 2 : 3 cards: Top Diagnosa, Top Obat, Distribusi Dept */}
           <div className="kunjungan-row-charts">
             <div className="card glow-coral">
               <div className="card-head">
@@ -942,7 +932,7 @@ export default function KunjunganBerobat() {
           </div>
         </div>
 
-        {/* Row 3 — Rujuk RS Section (slides up on scroll or toggle) */}
+        {/* Row 3 : Rujuk RS Section (slides up on scroll or toggle) */}
         <div
           className={"kunjungan-rujuk-section" + (rujukVisible ? ' visible' : '')}
           style={{ marginTop: 12, paddingBottom: 20 }}

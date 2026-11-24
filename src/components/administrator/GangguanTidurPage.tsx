@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Halaman Gangguan Tidur — Epworth Sleepiness Scale (ESS)
-// ============================================================
 //
 // Sesuai STD-006 Rev001, parameter zonasi ini bernama "Gangguan Tidur /
 // Excessive Daytime Sleepiness" dan menilai KANTUK BERLEBIHAN DI SIANG HARI
@@ -16,7 +14,6 @@
 // Jadwalnya lebih sering daripada MCU (misal setiap 3 atau 6 bulan), dan
 // tidak bergantung pada MCU. Hasilnya disimpan per tanggal di tabel mcu_ess,
 // sehingga riwayat lengkapnya tidak pernah tertimpa oleh pemeriksaan baru.
-// ============================================================
 
 import { useState, useMemo } from 'react';
 import { Clock, ShieldCheck, AlertCircle } from 'lucide-react';
@@ -176,7 +173,7 @@ export default function GangguanTidurPage() {
         <div style={{ padding: '8px 0 4px', borderBottom: '1px solid var(--border)' }}>
           <h1 className="admin-form-title">Gangguan Tidur</h1>
           <p className="admin-form-subtitle">
-            Epworth Sleepiness Scale (ESS) — Evaluasi kantuk siang hari (ambang kritis &gt; 15 tidak layak alat berat / shift malam) sesuai STD-006 Rev001.
+            Epworth Sleepiness Scale (ESS) : Evaluasi kantuk siang hari (ambang kritis &gt; 15 tidak layak alat berat / shift malam) sesuai STD-006 Rev001.
           </p>
         </div>
 

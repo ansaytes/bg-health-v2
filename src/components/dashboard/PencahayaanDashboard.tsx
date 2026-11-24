@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Dashboard > Higiene Industri > Pencahayaan Tempat Kerja
-// ============================================================
 //
 // ACUAN STANDAR: Permenkes 48/2016 Tabel 4 & Permenaker 5/2018.
 // Menampilkan agregat kepatuhan intensitas pencahayaan pada bidang kerja (Lux)

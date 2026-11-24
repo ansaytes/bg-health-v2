@@ -1,6 +1,4 @@
-// ============================================================
 // Pengaturan aplikasi (app_settings)
-// ============================================================
 //
 // Satu sumber kebenaran untuk nilai yang bisa diubah tanpa deploy ulang:
 // identitas perusahaan, batas waktu PAK, faskes rekanan, dan konfigurasi.
@@ -170,9 +168,7 @@ export function mergeSettings(stored: Partial<AppSettings> | null | undefined): 
   };
 }
 
-// ============================================================
 // ID Register PAK — PAK-BGMMYY-NNN
-// ============================================================
 //
 // Format sesuai keputusan: PAK + prefiks perusahaan + MMYY + nomor urut.
 // MMYY diambil dari tanggal-jam diterima di Register —

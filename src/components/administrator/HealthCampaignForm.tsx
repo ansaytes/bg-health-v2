@@ -169,7 +169,7 @@ export default function HealthCampaignForm() {
   if (loading) {
     return (
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
-        <div className="loading-spinner"><img src="/BM.png" alt="Loading" /></div>
+        <div className="loading-spinner"><img src="/BM.png" alt="Loading" width={48} height={48} /></div>
       </div>
     );
   }
@@ -181,7 +181,7 @@ export default function HealthCampaignForm() {
         <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h1 className="admin-form-title">Health Campaign</h1>
-            <p className="admin-form-subtitle">Posting konten kampanye kesehatan — tampil di Home page</p>
+            <p className="admin-form-subtitle">Posting konten kampanye kesehatan : tampil di Home page</p>
           </div>
           <button
             onClick={() => { if (showForm) { resetForm(); setShowForm(false); } else { resetForm(); setShowForm(true); } }}
@@ -219,7 +219,7 @@ export default function HealthCampaignForm() {
                 {imageUrl && (
                   <div style={{ marginTop: 8, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--muted)', maxWidth: 400, aspectRatio: '4 / 3', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={imageUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={(e) => { const img = e.target as HTMLImageElement; img.style.display = 'none'; const parent = img.parentElement; if (parent) parent.innerHTML = '<div style=\"text-align:center;color:var(--muted-foreground);font-size:11px;padding:20px\">Gambar gagal dimuat. Periksa URL atau pastikan akses publik.</div>'; }} />
+                    <img src={imageUrl} alt="Preview" width={400} height={300} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={(e) => { const img = e.target as HTMLImageElement; img.style.display = 'none'; const parent = img.parentElement; if (parent) parent.innerHTML = '<div style=\"text-align:center;color:var(--muted-foreground);font-size:11px;padding:20px\">Gambar gagal dimuat. Periksa URL atau pastikan akses publik.</div>'; }} />
                   </div>
                 )}
               </div>

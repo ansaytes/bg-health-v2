@@ -1,6 +1,4 @@
-// ============================================================
 // Pengendalian per parameter — BG/QSHE/STD/006 Rev.002 Bab 7
-// ============================================================
 //
 // MENGAPA MODUL INI ADA
 //
@@ -32,7 +30,6 @@
 // adalah yang PALING KETAT (bulan terkecil). Teks pengendalian SEMUA parameter
 // tetap dicantumkan, karena tiap parameter punya tindakan yang berbeda
 // (mis. obesitas → pemantauan paramedis, hipertensi → kontrol dokter).
-// ============================================================
 
 /** Kode parameter mengikuti kode yang dipakai clinical-classification.ts. */
 export type KodeParameter =
@@ -100,9 +97,7 @@ export interface AturanPengendalian {
   sekali?: boolean;
 }
 
-// ────────────────────────────────────────────────────────────
 // Teks berulang (dipersis dari dokumen) agar tidak salah salin
-// ────────────────────────────────────────────────────────────
 
 const KONTROL_3_BULAN = [
   'Wajib kontrol dokter minimal setiap 3 (tiga) bulan',
@@ -142,12 +137,10 @@ const HIJAU_UMUM: AturanPengendalian = {
   bulan: 12,
 };
 
-// ────────────────────────────────────────────────────────────
 // TABEL PENGENDALIAN PER PARAMETER — Bab 7
-// ────────────────────────────────────────────────────────────
 
 export const PENGENDALIAN_PER_PARAMETER: Record<KodeParameter, AturanPengendalian> = {
-  // ── Zona Merah ────────────────────────────────────────────
+//  Zona Merah
   'hipertensi-grade-2': { baris: 'Hipertensi Grade ≥2', zona: 'Merah', butir: MERAH_1_BULAN, bulan: 1 },
   'hipertensi-grade-3': { baris: 'Hipertensi Grade ≥2', zona: 'Merah', butir: MERAH_1_BULAN, bulan: 1 },
   'dm-tidak-terkontrol': { baris: 'DM tidak terkontrol', zona: 'Merah', butir: MERAH_1_BULAN, bulan: 1 },
@@ -181,7 +174,7 @@ export const PENGENDALIAN_PER_PARAMETER: Record<KodeParameter, AturanPengendalia
   },
   'lbp-berat': { baris: 'LBP kronik dengan defisit neurologis', zona: 'Merah', butir: MERAH_1_BULAN, bulan: 1 },
 
-  // ── Zona Kuning ───────────────────────────────────────────
+//  Zona Kuning
   'hipertensi-grade-1': { baris: 'Hipertensi Grade 1', zona: 'Kuning', butir: KONTROL_3_BULAN, bulan: 3 },
 
   'prediabetes': {
@@ -256,9 +249,7 @@ export const PENGENDALIAN_PER_PARAMETER: Record<KodeParameter, AturanPengendalia
   'lbp-ringan': { baris: 'LBP kronik tanpa defisit neurologis (batasi angkat berat)', zona: 'Kuning', butir: KONTROL_3_BULAN, bulan: 3 },
 };
 
-// ────────────────────────────────────────────────────────────
 // Pemetaan hasil klasifikasi → kode parameter
-// ────────────────────────────────────────────────────────────
 
 /**
  * Menentukan kode parameter dari label klasifikasi klinis.

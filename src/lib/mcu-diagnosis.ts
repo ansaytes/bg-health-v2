@@ -1,6 +1,4 @@
-// ============================================================
 // Diagnosa Medis Otomatis — BG/QSHE/STD/006 Rev001
-// ============================================================
 //
 // Mengubah hasil pemeriksaan MCU menjadi daftar diagnosis RESMI dalam
 // bahasa Inggris, diklasifikasi otomatis mengikuti ambang batas pada
@@ -12,7 +10,6 @@
 //
 // Semua angka ambang batas dan istilah berasal dari
 // clinical-classification.ts. Modul ini hanya menyusun urutannya.
-// ============================================================
 
 import {
   DRUG_TEST_DIAGNOSIS,
@@ -103,9 +100,7 @@ function isAbnormalMulti(value: string | number | null | undefined): boolean {
   return parts.some((part) => !isNormalText(part));
 }
 
-// ────────────────────────────────────────────────────────────
 // Bagian-bagian diagnosis
-// ────────────────────────────────────────────────────────────
 
 function buildAnamneseEntries(values: MCURaw): DiagnosisEntry[] {
   const entries: DiagnosisEntry[] = [];
@@ -378,9 +373,7 @@ function buildQuestionnaireEntries(values: MCURaw): DiagnosisEntry[] {
   return entries;
 }
 
-// ────────────────────────────────────────────────────────────
 // Penyusun utama
-// ────────────────────────────────────────────────────────────
 
 /** Urutan penyusunan diagnosis agar hasil stabil dan mudah dibandingkan. */
 const SYSTEM_ORDER = [

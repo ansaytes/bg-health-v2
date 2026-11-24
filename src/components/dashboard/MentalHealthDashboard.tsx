@@ -268,7 +268,7 @@ export default function MentalHealthDashboard() {
       </div>
 
       {/* TEMPLATE SERAGAM Monitoring MCU: 4 diagram berjajar.
-          Kotak KPI terpisah DIHAPUS — angkanya sudah tampil pada donut
+          Kotak KPI terpisah DIHAPUS : angkanya sudah tampil pada donut
           (total di tengah + persentase per potongan). */}
       <div className="mcu-live-chart-row mcu-live-chart-row--four">
         <MCUChartCard title="SRQ-20" subtitle="Ambang ≥6 = perlu tindak lanjut" className="glow-teal">
@@ -297,13 +297,13 @@ export default function MentalHealthDashboard() {
         <MCUChartCard title="SRQ-20 per Site" subtitle="Responden · perlu tindak lanjut" className="glow-steel"><canvas ref={siteRef} /></MCUChartCard>
       </div>
 
-      {/* Baris 2 — sebaran derajat keparahan & indikator SDS-30.
+      {/* Baris 2 : sebaran derajat keparahan & indikator SDS-30.
           Menggunakan data yang SUDAH tersedia di API tetapi belum pernah
           ditampilkan: `srq21.band`, `dass21.band`, dan `sds.perIndikator`.
           Sebelumnya kartu hanya menampilkan total, bukan DERAJAT, sehingga
           tidak informatif untuk menentukan prioritas tindak lanjut.
 
-          SDS-30 diperluas menjadi tiga kartu (pelaporan UKL — Kepdirjen
+          SDS-30 diperluas menjadi tiga kartu (pelaporan UKL : Kepdirjen
           Minerba No. 185.K/37.04/DJB/2019):
             • Rata-rata skor per indikator (5–35)
             • Sebaran derajat: ringan <10 · sedang 10–24 · berat >24
@@ -332,7 +332,7 @@ export default function MentalHealthDashboard() {
           />
         </MCUChartCard>
 
-        {/* SDS-30 — instrumen faktor psikologi kerja (Lampiran Permenaker
+        {/* SDS-30 : instrumen faktor psikologi kerja (Lampiran Permenaker
             5/2018), dipakai UKL untuk pelaporan Kepdirjen Minerba No. 185.K/37.04/DJB/2019.
             6 indikator × 5 item, skor indikator 5–35. Kategori derajat
             (hal. 207 Permenaker 5/2018): ringan <10 · sedang 10–24 · berat >24.
@@ -340,7 +340,7 @@ export default function MentalHealthDashboard() {
             rata-rata skor tiap indikator, jumlah responden per derajat,
             dan indikator mana yang paling banyak kategori berat. */}
         <MCUChartCard
-          title="SDS-30 — Stres Kerja (UKL · Kepdirjen Minerba)"
+          title="SDS-30 : Stres Kerja (UKL · Kepdirjen Minerba)"
           subtitle="6 indikator faktor psikologi kerja · skor 5–35"
           className="glow-coral"
         >
@@ -355,7 +355,7 @@ export default function MentalHealthDashboard() {
         </MCUChartCard>
 
         <MCUChartCard
-          title="SDS-30 — Sebaran Derajat Stres"
+          title="SDS-30 : Sebaran Derajat Stres"
           subtitle="Ringan <10 · Sedang 10–24 · Berat >24 (per indikator)"
           className="glow-orange"
         >
@@ -374,7 +374,7 @@ export default function MentalHealthDashboard() {
         </MCUChartCard>
 
         <MCUChartCard
-          title="SDS-30 — Indikator dengan Kategori Berat Terbanyak"
+          title="SDS-30 : Indikator dengan Kategori Berat Terbanyak"
           subtitle="Prioritas intervensi lingkungan kerja"
           className="glow-steel"
         >

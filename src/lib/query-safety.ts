@@ -1,9 +1,6 @@
-// ============================================================
 // Query Safety — sanitasi nilai yang masuk ke filter PostgREST
-// ============================================================
 //
 // MENGAPA MODUL INI ADA
-// ----------------------------------------------------------------
 // Aplikasi ini tidak memakai SQL mentah; semua akses lewat supabase-js.
 // Namun supabase-js meneruskan string filter `.or(...)`, `.filter(...)`,
 // dan `.not(...)` APA ADANYA ke PostgREST, dan PostgREST MEMPARSE string
@@ -21,7 +18,6 @@
 // melainkan MENGHAPUS karakter kontrol sintaks filter dari input.
 //
 // ATURAN
-// ----------------------------------------------------------------
 //  • Nilai yang boleh masuk filter hanya huruf, angka, spasi, dan tanda
 //    baca yang tidak bermakna bagi PostgREST.
 //  • Hash HMAC (hex 64 karakter) divalidasi bentuknya sebelum dipakai.

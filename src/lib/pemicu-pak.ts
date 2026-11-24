@@ -1,6 +1,4 @@
-// ============================================================
 // Engine Pemicu Dugaan PAK — INK/017 Lampiran 1
-// ============================================================
 //
 // Membaca SEJARAH MCU multi-baris + HRA, lalu menghasilkan SARAN pemicu
 // (nomor kriteria Lampiran 1). Keputusan tetap di QS Medic/dokter: sistem

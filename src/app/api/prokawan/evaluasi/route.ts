@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     let historiId: string | null = null;
 
     if (terapkan && hasil.evaluasi.zonaBaru !== 'Belum Lengkap') {
-      // ── 1. BACA nilai lama DULU ────────────────────────────────────────
+//  1. BACA nilai lama DULU
       // Tanpa ini, setelah UPDATE nilai lama hilang tanpa jejak.
       const { data: lama } = await client
         .from('mcu_records')
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
 
       const triggerBaru = hasil.evaluasi.triggers.join(' | ');
 
-      // ── 2. Tulis zona baru ke record MCU terakhir ──────────────────────
+//  2. Tulis zona baru ke record MCU terakhir
       const { error: updateError } = await client
         .from('mcu_records')
         .update({
@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
       if (updateError) throw new Error(`Gagal memperbarui zona: ${updateError.message}`);
       zonaDiterapkan = true;
 
-      // ── 3. CATAT HISTORI (append-only) ─────────────────────────────────
+//  3. CATAT HISTORI (append-only)
       // Tabel zona_histori menyimpan nilai sebelum & sesudah beserta nilai
       // parameter yang mendasari, sehingga perubahan zona dapat diaudit dan
       // dibuktikan berasal dari kontrol — bukan ditimpa tanpa bekas.

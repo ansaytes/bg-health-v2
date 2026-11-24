@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Administrator > Program Inspeksi & Register PICA (satu menu bertab)
-// ============================================================
 //
 // Program Inspeksi (rencana vs realisasi) dan Register PICA (temuan yang
 // harus ditutup) adalah SATU alur kerja: jadwal pemeriksaan → temuan →

@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Persetujuan sebelum pengisian kuisioner kesehatan jiwa & fisik
-// ============================================================
 //
 // POPUP modal dengan satu lembar penjelasan. Tombol persetujuan AKTIF hanya
 // setelah pengguna SCROLL sampai paling bawah (indikator keterbacaan).
@@ -32,7 +30,7 @@ const PENJELASAN: string[] = [
   'Persetujuan ini mencakup pengisian kuesioner kesehatan jiwa dan berbagi informasi antara QSHE Medic dengan psikolog Employee Assistance Program (EAP), agar konseling dan tindak lanjut medis berjalan selaras.',
   'EAP adalah layanan pendampingan. Psikolog EAP tidak menetapkan diagnosis, Zona Risiko PTM, maupun status kelayakan kerja. Penetapan tersebut tetap dilakukan oleh QSHE Medic berdasarkan penilaian dokter.',
   'Persetujuan diberikan secara sukarela. Menolak atau mencabut persetujuan tidak dikenai sanksi dan tidak dicatat dalam berkas kepegawaian.',
-  'Isi konseling tetap berada pada psikolog EAP. Namun bila ditemukan tanda bahaya atau kondisi yang membahayakan keselamatan karyawan maupun orang lain, psikolog EAP wajib segera menyampaikannya kepada QSHE Medic — ketentuan ini berlaku tanpa memerlukan persetujuan.',
+  'Isi konseling tetap berada pada psikolog EAP. Namun bila ditemukan tanda bahaya atau kondisi yang membahayakan keselamatan karyawan maupun orang lain, psikolog EAP wajib segera menyampaikannya kepada QSHE Medic (ketentuan ini berlaku tanpa memerlukan persetujuan).',
   'Atasan dan personel Departemen HCGS di luar tim EAP hanya menerima status kelayakan kerja dan pembatasan kerja, tanpa skor skrining maupun diagnosis.',
   'Catatan konseling EAP disimpan terpisah dari berkas kepegawaian dan tidak dapat digunakan sebagai dasar penilaian kinerja, promosi, mutasi, sanksi, maupun pemutusan hubungan kerja.',
   'Anda dapat mencabut persetujuan ini seluruhnya atau sebagian kapan saja tanpa dikenai sanksi. Pencabutan berlaku sejak diterima QSHE Medic dan tidak berlaku surut atas informasi yang telah dibagikan.',
@@ -116,14 +114,14 @@ export default function ConsentGate({
         {/* Header */}
         <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: 'var(--foreground)' }}>
-            Persetujuan — {instrumen}
+            Persetujuan : {instrumen}
           </h2>
           <p style={{ fontSize: 11, color: 'var(--muted-foreground)', margin: '3px 0 0' }}>
             Gulir sampai paling bawah untuk membaca seluruh pernyataan dan melanjutkan.
           </p>
         </div>
 
-        {/* Isi — bisa di-scroll */}
+        {/* Isi : bisa di-scroll */}
         <div
           ref={scrollRef}
           style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 20px' }}
@@ -148,7 +146,7 @@ export default function ConsentGate({
           >
             <b>Tanda bahaya.</b> Bila Anda memiliki pikiran untuk mengakhiri hidup, segera sampaikan
             kepada petugas kesehatan. Hal ini wajib ditindaklanjuti dokter pada hari yang sama dan
-            bersifat menyelamatkan — bukan pelanggaran kerahasiaan.
+            bersifat menyelamatkan (bukan pelanggaran kerahasiaan).
           </div>
 
           <p style={{ fontSize: 11.5, color: 'var(--muted-foreground)', marginTop: 14, lineHeight: 1.6 }}>
@@ -157,13 +155,13 @@ export default function ConsentGate({
             kesehatan lain yang tidak tercantum dalam lembar persetujuan ini.
           </p>
 
-          {/* Penanda bawah — terlihat saat sudah mencapai akhir */}
+          {/* Penanda bawah: terlihat saat sudah mencapai akhir */}
           <div style={{ marginTop: 12, textAlign: 'center', fontSize: 11, color: 'var(--muted-foreground)' }}>
             {reachedBottom ? '✓ Anda telah membaca seluruh lembar persetujuan.' : '↓ Gulir ke bawah untuk membaca seluruh isi.'}
           </div>
         </div>
 
-        {/* Footer — tombol tunggal */}
+        {/* Footer: tombol tunggal */}
         <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
           {error && (
             <p style={{ margin: '0 0 8px', fontSize: 11.5, color: '#b3261e' }}>{error}</p>
@@ -174,7 +172,8 @@ export default function ConsentGate({
             disabled={!reachedBottom}
             style={{
               width: '100%',
-              height: 42,
+              height: 44,
+              minHeight: 44,
               borderRadius: 10,
               border: 'none',
               cursor: reachedBottom ? 'pointer' : 'not-allowed',

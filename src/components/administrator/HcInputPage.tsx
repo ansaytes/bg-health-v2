@@ -115,7 +115,7 @@ function NoiseTab({ areas, onMsg, onSaved }: { areas: Row[]; onMsg: (m: any) => 
             <Field label="Site"><select className="admin-input" style={inputStyle} value={site} onChange={(e) => { setSite(e.target.value); set('area_id', ''); }}>
               <option value="">Semua site</option>{SITES.map((s) => <option key={s}>{s}</option>)}</select></Field>
             <Field label="Area Kerja" hint="(daftarkan dulu di tab Master Area)"><select className="admin-input" style={inputStyle} required value={f.area_id} onChange={(e) => set('area_id', e.target.value)}>
-              <option value="">Pilih area…</option>{areaOptions.map((a) => <option key={a.area_id} value={a.area_id}>{a.site} — {a.nama_area}</option>)}</select></Field>
+              <option value="">Pilih area…</option>{areaOptions.map((a) => <option key={a.area_id} value={a.area_id}>{a.site} : {a.nama_area}</option>)}</select></Field>
             <Field label="Tanggal Pengukuran"><input type="date" className="admin-input" style={inputStyle} required value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
             <Field label="Jenis"><select className="admin-input" style={inputStyle} value={f.tipe} onChange={(e) => set('tipe', e.target.value)}>
               <option value="BERKALA">Berkala</option><option value="PERUBAHAN_PROSES">Perubahan mesin / proses</option></select></Field>
@@ -187,7 +187,7 @@ function NoiseTab({ areas, onMsg, onSaved }: { areas: Row[]; onMsg: (m: any) => 
                 const z = mx === null ? null : zonaFromLeq(mx);
                 return (
                   <tr key={s.id}>
-                    <td style={tdStyle}>{fmtDate(s.tanggal)}</td><td style={tdStyle}>{s.hc_area?.site} — {s.hc_area?.nama_area}</td>
+                    <td style={tdStyle}>{fmtDate(s.tanggal)}</td><td style={tdStyle}>{s.hc_area?.site} : {s.hc_area?.nama_area}</td>
                     <td style={tdStyle}>{s.tipe === 'BERKALA' ? 'Berkala' : 'Perubahan proses'}</td><td style={tdStyle}>{lq.length}</td>
                     <td style={tdStyle}>{mx ?? '-'}</td><td style={tdStyle}>{z && <Chip text={z} color={ZONA_COLOR[z]} />}</td>
                     <td style={tdStyle}><button type="button" onClick={() => del(s.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E63946' }}><Trash2 size={13} /></button></td>
@@ -245,7 +245,7 @@ function ExposureTab({ areas, onMsg }: { areas: Row[]; onMsg: (m: any) => void }
     });
   };
   const siteAreas = areas.filter((a) => !f.site || a.site === f.site);
-  const KET: Record<string, string> = { A: 'A — rutin ≥ 4 jam/hari di zona Kuning/Merah', B: 'B — insidental / intermiten', C: 'C — tidak terpajan' };
+  const KET: Record<string, string> = { A: 'A : rutin ≥ 4 jam/hari di zona Kuning/Merah', B: 'B : insidental / intermiten', C: 'C : tidak terpajan' };
 
   return (
     <>
@@ -258,7 +258,7 @@ function ExposureTab({ areas, onMsg }: { areas: Row[]; onMsg: (m: any) => void }
             <Field label="Site"><select className="admin-input" style={inputStyle} value={f.site} onChange={(e) => set('site', e.target.value)}><option value="">-</option>{SITES.map((s) => <option key={s}>{s}</option>)}</select></Field>
             <Field label="Departemen"><input className="admin-input" style={inputStyle} placeholder="Nama departemen" value={f.departemen} onChange={(e) => set('departemen', e.target.value)} /></Field>
             <Field label="Jabatan"><input className="admin-input" style={inputStyle} placeholder="mis. Mekanik, Operator Crusher" value={f.jabatan} onChange={(e) => set('jabatan', e.target.value)} /></Field>
-            <Field label="Area Kerja Utama"><select className="admin-input" style={inputStyle} value={f.area_id} onChange={(e) => set('area_id', e.target.value)}><option value="">-</option>{siteAreas.map((a) => <option key={a.area_id} value={a.area_id}>{a.site} — {a.nama_area}</option>)}</select></Field>
+            <Field label="Area Kerja Utama"><select className="admin-input" style={inputStyle} value={f.area_id} onChange={(e) => set('area_id', e.target.value)}><option value="">-</option>{siteAreas.map((a) => <option key={a.area_id} value={a.area_id}>{a.site} : {a.nama_area}</option>)}</select></Field>
             <Field label="Kategori"><select className="admin-input" style={inputStyle} value={f.kategori} onChange={(e) => set('kategori', e.target.value)}>{Object.entries(KET).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
             <Field label="Jam/hari di zona Kuning/Merah" hint={f.kategori === 'A' ? '(wajib ≥ 4)' : '(opsional)'}><input type="number" step="0.5" className="admin-input" style={inputStyle} placeholder="6 Jam/Hari" value={f.jam_per_hari_zona} onChange={(e) => set('jam_per_hari_zona', e.target.value)} /></Field>
             <Field label="Tanggal Penetapan"><input type="date" className="admin-input" style={inputStyle} value={f.tanggal_penetapan} onChange={(e) => set('tanggal_penetapan', e.target.value)} /></Field>

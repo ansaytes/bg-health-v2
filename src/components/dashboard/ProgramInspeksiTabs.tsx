@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Dashboard > Program Inspeksi (Dua Tab Strategis QSHE)
-// ============================================================
 //
 // 1. Tab "Kinerja Tim Inspeksi":
 //    Memantau kedisiplinan, produktivitas, ketepatan waktu tim,

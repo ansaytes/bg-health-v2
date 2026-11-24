@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Register PAK — Dashboard (INK/017)
-// ============================================================
 // Superuser/administrator: kelola kasus (input, triase, diagnosis, laporan).
 // Manager/pic: read-only (menandatangani laporan Tahap I).
 // Dokumen register dicetak melalui print CSS.
@@ -89,7 +87,7 @@ const SUMBER_DUGAAN = [
 ];
 
 function fmtJam(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const d = new Date(iso);
   return `${d.toLocaleDateString('id-ID')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
@@ -315,8 +313,8 @@ export default function PakRegister() {
                   <tr key={c.id} className="hover:bg-accent/40" style={{ borderBottom: '1px solid var(--border)' }}>
                     <td className={td} style={{ fontWeight: 800, whiteSpace: 'nowrap' }}>{c.id_register}</td>
                     <td className={td}>
-                      <div style={{ fontWeight: 700, fontSize: '12px' }}>{c.nama_enc ?? '—'}</div>
-                      <div style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>{c.jabatan ?? '—'} · {c.department ?? '—'}</div>
+                      <div style={{ fontWeight: 700, fontSize: '12px' }}>{c.nama_enc ?? '-'}</div>
+                      <div style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>{c.jabatan ?? '-'} · {c.department ?? '-'}</div>
                     </td>
                     <td className={td} style={{ fontSize: '11px' }}>
                       {SUMBER_DUGAAN.find((s) => s.v === c.sumber_dugaan)?.label.split('(')[0].trim() ?? c.sumber_dugaan}
@@ -340,7 +338,7 @@ export default function PakRegister() {
                             padding: 0,
                             textAlign: 'left',
                           }}
-                          title={`Diverifikasi oleh ${c.hra_verified_by ?? '-'} pada ${fmtJam(c.hra_verified_tgl)} — Klik untuk melihat rincian bahaya HRA`}
+                          title={`Diverifikasi oleh ${c.hra_verified_by ?? '-'} pada ${fmtJam(c.hra_verified_tgl)} : Klik untuk melihat rincian bahaya HRA`}
                         >
                           <ShieldCheck size={12} /> Terverifikasi
                           <div style={{ fontSize: '9px', color: 'var(--muted-foreground)', fontWeight: 400 }}>{c.hra_verified_by}</div>
@@ -367,7 +365,7 @@ export default function PakRegister() {
                     <td className={td} style={{ fontSize: '11px' }}>
                       {c.diagnosis_okupasi
                         ? <><b>{c.diagnosis_okupasi}</b>{c.kelaikan_kerja && <div style={{ fontSize: '9.5px', color: 'var(--muted-foreground)' }}>{c.kelaikan_kerja}</div>}</>
-                        : '—'}
+                        : '-'}
                     </td>
                     <td className={td} style={{ fontSize: '11px' }}>
                       <DeadlineBadge sisaJam={c.deadline_info?.laporanMedisSisaJam ?? null} label="Lap. medis" />
@@ -452,7 +450,7 @@ function NewCaseForm({ saving, onCancel, onSubmit }: {
       <h3 style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 10 }}>Kasus PAK Baru</h3>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
         {/* Identitas diisi lewat pencarian karyawan yang SAMA dengan Review MCU.
-            Sebelumnya pengguna harus mengetik `nik_karyawan_hash` manual — tidak
+            Sebelumnya pengguna harus mengetik `nik_karyawan_hash` manual : tidak
             mungkin dilakukan tanpa membuka database. */}
         <div className="sm:col-span-2">
           <EmployeeLookupInput
@@ -540,13 +538,13 @@ function TriaseRow({ kasus, saving, onSubmit }: {
   return (
     <div className="flex flex-wrap items-center gap-2 p-3 rounded-lg border">
       <div className="flex-1 min-w-0">
-        <b style={{ fontSize: 12 }}>{kasus.id_register}</b> <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>{kasus.nama_enc ?? '—'}</span>
+        <b style={{ fontSize: 12 }}>{kasus.id_register}</b> <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>{kasus.nama_enc ?? '-'}</span>
         <DeadlineBadge sisaJam={kasus.deadline_info?.triaseSisaJam ?? null} label="Batas triase" />
       </div>
       <select value={keputusan} onChange={(e) => setKeputusan(e.target.value)} className="h-9 rounded-lg border-input bg-background px-2 text-xs">
         <option value="TIDAK_MEMENUHI">Tidak memenuhi dugaan PAK</option>
         <option value="PERLU_TAMBAHAN">Perlu pemeriksaan tambahan</option>
-        <option value="LANJUT_PAK02">Dugaan PAK — lanjut pemeriksaan</option>
+        <option value="LANJUT_PAK02">Dugaan PAK : lanjut pemeriksaan</option>
       </select>
       <Input value={alasan} onChange={(e) => setAlasan(e.target.value)} placeholder="Alasan / catatan triase" className="h-9 flex-1 rounded-lg text-sm min-w-[200px]" />
       <Button size="sm" onClick={() => onSubmit(keputusan, alasan)} disabled={saving || (keputusan === 'TIDAK_MEMENUHI' && !alasan.trim())}>

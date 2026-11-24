@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Administrator > ProKawan
-// ============================================================
 // Daftar peserta ProKawan (Zona Kuning/Merah) beserta panel DETAIL per peserta:
 //   - Identitas (nama, NIK, site, departemen, jabatan)
 //   - Zona PTM + parameter pemicu + kolom Pengendalian (per parameter STD/006,
@@ -57,7 +55,7 @@ const HASIL_WARNA: Record<string, string> = {
 };
 
 function fmtTanggal(value: string | null | undefined): string {
-  if (!value) return '—';
+  if (!value) return '-';
   const d = new Date(`${String(value).slice(0, 10)}T00:00:00`);
   if (Number.isNaN(d.getTime())) return String(value);
   return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -191,13 +189,13 @@ export default function AdminProKawan() {
       const tepat = !kontrolTerakhir.jadwal_tanggal
         || kontrolTerakhir.aktual_tanggal <= kontrolTerakhir.jadwal_tanggal;
       return {
-        label: tepat ? 'Patuh — kontrol tepat waktu' : 'Terlambat — kontrol melewati jadwal',
+        label: tepat ? 'Patuh: kontrol tepat waktu' : 'Terlambat: kontrol melewati jadwal',
         warna: tepat ? '#00B894' : '#FF2D2D',
         icon: tepat ? 'patuh' : 'lambat',
       };
     }
     if (selected.status === 'terlambat') {
-      return { label: 'Tidak patuh — lewat jatuh tempo, belum ada bukti periksa', warna: '#FF2D2D', icon: 'lambat' };
+      return { label: 'Tidak patuh: lewat jatuh tempo, belum ada bukti periksa', warna: '#FF2D2D', icon: 'lambat' };
     }
     if (selected.status === 'belum-kontrol') {
       return { label: 'Belum kontrol', warna: '#FF2D2D', icon: 'lambat' };
@@ -393,7 +391,7 @@ export default function AdminProKawan() {
       )}
       {!tabelSiap && (
         <div style={{ padding: '8px 12px', borderRadius: 8, background: 'rgba(255,196,0,0.10)', border: '1px solid rgba(255,196,0,0.4)', color: '#9a6b00', fontSize: 11.5, flexShrink: 0 }}>
-          Tabel <b>followups_prokawan</b> belum dibuat — jadwal kontrol masih dihitung dari MCU terakhir. Jalankan migration
+          Tabel <b>followups_prokawan</b> belum dibuat : jadwal kontrol masih dihitung dari MCU terakhir. Jalankan migration
           <code style={{ marginLeft: 4 }}>20261029_followups_prokawan.sql</code>.
         </div>
       )}
@@ -482,7 +480,7 @@ export default function AdminProKawan() {
                   <div style={{ flex: 1, minWidth: 200 }}>
                     <h2 style={{ fontSize: 14, fontWeight: 800, margin: 0 }}>{selected.nama}</h2>
                     <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: '2px 0 0' }}>
-                      NIK {selected.nik} · {selected.site || '—'} · {selected.department ?? 'Departemen tidak tercatat'}
+                      NIK {selected.nik} · {selected.site || '-'} · {selected.department ?? 'Departemen tidak tercatat'}
                       {selected.area ? ` · ${selected.area}` : ''}
                     </p>
                   </div>
@@ -516,7 +514,7 @@ export default function AdminProKawan() {
                   }}
                 >
                   {kepatuhan?.icon === 'patuh' ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
-                  Kepatuhan: {kepatuhan?.label ?? '—'}
+                  Kepatuhan: {kepatuhan?.label ?? '-'}
                 </div>
               </div>
 
@@ -596,16 +594,16 @@ export default function AdminProKawan() {
                               <td style={TD}>
                                 {k.hasil
                                   ? <span style={{ fontSize: 9.5, fontWeight: 800, color: HASIL_WARNA[k.hasil] }}>{HASIL_LABEL[k.hasil]}</span>
-                                  : '—'}
+                                  : '-'}
                               </td>
                               <td style={TD}>
                                 {k.evidence_url
                                   ? <a href={k.evidence_url} target="_blank" rel="noopener noreferrer" style={{ color: '#ff4d00', fontSize: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                                     <ExternalLink size={11} /> Lihat
                                   </a>
-                                  : '—'}
+                                  : '-'}
                               </td>
-                              <td style={{ ...TD, maxWidth: 220 }}>{k.catatan ?? '—'}</td>
+                              <td style={{ ...TD, maxWidth: 220 }}>{k.catatan ?? '-'}</td>
                             </tr>
                           );
                         })}
@@ -791,7 +789,7 @@ function RiwayatZona({ nik, versi }: { nik: string; versi: string }) {
         <div style={{ minWidth: 0 }}>
           <h2 style={{ fontSize: 12 }}>Riwayat Perubahan Zona</h2>
           <p style={{ fontSize: 9.5 }}>
-            Jejak audit — zona pada record MCU ditimpa setiap pembaruan, riwayatnya disimpan di sini
+            Jejak audit : zona pada record MCU ditimpa setiap pembaruan, riwayatnya disimpan di sini
           </p>
         </div>
       </div>
@@ -843,12 +841,12 @@ function RiwayatZona({ nik, versi }: { nik: string; versi: string }) {
                     </span>
                   </td>
                   <td style={{ ...TD, whiteSpace: 'nowrap', fontWeight: 700 }}>
-                    <span style={{ color: warna(h.zona_lama) }}>{h.zona_lama ?? '—'}</span>
+                    <span style={{ color: warna(h.zona_lama) }}>{h.zona_lama ?? '-'}</span>
                     <span style={{ margin: '0 4px', color: 'var(--muted-foreground)' }}>&rarr;</span>
                     <span style={{ color: warna(h.zona_baru) }}>{h.zona_baru}</span>
                   </td>
                   <td style={{ ...TD, whiteSpace: 'nowrap' }}>{fmtTanggal(h.tanggal_acuan)}</td>
-                  <td style={{ ...TD, maxWidth: 220, color: 'var(--muted-foreground)' }}>{h.catatan ?? '—'}</td>
+                  <td style={{ ...TD, maxWidth: 220, color: 'var(--muted-foreground)' }}>{h.catatan ?? '-'}</td>
                 </tr>
               ))}
             </tbody>

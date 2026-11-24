@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
   if (!site) return NextResponse.json({ error: 'Site wajib diisi' }, { status: 400 });
 
   try {
-    // ── Status kesiapan unit ambulans (Ready / Standby / Breakdown) ─────────
+//  Status kesiapan unit ambulans (Ready / Standby / Breakdown)
     if (jenisKey === 'ambulans' && aksi === 'unit') {
       const unit = String(body?.unit ?? '').trim();
       if (!unit) return NextResponse.json({ error: 'Unit wajib diisi' }, { status: 400 });
@@ -245,7 +245,7 @@ export async function POST(req: NextRequest) {
     const { error } = await client.from(konfig.kondisi).upsert(barisValid, { onConflict });
     if (error) throw error;
 
-    // ── Otomatis Sinkronisasi Realisasi ke inspeksi_jadwal ────────────────
+//  Otomatis Sinkronisasi Realisasi ke inspeksi_jadwal
     const tglInspeksi = baris[0]?.tanggal_inspeksi ? String(baris[0].tanggal_inspeksi).slice(0, 10) : hariIni;
     const periode = tglInspeksi.slice(0, 7);
 

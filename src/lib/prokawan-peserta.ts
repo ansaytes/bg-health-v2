@@ -1,6 +1,4 @@
-// ============================================================
 // Pemuat peserta ProKawan — dipakai BERSAMA dua endpoint
-// ============================================================
 //
 //  • GET /api/prokawan            → payload dengan IDENTITAS (nama, NIK, no. WA).
 //                                   Hanya untuk QSHE Medic di halaman
@@ -196,7 +194,7 @@ export async function muatPesertaProKawan(opsi: MuatPesertaOptions = {}): Promis
     }
   }
 
-  // ── Sumber tanggal kontrol, berurutan menurut kekuatan bukti ────────────
+//  Sumber tanggal kontrol, berurutan menurut kekuatan bukti
   //
   // 1. `kunjungan_kontrol` — jadwal yang SUDAH ditetapkan/dikonfirmasi QSHE
   //    Medic (INK/016 poin 4.1.4). Ini yang paling berwenang: bisa saja QSHE

@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Administrator > Higiene Industri > Riwayat Pengukuran Pencahayaan
-// ============================================================
 // Rekapitulasi hasil pengukuran pencahayaan (Lux) per ruangan.
 // Ditampilkan di panel tabel melalui tombol panah navigasi.
 
@@ -110,14 +108,14 @@ export default function InspeksiPencahayaanTable() {
                     <tr key={r.id}>
                       <td style={{ ...tdStyle, fontWeight: 700 }}>{r.namaRuang}</td>
                       <td style={tdStyle}>{NAB_LUX[r.peruntukan]?.label || r.peruntukan}</td>
-                      <td style={tdStyle}>{r.luasM2 ? `${r.luasM2} m²` : '—'} / {r.jumlahPekerja ? `${r.jumlahPekerja} org` : '—'}</td>
-                      <td style={{ ...tdStyle, fontWeight: 700 }}>{p?.luxMin != null ? `${p.luxMin} Lux` : '—'}</td>
-                      <td style={tdStyle}>{p?.nabLux != null ? `${p.nabLux} Lux` : '—'}</td>
+                      <td style={tdStyle}>{r.luasM2 ? `${r.luasM2} m²` : '-'} / {r.jumlahPekerja ? `${r.jumlahPekerja} org` : '-'}</td>
+                      <td style={{ ...tdStyle, fontWeight: 700 }}>{p?.luxMin != null ? `${p.luxMin} Lux` : '-'}</td>
+                      <td style={tdStyle}>{p?.nabLux != null ? `${p.nabLux} Lux` : '-'}</td>
                       <td style={{ ...tdStyle, fontWeight: 700, color: warna }}>
                         {status === 'memenuhi' ? '✓ Memenuhi' : status === 'tidak-memenuhi' ? '✗ Di Bawah NAB' : 'Belum Diukur'}
                       </td>
                       <td style={tdStyle}>
-                        {r.pengukuranTerakhir?.tanggal ? fmtDate(String(r.pengukuranTerakhir.tanggal)) : '—'}
+                        {r.pengukuranTerakhir?.tanggal ? fmtDate(String(r.pengukuranTerakhir.tanggal)) : '-'}
                       </td>
                     </tr>
                   );

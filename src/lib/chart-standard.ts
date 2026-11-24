@@ -337,9 +337,7 @@ export function useAnimationReady(deps: unknown[]): boolean {
  */
 export const ANIMASI_JEDA_MS = 80;
 
-// ═══════════════════════════════════════════════════════════════
 // MENGAPA DIAGRAM ASR BERANIMASI SEDANGKAN YANG LAIN TIDAK
-// ═══════════════════════════════════════════════════════════════
 //
 // Hasil riset (diukur di browser dengan menghitung piksel canvas per frame):
 //
@@ -372,7 +370,6 @@ export const ANIMASI_JEDA_MS = 80;
 //     secara eksplisit lewat `chart.reset()` + `chart.update()`. Ini meniru
 //     perilaku rAF manual pada diagram ASR: animasi selalu dijalankan ulang
 //     dari nol, tidak bergantung pada Chart.js "merasa" perlu beranimasi.
-// ═══════════════════════════════════════════════════════════════
 
 /**
  * Menjalankan ulang animasi Chart.js dari nol.

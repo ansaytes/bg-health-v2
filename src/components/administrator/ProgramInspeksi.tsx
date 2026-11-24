@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Administrator > Perencanaan Jadwal Inspeksi
-// ============================================================
 // Halaman operasional untuk MENETAPKAN TARGET & TANGGAL RENCANA inspeksi:
 //   • Buat rencana periode bulanan per site secara otomatis
 //   • Tambah jadwal inspeksi khusus / ad-hoc dengan tanggal rencana tertentu
@@ -311,11 +309,11 @@ export default function ProgramInspeksi() {
                   <tr key={String(b.id ?? i)}>
                     <td className="mcu-records-index">{i + 1}</td>
                     <td style={{ fontWeight: 500 }}>{JENIS_META[b.jenis as JenisInspeksi]?.label ?? b.jenis}</td>
-                    <td>{b.site ?? '—'}</td>
-                    <td title={b.objek_nama ?? ''}>{b.objek_nama ?? '—'}</td>
-                    <td>{b.tanggal_rencana ?? '—'}</td>
+                    <td>{b.site ?? '-'}</td>
+                    <td title={b.objek_nama ?? ''}>{b.objek_nama ?? '-'}</td>
+                    <td>{b.tanggal_rencana ?? '-'}</td>
                     <td style={{ color: b.tanggal_selesai ? '#00B894' : 'inherit', fontWeight: b.tanggal_selesai ? 600 : 'normal' }}>
-                      {b.tanggal_selesai ?? '—'}
+                      {b.tanggal_selesai ?? '-'}
                     </td>
                     <td>
                       <span style={{
@@ -325,7 +323,7 @@ export default function ProgramInspeksi() {
                         {st.label}
                       </span>
                     </td>
-                    <td title={b.petugas ?? ''}>{b.petugas_nama ?? b.petugas ?? '—'}</td>
+                    <td title={b.petugas ?? ''}>{b.petugas_nama ?? b.petugas ?? '-'}</td>
                     {isAdmin && (
                       <td className="mcu-records-action">
                         {b.status_efektif !== 'selesai' && b.status_efektif !== 'dibatalkan' ? (

@@ -1,6 +1,4 @@
-// ============================================================
 // Filter site "Batch"
-// ============================================================
 //
 // ATURAN OPERASIONAL
 // Site yang mengandung kata "Batch" (mis. "Batch 33", "Batch 34") berisi

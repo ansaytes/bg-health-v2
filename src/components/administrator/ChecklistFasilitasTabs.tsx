@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Administrator > Checklist Kelaikan (satu halaman, tiga tab)
-// ============================================================
 //
 // P3K, Ambulans, dan Sarana Ergonomi adalah SATU kelompok pekerjaan:
 // memeriksa kelengkapan & kelayakan aset kesehatan kerja. Karena itu

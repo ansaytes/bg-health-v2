@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Data Entry > Psikologi Lingkungan Kerja (SDS-30)
-// ============================================================
 //
 // SDS-30 (Survei Diagnosis Stres, Lampiran Permenaker 5/2018) mengukur FAKTOR
 // PSIKOLOGI LINGKUNGAN KERJA — berbeda dari SRQ-20/DASS-21 yang mengukur gejala
@@ -162,7 +160,7 @@ export default function InputPsikologiLingkunganPage() {
                 <div style={{ padding: '8px 0 4px', borderBottom: '1px solid var(--border)' }}>
                   <h1 className="admin-form-title">Psikologi Lingkungan Kerja (SDS-30)</h1>
                   <p className="admin-form-subtitle">
-                    Survei Diagnosis Stres (Lampiran Permenaker 5/2018) — Pemetaan 6 faktor psikologi lingkungan kerja untuk laporan Higiene Industri.
+                    Survei Diagnosis Stres (Lampiran Permenaker 5/2018) : Pemetaan 6 faktor psikologi lingkungan kerja untuk laporan Higiene Industri.
                   </p>
                 </div>
 
@@ -193,7 +191,7 @@ export default function InputPsikologiLingkunganPage() {
       {/* Satu daftar 1–30, tanpa judul kategori per blok. */}
       <ItemGroup
         title="SDS-30"
-        subtitle="Survei Diagnosis Stres — Permenaker 5/2018"
+        subtitle="Survei Diagnosis Stres : Permenaker 5/2018"
         items={SDS_ITEMS}
         values={values}
         onChange={setAnswer}

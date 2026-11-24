@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Dashboard > Program Inspeksi > Tab 1: Kinerja Tim Inspeksi
-// ============================================================
 //
 // Khusus memantau akuntabilitas, kedisiplinan & kinerja operasional petugas:
 //   • Capaian jadwal bulanan (Plan vs Actual) & ketepatan waktu inspektur
@@ -171,7 +169,7 @@ export default function InspeksiDashboard() {
             PICA Overdue: {p.overdue}
           </span>
           <span style={{ fontWeight: 700, color: '#3498DB' }}>
-            MTTR: {p.mttr !== null ? `${p.mttr} Hari` : '—'}
+            MTTR: {p.mttr !== null ? `${p.mttr} Hari` : '-'}
           </span>
           <MCURefreshButton loading={loading} onClick={() => void load()} />
         </div>
@@ -257,7 +255,7 @@ export default function InspeksiDashboard() {
         {/* CARD 4: Kinerja Resolusi PICA (MTTR) */}
         <MCUChartCard
           title="Kecepatan Resolusi PICA"
-          subtitle={`MTTR: ${p.mttr !== null ? `${p.mttr} Hari` : '—'} · Closed: ${p.closed} · Overdue: ${p.overdue}`}
+          subtitle={`MTTR: ${p.mttr !== null ? `${p.mttr} Hari` : '-'} · Closed: ${p.closed} · Overdue: ${p.overdue}`}
           className="glow-orange"
         >
           <MCUChart

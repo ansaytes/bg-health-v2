@@ -1,6 +1,4 @@
-// ============================================================
 // AI vision executor — pemanggilan provider + failover berurutan
-// ============================================================
 
 import { GoogleGenAI } from '@google/genai';
 import type {

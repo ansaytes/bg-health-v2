@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Dashboard > Higiene Industri (faktor lingkungan kerja — Permenaker 5/2018)
-// ============================================================
 //   1. Hearing Conservation — faktor FISIKA (kebisingan)
 //   2. Ergonomi              — faktor ERGONOMI
 //   3. Psikologi Lingkungan Kerja — faktor PSIKOLOGI (SDS-30)

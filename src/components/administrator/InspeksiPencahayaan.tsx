@@ -1,8 +1,6 @@
 'use client';
 
-// ============================================================
 // Administrator > Higiene Industri > Form Pengukuran Pencahayaan
-// ============================================================
 //
 // Standar: Permenkes 48/2016 Tabel 4 & Permenaker 5/2018.
 // - Pengukuran wajib dilakukan pada BIDANG KERJA (0,85 m).
@@ -227,7 +225,7 @@ export default function InspeksiPencahayaan() {
 
         {/* Form Pengukuran Ruang */}
         <form onSubmit={simpan}>
-          {/* Section 1: Lokasi & Pengukur — Baris Lurus */}
+          {/* Section 1: Lokasi & Pengukur : Baris Lurus */}
           <Section title="Informasi Lokasi &amp; Pengukur">
             <div style={grid4}>
               <Field label="Job Site">
@@ -266,7 +264,7 @@ export default function InspeksiPencahayaan() {
             </div>
           </Section>
 
-          {/* Section 2: Spesifikasi Ruangan — Baris Lurus */}
+          {/* Section 2: Spesifikasi Ruangan : Baris Lurus */}
           <Section title="Identifikasi Ruangan &amp; Standar NAB">
             <div style={grid4}>
               <Field label="Nama Ruangan">
@@ -303,7 +301,7 @@ export default function InspeksiPencahayaan() {
           <datalist id="noise-points-ref">
             {refTitikNoise.map((r, idx) => (
               <option key={idx} value={r.kode}>
-                {r.area ? `${r.area} — ` : ''}{r.deskripsi}
+                {r.area ? `${r.area} : ` : ''}{r.deskripsi}
               </option>
             ))}
           </datalist>

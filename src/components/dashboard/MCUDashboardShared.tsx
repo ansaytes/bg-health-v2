@@ -419,7 +419,7 @@ export function MCUChart({
             // nilai + persentase tiap potongan.
           },
           datalabels: {
-            // ── Perbaikan "label No Data tidak terlihat" ───────────────────
+//  Perbaikan "label No Data tidak terlihat"
             // Versi lama menyembunyikan label untuk batang bernilai 0, sehingga
             // kategori "No Data" / "Tidak Ada Data" tampil sebagai batang kosong
             // tanpa angka — padahal justru itu informasi yang dibutuhkan.

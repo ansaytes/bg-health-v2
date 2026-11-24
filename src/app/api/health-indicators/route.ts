@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       jobsite = caller!.site;
     }
 
-    // ── Distinct jobsite list (used by selectors) ──────────────
+//  Distinct jobsite list (used by selectors)
     if (sites_list === 'true') {
       let q = supabase
         .from('health_indicators')
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, data: unique });
     }
 
-    // ── ASR ranking: top 10 jobsites by ASR ───────────────────
+//  ASR ranking: top 10 jobsites by ASR
     // For YTD (no bulan), return ALL sites with ASR > 0 — client aggregates across months.
     // For specific bulan, limit to top 10.
     if (asr_ranking === 'true') {
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, data: data || [] });
     }
 
-    // ── YTD view: per-site per-year aggregates ────────────────
+//  YTD view: per-site per-year aggregates
     if (view === 'ytd') {
       let q = supabase.from('v_health_ytd_per_site').select('*');
       if (tahun) q = q.eq('tahun', parseInt(tahun));
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, data: data || [] });
     }
 
-    // ── "All Site" aggregation view (preferred over manual All Site rows) ──
+//  "All Site" aggregation view (preferred over manual All Site rows)
     if (caller!.role !== 'pic' && (view === 'all_site' || (jobsite === 'All Site' && !bulan))) {
       let q = supabase.from('v_health_all_site').select('*');
       if (tahun) q = q.eq('tahun', parseInt(tahun));
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, data: data || [] });
     }
 
-    // ── Default: raw rows from health_indicators ──────────────
+//  Default: raw rows from health_indicators
     let q = supabase
       .from('health_indicators')
       .select('*')

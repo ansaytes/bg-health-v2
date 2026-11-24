@@ -425,7 +425,7 @@ export default function InventoryAdmin() {
                   <div className="bm-loading is-inline" role="status" aria-live="polite" aria-label="Memuat data inventory admin">
                     <div className="bm-loading-spinner">
                       <div className="bm-loading-ring" aria-hidden="true" />
-                      <img src="/BM.png" alt="" className="bm-loading-logo" aria-hidden="true" />
+                      <img src="/BM.png" alt="" width={48} height={48} className="bm-loading-logo" aria-hidden="true" />
                     </div>
                     <p className="bm-loading-label">Memuat data inventory admin…</p>
                   </div>
@@ -592,7 +592,7 @@ export default function InventoryAdmin() {
       <Dialog open={isRestockOpen} onOpenChange={setIsRestockOpen}>
         <DialogContent style={{ maxWidth: 420 }}>
           <DialogHeader>
-            <DialogTitle>Restock / Tambah Batch — {selectedItem?.name}</DialogTitle>
+            <DialogTitle>Restock / Tambah Batch : {selectedItem?.name}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleRestock} style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 12 }}>
             <div>
