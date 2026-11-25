@@ -56,20 +56,27 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, inspeksi: data });
   }
 
-  let query = client
-    .from('gizi_inspeksi_jasaboga')
-    .select('id,site,tanggal,inspektur,vendor,nama_kantin,jumlah_porsi,jumlah_penjamah,jumlah_buku_sehat,no_slhs,tgl_kadaluwarsa_slhs,kalori_sarapan,kalori_siang,kalori_malam,extra_fooding,jawaban,ringkasan,catatan,created_at')
-    .order('tanggal', { ascending: false })
-    .limit(100);
+  const baseCols = 'id,site,tanggal,inspektur,vendor,nama_kantin,jumlah_porsi,jumlah_penjamah,jumlah_buku_sehat,no_slhs,tgl_kadaluwarsa_slhs,kalori_sarapan,kalori_siang,kalori_malam,extra_fooding,ringkasan,catatan,created_at';
+  const buildQuery = (cols: string) => {
+    let q = client
+      .from('gizi_inspeksi_jasaboga')
+      .select(cols)
+      .order('tanggal', { ascending: false })
+      .limit(100);
+    if (site) q = q.eq('site', site);
+    return q;
+  };
 
-  if (site) {
-    query = query.eq('site', site);
+  let { data, error } = await buildQuery(`${baseCols},jawaban`);
+
+  // Fallback aman bila kolom `jawaban` belum dimigrasi di Supabase (PGRST204 / 42703)
+  if (error && /jawaban|PGRST204|42703/i.test(error.message)) {
+    ({ data, error } = await buildQuery(baseCols));
   }
 
-  const { data, error } = await query;
-
   if (error) {
-    if (/does not exist|PGRST205|42P01/i.test(error.message)) {
+    const errText = `${error.code ?? ''} ${error.message ?? ''}`;
+    if (/does not exist|Could not find the table|PGRST205|42P01/i.test(errText)) {
       return NextResponse.json({
         success: true,
         data: [],

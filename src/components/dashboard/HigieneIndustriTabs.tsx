@@ -33,8 +33,8 @@ export default function HigieneIndustriTabs({ initialTab = 'hearing' }: { initia
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <CenteredTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Higiene Industri" />
-      {/* flex:1 + minHeight:0 agar tiap halaman tetap mengisi satu frame */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* flex:1 + minHeight:0 + overflowY:auto agar kartu tidak pernah terpotong */}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
         {tab === 'hearing' && <HearingConservationDashboard />}
         {tab === 'ergonomi' && <ErgonomiDashboard />}
         {tab === 'sanitasi' && <HigieneSanitasiDashboard />}

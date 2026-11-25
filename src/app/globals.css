@@ -2830,18 +2830,59 @@ select.admin-input.compact-input {
   margin-top: 1px;
 }
 
+.header-login-btn {
+  display: none;
+}
+
 /* Responsive — Tablet <=1023px */
 @media (max-width: 1023px) {
-  .sidebar { transform: translateX(-100%); }
+  .sidebar { transform: translateX(-100%); height: 100dvh; overflow-y: auto; }
   .sidebar.open { transform: translateX(0); }
-  .hamburger { display: flex; }
+  .hamburger {
+    display: flex;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+    top: 6px;
+    left: 8px;
+    border-radius: 8px;
+  }
   .main { margin-left: 0 !important; }
-  .header {
-  height: 52px; padding-left: 52px; }
+  .header { height: 46px; padding: 4px 10px 4px 48px; }
+  .header-top { height: 38px; gap: 6px; justify-content: space-between; }
+  .header-left-spacer { display: none; }
+  .header-right { flex-shrink: 0; gap: 6px; }
+  .header-right-logo { display: none !important; }
+  .header-login-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 28px;
+    padding: 0 9px;
+    border-radius: 7px;
+    border: none;
+    background: linear-gradient(135deg, #FF4D00, #E03E00);
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
   .health-main-grid { grid-template-columns: 1fr; }
   .health-left-col { flex: unset; }
-  .header-nav-item { padding: 4px 10px; font-size: 10px; }
-  .header-nav { justify-content: center; }
+  .header-nav {
+    flex: 1;
+    min-width: 0;
+    justify-content: flex-start;
+    overflow-x: auto;
+    gap: 2px;
+    padding: 2px;
+    scrollbar-width: none;
+  }
+  .header-nav::-webkit-scrollbar { display: none; }
+  .header-nav-item { padding: 4px 8px; font-size: 10px; white-space: nowrap; flex-shrink: 0; }
   .home-feed-grid { grid-template-columns: repeat(2, 1fr); }
   .home-feed-grid-compact {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2889,11 +2930,11 @@ select.admin-input.compact-input {
   .kunjungan-form-grid,
   .sick-lagging-grid,
   .sick-period-grid { grid-template-columns: minmax(0, 1fr); }
-  .header {
-  height: 52px; padding: 6px 10px 6px 44px; }
-  .header-right-logo { height: 18px; }
-  .header-nav { gap: 0; overflow-x: auto; justify-content: center; width: 100%; }
-  .header-nav-item { padding: 4px 10px; font-size: 9px; }
+  .header { height: 44px; padding: 3px 8px 3px 46px; }
+  .header-top { height: 36px; gap: 4px; }
+  .header-right-logo { display: none !important; }
+  .header-nav { gap: 2px; overflow-x: auto; justify-content: flex-start; flex: 1; min-width: 0; }
+  .header-nav-item { padding: 3px 7px; font-size: 9.5px; }
   .home-feed-grid { grid-template-columns: 1fr; }
   .home-feed-grid-compact { grid-template-columns: 1fr; }
   .home-feed-card { border-radius: 10px; }
@@ -2904,8 +2945,8 @@ select.admin-input.compact-input {
   .header-filter { gap: 4px; }
   .header-filter select { height: 28px; font-size: 11px; padding: 0 22px 0 8px; min-width: 0; flex: 1 1 auto; }
   .filter-tag { font-size: 8px; white-space: nowrap; }
-  .theme-btn { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
-  .theme-btn svg { width: 18px; height: 18px; }
+  .theme-btn { width: 30px; height: 30px; min-width: 30px; min-height: 30px; }
+  .theme-btn svg { width: 15px; height: 15px; }
   .card { padding: 8px; border-radius: 8px; overflow: hidden; }
   .card-head { gap: 4px; }
   .card-head h2 { font-size: 9px; }
@@ -2929,7 +2970,7 @@ select.admin-input.compact-input {
   
   .sick-list { overflow-x: auto; min-height: 120px; }
   .sidebar { width: 260px; }
-  .hamburger { width: 44px; height: 44px; min-width: 44px; min-height: 44px; top: 10px; left: 10px; border-radius: 10px; }
+  .hamburger { width: 32px; height: 32px; min-width: 32px; min-height: 32px; top: 6px; left: 8px; border-radius: 8px; }
   /* Admin forms mobile */
   .admin-form-inner { padding: 10px 10px 8px; }
   .admin-form-inner .admin-input { height: 40px !important; font-size: 14px !important; }
@@ -3465,16 +3506,16 @@ select option:active {
 
   /* Header */
   .header-top {
-    height: 50px;
+    height: 36px;
   }
   .header-right-logo {
-    height: 30px;
+    display: none !important;
   }
   .theme-btn {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    min-height: 44px;
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    min-height: 30px;
   }
 }
 

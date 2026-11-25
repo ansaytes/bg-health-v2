@@ -1532,6 +1532,21 @@ export default function Home() {
             <div className="header-right">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={logoBestK3} alt="BestK3" width={75} height={28} className="header-right-logo" />
+              {!isLoggedIn && (
+                <button
+                  type="button"
+                  className="header-login-btn"
+                  onClick={() => setShowLogin(true)}
+                  aria-label="Masuk"
+                >
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                    <polyline points="10 17 15 12 10 7" />
+                    <line x1="15" y1="12" x2="3" y2="12" />
+                  </svg>
+                  <span>Masuk</span>
+                </button>
+              )}
               <NotificationBell
                 isSuperuser={isSuperuser}
                 // Notifikasi tindak lanjut hanya untuk QSHE Medic.

@@ -24,11 +24,9 @@ export default function HearingConservationDashboard() {
   const [isDark, setIsDark] = useState(() => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'));
 
   const zonaRef = useRef<HTMLCanvasElement | null>(null);
-  const kategoriRef = useRef<HTMLCanvasElement | null>(null);
   const cakupanRef = useRef<HTMLCanvasElement | null>(null);
   const kelasRef = useRef<HTMLCanvasElement | null>(null);
   const stsRef = useRef<HTMLCanvasElement | null>(null);
-  const trendRef = useRef<HTMLCanvasElement | null>(null);
   const charts = useRef<Record<string, ChartJS | null>>({});
 
   useEffect(() => {
@@ -117,45 +115,7 @@ export default function HearingConservationDashboard() {
       }],
     }));
 
-    // 2. Karyawan terpajan per kategori — donut dengan total di tengah,
-    //    sama seperti diagram "Status MCU" di Monitoring MCU (seimbang
-    //    dengan donut Zona di atasnya, bukan semua bar).
-    const katVals = [d.kategori.A || 0, d.kategori.B || 0, d.kategori.C || 0];
-    const katTot = katVals.reduce((s, v) => s + v, 0);
-    draw('kategori', kategoriRef.current, () => new ChartJS(kategoriRef.current!, {
-      type: 'doughnut',
-      data: {
-        labels: ['A · rutin', 'B · insidental', 'C · tidak terpajan'],
-        datasets: [{ data: katVals, backgroundColor: ['#E63946', '#F5A623', '#00B894'], borderWidth: 2, borderColor: cardBg, hoverOffset: 6 }],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false, animation: STANDAR_ANIMASI_DONUT, cutout: '58%', rotation: 0, circumference: 360,
-        plugins: {
-          legend,
-          tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed}${katTot ? ` (${(c.parsed / katTot * 100).toFixed(1)}%)` : ''}` } },
-          datalabels: { display: false },
-        },
-      } as ChartOptions<'doughnut'>,
-      plugins: [{
-        id: 'hc-kat-total',
-        afterDraw: (chart) => {
-          const { left, right, top, bottom } = chart.chartArea;
-          const ctx = chart.ctx;
-          ctx.save();
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillStyle = text;
-          ctx.font = `bold 22px ${FONT}`;
-          ctx.fillText(String(katTot), (left + right) / 2, (top + bottom) / 2 - 6);
-          ctx.globalAlpha = 0.6;
-          ctx.font = `600 9px ${FONT}`;
-          ctx.fillText('TOTAL KARYAWAN', (left + right) / 2, (top + bottom) / 2 + 12);
-          ctx.restore();
-        },
-      }],
-    }));
-
-    // 3. Cakupan audiometri tahun ini (per kategori, stacked)
+    // 2. Cakupan audiometri tahun ini (per kategori, stacked)
     const cak = (d.cakupan || []) as D[];
     draw('cakupan', cakupanRef.current, () => new ChartJS(cakupanRef.current!, {
       type: 'bar',
@@ -191,7 +151,7 @@ export default function HearingConservationDashboard() {
       options: barOpts(false),
     }));
 
-    // 5. Status kasus STS
+    // 4. Status kasus STS
     draw('sts', stsRef.current, () => new ChartJS(stsRef.current!, {
       type: 'bar',
       data: {
@@ -199,37 +159,6 @@ export default function HearingConservationDashboard() {
         datasets: [{ data: [d.sts.suspek || 0, d.sts.retestDijadwalkan || 0, d.sts.terkonfirmasi || 0, d.sts.retestTerlambat || 0], backgroundColor: ['#E63946', '#F5A623', '#8E44AD', '#B91C1C'], borderRadius: 4, ...BAR_LAYOUT }],
       },
       options: barOpts(false),
-    }));
-
-    // 6. Tren Leq maks per area (8 pengukuran terakhir)
-    const areas = (d.areas || []) as D[];
-    const surv = areas
-      .filter((a) => a.tanggal_ukur && a.leq_max != null)
-      .sort((a, b) => String(a.tanggal_ukur).localeCompare(String(b.tanggal_ukur)))
-      .slice(-8);
-    draw('trend', trendRef.current, () => new ChartJS(trendRef.current!, {
-      type: 'line',
-      data: {
-        labels: surv.length ? surv.map((a) => String(a.nama_area)) : ['Belum ada data pengukuran'],
-        datasets: [{
-          label: 'Leq maks dB(A)',
-          data: surv.length ? surv.map((a) => Number(a.leq_max)) : [],
-          borderColor: '#ff4d00', backgroundColor: 'rgba(255,77,0,0.14)', fill: true, tension: 0.35, pointRadius: 4, pointHoverRadius: 6,
-          pointBackgroundColor: surv.length ? surv.map((a) => ZONA_COLOR[(a.zona as Zona) || 'HIJAU']) : '#ff4d00',
-        }],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false, animation: anim,
-        plugins: {
-          legend: { display: false },
-          datalabels: { color: text, align: 'top', anchor: 'end', offset: 4, clamp: true, clip: false, font: { size: 9, weight: 'bold', family: FONT } },
-          tooltip: { callbacks: { afterLabel: (c) => (surv[c.dataIndex]?.zona ? `Zona: ${surv[c.dataIndex].zona}` : '') } },
-        },
-        scales: {
-          x: { grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, maxRotation: 30 } },
-          y: { beginAtZero: true, suggestedMax: 100, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT } } },
-        },
-      } as ChartOptions<'line'>,
     }));
 
     return () => {
@@ -242,16 +171,13 @@ export default function HearingConservationDashboard() {
   if (!d) return <PageLoading label="Memuat Konservasi Pendengaran" />;
   // Spinner SATU untuk seluruh halaman (bukan per diagram), logo 75%.
 
-  const areas = (d.areas || []) as D[];
   const nAreaTot = Object.values(d.zona as Record<string, number>).reduce((a, b) => a + b, 0);
-  const kelasCount = Object.values((d.kelas || {}) as Record<string, number>).reduce((a, b) => a + b, 0);
   const katTotal = (d.kategori.A || 0) + (d.kategori.B || 0) + (d.kategori.C || 0);
   const cakTotal = ((d.cakupan || []) as D[]).reduce((s, c) => s + (c.total || 0), 0);
   const stsTotal = (d.sts.suspek || 0) + (d.sts.retestDijadwalkan || 0) + (d.sts.terkonfirmasi || 0) + (d.sts.retestTerlambat || 0);
-  const adaUkur = areas.some((a) => a.tanggal_ukur && a.leq_max != null);
 
   return (
-    <div className="dashboard hc-dash" style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className="dashboard hc-dash" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
       {/* Top bar : mengikuti pola Monitoring MCU */}
       <div className="mcu-live-top-bar" style={{ flexShrink: 0 }}>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -276,14 +202,12 @@ export default function HearingConservationDashboard() {
         </span>
       </div>
 
-      {/* Enam grafik mengisi seluruh sisa frame : tanpa scroll halaman */}
-      <div className="mcu-live-chart-row mcu-live-chart-row--two-rows">
-        <MCUChartCard title="Zona Kebisingan Area" subtitle="Area per zona hasil pengukuran terakhir" className="glow-coral"><canvas ref={zonaRef} /></MCUChartCard>
-        <MCUChartCard title="Karyawan Terpajan" subtitle="A rutin · B insidental · C tidak terpajan" className="glow-amber"><canvas ref={kategoriRef} /></MCUChartCard>
+      {/* Empat grafik inti wajib audit dalam grid 2x2 agar lega dan tidak terpotong */}
+      <div className="mcu-live-chart-row mcu-live-chart-row--two mcu-live-chart-row--two-rows" style={{ minHeight: 360 }}>
+        <MCUChartCard title="Zona Kebisingan Area" subtitle="Area per zona hasil pengukuran terakhir (NAB 85 dBA)" className="glow-coral"><canvas ref={zonaRef} /></MCUChartCard>
         <MCUChartCard title="Cakupan Audiometri Tahun Ini" subtitle="Kategori A & B : sudah vs belum diperiksa" className="glow-teal"><canvas ref={cakupanRef} /></MCUChartCard>
-        <MCUChartCard title="Derajat Gangguan Pendengaran" subtitle="WHO · telinga yang lebih baik" className="glow-steel"><canvas ref={kelasRef} /></MCUChartCard>
-        <MCUChartCard title="Kasus STS" subtitle="Suspek, retest, terkonfirmasi, terlambat" className="glow-orange"><canvas ref={stsRef} /></MCUChartCard>
-        <MCUChartCard title="Leq Maks per Area" subtitle="Titik tertinggi (dB(A)) · warna titik = zona" className="glow-coral"><canvas ref={trendRef} /></MCUChartCard>
+        <MCUChartCard title="Derajat Gangguan Pendengaran" subtitle="Klasifikasi WHO · telinga yang lebih baik" className="glow-steel"><canvas ref={kelasRef} /></MCUChartCard>
+        <MCUChartCard title="Kasus & Tindak Lanjut STS" subtitle="Suspek, retest dijadwalkan, terkonfirmasi, terlambat" className="glow-orange"><canvas ref={stsRef} /></MCUChartCard>
       </div>
 
       {/* Evaluasi efektivitas tahunan : SOP/028 poin 4.3.5:
@@ -348,7 +272,7 @@ function EvaluasiTahunan({ d, nAreaTot, katTotal, cakTotal, stsTotal }: {
   const label = terendah >= 95 ? 'Efektif' : terendah >= 80 ? 'Perlu Perbaikan' : 'Tidak Efektif';
 
   return (
-    <div className="card" style={{ flexShrink: 0, padding: '8px 10px', display: 'flex', gap: 12, alignItems: 'stretch' }}>
+    <div className="card hc-eval-card" style={{ flexShrink: 0, padding: '8px 10px', display: 'flex', gap: 12, alignItems: 'stretch', flexWrap: 'wrap' }}>
       <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingRight: 12, borderRight: '1px solid var(--border)', minWidth: 132 }}>
         <div style={{ fontSize: 8.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}>
           Evaluasi Tahunan
@@ -358,7 +282,7 @@ function EvaluasiTahunan({ d, nAreaTot, katTotal, cakTotal, stsTotal }: {
           Efektivitas program tahunan
         </div>
       </div>
-      <div style={{ flex: 1, minWidth: 0, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }}>
+      <div style={{ flex: 1, minWidth: 220, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
         {item.map((i) => {
           const w = i.nilai >= 95 ? '#00B894' : i.nilai >= 80 ? '#F1C40F' : '#E63946';
           return (

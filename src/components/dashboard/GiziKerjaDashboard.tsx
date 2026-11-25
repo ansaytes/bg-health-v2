@@ -128,16 +128,21 @@ export default function GiziKerjaDashboard({ site: initialSite }: { site?: strin
     else if (totalMenu < 2600 && totalMenu > 0) menuKurang++;
     else if (totalMenu > 3400) menuLebih++;
 
-    // Retensi Sampel Makanan & Suhu Dingin (dibaca dari item jawaban riil checklist gizi)
+    // Kontrol Kritis Food Safety (HACCP): baca jawaban riil (food_sample & suhu_chiller_freezer)
+    // bila kolom `jawaban` tersedia, atau fallback ke statusLaik/persenSkor di `ringkasan`.
     const jwb = row.jawaban;
-    if (jwb?.food_sample === 'sesuai' || jwb?.suhu_chiller_freezer === 'sesuai') {
-      sampelPatuh++;
-    } else if (jwb?.food_sample === 'tidak_sesuai' || jwb?.suhu_chiller_freezer === 'tidak_sesuai') {
-      sampelBelum++;
-    } else if (row.ringkasan && row.ringkasan.persenSkor >= 80) {
-      sampelPatuh++;
+    if (jwb && (jwb.food_sample || jwb.suhu_chiller_freezer)) {
+      if (jwb.food_sample === 'sesuai' && jwb.suhu_chiller_freezer !== 'tidak_sesuai') {
+        sampelPatuh++;
+      } else {
+        sampelBelum++;
+      }
     } else if (row.ringkasan) {
-      sampelBelum++;
+      if (row.ringkasan.statusLaik === 'laik' || row.ringkasan.persenSkor >= 85) {
+        sampelPatuh++;
+      } else {
+        sampelBelum++;
+      }
     }
   }
 
