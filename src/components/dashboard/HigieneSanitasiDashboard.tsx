@@ -317,14 +317,22 @@ export default function HigieneSanitasiDashboard({ site: initialSite }: { site?:
           subtitle="Distribusi Temuan Lapangan Berdasarkan Pilar Higiene"
           className="glow-teal"
         >
-          <MCUChart
-            type="bar"
-            horizontal
-            labels={['Kualitas Air Minum', 'Toilet & Kebersihan', 'Vektor Penyakit', 'Pengelolaan Sampah']}
-            values={[airMinumUjiUlang, toiletKurang, vektorPerluPestControl, sampahPerluPerbaikan]}
-            colors={['#3498DB', '#F1C40F', '#FF2D2D', '#FF7A00']}
-            legendLabel="Temuan Perlu Tindak Lanjut"
-          />
+          {airMinumUjiUlang + toiletKurang + vektorPerluPestControl + sampahPerluPerbaikan > 0 ? (
+            <MCUChart
+              type="doughnut"
+              labels={['Kualitas Air Minum', 'Toilet & Kebersihan', 'Vektor Penyakit', 'Pengelolaan Sampah']}
+              values={[airMinumUjiUlang, toiletKurang, vektorPerluPestControl, sampahPerluPerbaikan]}
+              colors={['#3498DB', '#F1C40F', '#FF2D2D', '#FF7A00']}
+              centerText={String(airMinumUjiUlang + toiletKurang + vektorPerluPestControl + sampahPerluPerbaikan)}
+              percentLabels
+            />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#00B894', gap: 6 }}>
+              <CheckCircle2 size={32} />
+              <span style={{ fontSize: 12, fontWeight: 700 }}>Nol Temuan 4 Pilar</span>
+              <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>Seluruh pilar sanitasi dalam kondisi sesuai</span>
+            </div>
+          )}
         </MCUChartCard>
       </div>
     </div>

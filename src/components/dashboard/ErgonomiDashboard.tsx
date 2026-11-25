@@ -1,20 +1,26 @@
 'use client';
 // Dashboard > Ergonomi. Data dari /api/ergo?resource=dashboard (12 bulan terakhir, survei berstatus Disetujui).
-// Layout grafik-first: donut klasifikasi, bar per metode, tren bulanan, status rekomendasi, kepatuhan per site.
-import { useEffect, useRef, useState } from 'react';
+// Mengikuti template Monitoring MCU & Kunjungan Berobat: top bar filter + KPI ringkas, 2 baris kartu (.mcu-grid-3),
+// campuran donut, bar, tren & tabel via MCUChartCard / MCUChart agar legend & label tidak pernah terpotong.
+
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChartOptions } from 'chart.js';
+import { Activity } from 'lucide-react';
+
 import { ChartJS } from '@/lib/chart-register';
 import { authFetch } from '@/lib/api-client';
 import { KLAS_COLOR, type Klasifikasi } from '@/lib/hc-ergo';
 import { Chip, fmtDate, tableStyle, tdStyle, thStyle } from '@/components/administrator/hc-ergo-ui';
 import { useSites } from '@/lib/site-list';
-import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, gradientBatangArray, useAnimationReady } from '@/lib/chart-standard';
+import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, gradientBatangArray, skalaBar, useAnimationReady } from '@/lib/chart-standard';
 import PageLoading from '@/components/ui/page-loading';
-import { MCUChartCard, MCURefreshButton } from '@/components/dashboard/MCUDashboardShared';
+import { MCUChart, MCUChartCard, MCURefreshButton } from '@/components/dashboard/MCUDashboardShared';
 
 type D = Record<string, any>;
 const KLAS: Klasifikasi[] = ['RENDAH', 'SEDANG', 'TINGGI', 'SANGAT_TINGGI'];
-const KLAS_SHORT = ['Rendah', 'Sedang', 'Tinggi', 'Sgt Tinggi'];
+const KLAS_SHORT = ['Rendah', 'Sedang', 'Tinggi', 'Sangat Tinggi'];
+const METODE = ['RULA', 'ROSA', 'WERA'] as const;
+const METODE_COLORS = ['#2E86DE', '#00B894', '#F5A623'];
 const BLN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
@@ -22,198 +28,151 @@ export default function ErgonomiDashboard() {
   const { sites: daftarSite } = useSites();
   const [d, setD] = useState<D | null>(null);
   const [site, setSite] = useState('');
+  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
-  const [isDark, setIsDark] = useState(() => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'));
+  const [isDark, setIsDark] = useState(
+    () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
+  );
 
-  const klasRef = useRef<HTMLCanvasElement | null>(null);
-  const metodeRef = useRef<HTMLCanvasElement | null>(null);
   const trendRef = useRef<HTMLCanvasElement | null>(null);
-  const rekomRef = useRef<HTMLCanvasElement | null>(null);
   const patuhRef = useRef<HTMLCanvasElement | null>(null);
   const charts = useRef<Record<string, ChartJS | null>>({});
 
   useEffect(() => {
-    // Tema dibaca setelah mount (bukan setState sinkron di body effect).
-    const id = setTimeout(() => setIsDark(document.documentElement.classList.contains('dark')), 0);
-    return () => clearTimeout(id);
+    const root = document.documentElement;
+    const syncTheme = () => setIsDark(root.classList.contains('dark'));
+    syncTheme();
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    let alive = true;
-    authFetch(`/api/ergo?resource=dashboard&site=${encodeURIComponent(site)}`)
-      .then((r) => { if (alive) setD(r.data); })
-      .catch((e) => { if (alive) setErr(e instanceof Error ? e.message : 'Gagal memuat dashboard'); });
-    return () => { alive = false; };
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setErr('');
+    try {
+      const r = await authFetch(`/api/ergo?resource=dashboard&site=${encodeURIComponent(site)}`);
+      setD(r.data as D);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Gagal memuat dashboard ergonomi');
+    } finally {
+      setLoading(false);
+    }
   }, [site]);
 
-  // Tunda penggambaran 2 frame agar animasi Chart.js berjalan di depan pengguna.
-  const animReady = useAnimationReady([]);
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  const animReady = useAnimationReady([d]);
 
   useEffect(() => {
     if (!d || !animReady) return;
     const text = isDark ? '#F9FAFB' : '#111827';
-    const grid = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
-    const cardBg = isDark ? '#1b1b1b' : '#ffffff';
-    const anim = STANDAR_ANIMASI_BAR;
-    const legend = { position: 'bottom' as const, labels: { color: text, font: { size: 10, family: FONT }, boxWidth: 9, boxHeight: 9, padding: 8 } };
+    const grid = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+    const legend = {
+      position: 'bottom' as const,
+      labels: { color: text, font: { size: 10, weight: 'bold' as const, family: FONT }, boxWidth: 10, usePointStyle: true, padding: 8 },
+    };
 
     const draw = (key: string, el: HTMLCanvasElement | null, make: () => ChartJS) => {
       if (!el) return;
       charts.current[key]?.destroy();
       charts.current[key] = make();
     };
-    const barOpts = (horizontal: boolean, stacked = false): ChartOptions<'bar'> => ({
-      responsive: true, maintainAspectRatio: false, animation: anim, indexAxis: horizontal ? 'y' : 'x',
-      plugins: {
-        legend: stacked ? legend : { display: false },
-        tooltip: { enabled: true },
-        datalabels: {
-          color: text, anchor: 'end', align: horizontal ? 'right' : 'top', clamp: true, clip: false,
-          font: { size: 10, weight: 'bold', family: FONT }, formatter: (v: number) => (v ? String(v) : ''),
-        },
-      },
-      scales: horizontal
-        ? { x: { stacked, beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } },
-            y: { stacked, grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false } } }
-        : { x: { stacked, grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false } },
-            y: { stacked, beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } } },
-    } as ChartOptions<'bar'>);
 
-    // 1. Donut distribusi klasifikasi risiko (semua metode)
-    const totKlas = KLAS.map((k) => (['RULA', 'ROSA', 'WERA'] as const).reduce((s, m) => s + (d.byKlas[m]?.[k] || 0), 0));
-    const grandTotal = totKlas.reduce((s, v) => s + v, 0);
-    draw('klas', klasRef.current, () => new ChartJS(klasRef.current!, {
-      type: 'doughnut',
-      data: {
-        labels: KLAS_SHORT,
-        datasets: [{ data: totKlas, backgroundColor: KLAS.map((k) => KLAS_COLOR[k]), borderWidth: 2, borderColor: cardBg, hoverOffset: 6 }],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false, animation: STANDAR_ANIMASI_DONUT, cutout: '62%', radius: '82%', rotation: 0, circumference: 360,
-        plugins: {
-          legend,
-          tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${ctx.parsed}${grandTotal ? ` (${(ctx.parsed / grandTotal * 100).toFixed(1)}%)` : ''}` } },
-          datalabels: { color: '#fff', font: { size: 10, weight: 'bold', family: FONT }, formatter: (v: number) => (v ? String(v) : '') },
-        },
-      } as ChartOptions<'doughnut'>,
-      plugins: [{
-        id: 'ergo-center-total',
-        afterDraw: (chart) => {
-          const { left, right, top, bottom } = chart.chartArea;
-          const ctx = chart.ctx;
-          ctx.save();
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillStyle = text;
-          ctx.font = `bold 20px ${FONT}`;
-          ctx.fillText(String(grandTotal), (left + right) / 2, (top + bottom) / 2 - 6);
-          ctx.globalAlpha = 0.6;
-          ctx.font = `600 9px ${FONT}`;
-          ctx.fillText('TOTAL SURVEI', (left + right) / 2, (top + bottom) / 2 + 12);
-          ctx.restore();
-        },
-      }],
-    }));
-
-    // 2. Klasifikasi per metode (stacked horizontal)
-    const metode = ['RULA', 'ROSA', 'WERA'] as const;
-    draw('metode', metodeRef.current, () => new ChartJS(metodeRef.current!, {
-      type: 'bar',
-      data: {
-        labels: metode.map((m) => `${m} · ${d.byMetode[m] || 0}`),
-        datasets: KLAS.map((k) => ({
-          label: String(k).replace('_', ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()),
-          data: metode.map((m) => d.byKlas[m]?.[k] || 0),
-          backgroundColor: KLAS_COLOR[k], borderRadius: 3, maxBarThickness: BAR_LAYOUT.maxBarThickness,
-        })),
-      },
-      options: barOpts(true, true),
-    }));
-
-    // 3. Tren survei per bulan (bar + garis risiko sedang ke atas)
+    // Tren survei per bulan (bar + garis perlu PICA)
     const trend = (d.trend || []) as D[];
-    draw('trend', trendRef.current, () => new ChartJS(trendRef.current!, {
-      data: {
-        labels: trend.length ? trend.map((t) => BLN[Number(String(t.bulan).slice(5)) - 1]) : ['-'],
-        datasets: [
-          { type: 'bar' as const, label: 'Total survei', data: trend.length ? trend.map((t) => t.total) : [0], backgroundColor: 'rgba(46,134,222,0.75)', borderRadius: 4, categoryPercentage: BAR_LAYOUT.categoryPercentage, barPercentage: BAR_LAYOUT.barPercentage, maxBarThickness: 34, order: 2 },
-          { type: 'line' as const, label: 'Perlu PICA', data: trend.length ? trend.map((t) => t.sedangKeAtas) : [0], borderColor: '#E63946', backgroundColor: '#E63946', tension: 0.35, pointRadius: 3, borderWidth: 2, order: 1 },
-        ],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false, animation: anim,
-        plugins: {
-          legend,
-          datalabels: { display: false },
+    const trendTotal = trend.reduce((s, t) => s + Number(t.total || 0), 0);
+    if (trendTotal > 0 && trendRef.current) {
+      const trendLabels = trend.map((t) => BLN[Number(String(t.bulan).slice(5)) - 1] ?? '-');
+      draw('trend', trendRef.current, () => new ChartJS(trendRef.current!, {
+        data: {
+          labels: trendLabels,
+          datasets: [
+            {
+              type: 'bar' as const,
+              label: 'Total Survei',
+              data: trend.map((t) => Number(t.total || 0)),
+              backgroundColor: 'rgba(46,134,222,0.8)',
+              borderRadius: 4,
+              ...BAR_LAYOUT,
+              order: 2,
+            },
+            {
+              type: 'line' as const,
+              label: 'Perlu PICA',
+              data: trend.map((t) => Number(t.sedangKeAtas || 0)),
+              borderColor: '#E63946',
+              backgroundColor: '#E63946',
+              tension: 0.35,
+              pointRadius: 3,
+              borderWidth: 2,
+              order: 1,
+            },
+          ],
         },
-        scales: {
-          x: { grid: { display: false }, ticks: { color: text, font: { size: 9, family: FONT } } },
-          y: { beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } },
-        },
-      } as ChartOptions,
-    }));
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: STANDAR_ANIMASI_BAR,
+          plugins: { legend, datalabels: { display: false } },
+          scales: {
+            x: { grid: { display: false }, border: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, autoSkip: false } },
+            y: { beginAtZero: true, grace: '15%', grid: { color: grid }, border: { display: false }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } },
+          },
+        } as ChartOptions,
+      }));
+    } else {
+      charts.current.trend?.destroy();
+      charts.current.trend = null;
+    }
 
-    // 4. Status rekomendasi — donut komposisi (bukan bar), menyamakan
-    //    pola visual dengan "Capaian Pelaksanaan MCU" di Monitoring MCU.
-    const rk = d.rekomendasi || {};
-    draw('rekom', rekomRef.current, () => new ChartJS(rekomRef.current!, {
-      type: 'doughnut',
-      data: {
-        labels: ['Open', 'Progress', 'Closed', 'Lewat tempo'],
-        datasets: [{ data: [rk.open || 0, rk.progress || 0, rk.closed || 0, rk.lewatJatuhTempo || 0], backgroundColor: ['#E63946', '#F5A623', '#00B894', '#B91C1C'], borderWidth: 2, borderColor: cardBg, hoverOffset: 6 }],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false, animation: STANDAR_ANIMASI_DONUT, cutout: '58%', rotation: 0, circumference: 360,
-        plugins: {
-          legend,
-          tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed}` } },
-          datalabels: { display: false },
-        },
-      } as ChartOptions<'doughnut'>,
-      plugins: [{
-        id: 'ergo-rekom-total',
-        afterDraw: (chart) => {
-          const { left, right, top, bottom } = chart.chartArea;
-          const ctx = chart.ctx;
-          const total = [rk.open || 0, rk.progress || 0, rk.closed || 0, rk.lewatJatuhTempo || 0].reduce((s, v) => s + v, 0);
-          ctx.save();
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillStyle = text;
-          ctx.font = `bold 20px ${FONT}`;
-          ctx.fillText(String(total), (left + right) / 2, (top + bottom) / 2 - 6);
-          ctx.globalAlpha = 0.6;
-          ctx.font = `600 9px ${FONT}`;
-          ctx.fillText('TOTAL REKOMENDASI', (left + right) / 2, (top + bottom) / 2 + 12);
-          ctx.restore();
-        },
-      }],
-    }));
-
-    // 5. Kepatuhan frekuensi survei per site (internal & pihak ketiga)
+    // Kepatuhan frekuensi survei per site (internal & pihak ketiga)
     const patuh = (d.kepatuhan || []) as D[];
-    draw('patuh', patuhRef.current, () => new ChartJS(patuhRef.current!, {
-      type: 'bar',
-      data: {
-        labels: patuh.length ? patuh.map((k) => String(k.site)) : ['Belum ada data'],
-        datasets: [
-          // Gradient per batang (efek seperti diagram Top 10 ASR), warna dasar tetap.
-          { label: 'Internal bulan ini', data: patuh.length ? patuh.map((k) => k.internalBulanIni) : [0], backgroundColor: gradientBatangArray(['#2E86DE'], true) as never, borderRadius: 4, ...BAR_LAYOUT },
-          { label: 'Pihak ketiga 12 bln', data: patuh.length ? patuh.map((k) => k.pihakKetiga12Bulan) : [0], backgroundColor: gradientBatangArray(['#00B894'], true) as never, borderRadius: 4, ...BAR_LAYOUT },
-        ],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false, animation: anim, indexAxis: 'y',
-        plugins: {
-          legend,
-          datalabels: { display: false },
+    const patuhTotal = patuh.reduce((s, k) => s + Number(k.internalBulanIni || 0) + Number(k.pihakKetiga12Bulan || 0), 0);
+    if (patuhTotal > 0 && patuhRef.current) {
+      const patuhLabels = patuh.map((k) => String(k.site));
+      draw('patuh', patuhRef.current, () => new ChartJS(patuhRef.current!, {
+        type: 'bar',
+        data: {
+          labels: patuhLabels,
+          datasets: [
+            {
+              label: 'Internal Bln Ini',
+              data: patuh.map((k) => Number(k.internalBulanIni || 0)),
+              backgroundColor: gradientBatangArray(['#2E86DE'], true) as never,
+              borderRadius: 4,
+              ...BAR_LAYOUT,
+            },
+            {
+              label: 'Pihak Ketiga 12 Bln',
+              data: patuh.map((k) => Number(k.pihakKetiga12Bulan || 0)),
+              backgroundColor: gradientBatangArray(['#00B894'], true) as never,
+              borderRadius: 4,
+              ...BAR_LAYOUT,
+            },
+          ],
         },
-        scales: {
-          x: { beginAtZero: true, grid: { color: grid }, ticks: { color: text, font: { size: 9, family: FONT }, precision: 0 } },
-          y: { grid: { display: false }, ticks: { color: text, font: { size: 10, family: FONT }, autoSkip: false } },
-        },
-      } as ChartOptions<'bar'>,
-    }));
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: STANDAR_ANIMASI_BAR,
+          indexAxis: 'y',
+          plugins: { legend, datalabels: { display: false } },
+          scales: skalaBar({
+            horizontal: true,
+            textColor: text,
+            gridColor: grid,
+            fontFamily: FONT,
+            labelOf: (idx) => patuhLabels[idx] ?? '',
+          }),
+        } as ChartOptions<'bar'>,
+      }));
+    } else {
+      charts.current.patuh?.destroy();
+      charts.current.patuh = null;
+    }
 
     return () => {
       Object.values(charts.current).forEach((c) => c?.destroy());
@@ -221,71 +180,206 @@ export default function ErgonomiDashboard() {
     };
   }, [d, isDark, animReady]);
 
-  if (err) return <div style={{ padding: 20, color: '#E63946', fontSize: 13 }}>{err}</div>;
-  // Spinner SATU untuk seluruh halaman (bukan per diagram), logo 75%.
-  if (!d) return <PageLoading label="Memuat Ergonomi" />;
+  if (loading && !d) return <PageLoading label="Memuat Ergonomi" />;
 
+  if (!d) {
+    return (
+      <div className="dashboard mcu-live-dashboard" style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(255,45,45,0.08)', color: '#b3261e', fontSize: 12 }}>
+          {err || 'Data Ergonomi tidak tersedia.'}
+        </div>
+      </div>
+    );
+  }
+
+  const totKlas = KLAS.map((k) => METODE.reduce((s, m) => s + Number(d.byKlas?.[m]?.[k] ?? 0), 0));
+  const grandTotal = totKlas.reduce((s, v) => s + v, 0);
+
+  const metodeVals = METODE.map((m) => Number(d.byMetode?.[m] ?? 0));
+  const metodeTotal = metodeVals.reduce((s, v) => s + v, 0);
+
+  const rk = d.rekomendasi || {};
+  const rekomVals = [Number(rk.open ?? 0), Number(rk.progress ?? 0), Number(rk.closed ?? 0), Number(rk.lewatJatuhTempo ?? 0)];
+  const rekomTotal = rekomVals.reduce((s, v) => s + v, 0);
+
+  const trendTotal = ((d.trend || []) as D[]).reduce((s, t) => s + Number(t.total || 0), 0);
   const patuh = (d.kepatuhan || []) as D[];
-  // Nilai total untuk empty-state tiap kartu (data kosong tidak digambar sebagai sumbu 0–1).
-  const grandTotal = KLAS.reduce((s, k) => s + (['RULA', 'ROSA', 'WERA'] as const).reduce((t, m) => t + (d.byKlas[m]?.[k] || 0), 0), 0);
-  const rekomTotal = (d.rekomendasi?.open || 0) + (d.rekomendasi?.progress || 0) + (d.rekomendasi?.closed || 0);
-  const trendTotal = ((d.trend || []) as D[]).reduce((s, t) => s + (t.total || 0), 0);
-  const patuhTotal = patuh.reduce((s, k) => s + (k.internalBulanIni || 0) + (k.pihakKetiga12Bulan || 0), 0);
+  const patuhTotal = patuh.reduce((s, k) => s + Number(k.internalBulanIni || 0) + Number(k.pihakKetiga12Bulan || 0), 0);
 
   return (
-    <div className="dashboard" style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* Top bar : mengikuti pola Monitoring MCU */}
-      <div className="mcu-live-top-bar" style={{ flexShrink: 0 }}>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <select className="admin-filter-select" value={site} onChange={(e) => { setErr(''); setSite(e.target.value); }}>
-            <option value="">All Site</option>
-            {daftarSite.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <MCURefreshButton loading={false} onClick={() => {
-            setErr('');
-            authFetch(`/api/ergo?resource=dashboard&site=${encodeURIComponent(site)}`)
-              .then((r) => setD(r.data))
-              .catch((e) => setErr(e instanceof Error ? e.message : 'Gagal refresh'));
-          }} />
+    <div className="dashboard mcu-live-dashboard">
+      {/* ── Top Bar: Filter & KPI Audit (pola Monitoring MCU) ─────────── */}
+      <div className="dashboard-top-bar mcu-live-top-bar">
+        <div className="mcu-dashboard-filters">
+          <label>
+            <span>Site</span>
+            <select
+              value={site}
+              onChange={(e) => setSite(e.target.value)}
+              style={{
+                height: 28,
+                width: 140,
+                borderRadius: 7,
+                border: '1px solid var(--border)',
+                background: 'var(--background)',
+                fontSize: 10,
+                fontWeight: 700,
+                padding: '0 6px',
+              }}
+            >
+              <option value="">Semua Site</option>
+              {daftarSite.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </label>
         </div>
-        <span className="kunjungan-total-right" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span>Ergonomi RULA / ROSA / WERA · 12 bulan</span>
-          <span>Disetujui <b>{d.totalDisetujui}</b></span>
-          <span>Menunggu <b style={{ color: d.menungguPersetujuan ? '#F5A623' : 'inherit' }}>{d.menungguPersetujuan}</b></span>
-          <span>Tidak sah/ulang <b style={{ color: d.perluDiulang ? '#E63946' : 'inherit' }}>{d.perluDiulang}</b></span>
-          <span>Rekomendasi aktif <b>{d.rekomendasi.open + d.rekomendasi.progress}</b></span>
-          <span>Lewat tempo <b style={{ color: d.rekomendasi.lewatJatuhTempo ? '#E63946' : 'inherit' }}>{d.rekomendasi.lewatJatuhTempo}</b></span>
-        </span>
+
+        <div className="mcu-total-bar">
+          <span>Disetujui <b>{d.totalDisetujui ?? 0}</b></span>
+          <span>Menunggu <b style={{ color: d.menungguPersetujuan ? '#F5A623' : 'inherit' }}>{d.menungguPersetujuan ?? 0}</b></span>
+          <span>Perlu Ulang <b style={{ color: d.perluDiulang ? '#E63946' : 'inherit' }}>{d.perluDiulang ?? 0}</b></span>
+          <span>Rekomendasi Aktif <b>{(rk.open ?? 0) + (rk.progress ?? 0)}</b></span>
+          <span>Lewat Tempo <b style={{ color: rk.lewatJatuhTempo ? '#E63946' : 'inherit' }}>{rk.lewatJatuhTempo ?? 0}</b></span>
+          <MCURefreshButton loading={loading} onClick={() => void loadData()} />
+        </div>
       </div>
 
-      {/* Grafik utama : jumlah dan jenis diagram sama di desktop maupun mobile. */}
-      <div className="mcu-live-chart-row mcu-live-chart-row--two-rows" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-        <MCUChartCard title="Distribusi Klasifikasi Risiko" subtitle="Seluruh survei disetujui, semua metode" className="glow-coral"><canvas ref={klasRef} /></MCUChartCard>
-        <MCUChartCard title="Klasifikasi per Metode" subtitle="RULA · ROSA · WERA" className="glow-amber"><canvas ref={metodeRef} /></MCUChartCard>
-        <MCUChartCard title="Status Rekomendasi" subtitle="Open · progress · closed · lewat tempo" className="glow-teal"><canvas ref={rekomRef} /></MCUChartCard>
-        <MCUChartCard title="Tren Survei per Bulan" subtitle="Batang: total survei · garis: perlu PICA" className="glow-steel"><canvas ref={trendRef} /></MCUChartCard>
-        <MCUChartCard title="Kepatuhan Frekuensi Survei" subtitle="Internal bulan ini & pihak ketiga 12 bulan" className="glow-orange"><canvas ref={patuhRef} /></MCUChartCard>
-        <div className="card" style={{ padding: '6px 10px', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          <div className="card-head" style={{ flexShrink: 0 }}>
-            <span style={{ width: 4, height: 20, borderRadius: 2, background: '#E63946', flexShrink: 0 }} />
-            <div><h2>Risiko Tinggi Terbaru</h2><p>{d.risikoTinggi.length} survei</p></div>
-          </div>
+      {err && (
+        <div style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(255,45,45,0.08)', color: '#b3261e', fontSize: 11 }}>
+          {err}
+        </div>
+      )}
+
+      {/* ── BARIS 1: Klasifikasi Risiko, Proporsi Metode & Tren Bulanan ── */}
+      <div className="mcu-grid-3 mcu-live-chart-row">
+        <MCUChartCard
+          title="Distribusi Klasifikasi Risiko"
+          subtitle="Seluruh survei disetujui · RULA, ROSA & WERA"
+          className="glow-coral"
+        >
+          {grandTotal > 0 ? (
+            <MCUChart
+              type="doughnut"
+              labels={KLAS_SHORT}
+              values={totKlas}
+              colors={KLAS.map((k) => KLAS_COLOR[k])}
+              centerText={String(grandTotal)}
+              percentLabels
+            />
+          ) : (
+            <Kosong label="Belum ada survei ergonomi disetujui" />
+          )}
+        </MCUChartCard>
+
+        <MCUChartCard
+          title="Proporsi Survei per Metode"
+          subtitle="Total penilaian disetujui · RULA · ROSA · WERA"
+          className="glow-amber"
+        >
+          {metodeTotal > 0 ? (
+            <MCUChart
+              type="doughnut"
+              labels={[...METODE]}
+              values={metodeVals}
+              colors={METODE_COLORS}
+              centerText={String(metodeTotal)}
+              percentLabels
+            />
+          ) : (
+            <Kosong label="Belum ada data metode ergonomi" />
+          )}
+        </MCUChartCard>
+
+        <MCUChartCard
+          title="Tren Survei per Bulan"
+          subtitle="Batang: total survei · garis: perlu PICA"
+          className="glow-steel"
+        >
+          {trendTotal > 0 ? (
+            <div className="mcu-dashboard-chart"><canvas ref={trendRef} /></div>
+          ) : (
+            <Kosong label="Belum ada tren survei 12 bulan" />
+          )}
+        </MCUChartCard>
+      </div>
+
+      {/* ── BARIS 2: Status Rekomendasi, Kepatuhan & Risiko Tinggi ─────── */}
+      <div className="mcu-grid-3 mcu-live-chart-row">
+        <MCUChartCard
+          title="Status Rekomendasi"
+          subtitle="Open · Progress · Closed · Lewat Tempo"
+          className="glow-teal"
+        >
+          {rekomTotal > 0 ? (
+            <MCUChart
+              type="doughnut"
+              labels={['Open', 'Progress', 'Closed', 'Lewat Tempo']}
+              values={rekomVals}
+              colors={['#E63946', '#F5A623', '#00B894', '#B91C1C']}
+              centerText={String(rekomTotal)}
+              percentLabels
+            />
+          ) : (
+            <Kosong label="Belum ada rekomendasi ergonomi" />
+          )}
+        </MCUChartCard>
+
+        <MCUChartCard
+          title="Kepatuhan Frekuensi Survei"
+          subtitle="Internal bulan ini & pihak ketiga 12 bulan per site"
+          className="glow-orange"
+        >
+          {patuhTotal > 0 ? (
+            <div className="mcu-dashboard-chart"><canvas ref={patuhRef} /></div>
+          ) : (
+            <Kosong label="Belum ada data kepatuhan site" />
+          )}
+        </MCUChartCard>
+
+        <MCUChartCard
+          title="Risiko Tinggi Terbaru"
+          subtitle={`${(d.risikoTinggi || []).length} survei kategori Tinggi / Sangat Tinggi`}
+          className="glow-coral"
+        >
           <div style={{ overflow: 'auto', flex: 1, minHeight: 0 }}>
             <table style={tableStyle}>
-              <thead><tr>{['Tanggal', 'Metode', 'Site / Area', 'Skor', 'Klasifikasi'].map((h) => <th key={h} style={thStyle}>{h}</th>)}</tr></thead>
+              <thead>
+                <tr>
+                  {['Tanggal', 'Metode', 'Site / Area', 'Skor', 'Klasifikasi'].map((h) => (
+                    <th key={h} style={thStyle}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
               <tbody>
-                {d.risikoTinggi.map((r: D) => (
-                  <tr key={r.id}><td style={tdStyle}>{fmtDate(r.tanggal)}</td><td style={tdStyle}>{r.metode}</td><td style={tdStyle}>{r.site} : {r.area_kerja}</td><td style={tdStyle}>{r.skor_akhir}</td>
-                    <td style={tdStyle}><Chip text={String(r.klasifikasi).replace('_', ' ')} color={KLAS_COLOR[r.klasifikasi as Klasifikasi]} /></td></tr>
+                {(d.risikoTinggi || []).map((r: D) => (
+                  <tr key={r.id}>
+                    <td style={tdStyle}>{fmtDate(r.tanggal)}</td>
+                    <td style={tdStyle}>{r.metode}</td>
+                    <td style={tdStyle}>{r.site} : {r.area_kerja}</td>
+                    <td style={tdStyle}>{r.skor_akhir}</td>
+                    <td style={tdStyle}>
+                      <Chip text={String(r.klasifikasi).replace('_', ' ')} color={KLAS_COLOR[r.klasifikasi as Klasifikasi]} />
+                    </td>
+                  </tr>
                 ))}
-                {!d.risikoTinggi.length && <tr><td style={tdStyle} colSpan={5}>Tidak ada.</td></tr>}
+                {!(d.risikoTinggi || []).length && (
+                  <tr><td style={tdStyle} colSpan={5}>Tidak ada survei risiko tinggi.</td></tr>
+                )}
               </tbody>
             </table>
           </div>
-        </div>
+        </MCUChartCard>
       </div>
+    </div>
+  );
+}
 
-      {/* Detail kepatuhan per site ada di tab Administrator → Ergonomi */}
+function Kosong({ label }: { label: string }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted-foreground)', gap: 6 }}>
+      <Activity size={28} style={{ opacity: 0.3 }} />
+      <span style={{ fontSize: 11 }}>{label}</span>
     </div>
   );
 }

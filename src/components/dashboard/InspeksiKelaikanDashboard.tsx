@@ -266,12 +266,12 @@ export default function InspeksiKelaikanDashboard() {
         >
           {k.kalibrasi.total > 0 ? (
             <MCUChart
-              type="bar"
-              horizontal
+              type="doughnut"
               labels={['Patuh / Valid', 'Mendekati (H-60)', 'Lewat Tempo', 'Belum Kalibrasi']}
               values={[k.kalibrasi.patuh, k.kalibrasi.kuning, k.kalibrasi.merah, k.kalibrasi.belum]}
               colors={['#00B894', '#F1C40F', '#FF2D2D', '#778899']}
-              legendLabel="Jumlah Alkes"
+              centerText={String(k.kalibrasi.total)}
+              percentLabels
             />
           ) : (
             <Kosong label="Belum ada alat medis wajib kalibrasi" />

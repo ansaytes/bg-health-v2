@@ -68,6 +68,17 @@ const DASS_COLORS: Record<string, string> = {
   'Sangat Berat': '#8E44AD',
 };
 
+const SDS_SHORT_LABELS: Record<string, string> = {
+  'ketaksaan-peran': 'Ketaksaan Peran',
+  'konflik-peran': 'Konflik Peran',
+  'beban-kuantitatif': 'Beban Kuantitatif',
+  'beban-kualitatif': 'Beban Kualitatif',
+  'pengembangan-karir': 'Pengembangan Karir',
+  'tanggung-jawab': 'Tanggung Jawab Orang',
+};
+const SDS_COLORS = ['#3498DB', '#9B59B6', '#FF2D2D', '#E67E22', '#1ABC9C', '#F1C40F'];
+const sdsShortLabel = (id: string, fallback: string) => SDS_SHORT_LABELS[id] ?? fallback;
+
 export default function MentalHealthDashboard() {
   const { sites: daftarSite } = useSites();
   const [data, setData] = useState<DataMentalHealth | null>(null);
@@ -248,7 +259,7 @@ export default function MentalHealthDashboard() {
             <MCUChart
               type="bar"
               horizontal
-              labels={sdsIndikator.map((s) => s.title)}
+              labels={sdsIndikator.map((s) => sdsShortLabel(s.id, s.title))}
               values={sdsIndikator.map((s) => s.rataRata)}
               colors={sdsIndikator.map((s) => (s.rataRata > 24 ? '#FF2D2D' : s.rataRata >= 10 ? '#FF7A00' : '#00B894'))}
               legendLabel="Rata-rata Skor"
@@ -261,17 +272,17 @@ export default function MentalHealthDashboard() {
         {/* CARD 5: Prioritas Intervensi Stresor Berat (SDS-30 > 24) */}
         <MCUChartCard
           title="Kasus Stres Kerja Berat (SDS >24)"
-          subtitle="Jumlah Pekerja Kategori Berat per Sumber Stresor (ISO 45003)"
+          subtitle="Proporsi Pekerja Kategori Berat per Sumber Stresor (ISO 45003)"
           className="glow-orange"
         >
           {sdsIndikator.some((s) => s.berat > 0) ? (
             <MCUChart
-              type="bar"
-              horizontal
-              labels={sdsIndikator.map((s) => s.title)}
-              values={sdsIndikator.map((s) => s.berat)}
-              colors={sdsIndikator.map((s) => (s.berat > 0 ? '#FF2D2D' : '#B0B7C3'))}
-              legendLabel="Pekerja Kategori Berat"
+              type="doughnut"
+              labels={sdsIndikator.filter((s) => s.berat > 0).map((s) => sdsShortLabel(s.id, s.title))}
+              values={sdsIndikator.filter((s) => s.berat > 0).map((s) => s.berat)}
+              colors={sdsIndikator.filter((s) => s.berat > 0).map((_, idx) => SDS_COLORS[idx % SDS_COLORS.length])}
+              centerText={String(sdsIndikator.reduce((sum, s) => sum + s.berat, 0))}
+              percentLabels
             />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#00B894', gap: 6 }}>
