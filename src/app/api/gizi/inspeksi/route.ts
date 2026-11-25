@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
 
   let query = client
     .from('gizi_inspeksi_jasaboga')
-    .select('id,site,tanggal,inspektur,vendor,nama_kantin,jumlah_porsi,jumlah_penjamah,jumlah_buku_sehat,no_slhs,tgl_kadaluwarsa_slhs,kalori_sarapan,kalori_siang,kalori_malam,extra_fooding,ringkasan,catatan,created_at')
+    .select('id,site,tanggal,inspektur,vendor,nama_kantin,jumlah_porsi,jumlah_penjamah,jumlah_buku_sehat,no_slhs,tgl_kadaluwarsa_slhs,kalori_sarapan,kalori_siang,kalori_malam,extra_fooding,jawaban,ringkasan,catatan,created_at')
     .order('tanggal', { ascending: false })
     .limit(100);
 

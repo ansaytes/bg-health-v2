@@ -41,6 +41,7 @@ interface InspeksiJasaboga {
   kalori_siang: number;
   kalori_malam: number;
   extra_fooding: string | null;
+  jawaban?: Record<string, 'sesuai' | 'tidak_sesuai' | 'tidak_berlaku'> | null;
   ringkasan: {
     totalSkor: number;
     persenSkor: number;
@@ -127,9 +128,17 @@ export default function GiziKerjaDashboard({ site: initialSite }: { site?: strin
     else if (totalMenu < 2600 && totalMenu > 0) menuKurang++;
     else if (totalMenu > 3400) menuLebih++;
 
-    // Retensi Sampel (diambil dari inspeksi kelaikan)
-    if (row.ringkasan && row.ringkasan.persenSkor >= 80) sampelPatuh++;
-    else sampelBelum++;
+    // Retensi Sampel Makanan & Suhu Dingin (dibaca dari item jawaban riil checklist gizi)
+    const jwb = row.jawaban;
+    if (jwb?.food_sample === 'sesuai' || jwb?.suhu_chiller_freezer === 'sesuai') {
+      sampelPatuh++;
+    } else if (jwb?.food_sample === 'tidak_sesuai' || jwb?.suhu_chiller_freezer === 'tidak_sesuai') {
+      sampelBelum++;
+    } else if (row.ringkasan && row.ringkasan.persenSkor >= 80) {
+      sampelPatuh++;
+    } else if (row.ringkasan) {
+      sampelBelum++;
+    }
   }
 
   const totalSLHS = slhsValid + slhsKadaluwarsa + slhsBelumAda;
@@ -234,13 +243,10 @@ export default function GiziKerjaDashboard({ site: initialSite }: { site?: strin
               percentLabels
             />
           ) : (
-            <MCUChart
-              type="doughnut"
-              labels={['SLHS Standar', 'Target SMKP']}
-              values={[1, 0]}
-              colors={['#00B894', '#B0B7C3']}
-              centerText="100%"
-            />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted-foreground)', fontSize: 11, gap: 6 }}>
+              <Utensils size={28} style={{ opacity: 0.3 }} />
+              <span>Belum ada data SLHS jasaboga</span>
+            </div>
           )}
         </MCUChartCard>
 
@@ -273,14 +279,21 @@ export default function GiziKerjaDashboard({ site: initialSite }: { site?: strin
           subtitle="Retensi Sampel 2×24 Jam & Pemantauan Danger Zone (5–60°C)"
           className="glow-orange"
         >
-          <MCUChart
-            type="doughnut"
-            labels={['Protokol HACCP Patuh', 'Perlu Tindakan Perbaikan']}
-            values={[Math.max(1, sampelPatuh), sampelBelum]}
-            colors={['#00B894', '#FF7A00']}
-            centerText={`${sampelPatuh + sampelBelum > 0 ? Math.round((sampelPatuh / (sampelPatuh + sampelBelum)) * 100) : 100}%`}
-            percentLabels
-          />
+          {sampelPatuh + sampelBelum > 0 ? (
+            <MCUChart
+              type="doughnut"
+              labels={['Protokol HACCP Patuh', 'Perlu Tindakan Perbaikan']}
+              values={[sampelPatuh, sampelBelum]}
+              colors={['#00B894', '#FF7A00']}
+              centerText={`${Math.round((sampelPatuh / (sampelPatuh + sampelBelum)) * 100)}%`}
+              percentLabels
+            />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted-foreground)', fontSize: 11, gap: 6 }}>
+              <Utensils size={28} style={{ opacity: 0.3 }} />
+              <span>Belum ada data inspeksi HACCP</span>
+            </div>
+          )}
         </MCUChartCard>
       </div>
 
@@ -303,14 +316,10 @@ export default function GiziKerjaDashboard({ site: initialSite }: { site?: strin
               percentLabels
             />
           ) : (
-            <MCUChart
-              type="doughnut"
-              labels={['Standar Kemenkes (2.650 kkal)', 'Standar Tambang (3.000 kkal)']}
-              values={[2650, 3000]}
-              colors={['#00B894', '#3498DB']}
-              legendLabel="Acuan kkal"
-              centerText="AKG 2019"
-            />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted-foreground)', fontSize: 11, gap: 6 }}>
+              <Utensils size={28} style={{ opacity: 0.3 }} />
+              <span>Belum ada data kalori menu katering</span>
+            </div>
           )}
         </MCUChartCard>
 

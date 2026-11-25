@@ -32,6 +32,7 @@ interface RiwayatSanitasi {
     tidakSesuai: number;
     belumDinilai: number;
     persenSesuai: number;
+    perKategori?: Record<string, { sesuai: number; tidakSesuai: number; belumDinilai: number }>;
   } | null;
   catatan: string | null;
   created_at: string;
@@ -72,22 +73,55 @@ export default function HigieneSanitasiDashboard({ site: initialSite }: { site?:
     ? Math.round(rows.reduce((acc, r) => acc + (r.ringkasan?.persenSesuai ?? 0), 0) / totalSesi)
     : 0;
 
-  // Analisis 4 Pilar Sanitasi:
-  // 1. Kualitas Air Minum & Bersih
-  const airMinumPatuh = Math.round(totalSesi * (avgKepatuhan >= 80 ? 0.92 : 0.75));
-  const airMinumUjiUlang = Math.max(0, totalSesi - airMinumPatuh);
+  // Analisis 4 Pilar Sanitasi dari data checklist per kategori riil:
+  let airMinumPatuh = 0;
+  let airMinumUjiUlang = 0;
+  let toiletMemenuhi = 0;
+  let toiletKurang = 0;
+  let vektorTerkendali = 0;
+  let vektorPerluPestControl = 0;
+  let sampahTerpilah = 0;
+  let sampahPerluPerbaikan = 0;
 
-  // 2. Rasio & Kecukupan Toilet Pekerja (Permenaker 5/2018)
-  const toiletMemenuhi = Math.round(totalSesi * (avgKepatuhan >= 75 ? 0.88 : 0.65));
-  const toiletKurang = Math.max(0, totalSesi - toiletMemenuhi);
+  for (const r of rows) {
+    const pk = r.ringkasan?.perKategori;
+    if (pk) {
+      if (pk.air_minum) {
+        airMinumPatuh += pk.air_minum.sesuai;
+        airMinumUjiUlang += pk.air_minum.tidakSesuai;
+      }
+      if (pk.toilet) {
+        toiletMemenuhi += pk.toilet.sesuai;
+        toiletKurang += pk.toilet.tidakSesuai;
+      }
+      if (pk.vektor) {
+        vektorTerkendali += pk.vektor.sesuai;
+        vektorPerluPestControl += pk.vektor.tidakSesuai;
+      }
+      if (pk.sampah) {
+        sampahTerpilah += pk.sampah.sesuai;
+        sampahPerluPerbaikan += pk.sampah.tidakSesuai;
+      }
+    } else if (r.ringkasan) {
+      const p = (r.ringkasan.persenSesuai ?? 0) >= 80;
+      if (p) {
+        airMinumPatuh += 1;
+        toiletMemenuhi += 1;
+        vektorTerkendali += 1;
+        sampahTerpilah += 1;
+      } else {
+        airMinumUjiUlang += 1;
+        toiletKurang += 1;
+        vektorPerluPestControl += 1;
+        sampahPerluPerbaikan += 1;
+      }
+    }
+  }
 
-  // 3. Pengendalian Vektor & Hama Lingkungan (Permenkes 48/2016)
-  const vektorTerkendali = Math.round(totalSesi * (avgKepatuhan >= 70 ? 0.95 : 0.70));
-  const vektorPerluPestControl = Math.max(0, totalSesi - vektorTerkendali);
-
-  // 4. Pengelolaan Sampah & Limbah Domestik
-  const sampahTerpilah = Math.round(totalSesi * 0.85);
-  const sampahPerluPerbaikan = Math.max(0, totalSesi - sampahTerpilah);
+  const totalAir = airMinumPatuh + airMinumUjiUlang;
+  const totalToilet = toiletMemenuhi + toiletKurang;
+  const totalVektor = vektorTerkendali + vektorPerluPestControl;
+  const totalSampah = sampahTerpilah + sampahPerluPerbaikan;
 
   // Skor Sanitasi per Site
   const perSiteKepatuhan: { site: string; skor: number }[] = [];
@@ -138,13 +172,13 @@ export default function HigieneSanitasiDashboard({ site: initialSite }: { site?:
             Rata-rata Kepatuhan: {avgKepatuhan}%
           </span>
           <span style={{ fontWeight: 700, color: '#00B894' }}>
-            Air Minum Memenuhi: {totalSesi > 0 ? Math.round((airMinumPatuh / totalSesi) * 100) : 100}%
+            Air Minum Memenuhi: {totalAir > 0 ? Math.round((airMinumPatuh / totalAir) * 100) : 100}%
           </span>
           <span style={{ fontWeight: 700, color: '#3498DB' }}>
-            Rasio Toilet Patuh: {totalSesi > 0 ? Math.round((toiletMemenuhi / totalSesi) * 100) : 100}%
+            Rasio Toilet Patuh: {totalToilet > 0 ? Math.round((toiletMemenuhi / totalToilet) * 100) : 100}%
           </span>
           <span style={{ fontWeight: 700, color: vektorPerluPestControl > 0 ? '#FF7A00' : '#00B894' }}>
-            Vektor Terkendali: {totalSesi > 0 ? Math.round((vektorTerkendali / totalSesi) * 100) : 100}%
+            Vektor Terkendali: {totalVektor > 0 ? Math.round((vektorTerkendali / totalVektor) * 100) : 100}%
           </span>
           <MCURefreshButton loading={loading} onClick={() => void loadData()} />
         </div>
@@ -164,23 +198,20 @@ export default function HigieneSanitasiDashboard({ site: initialSite }: { site?:
           subtitle="Permenkes No. 2 Tahun 2023 (E. Coli 0 CFU, TDS ≤500, pH 6.5–8.5)"
           className="glow-teal"
         >
-          {totalSesi > 0 ? (
+          {totalAir > 0 ? (
             <MCUChart
               type="doughnut"
               labels={['Memenuhi Standar Baku Mutu', 'Perlu Treatment / Uji Ulang']}
               values={[airMinumPatuh, airMinumUjiUlang]}
               colors={['#00B894', '#FF7A00']}
-              centerText={`${Math.round((airMinumPatuh / totalSesi) * 100)}%`}
+              centerText={`${Math.round((airMinumPatuh / totalAir) * 100)}%`}
               percentLabels
             />
           ) : (
-            <MCUChart
-              type="doughnut"
-              labels={['Baku Mutu Permenkes', 'Standar SMKP']}
-              values={[100, 0]}
-              colors={['#00B894', '#B0B7C3']}
-              centerText="100%"
-            />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted-foreground)', gap: 6 }}>
+              <Droplets size={28} style={{ opacity: 0.3 }} />
+              <span style={{ fontSize: 11 }}>Belum ada data uji kualitas air</span>
+            </div>
           )}
         </MCUChartCard>
 
@@ -190,13 +221,13 @@ export default function HigieneSanitasiDashboard({ site: initialSite }: { site?:
           subtitle="Permenaker 5/2018 Pasal 34 (Pria 1:40, Wanita 1:25 & Air Mengalir)"
           className="glow-coral"
         >
-          {totalSesi > 0 ? (
+          {totalToilet > 0 ? (
             <MCUChart
               type="doughnut"
               labels={['Rasio Standar Terpenuhi', 'Perlu Penambahan Fasilitas']}
               values={[toiletMemenuhi, toiletKurang]}
               colors={['#00B894', '#FF7A00']}
-              centerText={`${Math.round((toiletMemenuhi / totalSesi) * 100)}%`}
+              centerText={`${Math.round((toiletMemenuhi / totalToilet) * 100)}%`}
               percentLabels
             />
           ) : (
@@ -213,14 +244,21 @@ export default function HigieneSanitasiDashboard({ site: initialSite }: { site?:
           subtitle="Permenkes 48/2016 (Indeks Jentik, Beban Lalat & Tikus di Camp/Mess)"
           className="glow-orange"
         >
-          <MCUChart
-            type="doughnut"
-            labels={['Populasi Vektor Terkendali', 'Perlu Fogging / Pest Control']}
-            values={[Math.max(1, vektorTerkendali), vektorPerluPestControl]}
-            colors={['#00B894', '#FF2D2D']}
-            centerText={`${totalSesi > 0 ? Math.round((vektorTerkendali / totalSesi) * 100) : 100}%`}
-            percentLabels
-          />
+          {totalVektor > 0 ? (
+            <MCUChart
+              type="doughnut"
+              labels={['Populasi Vektor Terkendali', 'Perlu Fogging / Pest Control']}
+              values={[vektorTerkendali, vektorPerluPestControl]}
+              colors={['#00B894', '#FF2D2D']}
+              centerText={`${Math.round((vektorTerkendali / totalVektor) * 100)}%`}
+              percentLabels
+            />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted-foreground)', gap: 6 }}>
+              <Droplets size={28} style={{ opacity: 0.3 }} />
+              <span style={{ fontSize: 11 }}>Belum ada data inspeksi vektor</span>
+            </div>
+          )}
         </MCUChartCard>
       </div>
 
@@ -232,14 +270,21 @@ export default function HigieneSanitasiDashboard({ site: initialSite }: { site?:
           subtitle="Permenaker 5/2018 Pasal 37 (Pemilahan Organik/Anorganik & Bertutup)"
           className="glow-amber"
         >
-          <MCUChart
-            type="doughnut"
-            labels={['Pewadahan Terpilah & Rapi', 'Over-Capacity / Tidak Terpilah']}
-            values={[Math.max(1, sampahTerpilah), sampahPerluPerbaikan]}
-            colors={['#00B894', '#FF7A00']}
-            centerText={`${totalSesi > 0 ? Math.round((sampahTerpilah / totalSesi) * 100) : 100}%`}
-            percentLabels
-          />
+          {totalSampah > 0 ? (
+            <MCUChart
+              type="doughnut"
+              labels={['Pewadahan Terpilah & Rapi', 'Over-Capacity / Tidak Terpilah']}
+              values={[sampahTerpilah, sampahPerluPerbaikan]}
+              colors={['#00B894', '#FF7A00']}
+              centerText={`${Math.round((sampahTerpilah / totalSampah) * 100)}%`}
+              percentLabels
+            />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted-foreground)', gap: 6 }}>
+              <Droplets size={28} style={{ opacity: 0.3 }} />
+              <span style={{ fontSize: 11 }}>Belum ada data pengelolaan sampah</span>
+            </div>
+          )}
         </MCUChartCard>
 
         {/* CARD 5: Skor Kepatuhan Sanitasi per Jobsite */}

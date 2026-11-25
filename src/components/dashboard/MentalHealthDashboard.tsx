@@ -8,15 +8,12 @@
 //   - Permenaker No. 5 Tahun 2018 (Faktor Psikologi Lingkungan Kerja - SDS-30)
 //   - Standar WHO/Kemenkes: Self-Reporting Questionnaire (SRQ-20) & Depression Anxiety Stress Scales (DASS-21)
 //
-// CLOSED-LOOP GOVERNANCE (Anti-Open Loop):
-//   Tidak sekadar menampilkan angka skrining pasif, melainkan memantau:
-//   1. Skrining & deteksi dini gejala psikologis
-//   2. Corong rujukan & pendampingan konseling (ProKawan / Psikolog Klinis)
-//   3. Proteksi keselamatan pada pekerja berposisi kritis (Operator, Driver, Blaster)
-//   4. Diagnosis stresor lingkungan kerja nyata (SDS-30) untuk perbaikan organisasi kerja
+// INTEGRITAS DATA:
+//   100% data riil dari tabel Supabase `mcu_mental_health` via /api/mental-health/dashboard.
+//   Tidak ada angka estimasi atau proxy.
 
 import { useCallback, useEffect, useState } from 'react';
-import { CheckCircle2, HeartPulse, UserCheck } from 'lucide-react';
+import { CheckCircle2, HeartPulse } from 'lucide-react';
 
 import { authFetch } from '@/lib/api-client';
 import {
@@ -62,6 +59,15 @@ interface DataMentalHealth {
   perSite: { site: string; total: number; perluTindakLanjut: number }[];
 }
 
+const DASS_ORDER = ['Normal', 'Ringan', 'Sedang', 'Berat', 'Sangat Berat'] as const;
+const DASS_COLORS: Record<string, string> = {
+  Normal: '#00B894',
+  Ringan: '#F1C40F',
+  Sedang: '#E67E22',
+  Berat: '#FF2D2D',
+  'Sangat Berat': '#8E44AD',
+};
+
 export default function MentalHealthDashboard() {
   const { sites: daftarSite } = useSites();
   const [data, setData] = useState<DataMentalHealth | null>(null);
@@ -102,29 +108,21 @@ export default function MentalHealthDashboard() {
   const i = data.instrumen;
   const totalResponden = data.totalResponden;
 
-  // Kasus Perlu Evaluasi (SRQ >= 6 atau DASS Sedang/Berat)
+  const srqTerisi = i.srq20.terisi;
   const srqPerlu = i.srq20.perluTindakLanjut;
-  const dassBerat = (i.dass21.band?.['Berat'] ?? 0) + (i.dass21.band?.['Sangat Berat'] ?? 0);
-  const perluIntervensi = Math.max(srqPerlu, dassBerat);
-  const sehatMental = Math.max(0, totalResponden - perluIntervensi);
+  const srqNormal = Math.max(0, srqTerisi - srqPerlu);
 
-  // Closed Loop Intervention Pipeline (ISO 45003 Klausul 8.1)
-  // Menghitung status penanganan kasus
-  const terjadwalKonseling = Math.round(perluIntervensi * 0.9);
-  const dalamPendampingan = Math.round(perluIntervensi * 0.55);
-  const selesaiFit = Math.max(0, terjadwalKonseling - dalamPendampingan);
+  const dassBands = DASS_ORDER.filter((k) => Number(i.dass21.band?.[k] ?? 0) > 0);
+  const dassBerat = (i.dass21.band?.Berat ?? 0) + (i.dass21.band?.['Sangat Berat'] ?? 0);
 
-  // Safety-Critical Roles Status (Operator, Driver LV, Juru Ledak)
-  const totalCriticalRoles = Math.max(12, Math.round(totalResponden * 0.28));
-  const criticalPerluMonitoring = Math.min(perluIntervensi, Math.round(perluIntervensi * 0.35));
-  const criticalFit = Math.max(0, totalCriticalRoles - criticalPerluMonitoring);
-
-  // SDS-30 Indikator Stresor Lingkungan Kerja
   const sdsIndikator = (i.sds?.perIndikator ?? []).slice(0, 6);
+  const sdsBeratTotal = i.sds?.berat ?? 0;
+
+  const perSiteData = (data.perSite ?? []).slice(0, 8);
 
   return (
     <div className="dashboard mcu-live-dashboard">
-      {/* ── Top Bar: Filter & Case Management Badges ───────────────────── */}
+      {/* ── Top Bar: Filter & Audit KPI Badges (100% Riil) ─────────────── */}
       <div className="dashboard-top-bar mcu-live-top-bar">
         <div className="mcu-dashboard-filters">
           <label>
@@ -153,21 +151,18 @@ export default function MentalHealthDashboard() {
           </label>
         </div>
 
-        {/* Audit-Grade KPI Badges */}
+        {/* Audit-Grade KPI Badges (Murni Data Riil) */}
         <div className="mcu-total-bar">
           <span className="mcu-total-label">Total Responden:</span>
           <span className="mcu-total-num">{totalResponden}</span>
-          <span style={{ fontWeight: 700, color: perluIntervensi > 0 ? '#FF7A00' : '#00B894' }}>
-            Perlu Intervensi: {perluIntervensi}
+          <span style={{ fontWeight: 700, color: srqPerlu > 0 ? '#FF2D2D' : '#00B894' }}>
+            SRQ-20 ≥6 (Perlu Evaluasi): {srqPerlu}
           </span>
-          <span style={{ fontWeight: 700, color: '#3498DB' }}>
-            Dalam Pendampingan: {dalamPendampingan}
+          <span style={{ fontWeight: 700, color: dassBerat > 0 ? '#E67E22' : '#00B894' }}>
+            DASS Berat/Sangat Berat: {dassBerat}
           </span>
-          <span style={{ fontWeight: 700, color: '#00B894' }}>
-            Selesai Konseling (Fit): {selesaiFit}
-          </span>
-          <span style={{ fontWeight: 700, color: criticalPerluMonitoring > 0 ? '#FF2D2D' : '#00B894' }}>
-            Safety-Critical Monitored: {criticalPerluMonitoring}
+          <span style={{ fontWeight: 700, color: sdsBeratTotal > 0 ? '#E67E22' : '#00B894' }}>
+            SDS-30 Indikator Berat: {sdsBeratTotal}
           </span>
           <MCURefreshButton loading={loading} onClick={() => void loadData()} />
         </div>
@@ -179,93 +174,74 @@ export default function MentalHealthDashboard() {
         </div>
       )}
 
-      {/* ── BARIS 1: Surveilans & Corong Intervensi Kasus (Closed Loop) ─── */}
+      {/* ── BARIS 1: Skrining Klinis Individu (SRQ-20 & DASS-21) ────────── */}
       <div className="mcu-grid-3 mcu-live-chart-row">
-        {/* CARD 1: Status Skrining Mental Pekerja */}
+        {/* CARD 1: Hasil Skrining SRQ-20 */}
         <MCUChartCard
-          title="Status Skrining Mental Pekerja"
-          subtitle="Hasil Skrining Berkala (SRQ-20 & DASS-21)"
+          title="Skrining SRQ-20 (WHO)"
+          subtitle={`Ambang ≥6 = Perlu Evaluasi Medis · Rata-rata Skor: ${i.srq20.rataRata}`}
           className="glow-teal"
         >
-          {totalResponden > 0 ? (
+          {srqTerisi > 0 ? (
             <MCUChart
               type="doughnut"
-              labels={['Kondisi Prima / Sehat Mental', 'Terindikasi Perlu Intervensi Medis']}
-              values={[sehatMental, perluIntervensi]}
-              colors={['#00B894', '#FF7A00']}
-              centerText={`${Math.round((sehatMental / totalResponden) * 100)}%`}
+              labels={['Normal (<6)', 'Perlu Evaluasi Lanjut (≥6)']}
+              values={[srqNormal, srqPerlu]}
+              colors={['#00B894', '#FF2D2D']}
+              centerText={String(srqTerisi)}
               percentLabels
             />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted-foreground)', gap: 6 }}>
-              <HeartPulse size={30} style={{ opacity: 0.3 }} />
-              <span style={{ fontSize: 11 }}>Belum ada data skrining mental</span>
-            </div>
+            <Kosong label="Belum ada responden SRQ-20" />
           )}
         </MCUChartCard>
 
-        {/* CARD 2: Corong Tindak Lanjut & Rujukan (Closed-Loop Management) */}
+        {/* CARD 2: Distribusi Tingkat Keparahan DASS-21 */}
         <MCUChartCard
-          title="Corong Tindak Lanjut & Rujukan"
-          subtitle="Alur Intervensi Psikososial Pekerja (ISO 45003 Klausul 8.1)"
+          title="Tingkat Keparahan DASS-21"
+          subtitle="Klasifikasi Derajat Tertinggi dari Depresi, Ansietas & Stres"
           className="glow-coral"
         >
-          {perluIntervensi > 0 ? (
+          {dassBands.length > 0 ? (
             <MCUChart
-              type="bar"
-              horizontal
-              labels={['Terdeteksi Skrining', 'Terjadwal Konseling', 'Proses Pendampingan', 'Fit to Work (Selesai)']}
-              values={[perluIntervensi, terjadwalKonseling, dalamPendampingan, selesaiFit]}
-              colors={['#FF7A00', '#F1C40F', '#3498DB', '#00B894']}
-              legendLabel="Jumlah Pekerja"
+              type="doughnut"
+              labels={dassBands.map((k) => k)}
+              values={dassBands.map((k) => Number(i.dass21.band[k]))}
+              colors={dassBands.map((k) => DASS_COLORS[k] ?? '#778899')}
+              centerText={String(i.dass21.terisi)}
+              percentLabels
             />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#00B894', gap: 6 }}>
-              <CheckCircle2 size={32} />
-              <span style={{ fontSize: 12, fontWeight: 700 }}>Semua Pekerja Fit</span>
-              <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>Tidak ada kasus psikososial yang memerlukan rujukan</span>
-            </div>
+            <Kosong label="Belum ada responden DASS-21" />
           )}
         </MCUChartCard>
 
-        {/* CARD 3: Proteksi Pekerja Posisi Kritis (Safety-Critical Roles) */}
+        {/* CARD 3: Rata-rata Subskala DASS-21 */}
         <MCUChartCard
-          title="Status Posisi Kritis Keselamatan"
-          subtitle="Operator Alat Berat, Driver LV, Juru Ledak & Dispatcher"
-          className="glow-orange"
+          title="Rata-rata Subskala DASS-21"
+          subtitle="Profil Skor Depresi, Ansietas, dan Stres Responden"
+          className="glow-amber"
         >
-          <MCUChart
-            type="doughnut"
-            labels={['Fit to Work Penuh', 'Dalam Monitoring / Penyesuaian Shift']}
-            values={[criticalFit, criticalPerluMonitoring]}
-            colors={['#00B894', '#FF2D2D']}
-            centerText={`${Math.round((criticalFit / totalCriticalRoles) * 100)}%`}
-            percentLabels
-          />
+          {i.dass21.terisi > 0 ? (
+            <MCUChart
+              type="bar"
+              labels={['Depresi', 'Ansietas', 'Stres']}
+              values={[i.dass21.rataDepresi || 0, i.dass21.rataAnsietas || 0, i.dass21.rataStres || 0]}
+              colors={['#3498DB', '#F39C12', '#FF2D2D']}
+              legendLabel="Skor Rata-rata"
+            />
+          ) : (
+            <Kosong label="Belum ada data subskala DASS-21" />
+          )}
         </MCUChartCard>
       </div>
 
-      {/* ── BARIS 2: Analisis Stresor Lingkungan Kerja & Program Bantuan ──── */}
+      {/* ── BARIS 2: Bahaya Psikososial Lingkungan Kerja (SDS-30) & Wilayah ─ */}
       <div className="mcu-grid-3 mcu-live-chart-row">
-        {/* CARD 4: Rata-rata Derajat Subskala DASS-21 */}
+        {/* CARD 4: Stresor Lingkungan Kerja SDS-30 (Skor Rata-rata) */}
         <MCUChartCard
-          title="Rata-rata Subskala DASS-21"
-          subtitle="Tingkat Gejala Depresi, Ansietas, dan Stres Karyawan"
-          className="glow-amber"
-        >
-          <MCUChart
-            type="bar"
-            labels={['Depresi', 'Ansietas', 'Stres']}
-            values={[i.dass21.rataDepresi || 0, i.dass21.rataAnsietas || 0, i.dass21.rataStres || 0]}
-            colors={['#3498DB', '#F39C12', '#FF2D2D']}
-            legendLabel="Skor Rata-rata"
-          />
-        </MCUChartCard>
-
-        {/* CARD 5: Pemetaan Stresor Lingkungan Kerja (SDS-30) */}
-        <MCUChartCard
-          title="Stresor Lingkungan Kerja (SDS-30)"
-          subtitle="Diagnosis Stres Kerja Tempat Kerja (Permenaker 5/2018)"
+          title="Stresor Kerja SDS-30 (Skor Rata-rata)"
+          subtitle="Survei Diagnosis Stres Kerja — Permenaker 5/2018 (Skala 5–35)"
           className="glow-steel"
         >
           {sdsIndikator.length > 0 ? (
@@ -274,33 +250,67 @@ export default function MentalHealthDashboard() {
               horizontal
               labels={sdsIndikator.map((s) => s.title)}
               values={sdsIndikator.map((s) => s.rataRata)}
-              colors={sdsIndikator.map((s) => (s.rataRata >= 24 ? '#FF2D2D' : s.rataRata >= 18 ? '#FF7A00' : '#3498DB'))}
-              legendLabel="Skor Indikator (5-35)"
+              colors={sdsIndikator.map((s) => (s.rataRata > 24 ? '#FF2D2D' : s.rataRata >= 10 ? '#FF7A00' : '#00B894'))}
+              legendLabel="Rata-rata Skor"
             />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted-foreground)', gap: 6 }}>
-              <UserCheck size={28} style={{ opacity: 0.3 }} />
-              <span style={{ fontSize: 11 }}>Belum ada data SDS-30</span>
+            <Kosong label="Belum ada data SDS-30" />
+          )}
+        </MCUChartCard>
+
+        {/* CARD 5: Prioritas Intervensi Stresor Berat (SDS-30 > 24) */}
+        <MCUChartCard
+          title="Kasus Stres Kerja Berat (SDS >24)"
+          subtitle="Jumlah Pekerja Kategori Berat per Sumber Stresor (ISO 45003)"
+          className="glow-orange"
+        >
+          {sdsIndikator.some((s) => s.berat > 0) ? (
+            <MCUChart
+              type="bar"
+              horizontal
+              labels={sdsIndikator.map((s) => s.title)}
+              values={sdsIndikator.map((s) => s.berat)}
+              colors={sdsIndikator.map((s) => (s.berat > 0 ? '#FF2D2D' : '#B0B7C3'))}
+              legendLabel="Pekerja Kategori Berat"
+            />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#00B894', gap: 6 }}>
+              <CheckCircle2 size={32} />
+              <span style={{ fontSize: 12, fontWeight: 700 }}>Nol Stresor Berat</span>
+              <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>Tidak ada indikator SDS-30 di atas ambang 24</span>
             </div>
           )}
         </MCUChartCard>
 
-        {/* CARD 6: Utilisasi Program Pendampingan Karyawan (EAP & ProKawan) */}
+        {/* CARD 6: Sebaran SRQ-20 Perlu Evaluasi per Jobsite */}
         <MCUChartCard
-          title="Utilisasi Pendampingan (EAP)"
-          subtitle="Program Konseling Sebaya ProKawan & Hotline Psikolog"
+          title="Sebaran SRQ ≥6 per Jobsite"
+          subtitle="Jumlah Responden Perlu Tindak Lanjut di Setiap Site"
           className="glow-teal"
         >
-          <MCUChart
-            type="doughnut"
-            labels={['Konseling ProKawan Selesai', 'Rujukan Dokter / Spesialis', 'Pendampingan Berjalan']}
-            values={[Math.max(1, selesaiFit), Math.max(1, dassBerat), Math.max(1, dalamPendampingan)]}
-            colors={['#00B894', '#FF7A00', '#3498DB']}
-            centerText={`${selesaiFit + dassBerat + dalamPendampingan}`}
-            percentLabels
-          />
+          {perSiteData.length > 0 ? (
+            <MCUChart
+              type="bar"
+              horizontal
+              labels={perSiteData.map((p) => p.site)}
+              values={perSiteData.map((p) => p.perluTindakLanjut)}
+              colors={perSiteData.map((p) => (p.perluTindakLanjut > 0 ? '#FF2D2D' : '#00B894'))}
+              legendLabel="SRQ-20 ≥ 6"
+            />
+          ) : (
+            <Kosong label="Belum ada sebaran site" />
+          )}
         </MCUChartCard>
       </div>
+    </div>
+  );
+}
+
+function Kosong({ label }: { label: string }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted-foreground)', gap: 6 }}>
+      <HeartPulse size={28} style={{ opacity: 0.3 }} />
+      <span style={{ fontSize: 11 }}>{label}</span>
     </div>
   );
 }
