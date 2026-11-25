@@ -39,16 +39,25 @@ export const grid4: CSSProperties = { display: 'grid', gridTemplateColumns: 'rep
 
 export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { key: T; label: string }[]; value: T; onChange: (k: T) => void }) {
   return (
-    <div style={{ display: 'flex', gap: 5, marginBottom: 10, flexWrap: 'wrap' }}>
-      {tabs.map((t) => (
-        <button key={t.key} type="button" onClick={() => onChange(t.key)}
-          style={{
-            padding: '4px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer',
-            border: '1px solid var(--border)',
-            background: value === t.key ? 'var(--brand-primary, #ff4d00)' : 'var(--background)',
-            color: value === t.key ? '#fff' : 'var(--foreground)',
-          }}>{t.label}</button>
-      ))}
+    <div style={{ display: 'flex', marginBottom: 12, overflowX: 'auto', scrollbarWidth: 'none' }}>
+      <div className="centered-tabs-track">
+        {tabs.map((t) => {
+          const isActive = value === t.key;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => onChange(t.key)}
+              className={`centered-tab${isActive ? ' is-active' : ''}`}
+              style={{ height: 26, padding: '0 12px', fontSize: 11, minWidth: 90 }}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
