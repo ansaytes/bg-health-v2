@@ -1,6 +1,6 @@
 'use client';
 import NotificationBell from '@/components/header/NotificationBell';
-import { X, Eye, EyeOff } from 'lucide-react';
+import { X, Eye, EyeOff, Home as HomeIcon, LayoutDashboard, ClipboardEdit, ShieldCheck } from 'lucide-react';
 
 import { useState, useEffect , useCallback} from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -1518,6 +1518,9 @@ export default function Home() {
         <div className="header">
           <div className="header-top">
             <div className="header-left-spacer" />
+            <span className="mobile-header-title">
+              {headerNav.find((n) => n.key === activePage)?.label ?? 'OHIH'}
+            </span>
             <nav className="header-nav">
               {headerNav.map((item) => (
                 <button
@@ -1532,21 +1535,6 @@ export default function Home() {
             <div className="header-right">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={logoBestK3} alt="BestK3" width={75} height={28} className="header-right-logo" />
-              {!isLoggedIn && (
-                <button
-                  type="button"
-                  className="header-login-btn"
-                  onClick={() => setShowLogin(true)}
-                  aria-label="Masuk"
-                >
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                    <polyline points="10 17 15 12 10 7" />
-                    <line x1="15" y1="12" x2="3" y2="12" />
-                  </svg>
-                  <span>Masuk</span>
-                </button>
-              )}
               <NotificationBell
                 isSuperuser={isSuperuser}
                 // Notifikasi tindak lanjut hanya untuk QSHE Medic.
@@ -1593,6 +1581,29 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* iOS-style Bottom Tab Bar (Mobile <=1023px) */}
+      <nav className="mobile-bottom-nav" aria-label="Navigasi Utama">
+        {headerNav.map((item) => {
+          const Icon =
+            item.key === 'home' ? HomeIcon
+            : item.key === 'dashboard' ? LayoutDashboard
+            : item.key === 'data-entry' ? ClipboardEdit
+            : ShieldCheck;
+          const isActive = activePage === item.key;
+          return (
+            <button
+              key={item.key}
+              type="button"
+              className={`mobile-bottom-nav-item${isActive ? ' active' : ''}`}
+              onClick={() => handleNav(item.key)}
+            >
+              <Icon size={18} strokeWidth={isActive ? 2.4 : 1.9} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
 
       <AnimatePresence>
         {showLogin && <LoginPopup onClose={() => setShowLogin(false)} />}

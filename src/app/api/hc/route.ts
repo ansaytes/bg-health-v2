@@ -135,6 +135,34 @@ async function buildDashboard(site: string) {
   const areas = (areaAll || []).filter(a => siteOk(a.site));
   const zona = { HIJAU: 0, KUNING: 0, MERAH: 0, BELUM: 0 };
   for (const a of areas) zona[(a.zona as keyof typeof zona) || 'BELUM']++;
+
+  // Pengendalian area bising (rambu peringatan & ketersediaan APT) dari survei terbaru tiap area Kuning/Merah.
+  const areaIds = areas.map((a) => a.id).filter(Boolean);
+  const latestSurveyByArea = new Map<string, { rambu_terpasang: boolean; apt_tersedia: boolean }>();
+  if (areaIds.length) {
+    const { data: surveys } = await db
+      .from('hc_noise_survey')
+      .select('area_id,rambu_terpasang,apt_tersedia')
+      .in('area_id', areaIds)
+      .order('tanggal', { ascending: false })
+      .order('created_at', { ascending: false });
+    for (const s of surveys || []) {
+      if (!latestSurveyByArea.has(s.area_id)) {
+        latestSurveyByArea.set(s.area_id, {
+          rambu_terpasang: !!s.rambu_terpasang,
+          apt_tersedia: !!s.apt_tersedia,
+        });
+      }
+    }
+  }
+  const areaWajibKendali = areas.filter((a) => a.zona === 'KUNING' || a.zona === 'MERAH');
+  const pengendalian = {
+    totalWajib: areaWajibKendali.length,
+    rambuTerpasang: areaWajibKendali.filter((a) => latestSurveyByArea.get(a.id)?.rambu_terpasang).length,
+    rambuBelum: areaWajibKendali.filter((a) => !latestSurveyByArea.get(a.id)?.rambu_terpasang).length,
+    aptTersedia: areaWajibKendali.filter((a) => latestSurveyByArea.get(a.id)?.apt_tersedia).length,
+    aptBelum: areaWajibKendali.filter((a) => !latestSurveyByArea.get(a.id)?.apt_tersedia).length,
+  };
   const { rows, exposure } = await loadAudiometriEval();
   const emp = rows.filter(r => siteOk(r.site));
   const expAll = (await latestExposure()).filter(e => siteOk(e.site));
@@ -162,7 +190,7 @@ async function buildDashboard(site: string) {
     retestTerlambat: cs.filter(c => ['SUSPEK', 'RETEST_DIJADWALKAN'].includes(c.status) && c.retest_deadline < t).length,
   };
   return {
-    zona, areaTerlambat: areas.filter(a => a.terlambat).length, areas, kategori, cakupan,
+    zona, pengendalian, areaTerlambat: areas.filter(a => a.terlambat).length, areas, kategori, cakupan,
     kelas: Object.fromEntries(Object.entries(kelas).map(([k, v]) => [KELAS_LABEL[k as KelasPendengaran], v])),
     sts, totalEvaluasi: emp.length, adaExposure: exposure.length,
     audiometri: { dengan: emp.filter(r => r.latest).length, tidakLengkap: emp.filter(r => r.latest && r.lengkap === false).length },
