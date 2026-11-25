@@ -272,31 +272,40 @@ export default function DashboardView() {
     if (kpiData.length === 0) return null;
 
     if (isYTD) {
-      // YTD = SUM counts + AVG ratios/rates across all months with data
+      // YTD = SUM counts + kumulatif formula baku (menghindari distorsi rata-rata aritmatika)
       const rows = kpiData.filter(r => r.man_power > 0 || r.man_hours > 0 || r.tk_sakit > 0);
       if (rows.length === 0) return null;
       const sum = (k: keyof KpiRow) => rows.reduce((acc, r) => acc + (r[k] as number), 0);
-      const avg = (k: keyof KpiRow) => {
-        let valid: KpiRow[] = rows;
-        if (k === 'rkk' || k === 'cmr' || k === 'fr_pak') valid = rows.filter(r => r.man_power > 0);
-        else if (k === 'mfr' || k === 'asr') valid = rows.filter(r => r.man_hours > 0);
-        else if (k === 'ssr') valid = rows.filter(r => r.tk_sakit > 0);
-        if (valid.length === 0) return 0;
-        return valid.reduce((acc, r) => acc + (r[k] as number), 0) / valid.length;
-      };
+
+      const totalManHours = sum('man_hours');
+      const totalManPower = sum('man_power');
+      const totalTkSakit = sum('tk_sakit');
+      const totalAbsensiSakit = sum('absensi_sakit');
+      const totalPak = sum('penyakit_akibat_kerja');
+      const totalLayak = sum('layak_bekerja');
+      const avgMonthlyManPower = rows.length > 0 ? totalManPower / rows.length : 0;
+
+      // Formula kumulatif baku sesuai Kepdirjen Minerba No. 185/2019
+      const rkkYtd = avgMonthlyManPower > 0 ? (totalLayak / rows.length) / avgMonthlyManPower : (rows.length > 0 ? rows.reduce((acc, r) => acc + r.rkk, 0) / rows.length : 0);
+      const cmrYtd = avgMonthlyManPower > 0 ? totalTkSakit / avgMonthlyManPower : (rows.length > 0 ? rows.reduce((acc, r) => acc + r.cmr, 0) / rows.length : 0);
+      const mfrYtd = totalManHours > 0 ? (totalTkSakit * 1_000_000) / totalManHours : 0;
+      const ssrYtd = totalTkSakit > 0 ? totalAbsensiSakit / totalTkSakit : 0;
+      const asrYtd = totalManHours > 0 ? (totalAbsensiSakit * 1_000_000) / totalManHours : 0;
+      const frPakYtd = avgMonthlyManPower > 0 ? totalPak / avgMonthlyManPower : 0;
+
       return {
         tahun: selectedYear, bulan: 0, jobsite: selectedSite,
-        man_power: Math.round(sum('man_power') / rows.length),
-        man_hours: sum('man_hours'),
+        man_power: Math.round(avgMonthlyManPower),
+        man_hours: totalManHours,
         kunjungan_klinik: sum('kunjungan_klinik'),
-        tk_sakit: sum('tk_sakit'),
-        absensi_sakit: sum('absensi_sakit'),
+        tk_sakit: totalTkSakit,
+        absensi_sakit: totalAbsensiSakit,
         spell: sum('spell'),
-        penyakit_akibat_kerja: sum('penyakit_akibat_kerja'),
+        penyakit_akibat_kerja: totalPak,
         kejadian_penyakit_tk: sum('kejadian_penyakit_tk'),
-        layak_bekerja: Math.round(sum('layak_bekerja') / rows.length),
-        rkk: avg('rkk'), cmr: avg('cmr'), mfr: avg('mfr'),
-        ssr: avg('ssr'), asr: avg('asr'), fr_pak: avg('fr_pak'),
+        layak_bekerja: Math.round(totalLayak / rows.length),
+        rkk: rkkYtd, cmr: cmrYtd, mfr: mfrYtd,
+        ssr: ssrYtd, asr: asrYtd, fr_pak: frPakYtd,
         kaptk: sum('kaptk'),
       };
     }

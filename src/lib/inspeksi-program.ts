@@ -367,6 +367,9 @@ export interface RingkasanPica {
   /** Top 5 objek yang temuan PICA-nya paling sering berulang. */
   terulang: { objek: string; jumlah: number; picaIds: string[] }[];
   overdueList: BarisPica[];
+  tingkat: { kritis: number; mayor: number; minor: number };
+  kritisAktif: number;
+  mttrKritis: number | null;
 }
 
 /**
@@ -422,6 +425,19 @@ export function ringkasPica(daftar: BarisPica[], sekarang: Date = new Date()): R
     .sort((a, b) => b.jumlah - a.jumlah)
     .slice(0, 5);
 
+  const kritisSemua = berjalan.filter(p => String(p.tingkat ?? '').toLowerCase() === 'kritis');
+  const mayorSemua = berjalan.filter(p => String(p.tingkat ?? '').toLowerCase() === 'mayor');
+  const minorSemua = berjalan.filter(p => {
+    const t = String(p.tingkat ?? '').toLowerCase();
+    return t === 'minor' || (!t && t !== 'kritis' && t !== 'mayor');
+  });
+
+  const kritisClosed = kritisSemua.filter(p => String(p.status ?? '').toLowerCase() === 'closed');
+  const durasiKritis = kritisClosed.map(p => durasiHari(p, sekarang)).filter((d): d is number => d !== null);
+  const mttrKritis = durasiKritis.length
+    ? Math.round((durasiKritis.reduce((a, b) => a + b, 0) / durasiKritis.length) * 10) / 10
+    : null;
+
   return {
     total: berjalan.length,
     aktif: aktif.length,
@@ -433,6 +449,13 @@ export function ringkasPica(daftar: BarisPica[], sekarang: Date = new Date()): R
     overdueList: overdueList.sort(
       (a, b) => (selisihHari(a.due_date, sekarang) ?? 0) - (selisihHari(b.due_date, sekarang) ?? 0),
     ),
+    tingkat: {
+      kritis: kritisSemua.length,
+      mayor: mayorSemua.length,
+      minor: minorSemua.length,
+    },
+    kritisAktif: kritisSemua.filter(p => String(p.status ?? 'open').toLowerCase() !== 'closed').length,
+    mttrKritis,
   };
 }
 

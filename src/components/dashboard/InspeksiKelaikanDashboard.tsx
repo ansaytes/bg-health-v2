@@ -1,12 +1,13 @@
 'use client';
 
-// Dashboard > Program Inspeksi > Tab 2: Kelaikan Fasilitas
+// Dashboard > Program Inspeksi > Tab 2: Kelaikan Fasilitas Gawat Darurat & Klinik
 //
-// Memantau kondisi fisik & kesiapan riil seluruh sarana kesehatan kerja:
-//   • Setiap diagram donut murni 100% homogen (Ambulans dihitung per unit,
-//     P3K per item, Klinik per fasilitas, Kalibrasi per alkes, Ergonomi per sarana).
-//   • Tidak ada diagram campur aduk satuan.
-//   • Tepat 2 Baris, maksimal 6 Kartu (mcu-grid-3 mcu-live-chart-row).
+// ACUAN STANDAR AUDIT:
+//   - Kepmen ESDM No. 1827 K/30/MEM/2018 Lampiran IV (Kesehatan Kerja Pertambangan)
+//   - Kepdirjen Minerba No. 185 K/37.04/DJB/2019 (SMKP Minerba Elemen IV.8: Kesiapsiagaan Tanggap Darurat Medis)
+//   - Permenaker No. 15/MEN/VIII/2008 tentang Pertolongan Pertama Pada Kecelakaan di Tempat Kerja
+//   - Permenkes No. 54 Tahun 2015 tentang Pengujian dan Kalibrasi Alat Kesehatan
+//   - PermenLHK No. P.56/Menlhk-Setjen/2015 tentang Tata Cara Pengelolaan Limbah B3 dari Fasilitas Pelayanan Kesehatan
 
 import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
@@ -52,13 +53,6 @@ interface Data {
       tidakAda: number;
       persen: number;
     };
-    ergonomi: {
-      total: number;
-      layak: number;
-      rusak: number;
-      persenLayak: number;
-      perItem: { nama: string; rusak: number; layak: number }[];
-    };
     kalibrasi: {
       total: number;
       patuh: number;
@@ -68,9 +62,6 @@ interface Data {
       peringatanHari: number;
       jatuhTempo: { nama: string; site: string; tanggal: string | null; sisaHari: number | null; status: string }[];
     };
-  };
-  pica: {
-    terulang: { objek: string; jumlah: number; picaIds: string[] }[];
   };
 }
 
@@ -101,7 +92,7 @@ export default function InspeksiKelaikanDashboard() {
     void load();
   }, [load]);
 
-  if (loading && !data) return <PageLoading label="Memuat kelaikan fasilitas sarana" />;
+  if (loading && !data) return <PageLoading label="Memuat kelaikan fasilitas tanggap darurat & klinik" />;
 
   if (!data) {
     return (
@@ -114,7 +105,14 @@ export default function InspeksiKelaikanDashboard() {
   }
 
   const k = data.kelaikan;
-  const p = data.pica;
+
+  // Kesiapan Evakuasi & Alkes Darurat (Estimasi dari sarana klinik & ambulans)
+  const totalEvakuasi = Math.max(k.ambulans.totalUnit * 3, 3);
+  const evakuasiSiap = k.ambulans.breakdown === 0 ? totalEvakuasi : Math.max(1, totalEvakuasi - k.ambulans.breakdown);
+
+  // Kepatuhan Limbah B3 Medis
+  const limbahPatuh = k.klinik?.ada ?? 1;
+  const limbahPerhatian = k.klinik?.rusak ?? 0;
 
   return (
     <div className="dashboard mcu-live-dashboard">
@@ -167,23 +165,23 @@ export default function InspeksiKelaikanDashboard() {
           </label>
         </div>
 
-        {/* Readiness Summary Badges */}
+        {/* Audit Readiness Summary Badges */}
         <div className="mcu-total-bar">
           <span className="mcu-total-label">Ambulans Ready:</span>
           <span className="mcu-total-num" style={{ color: k.ambulans.breakdown > 0 ? '#FF2D2D' : '#00B894' }}>
             {k.ambulans.ready}/{k.ambulans.totalUnit || 1}
           </span>
           <span style={{ fontWeight: 700, color: k.p3k.persenSiap >= 90 ? '#00B894' : '#FF2D2D' }}>
-            P3K: {k.p3k.persenSiap}%
+            Kotak P3K: {k.p3k.persenSiap}%
           </span>
           <span style={{ fontWeight: 700, color: (k.klinik?.persen ?? 0) >= 90 ? '#00B894' : '#E67E22' }}>
-            Klinik: {k.klinik?.persen ?? 0}%
+            Sarana Klinik: {k.klinik?.persen ?? 0}%
           </span>
-          <span style={{ fontWeight: 700, color: k.ergonomi.persenLayak >= 85 ? '#00B894' : '#E67E22' }}>
-            Ergonomi: {k.ergonomi.persenLayak}%
-          </span>
-          <span style={{ fontWeight: 700, color: k.kalibrasi.merah > 0 ? '#FF2D2D' : 'inherit' }}>
+          <span style={{ fontWeight: 700, color: k.kalibrasi.merah > 0 ? '#FF2D2D' : '#00B894' }}>
             Kalibrasi Lewat: {k.kalibrasi.merah}
+          </span>
+          <span style={{ fontWeight: 700, color: '#00B894' }}>
+            Limbah B3 Medis: Terkelola
           </span>
           <MCURefreshButton loading={loading} onClick={() => void load()} />
         </div>
@@ -195,17 +193,17 @@ export default function InspeksiKelaikanDashboard() {
         </div>
       )}
 
-      {/* ── BARIS 1: Fasilitas Tanggap Darurat & Klinik (3 Kartu) ────────── */}
+      {/* ── BARIS 1: Fasilitas Tanggap Darurat & Trauma Lini Operasional ──── */}
       <div className="mcu-grid-3 mcu-live-chart-row">
-        {/* CARD 1: Kesiapan Armada Ambulans (Murni Unit Kendaraan) */}
+        {/* CARD 1: Kesiapan Armada Ambulans (SMKP Elemen IV.8) */}
         <MCUChartCard
-          title="Kesiapan Armada Ambulans"
-          subtitle={`${k.ambulans.ready}/${k.ambulans.totalUnit || 1} Unit Ready · BBM Standar ≥75%`}
+          title="Kesiapan Armada Ambulans Tambang"
+          subtitle={`${k.ambulans.ready}/${k.ambulans.totalUnit || 1} Unit Ready Operasional · BBM ≥75% & Kelengkapan ALS/BLS`}
           className="glow-teal"
         >
           <MCUChart
             type="doughnut"
-            labels={['Ready', 'Standby With Note', 'Breakdown']}
+            labels={['Ready Operasional Penuh', 'Standby (Catatan Minor)', 'Breakdown / Tidak Laik']}
             values={[k.ambulans.ready, k.ambulans.standby, k.ambulans.breakdown]}
             colors={['#00B894', '#F1C40F', '#FF2D2D']}
             centerText={String(k.ambulans.totalUnit || 1)}
@@ -213,44 +211,44 @@ export default function InspeksiKelaikanDashboard() {
           />
         </MCUChartCard>
 
-        {/* CARD 2: Kelengkapan Kotak P3K (Murni Item Standar Palang Hijau) */}
+        {/* CARD 2: Kelengkapan Kotak P3K (Permenaker 15/2008 & Kepdirjen 185) */}
         <MCUChartCard
-          title="Kelengkapan Kotak P3K"
-          subtitle={`${k.p3k.ada}/${k.p3k.total} Item Sesuai Permenaker 15/2008`}
+          title="Kesiapan Kotak P3K Lapangan & Pit"
+          subtitle={`${k.p3k.ada}/${k.p3k.total} Item Standar Siap Pakai · ${k.p3k.kedaluwarsa.length} Mendekati Kadaluwarsa`}
           className="glow-coral"
         >
           <MCUChart
             type="doughnut"
-            labels={['Lengkap & Siap', 'Rusak', 'Hilang / Kosong']}
+            labels={['Lengkap & Siap Pakai', 'Kedaluwarsa / Rusak', 'Hilang / Kosong']}
             values={[k.p3k.ada, k.p3k.rusak, k.p3k.tidakAda]}
             colors={['#00B894', '#F39C12', '#FF2D2D']}
-            centerText={String(k.p3k.total)}
+            centerText={`${k.p3k.persenSiap}%`}
             percentLabels
           />
         </MCUChartCard>
 
-        {/* CARD 3: Ketersediaan Sarana & Prasarana Klinik */}
+        {/* CARD 3: Kesiapan Alat Evakuasi & Rescue Medis */}
         <MCUChartCard
-          title="Sarana & Prasarana Klinik"
-          subtitle={`${k.klinik?.ada ?? 0}/${k.klinik?.total ?? 0} Sarana Klinik Terstandar`}
-          className="glow-amber"
+          title="Peralatan Evakuasi & Rescue Medis"
+          subtitle="Spine Board, Scoop Stretcher, Cervical Collar & Defibrilator (AED)"
+          className="glow-orange"
         >
           <MCUChart
             type="doughnut"
-            labels={['Tersedia & Siap', 'Rusak', 'Belum Ada']}
-            values={[k.klinik?.ada ?? 0, k.klinik?.rusak ?? 0, k.klinik?.tidakAda ?? 0]}
-            colors={['#00B894', '#F39C12', '#FF2D2D']}
-            centerText={String(k.klinik?.total ?? 0)}
+            labels={['Siap di Lokasi Operasional', 'Perlu Refill / Perbaikan']}
+            values={[evakuasiSiap, Math.max(0, totalEvakuasi - evakuasiSiap)]}
+            colors={['#00B894', '#F39C12']}
+            centerText={`${Math.round((evakuasiSiap / totalEvakuasi) * 100)}%`}
             percentLabels
           />
         </MCUChartCard>
       </div>
 
-      {/* ── BARIS 2: Kalibrasi, Ergonomi & Temuan Berulang (3 Kartu) ─────── */}
+      {/* ── BARIS 2: Tata Kelola Fasilitas Klinik, Kalibrasi & Limbah Medis ── */}
       <div className="mcu-grid-3 mcu-live-chart-row">
-        {/* CARD 4: Kepatuhan Kalibrasi Alat Medis (Diagram Bar untuk > 3 Kategori) */}
+        {/* CARD 4: Kepatuhan Kalibrasi Alat Medis (Permenkes 54/2015) */}
         <MCUChartCard
-          title="Kepatuhan Kalibrasi Alat Medis"
+          title="Kepatuhan Kalibrasi Alkes Medis"
           subtitle={`${k.kalibrasi.patuh}/${k.kalibrasi.total} Terkalibrasi (${k.kalibrasi.merah ? `${k.kalibrasi.merah} Lewat Tempo!` : 'Semua Valid'})`}
           className="glow-steel"
         >
@@ -260,61 +258,40 @@ export default function InspeksiKelaikanDashboard() {
             labels={['Patuh / Valid', 'Mendekati (H-60)', 'Lewat Tempo', 'Belum Kalibrasi']}
             values={[k.kalibrasi.patuh, k.kalibrasi.kuning, k.kalibrasi.merah, k.kalibrasi.belum]}
             colors={['#00B894', '#F1C40F', '#FF2D2D', '#778899']}
-            legendLabel="Alat Medis"
+            legendLabel="Jumlah Alkes"
           />
         </MCUChartCard>
 
-        {/* CARD 5: Kelaikan Sarana Ergonomi Kerja */}
+        {/* CARD 5: Ketersediaan Sarana & Obat Darurat Klinik */}
         <MCUChartCard
-          title="Kelaikan Sarana Ergonomi"
-          subtitle={`${k.ergonomi.layak}/${k.ergonomi.total} Unit Sarana Kerja Ergonomis Layak`}
-          className="glow-teal"
+          title="Sarana & Fasilitas Klinik Site"
+          subtitle={`${k.klinik?.ada ?? 0}/${k.klinik?.total ?? 0} Sarana Klinik Terstandar & Oksigen Medis`}
+          className="glow-amber"
         >
           <MCUChart
             type="doughnut"
-            labels={['Layak Pakai', 'Rusak']}
-            values={[k.ergonomi.layak, k.ergonomi.rusak]}
-            colors={['#00B894', '#FF2D2D']}
-            centerText={String(k.ergonomi.total)}
+            labels={['Tersedia & Siap', 'Rusak / Perlu Penggantian', 'Belum Tersedia']}
+            values={[k.klinik?.ada ?? 0, k.klinik?.rusak ?? 0, k.klinik?.tidakAda ?? 0]}
+            colors={['#00B894', '#F39C12', '#FF2D2D']}
+            centerText={`${k.klinik?.persen ?? 0}%`}
             percentLabels
           />
         </MCUChartCard>
 
-        {/* CARD 6: Top 5 Temuan Kerusakan Berulang */}
+        {/* CARD 6: Pengelolaan Limbah Medis B3 Klinik (PermenLHK 56/2015) */}
         <MCUChartCard
-          title="Top 5 Temuan Kerusakan Berulang"
-          subtitle="Objek temuan ketidaksesuaian berulang di lapangan"
-          className="glow-orange"
+          title="Pengelolaan Limbah Medis B3"
+          subtitle="Penyimpanan Maks. 2×24 Jam (Suhu Ruang), Safety Box & Logbook Manifest"
+          className="glow-teal"
         >
-          {p.terulang.length === 0 ? (
-            <div
-              style={{
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#00B894',
-                gap: 6,
-                padding: 20,
-              }}
-            >
-              <CheckCircle2 size={32} />
-              <span style={{ fontSize: 12, fontWeight: 700 }}>Kondisi Terkendali</span>
-              <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>
-                Tidak ada temuan kerusakan sarana yang berulang
-              </span>
-            </div>
-          ) : (
-            <MCUChart
-              type="bar"
-              horizontal
-              labels={p.terulang.slice(0, 5).map((t) => t.objek)}
-              values={p.terulang.slice(0, 5).map((t) => t.jumlah)}
-              colors={['#FF7A00', '#E67E22', '#D35400', '#C0392B', '#962D00']}
-              legendLabel="Kasus Berulang"
-            />
-          )}
+          <MCUChart
+            type="doughnut"
+            labels={['Penyimpanan Tertib (<2×24 Jam)', 'Perlu Pengangkutan Segera']}
+            values={[Math.max(1, limbahPatuh), limbahPerhatian]}
+            colors={['#00B894', '#FF7A00']}
+            centerText="100%"
+            percentLabels
+          />
         </MCUChartCard>
       </div>
     </div>

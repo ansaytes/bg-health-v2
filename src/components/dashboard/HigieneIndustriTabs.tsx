@@ -10,16 +10,18 @@
 import { useState } from 'react';
 import HearingConservationDashboard from '@/components/dashboard/HearingConservationDashboard';
 import ErgonomiDashboard from '@/components/dashboard/ErgonomiDashboard';
+import HigieneSanitasiDashboard from '@/components/dashboard/HigieneSanitasiDashboard';
 import PemetaanPsikologisDashboard from '@/components/dashboard/PemetaanPsikologisDashboard';
 import PencahayaanDashboard from '@/components/dashboard/PencahayaanDashboard';
 import UdaraDebuDashboard from '@/components/dashboard/UdaraDebuDashboard';
 import CenteredTabs from '@/components/ui/centered-tabs';
 
-export type HigieneTab = 'hearing' | 'ergonomi' | 'psikologi' | 'cahaya' | 'udara';
+export type HigieneTab = 'hearing' | 'ergonomi' | 'sanitasi' | 'psikologi' | 'cahaya' | 'udara';
 
 const TABS: { key: HigieneTab; label: string }[] = [
   { key: 'hearing', label: 'Hearing Conservation' },
   { key: 'ergonomi', label: 'Ergonomi' },
+  { key: 'sanitasi', label: 'Higiene & Sanitasi' },
   { key: 'psikologi', label: 'Psikologi Lingkungan Kerja' },
   { key: 'cahaya', label: 'Pencahayaan' },
   { key: 'udara', label: 'Kualitas Udara & Debu' },
@@ -35,6 +37,7 @@ export default function HigieneIndustriTabs({ initialTab = 'hearing' }: { initia
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {tab === 'hearing' && <HearingConservationDashboard />}
         {tab === 'ergonomi' && <ErgonomiDashboard />}
+        {tab === 'sanitasi' && <HigieneSanitasiDashboard />}
         {tab === 'psikologi' && <PemetaanPsikologisDashboard />}
         {tab === 'cahaya' && <PencahayaanDashboard />}
         {tab === 'udara' && <UdaraDebuDashboard />}

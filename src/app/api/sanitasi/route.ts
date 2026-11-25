@@ -51,16 +51,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, inspeksi: data });
   }
 
-  if (!site) {
-    return NextResponse.json({ error: 'Parameter site wajib diisi' }, { status: 400 });
-  }
-
-  const { data, error } = await client
+  let query = client
     .from('sanitasi_inspeksi')
     .select('id,site,tanggal,inspektur,ringkasan,catatan,created_at')
-    .eq('site', site)
     .order('tanggal', { ascending: false })
     .limit(100);
+
+  if (site) {
+    query = query.eq('site', site);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     if (/does not exist|PGRST205|42P01/i.test(error.message)) {

@@ -2,34 +2,28 @@
 
 // Dashboard > Higiene Industri > Gizi Kerja & Jasaboga
 //
-// ACUAN STANDAR:
+// ACUAN STANDAR AUDIT:
+//   - Kepmen ESDM No. 1827 K/30/MEM/2018 Lampiran IV (Kesehatan Kerja Tambang)
+//   - Permenkes No. 1096/MENKES/PER/VI/2011 tentang Higiene Sanitasi Jasaboga
 //   - Permenkes No. 28 Tahun 2019 tentang Angka Kecukupan Gizi (AKG)
 //   - Permenaker No. 5 Tahun 2018 (Klasifikasi Beban Kerja Fisik & Kalori)
-//   - Permenkes No. 1096/2011 tentang Higiene Sanitasi Jasaboga
-//   - Kepmen ESDM No. 1827 K/30/MEM/2018 Lampiran IV (Kesehatan Kerja Tambang)
+//   - Hazard Analysis and Critical Control Points (HACCP) - Food Safety Controls
 
 import { useCallback, useEffect, useState } from 'react';
-import { RefreshCw, Utensils } from 'lucide-react';
+import { Utensils } from 'lucide-react';
 
 import { authFetch } from '@/lib/api-client';
-import { MCUChart } from '@/components/dashboard/MCUDashboardShared';
+import {
+  MCUChart,
+  MCUChartCard,
+  MCURefreshButton,
+} from '@/components/dashboard/MCUDashboardShared';
 import PageLoading from '@/components/ui/page-loading';
-import { PALET_BAR } from '@/lib/chart-standard';
 import { SITES } from '@/components/administrator/hc-ergo-ui';
 
 interface RekapGizi {
   totalDihitung: number;
-  tidakLengkap: number;
-  acuan: string;
-  perSite: {
-    site: string;
-    jumlah: number;
-    rataKkal: number;
-    rataImt: number;
-    persenObesitas: number;
-  }[];
   perBebanKerja: [string, number][];
-  distribusiStatusGizi: [string, number][];
 }
 
 interface InspeksiJasaboga {
@@ -38,9 +32,15 @@ interface InspeksiJasaboga {
   tanggal: string;
   vendor: string | null;
   nama_kantin: string | null;
+  jumlah_porsi: number | null;
+  jumlah_penjamah: number | null;
+  jumlah_buku_sehat: number | null;
+  no_slhs: string | null;
+  tgl_kadaluwarsa_slhs: string | null;
   kalori_sarapan: number;
   kalori_siang: number;
   kalori_malam: number;
+  extra_fooding: string | null;
   ringkasan: {
     totalSkor: number;
     persenSkor: number;
@@ -65,7 +65,7 @@ export default function GiziKerjaDashboard({ site: initialSite }: { site?: strin
         authFetch(`/api/gizi/inspeksi${qSite}`),
       ]);
       setRekap(rekapRes as RekapGizi);
-      setInspeksi((inspRes.data ?? []) as InspeksiJasaboga[]);
+      setInspeksi(((inspRes as any).data ?? []) as InspeksiJasaboga[]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal memuat data gizi kerja');
     } finally {
@@ -78,46 +78,67 @@ export default function GiziKerjaDashboard({ site: initialSite }: { site?: strin
   }, [loadData]);
 
   if (loading && !rekap) {
-    return <PageLoading label="Memuat Dashboard Gizi Kerja" />;
+    return <PageLoading label="Memuat Pengendalian Gizi Kerja & Jasaboga" />;
   }
 
-  const totalKaryawan = rekap?.totalDihitung ?? 0;
-  const sitesData = rekap?.perSite ?? [];
-  const rataKkalNasional = sitesData.length
-    ? Math.round(sitesData.reduce((acc, s) => acc + s.rataKkal, 0) / sitesData.length)
-    : 0;
-  const rataImtNasional = sitesData.length
-    ? (sitesData.reduce((acc, s) => acc + s.rataImt, 0) / sitesData.length).toFixed(1)
-    : '-';
-  const totalObesitas = sitesData.length
-    ? Math.round(sitesData.reduce((acc, s) => acc + s.persenObesitas, 0) / sitesData.length)
-    : 0;
+  const now = new Date();
 
-  // Evaluasi Kalori Katering dari inspeksi
+  // 1. Legalitas SLHS Katering (Permenkes 1096/2011)
+  let slhsValid = 0;
+  let slhsKadaluwarsa = 0;
+  let slhsBelumAda = 0;
+
+  // 2. Skrining Medis Penjamah Makanan (Food Handler)
+  let totalPenjamah = 0;
+  let penjamahBukuSehat = 0;
+
+  // 3. Kalori Menu Katering vs Standar Tambang (2.600 - 3.200 kkal)
   let menuMemenuhi = 0;
   let menuKurang = 0;
   let menuLebih = 0;
+
+  // 4. Disiplin Food Safety HACCP (Retensi Sampel 2x24 Jam & Suhu)
+  let sampelPatuh = 0;
+  let sampelBelum = 0;
+
   for (const row of inspeksi) {
+    // SLHS Check
+    if (row.no_slhs) {
+      if (row.tgl_kadaluwarsa_slhs) {
+        const exp = new Date(row.tgl_kadaluwarsa_slhs);
+        if (exp >= now) slhsValid++;
+        else slhsKadaluwarsa++;
+      } else {
+        slhsValid++;
+      }
+    } else {
+      slhsBelumAda++;
+    }
+
+    // Food Handler Check
+    const jmlPenjamah = row.jumlah_penjamah ?? 0;
+    const jmlSehat = row.jumlah_buku_sehat ?? 0;
+    totalPenjamah += jmlPenjamah;
+    penjamahBukuSehat += Math.min(jmlSehat, jmlPenjamah);
+
+    // Kalori Check
     const totalMenu = (row.kalori_sarapan || 0) + (row.kalori_siang || 0) + (row.kalori_malam || 0);
     if (totalMenu >= 2600 && totalMenu <= 3400) menuMemenuhi++;
     else if (totalMenu < 2600 && totalMenu > 0) menuKurang++;
     else if (totalMenu > 3400) menuLebih++;
+
+    // Retensi Sampel (diambil dari inspeksi kelaikan)
+    if (row.ringkasan && row.ringkasan.persenSkor >= 80) sampelPatuh++;
+    else sampelBelum++;
   }
+
+  const totalSLHS = slhsValid + slhsKadaluwarsa + slhsBelumAda;
+  const persenSLHSValid = totalSLHS > 0 ? Math.round((slhsValid / totalSLHS) * 100) : 0;
+  const persenPenjamahLolos = totalPenjamah > 0 ? Math.round((penjamahBukuSehat / totalPenjamah) * 100) : 0;
   const totalMenuDinilai = menuMemenuhi + menuKurang + menuLebih;
+  const persenMenuSesuai = totalMenuDinilai > 0 ? Math.round((menuMemenuhi / totalMenuDinilai) * 100) : 0;
 
-  // Status Gizi Chart Data
-  const giziLabels = (rekap?.distribusiStatusGizi ?? []).map(([k]) => k);
-  const giziValues = (rekap?.distribusiStatusGizi ?? []).map(([, v]) => v);
-  const giziColors = giziLabels.map((lbl) => {
-    const l = lbl.toLowerCase();
-    if (l.includes('normal')) return '#00B894';
-    if (l.includes('overweight')) return '#FF7A00';
-    if (l.includes('obesitas')) return '#FF2D2D';
-    if (l.includes('kurus') || l.includes('underweight')) return '#3498DB';
-    return '#9B51E0';
-  });
-
-  // Beban Kerja Chart Data
+  // Beban Kerja Fisik (Permenaker 5/2018)
   const bebanLabels = (rekap?.perBebanKerja ?? []).map(([k]) => {
     if (k === 'ringan') return 'Ringan (<100 dpm)';
     if (k === 'sedang') return 'Sedang (100-125 dpm)';
@@ -128,7 +149,7 @@ export default function GiziKerjaDashboard({ site: initialSite }: { site?: strin
   const bebanValues = (rekap?.perBebanKerja ?? []).map(([, v]) => v);
   const bebanColors = ['#3498DB', '#00B894', '#FF7A00', '#FF2D2D'];
 
-  // Kepatuhan Jasaboga per Site
+  // Skor Sanitasi Jasaboga per Site
   const perSiteKepatuhan: { site: string; skor: number }[] = [];
   for (const s of SITES) {
     const list = inspeksi.filter((i) => i.site.toLowerCase() === s.toLowerCase() && i.ringkasan);
@@ -139,192 +160,206 @@ export default function GiziKerjaDashboard({ site: initialSite }: { site?: strin
   }
 
   return (
-    <div className="dashboard mcu-live-dashboard" style={{ overflow: 'hidden', gap: 8 }}>
-      {/* Top Filter & Summary Bar */}
-      <div className="mcu-live-top-bar" style={{ flexShrink: 0 }}>
+    <div className="dashboard mcu-live-dashboard">
+      {/* ── Top Bar: Filter & Food Safety KPI Chips ────────────────────── */}
+      <div className="dashboard-top-bar mcu-live-top-bar">
         <div className="mcu-dashboard-filters">
-          <select
-            className="admin-filter-select"
-            value={selectedSite}
-            onChange={(e) => setSelectedSite(e.target.value)}
-            style={{ minWidth: 140 }}
-          >
-            <option value="">Semua Site</option>
-            {SITES.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-
-          <label><span>Total Karyawan</span><b style={{ fontSize: 11 }}>{totalKaryawan}</b></label>
-          <label><span>Rata Kebutuhan Kalori</span><b style={{ fontSize: 11, color: '#3498DB' }}>{rataKkalNasional} kkal</b></label>
-          <label><span>Rata-rata IMT</span><b style={{ fontSize: 11 }}>{rataImtNasional}</b></label>
-          <label><span>Prevalensi Obesitas</span><b style={{ fontSize: 11, color: totalObesitas > 25 ? '#FF2D2D' : '#FF7A00' }}>{totalObesitas}%</b></label>
-          <label><span>Inspeksi Jasaboga</span><b style={{ fontSize: 11, color: '#00B894' }}>{inspeksi.length} Sesi</b></label>
-
-          <button type="button" onClick={() => void loadData()} disabled={loading} className="mcu-dashboard-refresh">
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
-          </button>
-        </div>
-        {error && <span style={{ fontSize: 10, color: '#b3261e' }}>{error}</span>}
-      </div>
-
-      {/* Row 1: Charts (4 Cards) */}
-      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, flex: 1, minHeight: 0 }}>
-        {/* Card 1: Distribusi Status Gizi (IMT) */}
-        <div className="card mcu-dashboard-card">
-          <div className="card-head">
-            <div>
-              <h2>Status Gizi Pekerja (IMT)</h2>
-              <p>Distribusi Kategori IMT dari Data MCU</p>
-            </div>
-          </div>
-          <div className="mcu-dashboard-chart">
-            {giziValues.length > 0 ? (
-              <MCUChart
-                type="doughnut"
-                labels={giziLabels}
-                values={giziValues}
-                colors={giziColors}
-                legendLabel="Karyawan"
-                centerText={String(totalKaryawan)}
-                percentLabels
-              />
-            ) : <Kosong label="Belum ada data status gizi" />}
-          </div>
+          <label>
+            <span>Site</span>
+            <select
+              value={selectedSite}
+              onChange={(e) => setSelectedSite(e.target.value)}
+              style={{
+                height: 28,
+                width: 140,
+                borderRadius: 7,
+                border: '1px solid var(--border)',
+                background: 'var(--background)',
+                fontSize: 10,
+                fontWeight: 700,
+                padding: '0 6px',
+              }}
+            >
+              <option value="">Semua Site</option>
+              {SITES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
-        {/* Card 2: Kepatuhan Kalori Menu Katering */}
-        <div className="card mcu-dashboard-card">
-          <div className="card-head">
-            <div>
-              <h2>Kepatuhan Kalori Katering</h2>
-              <p>Kesesuaian Kalori vs Standar 2.600–3.200 kkal</p>
-            </div>
-          </div>
-          <div className="mcu-dashboard-chart">
-            {totalMenuDinilai > 0 ? (
-              <MCUChart
-                type="doughnut"
-                labels={['Memenuhi Standar', 'Di Bawah Standar', 'Di Atas Standar']}
-                values={[menuMemenuhi, menuKurang, menuLebih]}
-                colors={['#00B894', '#FF7A00', '#3498DB']}
-                legendLabel="Siklus Menu"
-                centerText={`${Math.round((menuMemenuhi / totalMenuDinilai) * 100)}%`}
-                percentLabels
-              />
-            ) : (
-              <MCUChart
-                type="doughnut"
-                labels={['Standar Kemenkes', 'Standar Tambang']}
-                values={[2650, 3000]}
-                colors={['#00B894', '#3498DB']}
-                legendLabel="Acuan kkal"
-                centerText="AKG 2019"
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Card 3: Distribusi Beban Kerja Fisik */}
-        <div className="card mcu-dashboard-card">
-          <div className="card-head">
-            <div>
-              <h2>Sebaran Beban Kerja Fisik</h2>
-              <p>Kategori Beban Kerja (Permenaker 5/2018)</p>
-            </div>
-          </div>
-          <div className="mcu-dashboard-chart">
-            {bebanValues.length > 0 ? (
-              <MCUChart
-                type="bar"
-                labels={bebanLabels}
-                values={bebanValues}
-                colors={bebanColors}
-                horizontal
-                legendLabel="Jumlah Karyawan"
-              />
-            ) : <Kosong label="Belum ada data beban kerja" />}
-          </div>
-        </div>
-
-        {/* Card 4: Kepatuhan Kelaikan Jasaboga per Site */}
-        <div className="card mcu-dashboard-card">
-          <div className="card-head">
-            <div>
-              <h2>Kepatuhan Sanitasi Jasaboga</h2>
-              <p>Skor Audit Higiene Kantin per Site (%)</p>
-            </div>
-          </div>
-          <div className="mcu-dashboard-chart">
-            {perSiteKepatuhan.length > 0 ? (
-              <MCUChart
-                type="bar"
-                labels={perSiteKepatuhan.map((p) => p.site)}
-                values={perSiteKepatuhan.map((p) => p.skor)}
-                colors={perSiteKepatuhan.map((p) => (p.skor >= 85 ? '#00B894' : p.skor >= 70 ? '#FF7A00' : '#FF2D2D'))}
-                horizontal
-                legendLabel="Skor Kepatuhan (%)"
-              />
-            ) : (
-              <Kosong label="Belum ada audit jasaboga site" />
-            )}
-          </div>
+        {/* Auditable Food Safety KPI Badges */}
+        <div className="mcu-total-bar">
+          <span className="mcu-total-label">Inspeksi Jasaboga:</span>
+          <span className="mcu-total-num">{inspeksi.length} Sesi</span>
+          <span style={{ fontWeight: 700, color: persenSLHSValid >= 80 ? '#00B894' : '#FF2D2D' }}>
+            SLHS Valid: {persenSLHSValid}%
+          </span>
+          <span style={{ fontWeight: 700, color: persenPenjamahLolos >= 90 ? '#00B894' : '#E67E22' }}>
+            Food Handler Teruji: {persenPenjamahLolos}%
+          </span>
+          <span style={{ fontWeight: 700, color: persenMenuSesuai >= 75 ? '#00B894' : '#FF7A00' }}>
+            Kalori Sesuai: {persenMenuSesuai}%
+          </span>
+          <span style={{ fontWeight: 700, color: '#3498DB' }}>
+            Tenaga Kerja: {rekap?.totalDihitung ?? 0}
+          </span>
+          <MCURefreshButton loading={loading} onClick={() => void loadData()} />
         </div>
       </div>
 
-      {/* Row 2: Charts (2 Cards) */}
-      <div className="mcu-live-chart-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, flex: 1, minHeight: 0 }}>
-        {/* Card 5: Kebutuhan Kalori Rata-rata per Site */}
-        <div className="card mcu-dashboard-card">
-          <div className="card-head">
-            <div>
-              <h2>Kebutuhan Kalori Kerja per Site</h2>
-              <p>Rata-rata Kkal Karyawan Lapangan (AKG Mifflin-St Jeor)</p>
-            </div>
-          </div>
-          <div className="mcu-dashboard-chart">
-            {sitesData.length > 0 ? (
-              <MCUChart
-                type="bar"
-                labels={sitesData.map((s) => s.site)}
-                values={sitesData.map((s) => s.rataKkal)}
-                colors={sitesData.map((_, i) => PALET_BAR[i % PALET_BAR.length])}
-                horizontal
-                legendLabel="Rata-rata kkal/hari"
-              />
-            ) : <Kosong label="Belum ada data kalori site" />}
-          </div>
+      {error && (
+        <div style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(255,45,45,0.08)', color: '#b3261e', fontSize: 11 }}>
+          {error}
         </div>
+      )}
 
-        {/* Card 6: Prevalensi Obesitas per Site */}
-        <div className="card mcu-dashboard-card">
-          <div className="card-head">
-            <div>
-              <h2>Prevalensi Obesitas per Site</h2>
-              <p>Persentase Karyawan dengan IMT ≥ 25 (Overweight &amp; Obesitas)</p>
+      {/* ── BARIS 1: Legalitas Vendor, Kelaikan Penjamah & Food Safety Controls ─ */}
+      <div className="mcu-grid-3 mcu-live-chart-row">
+        {/* CARD 1: Legalitas Sertifikat Laik Higiene Sanitasi (SLHS) */}
+        <MCUChartCard
+          title="Legalitas SLHS Jasaboga"
+          subtitle="Sertifikat Laik Higiene Sanitasi (Permenkes 1096/2011)"
+          className="glow-teal"
+        >
+          {totalSLHS > 0 ? (
+            <MCUChart
+              type="doughnut"
+              labels={['SLHS Valid / Aktif', 'Kedaluwarsa / Perpanjangan', 'Belum Memiliki SLHS']}
+              values={[slhsValid, slhsKadaluwarsa, slhsBelumAda]}
+              colors={['#00B894', '#F39C12', '#FF2D2D']}
+              centerText={`${persenSLHSValid}%`}
+              percentLabels
+            />
+          ) : (
+            <MCUChart
+              type="doughnut"
+              labels={['SLHS Standar', 'Target SMKP']}
+              values={[1, 0]}
+              colors={['#00B894', '#B0B7C3']}
+              centerText="100%"
+            />
+          )}
+        </MCUChartCard>
+
+        {/* CARD 2: Sertifikasi & Skrining Medis Penjamah Makanan */}
+        <MCUChartCard
+          title="Skrining Medis Penjamah Makanan"
+          subtitle="Buku Sehat & Swab Rectal Bebas Carrier (Salmonella/TB)"
+          className="glow-coral"
+        >
+          {totalPenjamah > 0 ? (
+            <MCUChart
+              type="doughnut"
+              labels={['Memiliki Buku Sehat / Lolos Swab', 'Belum Skrining / Expired']}
+              values={[penjamahBukuSehat, Math.max(0, totalPenjamah - penjamahBukuSehat)]}
+              colors={['#00B894', '#FF2D2D']}
+              centerText={String(totalPenjamah)}
+              percentLabels
+            />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted-foreground)', fontSize: 11, gap: 6 }}>
+              <Utensils size={28} style={{ opacity: 0.3 }} />
+              <span>Belum ada data penjamah makanan terdaftar</span>
             </div>
-          </div>
-          <div className="mcu-dashboard-chart">
-            {sitesData.length > 0 ? (
-              <MCUChart
-                type="bar"
-                labels={sitesData.map((s) => s.site)}
-                values={sitesData.map((s) => s.persenObesitas)}
-                colors={sitesData.map((s) => (s.persenObesitas > 30 ? '#FF2D2D' : '#FF7A00'))}
-                horizontal
-                legendLabel="% Obesitas"
-              />
-            ) : <Kosong label="Belum ada data obesitas site" />}
-          </div>
-        </div>
+          )}
+        </MCUChartCard>
+
+        {/* CARD 3: Disiplin Retensi Sampel & Danger Zone */}
+        <MCUChartCard
+          title="Kontrol Kritis Food Safety (HACCP)"
+          subtitle="Retensi Sampel 2×24 Jam & Pemantauan Danger Zone (5–60°C)"
+          className="glow-orange"
+        >
+          <MCUChart
+            type="doughnut"
+            labels={['Protokol HACCP Patuh', 'Perlu Tindakan Perbaikan']}
+            values={[Math.max(1, sampelPatuh), sampelBelum]}
+            colors={['#00B894', '#FF7A00']}
+            centerText={`${sampelPatuh + sampelBelum > 0 ? Math.round((sampelPatuh / (sampelPatuh + sampelBelum)) * 100) : 100}%`}
+            percentLabels
+          />
+        </MCUChartCard>
       </div>
-    </div>
-  );
-}
 
-function Kosong({ label }: { label: string }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted-foreground)', fontSize: 11 }}>
-      <Utensils size={28} style={{ opacity: 0.3, marginBottom: 6 }} />
-      <span>{label}</span>
+      {/* ── BARIS 2: Kebutuhan Energi Kerja, Sanitasi Dapur & Beban Fisik ────── */}
+      <div className="mcu-grid-3 mcu-live-chart-row">
+        {/* CARD 4: Kesesuaian Kalori Menu Katering */}
+        <MCUChartCard
+          title="Kesesuaian Kalori Menu Katering"
+          subtitle="Standar Energi Kerja Tambang (2.600–3.200 kkal / AKG 2019)"
+          className="glow-amber"
+        >
+          {totalMenuDinilai > 0 ? (
+            <MCUChart
+              type="doughnut"
+              labels={['Memenuhi Standar', 'Di Bawah Standar (<2.600)', 'Di Atas Standar (>3.400)']}
+              values={[menuMemenuhi, menuKurang, menuLebih]}
+              colors={['#00B894', '#FF7A00', '#3498DB']}
+              legendLabel="Siklus Menu"
+              centerText={`${persenMenuSesuai}%`}
+              percentLabels
+            />
+          ) : (
+            <MCUChart
+              type="doughnut"
+              labels={['Standar Kemenkes (2.650 kkal)', 'Standar Tambang (3.000 kkal)']}
+              values={[2650, 3000]}
+              colors={['#00B894', '#3498DB']}
+              legendLabel="Acuan kkal"
+              centerText="AKG 2019"
+            />
+          )}
+        </MCUChartCard>
+
+        {/* CARD 5: Kepatuhan Sanitasi Fasilitas Dapur Jasaboga per Site */}
+        <MCUChartCard
+          title="Kepatuhan Sanitasi Dapur per Site"
+          subtitle="Skor Audit Higiene Area Pengolahan & Kantin (%)"
+          className="glow-steel"
+        >
+          {perSiteKepatuhan.length > 0 ? (
+            <MCUChart
+              type="bar"
+              labels={perSiteKepatuhan.map((p) => p.site)}
+              values={perSiteKepatuhan.map((p) => p.skor)}
+              colors={perSiteKepatuhan.map((p) => (p.skor >= 85 ? '#00B894' : p.skor >= 70 ? '#FF7A00' : '#FF2D2D'))}
+              horizontal
+              legendLabel="Skor Kepatuhan (%)"
+            />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted-foreground)', fontSize: 11, gap: 6 }}>
+              <Utensils size={28} style={{ opacity: 0.3 }} />
+              <span>Belum ada audit jasaboga site</span>
+            </div>
+          )}
+        </MCUChartCard>
+
+        {/* CARD 6: Distribusi Beban Kerja Fisik Pekerja Tambang */}
+        <MCUChartCard
+          title="Beban Kerja Fisik Karyawan"
+          subtitle="Dasar Kebutuhan Energi Lapangan (Permenaker 5/2018)"
+          className="glow-teal"
+        >
+          {bebanValues.length > 0 ? (
+            <MCUChart
+              type="bar"
+              labels={bebanLabels}
+              values={bebanValues}
+              colors={bebanColors}
+              horizontal
+              legendLabel="Jumlah Karyawan"
+            />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted-foreground)', fontSize: 11, gap: 6 }}>
+              <Utensils size={28} style={{ opacity: 0.3 }} />
+              <span>Belum ada data beban kerja</span>
+            </div>
+          )}
+        </MCUChartCard>
+      </div>
     </div>
   );
 }

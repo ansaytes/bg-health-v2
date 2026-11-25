@@ -73,14 +73,14 @@ const AGGREGATE_FIELDS: { key: keyof IndicatorRow; label: string; hint?: string;
   { key: 'kejadian_penyakit_tk', label: 'Kejadian Akibat Penyakit TK', hint: 'Jumlah kejadian KAPTK' },
 ];
 
-const LAGGING_FIELDS: { key: keyof IndicatorRow; label: string; formula: string; isPercent?: boolean }[] = [
-  { key: 'rkk',    label: 'Rasio Kelayakan Kerja (RKK)',         formula: '= Layak Bekerja / Σ Man Power', isPercent: true },
-  { key: 'cmr',    label: 'Angka Kesakitan Kasar (CMR)',          formula: '= TK Sakit / Σ Man Power', isPercent: true },
-  { key: 'mfr',    label: 'Kekerapan Kesakitan (MFR)',            formula: '= (TK Sakit × 10⁶) / Man Hours' },
-  { key: 'ssr',    label: 'Keparahan Penyakit (SSR)',             formula: '= Total Absensi Sakit / TK Sakit' },
-  { key: 'asr',    label: 'Keparahan Absensi (ASR)',              formula: '= (Absensi Sakit × 10⁶) / Man Hours' },
-  { key: 'fr_pak', label: 'Frekuensi PAK (FR PAK)',               formula: '= Penyakit Akibat Kerja / Σ Man Power', isPercent: true },
-  { key: 'kaptk',  label: 'Kejadian Akibat Penyakit TK (KAPTK)',   formula: 'Count kejadian' },
+const LAGGING_FIELDS: { key: keyof IndicatorRow; label: string; formula: string; isPercent?: boolean; placeholder?: string; hint?: string }[] = [
+  { key: 'rkk',    label: 'Rasio Kelayakan Kerja (RKK)',         formula: '= Layak Bekerja / Σ Man Power', isPercent: true, placeholder: '0.00 - 1.00 (cth: 0.95 = 95%)', hint: 'Gunakan desimal 0 - 1 (cth: 0.95 = 95%)' },
+  { key: 'cmr',    label: 'Angka Kesakitan Kasar (CMR)',          formula: '= TK Sakit / Σ Man Power', isPercent: true, placeholder: '0.00 - 1.00 (cth: 0.05 = 5%)', hint: 'Gunakan desimal 0 - 1 (cth: 0.05 = 5%)' },
+  { key: 'mfr',    label: 'Kekerapan Kesakitan (MFR)',            formula: '= (TK Sakit × 10⁶) / Man Hours', placeholder: 'Kekerapan per 10⁶ jam' },
+  { key: 'ssr',    label: 'Keparahan Penyakit (SSR)',             formula: '= Total Absensi Sakit / TK Sakit', placeholder: 'Hari hilang per kasus sakit' },
+  { key: 'asr',    label: 'Keparahan Absensi (ASR)',              formula: '= (Absensi Sakit × 10⁶) / Man Hours', placeholder: 'Keparahan per 10⁶ jam' },
+  { key: 'fr_pak', label: 'Frekuensi PAK (FR PAK)',               formula: '= Penyakit Akibat Kerja / Σ Man Power', isPercent: true, placeholder: '0.00 - 1.00 (cth: 0 = Zero PAK)', hint: 'Gunakan desimal 0 - 1 (target 0)' },
+  { key: 'kaptk',  label: 'Kejadian Akibat Penyakit TK (KAPTK)',   formula: 'Count kejadian', placeholder: '0' },
 ];
 
 export default function LaggingIndicatorPage() {
@@ -161,8 +161,14 @@ function StatistikKesehatanForm() {
   const showFormulaMismatch = LAGGING_FIELDS.some(f => isMismatch(f.key));
 
   const setField = (key: keyof IndicatorRow, value: string) => {
-    const num = parseFloat(value);
-    setRow(prev => ({ ...prev, [key]: isNaN(num) ? 0 : num }));
+    let num = parseFloat(value);
+    if (isNaN(num)) num = 0;
+    // Auto-sanitizer (Resiko 1): Jika user mengetik angka > 1 pada kolom rasio persentase (misal: 95 -> 0.95)
+    const fieldDef = LAGGING_FIELDS.find(f => f.key === key);
+    if (fieldDef?.isPercent && num > 1) {
+      num = Number((num / 100).toFixed(6));
+    }
+    setRow(prev => ({ ...prev, [key]: num }));
     setSaved(false);
   };
 
@@ -186,28 +192,70 @@ function StatistikKesehatanForm() {
     setSaved(false);
   };
 
-  /* Auto-aggregate counts from kunjungan_berobat + sick_employees tables */
+  /* Auto-aggregate counts from kunjungan_berobat + sick_employees + man_power + mcu_records */
   const handleAutoAggregate = async () => {
     setAggregating(true);
     setErrorMsg('');
     setAggregateInfo('');
     try {
       const url = `/api/health-indicators/aggregate?tahun=${row.tahun}&bulan=${row.bulan}&jobsite=${encodeURIComponent(row.jobsite)}`;
-      const json = await authFetch<{ success: boolean; data: Record<string, number>; sources: { kunjungan_berobat_rows: number; sick_employees_rows: number }; error?: string }>(url);
+      const json = await authFetch<{
+        success: boolean;
+        data: Record<string, number>;
+        sources: {
+          kunjungan_berobat_rows: number;
+          sick_employees_rows: number;
+          man_power_synced?: boolean;
+          layak_bekerja_synced?: boolean;
+        };
+        error?: string;
+      }>(url);
       const agg = json.data;
       const src = json.sources;
+
+      // Nilai denominator: gunakan hasil sinkronisasi jika ada, atau pertahankan nilai sebelumnya
+      const newMp = agg.man_power > 0 ? agg.man_power : (row.man_power || 0);
+      const newMh = agg.man_hours > 0 ? agg.man_hours : (row.man_hours || 0);
+      const newLb = agg.layak_bekerja > 0 ? agg.layak_bekerja : (row.layak_bekerja || 0);
+      const newTks = agg.tk_sakit || 0;
+      const newAbs = agg.absensi_sakit || 0;
+      const newPak = agg.penyakit_akibat_kerja || 0;
+      const newKunj = agg.kunjungan_klinik || 0;
+      const newSpell = agg.spell || 0;
+
+      // Resiko 2 Solusi: Langsung hitung otomatis formula lagging indicators saat auto-aggregate!
+      const newRkk = newMp > 0 ? (newLb / newMp) : 0;
+      const newCmr = newMp > 0 ? (newTks / newMp) : 0;
+      const newMfr = newMh > 0 ? ((newTks * 1_000_000) / newMh) : 0;
+      const newSsr = newTks > 0 ? (newAbs / newTks) : 0;
+      const newAsr = newMh > 0 ? ((newAbs * 1_000_000) / newMh) : 0;
+      const newFrPak = newMp > 0 ? (newPak / newMp) : 0;
+
       setRow(prev => ({
         ...prev,
-        kunjungan_klinik: agg.kunjungan_klinik,
-        tk_sakit: agg.tk_sakit,
-        absensi_sakit: agg.absensi_sakit,
-        spell: agg.spell,
-        penyakit_akibat_kerja: agg.penyakit_akibat_kerja,
-        // kejadian_penyakit_tk not derivable from sick_employees — keep existing value
+        man_power: newMp,
+        man_hours: newMh,
+        layak_bekerja: newLb,
+        kunjungan_klinik: newKunj,
+        tk_sakit: newTks,
+        absensi_sakit: newAbs,
+        spell: newSpell,
+        penyakit_akibat_kerja: newPak,
+        rkk: newRkk,
+        cmr: newCmr,
+        mfr: newMfr,
+        ssr: newSsr,
+        asr: newAsr,
+        fr_pak: newFrPak,
       }));
-      setAggregateInfo(
-        `${src.kunjungan_berobat_rows} kunjungan${row.jobsite === 'Head Office' || row.jobsite === 'All Site' ? '' : ' (HO only)'} + ${src.sick_employees_rows} karyawan sakit`
-      );
+
+      const syncNotes: string[] = [];
+      if (src.man_power_synced) syncNotes.push('MP & Jam Kerja tersinkron');
+      if (src.layak_bekerja_synced) syncNotes.push('Layak Kerja MCU tersinkron');
+      syncNotes.push(`${src.sick_employees_rows} Karyawan Sakit`);
+      if (newKunj > 0) syncNotes.push(`${newKunj} Kunjungan`);
+
+      setAggregateInfo(syncNotes.join(' · ') + ' → Formula langsung terkalkulasi!');
       setSaved(false);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Gagal meng-aggregate data');
@@ -382,7 +430,12 @@ function StatistikKesehatanForm() {
                   onChange={(e) => setField(f.key, e.target.value)}
                   className={`admin-input compact-input${mismatch ? ' input-warning' : ''}`}
                   style={mismatch ? { borderColor: 'var(--destructive, #dc2626)', outline: 'none' } : undefined}
-                  placeholder="0" />
+                  placeholder={f.placeholder || '0'} />
+                {f.hint && (
+                  <p style={{ fontSize: 9, color: 'var(--muted-foreground)', margin: '2px 0 0', lineHeight: 1.2 }}>
+                    {f.hint}
+                  </p>
+                )}
                 {mismatch && expFormatted && (
                   <p style={{ fontSize: 9.5, color: 'var(--destructive, #dc2626)', margin: '2px 0 0', lineHeight: 1.3 }}>
                     ⚠ Perlu verifikasi: formula menghasilkan {expFormatted}

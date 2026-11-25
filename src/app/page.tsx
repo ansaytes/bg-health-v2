@@ -678,6 +678,7 @@ function DashContent() {
     case 'gizi-kerja-dashboard': return <GiziKerjaDashboard />;
     case 'hearing-dashboard': return <HigieneIndustriTabs initialTab="hearing" />;
     case 'ergonomi-dashboard': return <HigieneIndustriTabs initialTab="ergonomi" />;
+    case 'sanitasi-dashboard': return <HigieneIndustriTabs initialTab="sanitasi" />;
     // SDS-30 = faktor psikologi lingkungan kerja → bagian Higiene Industri.
     case 'mental-health-dashboard': return <MentalHealthDashboard />;
     case 'pemetaan-psikologis': return <HigieneIndustriTabs initialTab="psikologi" />;

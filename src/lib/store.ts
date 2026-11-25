@@ -6,7 +6,7 @@ import { applyMCUCalculations, buildAutomaticFollowUpRecommendations, suggestRek
 import { AUTO_INTERPRETATION_FIELDS } from './clinical-classification';
 
 export type PageTab = 'home' | 'dashboard' | 'data-entry' | 'administrator';
-export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan' | 'layanan-kuratif' | 'inventory-dashboard' | 'hearing-dashboard' | 'ergonomi-dashboard' | 'mental-health-dashboard' | 'pemetaan-psikologis' | 'higiene-industri' | 'persetujuan-ergonomi' | 'prokawan-dashboard' | 'spip' | 'inspeksi-dashboard' | 'gizi-kerja-dashboard';
+export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan' | 'layanan-kuratif' | 'inventory-dashboard' | 'hearing-dashboard' | 'ergonomi-dashboard' | 'mental-health-dashboard' | 'pemetaan-psikologis' | 'higiene-industri' | 'persetujuan-ergonomi' | 'prokawan-dashboard' | 'spip' | 'inspeksi-dashboard' | 'gizi-kerja-dashboard' | 'sanitasi-dashboard';
 export type AdminSidebar = 'lagging-indicator' | 'review-mcu' | 'input-jadwal-mcu' | 'kunjungan-admin' | 'health-campaign' | 'kelola-pengguna' | 'hearing-conservation' | 'ergonomi' | 'layanan-kuratif-admin' | 'higiene-industri-admin' | 'hra-admin' | 'gizi-kerja-admin' | 'pak-register' | 'prokawan-admin' | 'karyawan-sakit' | 'sarana-klinik' | 'inspeksi-sanitasi' | 'checklist-fasilitas' | 'program-inspeksi' | 'pica' | 'checklist-p3k' | 'checklist-ambulans' | 'checklist-ergonomi' | 'pengaturan';
 export type DataEntrySidebar = 'gangguan-tidur' | 'kesehatan-mental' | 'psikologi-lingkungan' | 'input-jadwal-mcu' | 'persetujuan-ergonomi' | 'persetujuan-inspeksi';
 export type HomeSidebar = 'semua-feed' | 'health-campaign' | 'health-talk' | 'podcast' | 'news';

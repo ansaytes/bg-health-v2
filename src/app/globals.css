@@ -451,17 +451,11 @@
   background: rgba(255, 255, 255, 0.06);
 }
 .header-nav-item.active {
-  background: var(--card);
-  color: #FF4D00;
+  background: linear-gradient(180deg, #FF6F1A 0%, #FF4D00 100%);
+  color: #ffffff;
   font-weight: 700;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(255, 77, 0, 0.25);
-}
-.dark .header-nav-item.active {
-  background: var(--card);
-  color: #FF5E00;
-  border-color: rgba(255, 94, 0, 0.35);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 1px 4px rgba(255, 77, 0, 0.35);
+  border: none;
 }
 
 .theme-btn {
@@ -4790,17 +4784,11 @@ select option:active {
   background: rgba(255, 255, 255, 0.06);
 }
 .centered-tab.is-active {
-  background: var(--card);
-  color: #FF4D00;
+  background: linear-gradient(180deg, #FF6F1A 0%, #FF4D00 100%);
+  color: #ffffff;
   font-weight: 700;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(255, 77, 0, 0.25);
-}
-.dark .centered-tab.is-active {
-  background: var(--card);
-  color: #FF5E00;
-  border-color: rgba(255, 94, 0, 0.35);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 1px 4px rgba(255, 77, 0, 0.35);
+  border: none;
 }
 .centered-tab-count {
   display: inline-grid;
@@ -4817,12 +4805,8 @@ select option:active {
   color: var(--muted-foreground);
 }
 .centered-tab.is-active .centered-tab-count {
-  background: rgba(255, 77, 0, 0.12);
-  color: #FF4D00;
-}
-.dark .centered-tab.is-active .centered-tab-count {
-  background: rgba(255, 94, 0, 0.2);
-  color: #FF5E00;
+  background: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
 }
 
 /* Latar semua <select> WAJIB solid (ditaruh paling akhir agar menang atas aturan

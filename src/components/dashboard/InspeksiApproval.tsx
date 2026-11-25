@@ -158,8 +158,8 @@ export default function InspeksiApproval() {
 
   const tabsWithCount = useMemo(() => [
     { key: 'menunggu_persetujuan' as const, label: 'Menunggu Persetujuan', count: tab === 'menunggu_persetujuan' ? rows.length : undefined },
-    { key: 'disetujui' as const, label: 'Sudah Disetujui', count: tab === 'disetujui' ? rows.length : undefined },
-    { key: 'ditolak_perbaikan' as const, label: 'Ditolak / Perbaikan', count: tab === 'ditolak_perbaikan' ? rows.length : undefined },
+    { key: 'selesai' as const, label: 'Sudah Disetujui', count: tab === 'selesai' ? rows.length : undefined },
+    { key: 'ditolak' as const, label: 'Ditolak / Evaluasi Ulang', count: tab === 'ditolak' ? rows.length : undefined },
   ], [tab, rows.length]);
 
   return (

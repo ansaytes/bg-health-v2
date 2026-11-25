@@ -137,9 +137,58 @@ export async function GET(request: NextRequest) {
     // admin must input manually
     const kejadian_penyakit_tk = 0;
 
+//  3. Aggregate from man_power (Sinkronisasi otomatis Resiko 3)
+    let man_power = 0;
+    let man_hours = 0;
+    try {
+      let mpQuery = client
+        .from('man_power')
+        .select('man_power, man_hours, hari_kerja')
+        .eq('tahun', tahunNum)
+        .eq('bulan', bulanNum);
+      if (jobsite !== 'All Site') {
+        mpQuery = mpQuery.eq('jobsite', jobsite);
+      }
+      const { data: mpRows } = await mpQuery;
+      if (mpRows && mpRows.length > 0) {
+        man_power = mpRows.reduce((sum, r) => sum + (Number(r.man_power) || 0), 0);
+        man_hours = mpRows.reduce((sum, r) => {
+          const mh = r.man_hours ? Number(r.man_hours) : (Number(r.man_power || 0) * Number(r.hari_kerja || 0));
+          return sum + mh;
+        }, 0);
+      }
+    } catch {
+      // Non-blocking jika tabel man_power kosong/tidak tersedia
+    }
+
+//  4. Aggregate Layak Bekerja from mcu_records (Otomasi Resiko 4)
+    let layak_bekerja = 0;
+    try {
+      let mcuQuery = client
+        .from('mcu_records')
+        .select('id, rek_qshe, kes_vendor')
+        .gte('tgl_mcu', `${tahunNum}-01-01`)
+        .lte('tgl_mcu', `${tahunNum}-12-31`);
+      if (jobsite !== 'All Site') {
+        mcuQuery = mcuQuery.eq('site', jobsite);
+      }
+      const { data: mcuRows } = await mcuQuery;
+      if (mcuRows && mcuRows.length > 0) {
+        layak_bekerja = mcuRows.filter(r => {
+          const kes = ((r.rek_qshe || r.kes_vendor) || '').toLowerCase();
+          return kes.includes('fit') && !kes.includes('unfit');
+        }).length;
+      }
+    } catch {
+      // Non-blocking jika mcu_records belum tersedia
+    }
+
     return NextResponse.json({
       success: true,
       data: {
+        man_power,
+        man_hours,
+        layak_bekerja,
         kunjungan_klinik,
         tk_sakit,
         absensi_sakit,
@@ -150,6 +199,8 @@ export async function GET(request: NextRequest) {
       sources: {
         kunjungan_berobat_rows: kunjungan_klinik,
         sick_employees_rows: sickList.length,
+        man_power_synced: man_power > 0,
+        layak_bekerja_synced: layak_bekerja > 0,
         period_used: { tahun: tahunNum, bulan: bulanNum, jobsite },
       },
     });
