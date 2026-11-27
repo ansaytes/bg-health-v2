@@ -155,7 +155,7 @@ export default function SaranaKlinik({ onBukaPica }: { onBukaPica?: () => void }
   };
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '94%', margin: '0 auto' }}>
+    <div className="admin-scroll-body" style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '94%', margin: '0 auto' }}>
       <div className="admin-form-inner">
         {/* Judul Halaman ala Hearing Conservation / Ergonomi */}
         <div style={{ marginBottom: 8 }}>

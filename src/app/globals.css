@@ -3291,6 +3291,34 @@ select.admin-input.compact-input {
   .raw-table-filter-bar {
     flex-wrap: wrap !important;
   }
+  .kunjungan-top-bar {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    padding: 0 !important;
+  }
+  .kunjungan-filter-bar {
+    flex-wrap: wrap !important;
+    width: 100% !important;
+  }
+  .kunjungan-total-right {
+    margin-left: 0 !important;
+    flex-wrap: wrap !important;
+  }
+  .mcu-records-modern,
+  .mcu-records-card {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .mcu-records-table-wrap {
+    flex: 0 0 auto !important;
+    min-height: 0 !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
   .sick-monitor-grid {
     display: flex !important;
     flex-direction: column !important;

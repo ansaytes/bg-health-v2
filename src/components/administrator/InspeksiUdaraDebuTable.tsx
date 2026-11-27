@@ -65,7 +65,7 @@ export default function InspeksiUdaraDebuTable() {
   const adaGagal = data.filter((d) => d.penilaian && d.penilaian.statusUdara && d.penilaian.statusUdara.some((x) => x.status === 'tidak-memenuhi')).length;
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '94%', margin: '0 auto' }}>
+    <div className="admin-scroll-body" style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '94%', margin: '0 auto' }}>
       <div className="admin-form-inner">
         <div style={{ marginBottom: 8 }}>
           <h1 className="admin-form-title">Rekapitulasi Kualitas Udara &amp; Debu Ruangan</h1>

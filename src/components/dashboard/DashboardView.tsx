@@ -826,7 +826,7 @@ export default function DashboardView() {
             <div className="card-icon" style={{ background: 'rgba(255,99,71,.1)' }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="#ff6347" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" /></svg>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
               <div style={{ minWidth: 0 }}>
                 <h2>Peringkat Karyawan Sakit</h2>
                 <p>{isYTD

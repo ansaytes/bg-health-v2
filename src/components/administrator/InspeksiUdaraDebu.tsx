@@ -252,7 +252,7 @@ export default function InspeksiUdaraDebu() {
   }
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '94%', margin: '0 auto' }}>
+    <div className="admin-scroll-body" style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '94%', margin: '0 auto' }}>
       <div className="admin-form-inner">
         {/* Header */}
         <div style={{ marginBottom: 8 }}>
