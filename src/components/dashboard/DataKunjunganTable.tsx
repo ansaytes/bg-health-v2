@@ -820,62 +820,66 @@ export default function DataKunjunganTable({ canEdit = false }: DataKunjunganTab
               </div>
 
               {editMedications.map((med, idx) => (
-                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr auto', gap: 6, alignItems: 'center', marginBottom: 6 }}>
-                  <input
-                    type="text"
-                    list="edit-inventory-list"
-                    placeholder="Nama Obat / BHP"
-                    value={med.nama}
-                    onChange={e => {
-                      const v = e.target.value;
-                      setEditMedications(prev => prev.map((m, i) => i === idx ? { ...m, nama: v } : m));
-                    }}
-                    style={{ height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)', padding: '0 6px', fontSize: 11 }}
-                  />
-                  <select
-                    value={med.aturan}
-                    onChange={e => {
-                      const v = e.target.value;
-                      setEditMedications(prev => prev.map((m, i) => i === idx ? { ...m, aturan: v } : m));
-                    }}
-                    style={{ height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)', padding: '0 6px', fontSize: 11 }}
-                  >
-                    {DEFAULT_DOSIS.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                  <input
-                    type="number"
-                    placeholder="Qty"
-                    value={med.jumlah}
-                    onChange={e => {
-                      const v = e.target.value;
-                      setEditMedications(prev => prev.map((m, i) => i === idx ? { ...m, jumlah: v } : m));
-                    }}
-                    style={{ height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)', padding: '0 6px', fontSize: 11 }}
-                  />
-                  <select
-                    value={med.satuan}
-                    onChange={e => {
-                      const v = e.target.value;
-                      setEditMedications(prev => prev.map((m, i) => i === idx ? { ...m, satuan: v } : m));
-                    }}
-                    style={{ height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)', padding: '0 6px', fontSize: 11 }}
-                  >
-                    {['Tablet', 'Pcs', 'Btl/Flash', 'Ampul', 'Tube', 'Kapsul', 'Sachet'].map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => setEditMedications(prev => prev.filter((_, i) => i !== idx))}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#FF4444', padding: 2 }}
-                    title="Hapus baris obat"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                <div key={idx} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--card)', marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      list="edit-inventory-list"
+                      placeholder="Nama Obat / BHP"
+                      value={med.nama}
+                      onChange={e => {
+                        const v = e.target.value;
+                        setEditMedications(prev => prev.map((m, i) => i === idx ? { ...m, nama: v } : m));
+                      }}
+                      style={{ flex: 1, minWidth: 0, height: 32, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)', padding: '0 8px', fontSize: 11.5 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setEditMedications(prev => prev.filter((_, i) => i !== idx))}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#FF4444', padding: 4, flexShrink: 0 }}
+                      title="Hapus baris obat"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 100px), 1fr))', gap: 6 }}>
+                    <select
+                      value={med.aturan}
+                      onChange={e => {
+                        const v = e.target.value;
+                        setEditMedications(prev => prev.map((m, i) => i === idx ? { ...m, aturan: v } : m));
+                      }}
+                      style={{ width: '100%', height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)', padding: '0 6px', fontSize: 11 }}
+                    >
+                      {DEFAULT_DOSIS.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                    <input
+                      type="number"
+                      placeholder="Qty"
+                      value={med.jumlah}
+                      onChange={e => {
+                        const v = e.target.value;
+                        setEditMedications(prev => prev.map((m, i) => i === idx ? { ...m, jumlah: v } : m));
+                      }}
+                      style={{ width: '100%', height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)', padding: '0 6px', fontSize: 11 }}
+                    />
+                    <select
+                      value={med.satuan}
+                      onChange={e => {
+                        const v = e.target.value;
+                        setEditMedications(prev => prev.map((m, i) => i === idx ? { ...m, satuan: v } : m));
+                      }}
+                      style={{ width: '100%', height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--background)', padding: '0 6px', fontSize: 11 }}
+                    >
+                      {['Tablet', 'Pcs', 'Btl/Flash', 'Ampul', 'Tube', 'Kapsul', 'Sachet'].map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
                 </div>
               ))}
             </div>
 
             {/* 5. Rujukan & Status Istirahat */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: 10 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--foreground)', marginBottom: 3 }}>Rujuk RS</label>
                 <select

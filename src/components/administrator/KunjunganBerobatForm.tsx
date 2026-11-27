@@ -816,14 +816,14 @@ export default function KunjunganBerobatForm() {
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       <span style={{ fontSize: 12, color: 'var(--muted-foreground)', width: 20 }}>{index + 1}.</span>
                       {isCustomMode ? (
-                        <div style={{ display: 'flex', gap: 6, flex: 1, alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: 6, flex: 1, alignItems: 'center', flexWrap: 'wrap', minWidth: 0 }}>
                           <input
                             type="text"
                             value={diag.text}
                             onChange={e => handleDiagnosisChange(diag.id, e.target.value)}
                             placeholder="Ketik diagnosa baru (cth: Common Cold, Faringitis...)"
                             className="admin-input"
-                            style={{ flex: 1 }}
+                            style={{ flex: '1 1 160px', minWidth: 0 }}
                           />
                           <button
                             type="button"
@@ -923,15 +923,6 @@ export default function KunjunganBerobatForm() {
                 </Button>
               </div>
 
-              <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
-                <span style={{ fontSize: 10.5, fontWeight: 600, width: 20 }}></span>
-                <span style={{ fontSize: 10.5, fontWeight: 600, flex: 2 }}>Nama Obat / BHP (Tabel Inventory)</span>
-                <span style={{ fontSize: 10.5, fontWeight: 600, flex: 1.2 }}>Dosis / Aturan Pakai</span>
-                <span style={{ fontSize: 10.5, fontWeight: 600, width: 70 }}>Jumlah</span>
-                <span style={{ fontSize: 10.5, fontWeight: 600, width: 90 }}>Satuan (Auto)</span>
-                <span style={{ width: 36 }}></span>
-              </div>
-
               {medications.map((med, index) => {
                 const isNewDosis = med.aturan.trim() && !masterDosis.some(d => d.toLowerCase() === med.aturan.trim().toLowerCase());
                 const medQuery = med.nama.trim().toLowerCase();
@@ -942,10 +933,26 @@ export default function KunjunganBerobatForm() {
                 const curSatuan = med.satuan || 'Tablet';
                 const allSatuanOpts = satuanOpts.includes(curSatuan) ? satuanOpts : [curSatuan, ...satuanOpts];
                 return (
-                  <div key={med.id} style={{ marginBottom: 6 }}>
+                  <div
+                    key={med.id}
+                    style={{
+                      marginBottom: 8,
+                      padding: '8px 10px',
+                      borderRadius: 8,
+                      border: '1px solid var(--border)',
+                      background: 'var(--background)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                    }}
+                  >
+                    {/* Baris 1: Nomor + Nama Obat / BHP (lebar penuh agar dropdown jelas) + Tombol Hapus */}
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <span style={{ fontSize: 12, color: 'var(--muted-foreground)', width: 20 }}>{index + 1}.</span>
-                      <div style={{ flex: 2, position: 'relative' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted-foreground)', flexShrink: 0 }}>{index + 1}.</span>
+                      <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+                        <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--muted-foreground)', marginBottom: 3 }}>
+                          Nama Obat / BHP (Tabel Inventory)
+                        </label>
                         <input
                           type="text"
                           value={med.nama}
@@ -989,7 +996,7 @@ export default function KunjunganBerobatForm() {
                                   textAlign: 'left',
                                   border: 'none',
                                   background: 'transparent',
-                                  padding: '5px 8px',
+                                  padding: '6px 8px',
                                   borderRadius: 6,
                                   cursor: 'pointer',
                                   display: 'flex',
@@ -998,10 +1005,10 @@ export default function KunjunganBerobatForm() {
                                 }}
                                 className="hover:bg-black/5 dark:hover:bg-white/5"
                               >
-                                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--foreground)', lineHeight: 1.25 }}>
+                                <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--foreground)', lineHeight: 1.25 }}>
                                   {item.name}
                                 </span>
-                                <span style={{ fontSize: 9.5, color: 'var(--muted-foreground)', lineHeight: 1.2 }}>
+                                <span style={{ fontSize: 10, color: 'var(--muted-foreground)', lineHeight: 1.2 }}>
                                   Satuan: {item.unit}{item.stock !== undefined ? ` · Stok: ${item.stock}` : ''}
                                 </span>
                               </button>
@@ -1009,47 +1016,65 @@ export default function KunjunganBerobatForm() {
                           </div>
                         )}
                       </div>
-                      <input
-                        type="text"
-                        list="master-dosis-list"
-                        value={med.aturan}
-                        onChange={e => handleMedicationFieldChange(med.id, 'aturan', e.target.value)}
-                        placeholder="Dosis (cth: 3DD1)"
-                        className="admin-input"
-                        style={{ flex: 1.2 }}
-                      />
-                      <input
-                        type="number"
-                        value={med.jumlah}
-                        onChange={e => handleMedicationFieldChange(med.id, 'jumlah', e.target.value)}
-                        placeholder="Jml"
-                        className="admin-input"
-                        style={{ width: 70 }}
-                      />
-                      <select
-                        value={curSatuan}
-                        onChange={e => handleMedicationFieldChange(med.id, 'satuan', e.target.value)}
-                        className="admin-input"
-                        style={{ width: 90 }}
-                      >
-                        {allSatuanOpts.map((sat) => (
-                          <option key={sat} value={sat}>{sat}</option>
-                        ))}
-                      </select>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveMedication(med.id)}
                         className="text-red-500 hover:text-red-600"
+                        style={{ alignSelf: 'flex-end', flexShrink: 0 }}
+                        title="Hapus item obat"
                       >
                         <Trash2 size={16} />
                       </Button>
                     </div>
 
+                    {/* Baris 2: Dosis, Jumlah, Satuan dalam grid responsif */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: 8 }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--muted-foreground)', marginBottom: 3 }}>
+                          Dosis / Aturan Pakai
+                        </label>
+                        <input
+                          type="text"
+                          list="master-dosis-list"
+                          value={med.aturan}
+                          onChange={e => handleMedicationFieldChange(med.id, 'aturan', e.target.value)}
+                          placeholder="Dosis (cth: 3DD1)"
+                          className="admin-input"
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--muted-foreground)', marginBottom: 3 }}>
+                          Jumlah
+                        </label>
+                        <input
+                          type="number"
+                          value={med.jumlah}
+                          onChange={e => handleMedicationFieldChange(med.id, 'jumlah', e.target.value)}
+                          placeholder="Jml"
+                          className="admin-input"
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--muted-foreground)', marginBottom: 3 }}>
+                          Satuan (Auto)
+                        </label>
+                        <select
+                          value={curSatuan}
+                          onChange={e => handleMedicationFieldChange(med.id, 'satuan', e.target.value)}
+                          className="admin-input"
+                        >
+                          {allSatuanOpts.map((sat) => (
+                            <option key={sat} value={sat}>{sat}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
                     {/* Tombol Simpan ke Master Dosis jika dosis belum ada di database */}
                     {isNewDosis && (
-                      <div style={{ marginLeft: 28, marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <button
                           type="button"
                           onClick={() => handleSaveNewDosisToMaster(med.aturan)}

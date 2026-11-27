@@ -141,13 +141,19 @@ function NoiseTab({ areas, onMsg, onSaved }: { areas: Row[]; onMsg: (m: any) => 
           {pts.map((p, i) => {
             const leq = parseFloat(p.leq_dba); const z = Number.isFinite(leq) ? zonaFromLeq(leq) : null;
             return (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '110px 1fr 110px 110px 90px 32px', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-                <input style={smallInput} placeholder="mis. WS-T1" title="Kode titik ukur (mis. WS-T1 untuk Workshop)" value={p.kode_titik} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, kode_titik: e.target.value } : x))} />
-                <input style={smallInput} placeholder="Lokasi titik, mis. 1 meter dari genset" value={p.deskripsi} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, deskripsi: e.target.value } : x))} />
-                <input style={smallInput} type="number" step="0.1" placeholder="85.5 dBA" title="Nilai Leq dalam dBA" value={p.leq_dba} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, leq_dba: e.target.value } : x))} />
-                <input style={smallInput} type="number" placeholder="10 Menit" title="Durasi pengukuran dalam menit (minimal 5)" value={p.durasi_menit} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, durasi_menit: e.target.value } : x))} />
-                <div>{z ? <Chip text={z} color={ZONA_COLOR[z]} /> : <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>-</span>}</div>
-                <button type="button" disabled={pts.length === 1} onClick={() => setPts(pts.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E63946' }}><Trash2 size={14} /></button>
+              <div key={i} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--background)', marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input style={{ ...smallInput, width: 100, flexShrink: 0 }} placeholder="mis. WS-T1" title="Kode titik ukur (mis. WS-T1 untuk Workshop)" value={p.kode_titik} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, kode_titik: e.target.value } : x))} />
+                  <input style={{ ...smallInput, flex: '1 1 180px', minWidth: 0 }} placeholder="Lokasi titik, mis. 1 meter dari genset" value={p.deskripsi} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, deskripsi: e.target.value } : x))} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+                    {z ? <Chip text={z} color={ZONA_COLOR[z]} /> : <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>-</span>}
+                    <button type="button" disabled={pts.length === 1} onClick={() => setPts(pts.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E63946', padding: 4 }}><Trash2 size={14} /></button>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: 8 }}>
+                  <input style={smallInput} type="number" step="0.1" placeholder="85.5 dBA" title="Nilai Leq dalam dBA" value={p.leq_dba} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, leq_dba: e.target.value } : x))} />
+                  <input style={smallInput} type="number" placeholder="10 Menit" title="Durasi pengukuran dalam menit (minimal 5)" value={p.durasi_menit} onChange={(e) => setPts(pts.map((x, j) => j === i ? { ...x, durasi_menit: e.target.value } : x))} />
+                </div>
               </div>
             );
           })}

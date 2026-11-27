@@ -936,9 +936,10 @@ export default function GiziKerjaForm() {
                             background: cur === 'tidak_sesuai' ? 'rgba(255,45,45,0.05)' : 'transparent',
                             borderBottom: '1px dashed var(--border)',
                             gap: 12,
+                            flexWrap: 'wrap',
                           }}
                         >
-                          <div style={{ flex: 1, minWidth: 200 }}>
+                          <div style={{ flex: '1 1 200px', minWidth: 0 }}>
                             <div style={{ fontSize: 11.5, fontWeight: 600 }}>{it.judul}</div>
                             <div style={{ fontSize: 10, color: 'var(--muted-foreground)', marginTop: 2 }}>
                               {it.keterangan}

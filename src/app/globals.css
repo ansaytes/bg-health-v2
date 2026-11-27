@@ -3319,13 +3319,13 @@ select.admin-input.compact-input {
   .card-icon { width: 20px; height: 20px; border-radius: 5px; }
   .card-icon svg { width: 10px; height: 10px; }
   /* Stats: fix number overflow on mobile */
-  .stats-grid { gap: 4px; padding: 2px; grid-template-columns: 1fr 1fr; }
-  .stat-box { padding: 6px 8px; gap: 4px; border-radius: 8px; min-height: auto; }
+  .stats-grid { gap: 6px; padding: 2px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat-box { padding: 8px 10px; gap: 4px; border-radius: 8px; min-height: auto; min-width: 0; flex-direction: column; align-items: stretch; }
   .stat-val { font-size: 16px; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-  .stat-label { font-size: 7px; text-align: left; flex: unset; white-space: nowrap; }
-  .stat-box.stat-wide { padding: 6px 8px; }
+  .stat-label { font-size: 8.5px; text-align: left; flex: unset; white-space: normal; line-height: 1.25; }
+  .stat-box.stat-wide { padding: 8px 10px; align-items: center; }
   .stat-wide .stat-val { font-size: 20px; }
-  .stat-wide .stat-label { font-size: 8px; text-align: center; }
+  .stat-wide .stat-label { font-size: 9px; text-align: center; }
   .chart-box, .mcu-dashboard-chart { height: 215px !important; min-height: 215px !important; max-height: 215px !important; }
   .mcu-total-bar { padding: 4px 8px; gap: 4px; font-size: 9.5px; flex-wrap: wrap; line-height: 1.6; }
   .mcu-total-num { font-size: 11.5px; }
@@ -3807,14 +3807,36 @@ select option:active {
 
   /* Dashboard cards mobile */
   .stats-grid {
-    grid-template-columns: 1fr 1fr !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 6px;
   }
+  .stat-box {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    min-width: 0 !important;
+    padding: 8px 10px !important;
+    gap: 4px !important;
+  }
+  .stat-box.stat-wide {
+    align-items: center !important;
+  }
+  .stat-box.stat-wide > div:first-child {
+    width: 100%;
+    justify-content: center !important;
+    gap: 8px;
+  }
   .stat-val {
-    font-size: 18px;
+    font-size: 17px;
   }
   .stat-label {
-    font-size: 10px;
+    font-size: 9px !important;
+    text-align: left !important;
+    white-space: normal !important;
+    flex: unset !important;
+    line-height: 1.25;
+  }
+  .stat-wide .stat-label {
+    text-align: center !important;
   }
 
   /* Raw tables mobile */
