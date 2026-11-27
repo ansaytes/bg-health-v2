@@ -1118,8 +1118,19 @@ export default function KunjunganBerobatForm() {
         <DialogContent className="sm:max-w-3xl" style={{ maxHeight: '85vh', overflowY: 'auto' }}>
           <DialogHeader>
             <DialogTitle style={{ fontSize: 16 }}>Riwayat Kunjungan Pasien</DialogTitle>
-            <DialogDescription>
-              {form.nama || 'Pasien'} · NIK: {form.nik || 'Non-NIK'} · {form.departemen || '-'} · {form.site || '-'}
+            <DialogDescription asChild>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4, fontSize: 11, alignItems: 'center' }}>
+                <span style={{ fontWeight: 700, color: 'var(--foreground)' }}>{form.nama || 'Pasien'}</span>
+                <span style={{ padding: '1px 6px', borderRadius: 4, background: 'rgba(0,0,0,0.04)', color: 'var(--foreground)' }}>
+                  NIK: <b>{form.nik || 'Non-NIK'}</b>
+                </span>
+                <span style={{ padding: '1px 6px', borderRadius: 4, background: 'rgba(155,89,182,0.08)', color: '#8e44ad', border: '1px solid rgba(155,89,182,0.2)' }}>
+                  Departemen: <b>{form.departemen || '-'}</b>
+                </span>
+                <span style={{ padding: '1px 6px', borderRadius: 4, background: 'rgba(46,204,113,0.08)', color: '#27ae60', border: '1px solid rgba(46,204,113,0.2)' }}>
+                  Site: <b>{form.site || '-'}</b>
+                </span>
+              </div>
             </DialogDescription>
           </DialogHeader>
 

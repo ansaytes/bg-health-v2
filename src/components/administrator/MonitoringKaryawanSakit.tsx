@@ -376,9 +376,22 @@ function DetailEpisode({ episode, onBerubah, toast }: {
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 200 }}>
             <h2 style={{ fontSize: 14, fontWeight: 800, margin: 0 }}>{episode.nama ?? '-'}</h2>
-            <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: '2px 0 0' }}>
-              NIK {episode.nik ?? '-'} · {episode.site ?? '-'} · {episode.department ?? 'Departemen tidak tercatat'}
-            </p>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4, fontSize: 10.5 }}>
+              <span style={{ padding: '1px 6px', borderRadius: 4, background: 'rgba(0,0,0,0.04)', color: 'var(--foreground)' }}>
+                NIK: <b>{episode.nik ?? '-'}</b>
+              </span>
+              <span style={{ padding: '1px 6px', borderRadius: 4, background: 'rgba(46,204,113,0.08)', color: '#27ae60', border: '1px solid rgba(46,204,113,0.2)' }}>
+                Site: <b>{episode.site ?? '-'}</b>
+              </span>
+              <span style={{ padding: '1px 6px', borderRadius: 4, background: 'rgba(155,89,182,0.08)', color: '#8e44ad', border: '1px solid rgba(155,89,182,0.2)' }}>
+                Departemen: <b>{episode.department ?? 'Tidak tercatat'}</b>
+              </span>
+              {episode.jabatan && (
+                <span style={{ padding: '1px 6px', borderRadius: 4, background: 'rgba(52,152,219,0.08)', color: '#2980b9', border: '1px solid rgba(52,152,219,0.2)' }}>
+                  Jabatan: <b>{episode.jabatan}</b>
+                </span>
+              )}
+            </div>
           </div>
           <span style={{
             fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 4,

@@ -437,33 +437,69 @@ export default function EmployeeLookupInput({
                   {emp.nama || '(Tanpa nama)'}
                 </div>
                 <div style={{
-                  fontSize: 11,
-                  color: '#666',
-                  marginTop: 3,
+                  fontSize: 10.5,
+                  marginTop: 4,
                   display: 'flex',
-                  gap: 10,
+                  gap: 6,
+                  flexWrap: 'wrap',
                   alignItems: 'center',
                   fontFamily: 'inherit',
                 }}>
-                  {emp.national_id && (
+                  {emp.job_position && (
                     <span style={{
-                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                      fontSize: 10.5,
-                      color: '#555',
-                      background: 'rgba(0,0,0,0.04)',
-                      padding: '2px 6px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 3,
+                      background: 'rgba(52, 152, 219, 0.08)',
+                      color: '#2980b9',
+                      border: '1px solid rgba(52, 152, 219, 0.2)',
+                      padding: '1px 6px',
                       borderRadius: 4,
+                      fontWeight: 500,
                     }}>
-                      {emp.national_id}
+                      <span style={{ fontSize: 9, opacity: 0.7, textTransform: 'uppercase' }}>Jabatan:</span> {emp.job_position}
+                    </span>
+                  )}
+                  {emp.department && (
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 3,
+                      background: 'rgba(155, 89, 182, 0.08)',
+                      color: '#8e44ad',
+                      border: '1px solid rgba(155, 89, 182, 0.2)',
+                      padding: '1px 6px',
+                      borderRadius: 4,
+                      fontWeight: 500,
+                    }}>
+                      <span style={{ fontSize: 9, opacity: 0.7, textTransform: 'uppercase' }}>Dept:</span> {emp.department}
                     </span>
                   )}
                   {emp.site_name && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                        <circle cx="12" cy="10" r="3" />
-                      </svg>
-                      {emp.site_name}
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 3,
+                      background: 'rgba(46, 204, 113, 0.08)',
+                      color: '#27ae60',
+                      border: '1px solid rgba(46, 204, 113, 0.2)',
+                      padding: '1px 6px',
+                      borderRadius: 4,
+                      fontWeight: 500,
+                    }}>
+                      <span style={{ fontSize: 9, opacity: 0.7, textTransform: 'uppercase' }}>Site:</span> {emp.site_name}
+                    </span>
+                  )}
+                  {emp.national_id && (
+                    <span style={{
+                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                      fontSize: 10,
+                      color: '#666',
+                      background: 'rgba(0,0,0,0.04)',
+                      padding: '1px 5px',
+                      borderRadius: 4,
+                    }}>
+                      KTP: {emp.national_id}
                     </span>
                   )}
                 </div>

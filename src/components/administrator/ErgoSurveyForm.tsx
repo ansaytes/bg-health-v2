@@ -82,7 +82,7 @@ export default function ErgoSurveyForm() {
 
   const found = (e: EmployeeData) => {
     setId((p) => ({ ...p, pekerja_diamati: e.nama || p.pekerja_diamati, nik_pekerja: e.nik ? String(e.nik) : p.nik_pekerja,
-      departemen: p.departemen || e.department || '', site: p.site || e.site_name || '' }));
+      departemen: p.departemen || e.department || '', site: p.site || e.site_name || '', aktivitas: p.aktivitas || e.job_position || '' }));
   };
   const clearWorker = () => { setId((p) => ({ ...p, pekerja_diamati: '', nik_pekerja: '' })); setQuery(''); };
 
@@ -160,7 +160,15 @@ export default function ErgoSurveyForm() {
                   {id.pekerja_diamati ? (
                     <Field label="Nama Pekerja yang Diamati">
                       <div style={{ display: 'flex', gap: 10, alignItems: 'center', border: '2px solid #00B894', borderRadius: 8, padding: '8px 12px', background: 'rgba(0,184,148,0.07)' }}>
-                        <div style={{ flex: 1, minWidth: 0 }}><b style={{ fontSize: 13 }}>{id.pekerja_diamati}</b><div style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>NIK {id.nik_pekerja || '-'}</div></div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <b style={{ fontSize: 13 }}>{id.pekerja_diamati}</b>
+                          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4, fontSize: 10.5 }}>
+                            <span style={{ color: 'var(--muted-foreground)' }}>NIK: <b>{id.nik_pekerja || '-'}</b></span>
+                            <span style={{ color: '#2980b9' }}>Jabatan: <b>{id.aktivitas || '-'}</b></span>
+                            <span style={{ color: '#8e44ad' }}>Departemen: <b>{id.departemen || '-'}</b></span>
+                            <span style={{ color: '#27ae60' }}>Site: <b>{id.site || '-'}</b></span>
+                          </div>
+                        </div>
                         <Btn onClick={clearWorker}>Ganti</Btn>
                       </div>
                     </Field>

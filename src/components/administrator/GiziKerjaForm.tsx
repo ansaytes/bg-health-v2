@@ -172,10 +172,43 @@ export default function GiziKerjaForm() {
   const [catatan, setCatatan] = useState('');
   const [menyimpan, setMenyimpan] = useState(false);
 
+  // PICA Terstruktur (Problem Identification & Corrective Action)
+  const defaultDueDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 14);
+    return d.toISOString().slice(0, 10);
+  }, []);
+  const [picaNo, setPicaNo] = useState(`PICA-GIZI/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${String(Date.now()).slice(-4)}`);
+  const [picaTemuan, setPicaTemuan] = useState('');
+  const [picaAkarMasalah, setPicaAkarMasalah] = useState('');
+  const [picaTindakan, setPicaTindakan] = useState('');
+  const [picaPic, setPicaPic] = useState('');
+  const [picaDueDate, setPicaDueDate] = useState(defaultDueDate);
+  const [picaStatus, setPicaStatus] = useState<'OPEN' | 'IN_PROGRESS' | 'CLOSED'>('OPEN');
+
   // Hitung Skor Real-time
   const evaluasiSkor = useMemo(() => {
     return hitungSkorInspeksiGizi(jawaban);
   }, [jawaban]);
+
+  // Fungsi otomatis menarik temuan tidak sesuai ke PICA
+  const handleTarikTemuanKePica = useCallback(() => {
+    const temuanList: string[] = [];
+    for (const item of CHECKLIST_GIZI) {
+      if (jawaban[item.id] === 'tidak_sesuai') {
+        const katLabel = KATEGORI_GIZI[item.kategori]?.label || item.kategori;
+        temuanList.push(`• [${item.id}] ${katLabel} — ${item.judul}: ${item.keterangan}`);
+      }
+    }
+    if (temuanList.length === 0) {
+      store.showToast('Tidak ada item dengan status "Tidak Sesuai" pada checklist.', 'info');
+      return;
+    }
+    const textTemuan = temuanList.join('\n');
+    setPicaTemuan((prev) => (prev ? `${prev}\n${textTemuan}` : textTemuan));
+    if (!picaPic && vendor) setPicaPic(vendor);
+    store.showToast(`${temuanList.length} temuan berhasil dimasukkan ke form PICA.`, 'success');
+  }, [jawaban, vendor, picaPic, store]);
 
   // Total Kalori Siklus
   const totalKaloriMenu = (Number(kaloriSarapan) || 0) + (Number(kaloriSiang) || 0) + (Number(kaloriMalam) || 0);
@@ -226,6 +259,13 @@ export default function GiziKerjaForm() {
         extra_fooding: extraFooding,
         jawaban,
         catatan,
+        pica_no: picaNo.trim() || undefined,
+        pica_temuan: picaTemuan.trim() || undefined,
+        pica_akar_masalah: picaAkarMasalah.trim() || undefined,
+        pica_tindakan: picaTindakan.trim() || undefined,
+        pica_pic: picaPic.trim() || undefined,
+        pica_due_date: picaDueDate || undefined,
+        pica_status: picaStatus,
       };
 
       const res = await authFetch('/api/gizi/inspeksi', {
@@ -233,7 +273,7 @@ export default function GiziKerjaForm() {
         body: JSON.stringify(payload),
       });
 
-      store.showToast(res.pesan || 'Data inspeksi jasaboga & gizi kerja berhasil disimpan', 'success');
+      store.showToast(res.pesan || 'Data inspeksi jasaboga & register PICA berhasil disimpan', 'success');
     } catch (e) {
       store.showToast(e instanceof Error ? e.message : 'Gagal menyimpan inspeksi gizi kerja', 'error');
     } finally {
@@ -1000,16 +1040,141 @@ export default function GiziKerjaForm() {
             </div>
           </div>
 
-          <Field label="Catatan / Tindakan Perbaikan (PICA) Auditor">
-            <textarea
-              className="admin-input"
-              rows={3}
-              style={{ width: '100%', fontSize: 11, padding: '6px 8px' }}
-              placeholder="Tuliskan temuan ketidaksesuaian, catatan suhu chiller, atau batas waktu perbaikan untuk pengelola kantin/jasaboga..."
-              value={catatan}
-              onChange={(e) => setCatatan(e.target.value)}
-            />
-          </Field>
+          {/* ─── PICA TERSTRUKTUR (Problem Identification & Corrective Action) ─── */}
+          <div style={{
+            marginTop: 16,
+            padding: '14px 16px',
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+              <div>
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#FF7A00', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+                  Register PICA Inspeksi Jasaboga
+                </span>
+                <p style={{ margin: '2px 0 0', fontSize: 10.5, color: 'var(--muted-foreground)' }}>
+                  Problem Identification &amp; Corrective Action: pencatatan ketidaksesuaian, akar masalah, tindakan perbaikan, penanggung jawab, dan due date.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {evaluasiSkor.totalTidakSesuai > 0 && (
+                  <Btn
+                    type="button"
+                    onClick={handleTarikTemuanKePica}
+                    style={{ height: 28, fontSize: 10.5, background: 'rgba(255,122,0,0.12)', color: '#FF7A00', border: '1px solid rgba(255,122,0,0.3)' }}
+                  >
+                    Tarik {evaluasiSkor.totalTidakSesuai} Temuan Checklist
+                  </Btn>
+                )}
+                <span style={{
+                  padding: '3px 8px',
+                  borderRadius: 10,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  background: picaStatus === 'OPEN' ? 'rgba(255,45,45,0.12)' : picaStatus === 'IN_PROGRESS' ? 'rgba(255,122,0,0.12)' : 'rgba(0,184,148,0.12)',
+                  color: picaStatus === 'OPEN' ? '#FF2D2D' : picaStatus === 'IN_PROGRESS' ? '#FF7A00' : '#00B894',
+                }}>
+                  STATUS: {picaStatus}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ ...grid4, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginBottom: 10 }}>
+              <Field label="Nomor Register PICA">
+                <input
+                  type="text"
+                  className="admin-input"
+                  style={smallInput}
+                  placeholder="Contoh: PICA-GIZI/2026/02/001"
+                  value={picaNo}
+                  onChange={(e) => setPicaNo(e.target.value)}
+                />
+              </Field>
+
+              <Field label="Status Tindak Lanjut PICA">
+                <select
+                  className="admin-input"
+                  style={smallInput}
+                  value={picaStatus}
+                  onChange={(e) => setPicaStatus(e.target.value as 'OPEN' | 'IN_PROGRESS' | 'CLOSED')}
+                >
+                  <option value="OPEN">OPEN (Menunggu Perbaikan)</option>
+                  <option value="IN_PROGRESS">IN PROGRESS (Sedang Dikerjakan)</option>
+                  <option value="CLOSED">CLOSED (Selesai &amp; Diverifikasi)</option>
+                </select>
+              </Field>
+
+              <Field label="Penanggung Jawab (PIC Tindakan)">
+                <input
+                  type="text"
+                  className="admin-input"
+                  style={smallInput}
+                  placeholder="Contoh: Vendor Katering / Pengelola Kantin"
+                  value={picaPic}
+                  onChange={(e) => setPicaPic(e.target.value)}
+                />
+              </Field>
+
+              <Field label="Target Batas Waktu (Due Date)">
+                <input
+                  type="date"
+                  className="admin-input"
+                  style={smallInput}
+                  value={picaDueDate}
+                  onChange={(e) => setPicaDueDate(e.target.value)}
+                />
+              </Field>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 10, marginBottom: 10 }}>
+              <Field label="Temuan Ketidaksesuaian (Problem Identification)">
+                <textarea
+                  className="admin-input"
+                  rows={3}
+                  style={{ width: '100%', fontSize: 11, padding: '6px 8px' }}
+                  placeholder="Uraikan temuan audit higiene, sanitasi dapur, suhu chiller, atau kecukupan kalori..."
+                  value={picaTemuan}
+                  onChange={(e) => setPicaTemuan(e.target.value)}
+                />
+              </Field>
+
+              <Field label="Analisis Akar Masalah (Root Cause)">
+                <textarea
+                  className="admin-input"
+                  rows={3}
+                  style={{ width: '100%', fontSize: 11, padding: '6px 8px' }}
+                  placeholder="Penyebab ketidaksesuaian (faktor manusia, peralatan rusak, SOP belum berjalan, dll)..."
+                  value={picaAkarMasalah}
+                  onChange={(e) => setPicaAkarMasalah(e.target.value)}
+                />
+              </Field>
+
+              <Field label="Tindakan Koreksi &amp; Pencegahan (Corrective &amp; Preventive Action)">
+                <textarea
+                  className="admin-input"
+                  rows={3}
+                  style={{ width: '100%', fontSize: 11, padding: '6px 8px' }}
+                  placeholder="Langkah nyata perbaikan vendor kantin dan langkah agar masalah tidak terulang..."
+                  value={picaTindakan}
+                  onChange={(e) => setPicaTindakan(e.target.value)}
+                />
+              </Field>
+            </div>
+
+            <Field label="Catatan Tambahan Auditor (Opsional)">
+              <textarea
+                className="admin-input"
+                rows={2}
+                style={{ width: '100%', fontSize: 11, padding: '6px 8px' }}
+                placeholder="Catatan inspektur, kondisi khusus saat audit, atau hasil observasi langsung..."
+                value={catatan}
+                onChange={(e) => setCatatan(e.target.value)}
+              />
+            </Field>
+          </div>
 
           <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
             <Btn

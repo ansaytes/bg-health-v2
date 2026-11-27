@@ -875,10 +875,12 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
   const [regNik, setRegNik] = useState("");
   const [regNama, setRegNama] = useState("");
   const [regJabatan, setRegJabatan] = useState("");
+  const [regDepartment, setRegDepartment] = useState("");
   const [regJobsite, setRegJobsite] = useState("");
   const [regEmployee, setRegEmployee] = useState<{
     nama: string;
     job_position: string;
+    department?: string;
     site_name: string;
     lookupToken: string;
   } | null>(null);
@@ -889,6 +891,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
   const [regPassword, setRegPassword] = useState("");
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegPassword, setShowRegPassword] = useState(false);
+  const [pulsing, setPulsing] = useState(false);
 
   useEffect(() => {
     const query = regNik.trim();
@@ -942,6 +945,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
           setRegEmployee(employee);
           setRegNama(employee.nama);
           setRegJabatan(employee.job_position || '');
+          setRegDepartment(employee.department || '');
           setRegJobsite(employee.site_name || '');
           setRegLookupStatus('found');
         } else {
@@ -1029,7 +1033,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
               textAlign: 'center',
             }}
           >
-            {mode === 'login' ? 'Login' : 'Pendaftaran Baru'}
+            {mode === 'login' ? '' : 'Pendaftaran Baru'}
           </span>
 
           <button
@@ -1110,8 +1114,16 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
             {error && (
               <p className="login-error-msg" style={{ marginBottom: 12 }}>{error}</p>
             )}
-            <button type="submit" className="login-btn" disabled={loading}>
-              {loading ? 'Memproses...' : 'Login'}
+            <button
+              type="submit"
+              className={`login-btn${pulsing ? ' is-pulsing' : ''}`}
+              disabled={loading}
+              onClick={() => {
+                setPulsing(true);
+                setTimeout(() => setPulsing(false), 500);
+              }}
+            >
+              {loading ? 'Memproses...' : 'Sign In'}
             </button>
           </form>
           </>
@@ -1159,6 +1171,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
                   setRegCandidates([]);
                   setRegNama('');
                   setRegJabatan('');
+                  setRegDepartment('');
                   setRegJobsite('');
                   setRegLookupStatus('idle');
                   setRegLookupError('');
@@ -1178,6 +1191,7 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
                         setRegEmployee(employee);
                         setRegNama(employee.nama);
                         setRegJabatan(employee.job_position || '');
+                        setRegDepartment(employee.department || '');
                         setRegJobsite(employee.site_name || '');
                         setRegLookupStatus('found');
                         setRegLookupError('');
@@ -1193,16 +1207,44 @@ function LoginPopup({ onClose }: { onClose: () => void }) {
                       }}
                     >
                       <strong>{employee.nama}</strong>
-                      <span style={{ display: 'block', fontSize: 11, color: 'var(--muted-foreground)' }}>
-                        {employee.job_position} · {employee.site_name}
-                      </span>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4, fontSize: 10.5 }}>
+                        <span style={{ padding: '1px 6px', borderRadius: 4, background: 'rgba(52,152,219,0.08)', color: '#2980b9', border: '1px solid rgba(52,152,219,0.2)' }}>
+                          Jabatan: {employee.job_position || '-'}
+                        </span>
+                        <span style={{ padding: '1px 6px', borderRadius: 4, background: 'rgba(155,89,182,0.08)', color: '#8e44ad', border: '1px solid rgba(155,89,182,0.2)' }}>
+                          Dept: {employee.department || '-'}
+                        </span>
+                        <span style={{ padding: '1px 6px', borderRadius: 4, background: 'rgba(46,204,113,0.08)', color: '#27ae60', border: '1px solid rgba(46,204,113,0.2)' }}>
+                          Site: {employee.site_name || '-'}
+                        </span>
+                      </div>
                     </button>
                   ))}
                 </div>
               )}
               {regNama && (
-                <div style={{ marginTop: 6, fontSize: 11, color: 'var(--muted-foreground)', background: 'var(--muted)', padding: '4px 8px', borderRadius: 6 }}>
-                  ✓ {regNama} : {regJabatan} : {regJobsite}
+                <div style={{
+                  marginTop: 8,
+                  padding: '8px 10px',
+                  borderRadius: 8,
+                  background: 'var(--muted)',
+                  border: '1px solid var(--border)',
+                  fontSize: 11,
+                }}>
+                  <div style={{ fontWeight: 700, fontSize: 12, color: 'var(--foreground)', marginBottom: 4 }}>
+                    ✓ {regNama}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 10.5 }}>
+                    <span style={{ color: 'var(--muted-foreground)' }}>
+                      <b>Jabatan:</b> {regJabatan || '-'}
+                    </span>
+                    <span style={{ color: 'var(--muted-foreground)' }}>
+                      <b>Departemen:</b> {regDepartment || '-'}
+                    </span>
+                    <span style={{ color: 'var(--muted-foreground)' }}>
+                      <b>Site:</b> {regJobsite || '-'}
+                    </span>
+                  </div>
                 </div>
               )}
               {regLookupError && (
@@ -1345,9 +1387,9 @@ export default function Home() {
     resetSidebar(activePage);
   }, [activePage, resetSidebar]);
 
-  // Role-based header nav: menu tanpa wewenang disembunyikan total.
+  // Role-based header nav: menu tanpa wewenang disembunyikan total. Mode tamu (belum login) header bersih tanpa menu button.
   const headerNav = ALL_HEADER_NAV.filter((item) => {
-    if (!isLoggedIn) return item.key === 'home';
+    if (!isLoggedIn) return false;
     if (role === 'employee') return item.key === 'home' || item.key === 'data-entry';
     if (item.key === 'administrator') return ['administrator', 'superuser'].includes(role || '');
     if (item.key === 'dashboard') return ['pic', 'manager', 'administrator', 'superuser'].includes(role || '');
@@ -1501,32 +1543,36 @@ export default function Home() {
         </div>
       </aside>
 
-      <div className="main">
+      <div className={`main${!isLoggedIn ? ' is-guest' : ''}`}>
         <div className="header">
           <div className="header-top">
             <div className="header-left-spacer" />
             <span className="mobile-header-title">
-              {headerNav.find((n) => n.key === activePage)?.label ?? 'OHIH'}
+              {headerNav.find((n) => n.key === activePage)?.label ?? (isLoggedIn ? 'OHIH' : '')}
             </span>
-            <nav className="header-nav">
-              {headerNav.map((item) => (
-                <button
-                  key={item.key}
-                  className={`header-nav-item${activePage === item.key ? ' active' : ''}`}
-                  onClick={() => handleNav(item.key)}
-                >
-                  <span>{item.label}</span>
-                </button>
-              ))}
-            </nav>
+            {headerNav.length > 0 && (
+              <nav className="header-nav">
+                {headerNav.map((item) => (
+                  <button
+                    key={item.key}
+                    className={`header-nav-item${activePage === item.key ? ' active' : ''}`}
+                    onClick={() => handleNav(item.key)}
+                  >
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </nav>
+            )}
             <div className="header-right">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={logoBestK3} alt="BestK3" width={75} height={28} className="header-right-logo" />
-              <NotificationBell
-                isSuperuser={isSuperuser}
-                // Notifikasi tindak lanjut hanya untuk QSHE Medic.
-                canMedic={['superuser', 'administrator', 'pic'].includes(role ?? '')}
-              />
+              {isLoggedIn && (
+                <NotificationBell
+                  isSuperuser={isSuperuser}
+                  // Notifikasi tindak lanjut hanya untuk QSHE Medic.
+                  canMedic={['superuser', 'administrator', 'pic'].includes(role ?? '')}
+                />
+              )}
               <button
                 className="theme-btn"
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -1569,28 +1615,30 @@ export default function Home() {
         </div>
       </div>
 
-      {/* iOS-style Bottom Tab Bar (Mobile <=1023px) */}
-      <nav className="mobile-bottom-nav" aria-label="Navigasi Utama">
-        {headerNav.map((item) => {
-          const Icon =
-            item.key === 'home' ? HomeIcon
-            : item.key === 'dashboard' ? LayoutDashboard
-            : item.key === 'data-entry' ? ClipboardEdit
-            : ShieldCheck;
-          const isActive = activePage === item.key;
-          return (
-            <button
-              key={item.key}
-              type="button"
-              className={`mobile-bottom-nav-item${isActive ? ' active' : ''}`}
-              onClick={() => handleNav(item.key)}
-            >
-              <Icon size={18} strokeWidth={isActive ? 2.4 : 1.9} />
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
-      </nav>
+      {/* iOS-style Bottom Tab Bar (Mobile <=1023px) — hanya tampil saat login */}
+      {isLoggedIn && headerNav.length > 0 && (
+        <nav className="mobile-bottom-nav" aria-label="Navigasi Utama">
+          {headerNav.map((item) => {
+            const Icon =
+              item.key === 'home' ? HomeIcon
+              : item.key === 'dashboard' ? LayoutDashboard
+              : item.key === 'data-entry' ? ClipboardEdit
+              : ShieldCheck;
+            const isActive = activePage === item.key;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                className={`mobile-bottom-nav-item${isActive ? ' active' : ''}`}
+                onClick={() => handleNav(item.key)}
+              >
+                <Icon size={18} strokeWidth={isActive ? 2.4 : 1.9} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
 
       <AnimatePresence>
         {showLogin && <LoginPopup onClose={() => setShowLogin(false)} />}

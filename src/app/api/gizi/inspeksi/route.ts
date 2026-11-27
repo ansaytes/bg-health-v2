@@ -57,6 +57,8 @@ export async function GET(req: NextRequest) {
   }
 
   const baseCols = 'id,site,tanggal,inspektur,vendor,nama_kantin,jumlah_porsi,jumlah_penjamah,jumlah_buku_sehat,no_slhs,tgl_kadaluwarsa_slhs,kalori_sarapan,kalori_siang,kalori_malam,extra_fooding,ringkasan,catatan,created_at';
+  const picaCols = 'pica_no,pica_temuan,pica_akar_masalah,pica_tindakan,pica_pic,pica_due_date,pica_status,pica_items';
+
   const buildQuery = (cols: string) => {
     let q = client
       .from('gizi_inspeksi_jasaboga')
@@ -67,9 +69,14 @@ export async function GET(req: NextRequest) {
     return q;
   };
 
-  let { data, error } = await buildQuery(`${baseCols},jawaban`);
+  let { data, error } = await buildQuery(`${baseCols},jawaban,${picaCols}`);
 
-  // Fallback aman bila kolom `jawaban` belum dimigrasi di Supabase (PGRST204 / 42703)
+  // Fallback 1: Jika kolom PICA belum dimigrasi di Supabase
+  if (error && /pica_|PGRST204|42703/i.test(error.message)) {
+    ({ data, error } = await buildQuery(`${baseCols},jawaban`));
+  }
+
+  // Fallback 2: Bila kolom `jawaban` juga belum dimigrasi di Supabase
   if (error && /jawaban|PGRST204|42703/i.test(error.message)) {
     ({ data, error } = await buildQuery(baseCols));
   }
@@ -113,6 +120,14 @@ export async function POST(req: NextRequest) {
     extra_fooding?: string;
     jawaban?: Record<string, 'sesuai' | 'tidak_sesuai' | 'tidak_berlaku'>;
     catatan?: string;
+    pica_no?: string;
+    pica_temuan?: string;
+    pica_akar_masalah?: string;
+    pica_tindakan?: string;
+    pica_pic?: string;
+    pica_due_date?: string;
+    pica_status?: string;
+    pica_items?: unknown[];
   };
 
   try {
@@ -138,7 +153,7 @@ export async function POST(req: NextRequest) {
   const ringkasan = hitungSkorInspeksiGizi(jawaban);
 
   const client = adminClient();
-  const record = {
+  const baseRecord: Record<string, unknown> = {
     site,
     tanggal,
     inspektur,
@@ -159,11 +174,32 @@ export async function POST(req: NextRequest) {
     created_by: caller.userId,
   };
 
-  const { data, error } = await client
+  const picaRecord: Record<string, unknown> = {
+    ...baseRecord,
+    pica_no: body.pica_no?.trim() || null,
+    pica_temuan: body.pica_temuan?.trim() || null,
+    pica_akar_masalah: body.pica_akar_masalah?.trim() || null,
+    pica_tindakan: body.pica_tindakan?.trim() || null,
+    pica_pic: body.pica_pic?.trim() || null,
+    pica_due_date: body.pica_due_date || null,
+    pica_status: body.pica_status || 'OPEN',
+    pica_items: Array.isArray(body.pica_items) ? body.pica_items : [],
+  };
+
+  let { data, error } = await client
     .from('gizi_inspeksi_jasaboga')
-    .insert([record])
+    .insert([picaRecord])
     .select('id,site,tanggal,created_at')
     .maybeSingle();
+
+  // Fallback jika kolom PICA belum ada di tabel Supabase
+  if (error && /pica_|PGRST204|42703/i.test(error.message)) {
+    ({ data, error } = await client
+      .from('gizi_inspeksi_jasaboga')
+      .insert([baseRecord])
+      .select('id,site,tanggal,created_at')
+      .maybeSingle());
+  }
 
   if (error) {
     if (/does not exist|PGRST205|42P01/i.test(error.message)) {
@@ -184,4 +220,53 @@ export async function POST(req: NextRequest) {
     id: data?.id,
     ringkasan,
   });
+}
+
+export async function PATCH(req: NextRequest) {
+  const caller = await getCaller(req);
+  if (!caller || !ROLES_TULIS.includes(String(caller.role))) {
+    return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
+  }
+
+  let body: {
+    id: string;
+    pica_no?: string;
+    pica_temuan?: string;
+    pica_akar_masalah?: string;
+    pica_tindakan?: string;
+    pica_pic?: string;
+    pica_due_date?: string | null;
+    pica_status?: string;
+  };
+
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Format JSON tidak valid' }, { status: 400 });
+  }
+
+  if (!body.id) {
+    return NextResponse.json({ error: 'ID inspeksi wajib disertakan' }, { status: 400 });
+  }
+
+  const client = adminClient();
+  const updatePayload: Record<string, unknown> = {};
+  if ('pica_no' in body) updatePayload.pica_no = body.pica_no?.trim() || null;
+  if ('pica_temuan' in body) updatePayload.pica_temuan = body.pica_temuan?.trim() || null;
+  if ('pica_akar_masalah' in body) updatePayload.pica_akar_masalah = body.pica_akar_masalah?.trim() || null;
+  if ('pica_tindakan' in body) updatePayload.pica_tindakan = body.pica_tindakan?.trim() || null;
+  if ('pica_pic' in body) updatePayload.pica_pic = body.pica_pic?.trim() || null;
+  if ('pica_due_date' in body) updatePayload.pica_due_date = body.pica_due_date || null;
+  if ('pica_status' in body) updatePayload.pica_status = body.pica_status || 'OPEN';
+
+  const { error } = await client
+    .from('gizi_inspeksi_jasaboga')
+    .update(updatePayload)
+    .eq('id', body.id);
+
+  if (error) {
+    return NextResponse.json({ error: `Gagal memperbarui status PICA: ${error.message}` }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true, pesan: 'PICA inspeksi jasaboga berhasil diperbarui' });
 }

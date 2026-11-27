@@ -479,10 +479,22 @@ export default function AdminProKawan() {
                   </div>
                   <div style={{ flex: 1, minWidth: 200 }}>
                     <h2 style={{ fontSize: 14, fontWeight: 800, margin: 0 }}>{selected.nama}</h2>
-                    <p style={{ fontSize: 10.5, color: 'var(--muted-foreground)', margin: '2px 0 0' }}>
-                      NIK {selected.nik} · {selected.site || '-'} · {selected.department ?? 'Departemen tidak tercatat'}
-                      {selected.area ? ` · ${selected.area}` : ''}
-                    </p>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4, fontSize: 10.5 }}>
+                      <span style={{ padding: '1px 6px', borderRadius: 4, background: 'rgba(0,0,0,0.04)', color: 'var(--foreground)' }}>
+                        NIK: <b>{selected.nik}</b>
+                      </span>
+                      <span style={{ padding: '1px 6px', borderRadius: 4, background: 'rgba(46,204,113,0.08)', color: '#27ae60', border: '1px solid rgba(46,204,113,0.2)' }}>
+                        Site: <b>{selected.site || '-'}</b>
+                      </span>
+                      <span style={{ padding: '1px 6px', borderRadius: 4, background: 'rgba(155,89,182,0.08)', color: '#8e44ad', border: '1px solid rgba(155,89,182,0.2)' }}>
+                        Departemen: <b>{selected.department ?? 'Tidak tercatat'}</b>
+                      </span>
+                      {selected.area && (
+                        <span style={{ padding: '1px 6px', borderRadius: 4, background: 'rgba(52,152,219,0.08)', color: '#2980b9', border: '1px solid rgba(52,152,219,0.2)' }}>
+                          Area: <b>{selected.area}</b>
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                     <Button

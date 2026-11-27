@@ -14,6 +14,7 @@ type RegistrationEmployeeRow = {
   national_id: string | null;
   nama: string;
   job_position: string | null;
+  department: string | null;
   site_name: string | null;
 };
 
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
   try {
     let employeeQuery = client
       .from('employees')
-      .select('nik, national_id, nama, job_position, site_name')
+      .select('nik, national_id, nama, job_position, department, site_name')
       .ilike('employment_status', 'Aktif');
 
     if (searchBy === 'national_id') {
@@ -104,6 +105,7 @@ export async function POST(request: NextRequest) {
         national_id: typeof decrypted.national_id === 'string' ? decrypted.national_id : null,
         nama: String(decrypted.nama || ''),
         job_position: typeof decrypted.job_position === 'string' ? decrypted.job_position : null,
+        department: typeof decrypted.department === 'string' ? decrypted.department : null,
         site_name: typeof decrypted.site_name === 'string' ? decrypted.site_name : null,
       };
       return employee;
@@ -112,6 +114,7 @@ export async function POST(request: NextRequest) {
     ).map(employee => ({
       nama: employee.nama,
       job_position: employee.job_position || '',
+      department: employee.department || '',
       site_name: employee.site_name || '',
       lookupToken: createRegistrationLookupToken({
         nik: employee.nik,

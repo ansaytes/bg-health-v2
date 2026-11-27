@@ -36,6 +36,13 @@ interface RiwayatGizi {
     totalTidakSesuai: number;
   } | null;
   catatan: string | null;
+  pica_no?: string | null;
+  pica_temuan?: string | null;
+  pica_akar_masalah?: string | null;
+  pica_tindakan?: string | null;
+  pica_pic?: string | null;
+  pica_due_date?: string | null;
+  pica_status?: 'OPEN' | 'IN_PROGRESS' | 'CLOSED' | null;
   created_at: string;
 }
 
@@ -74,6 +81,7 @@ export default function GiziKerjaTable() {
         ) / totalSesi
       )
     : 0;
+  const totalPicaOpen = rows.filter((r) => r.pica_status === 'OPEN' || (!r.pica_status && r.ringkasan && r.ringkasan.totalTidakSesuai > 0)).length;
 
   return (
     <div style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '94%', margin: '0 auto' }}>
@@ -128,6 +136,14 @@ export default function GiziKerjaTable() {
             <div style={{ ...BADGE_VALUE, color: '#3498DB' }}>{avgKalori || '-'} <span style={{ fontSize: 11, fontWeight: 500 }}>kkal</span></div>
             <span style={BADGE_SUB}>Standar: 2.600 - 3.200 kkal</span>
           </div>
+
+          <div style={BADGE_CARD}>
+            <span style={BADGE_LABEL}>PICA Temuan</span>
+            <div style={{ ...BADGE_VALUE, color: totalPicaOpen > 0 ? '#FF2D2D' : '#00B894' }}>
+              {totalPicaOpen} <span style={{ fontSize: 11, fontWeight: 500 }}>Open</span>
+            </div>
+            <span style={BADGE_SUB}>Tindak lanjut perbaikan kantin</span>
+          </div>
         </div>
 
         {/* Tabel Data */}
@@ -145,7 +161,7 @@ export default function GiziKerjaTable() {
                   <th style={thStyle}>Total Kalori</th>
                   <th style={thStyle}>Skor Higiene</th>
                   <th style={thStyle}>Status Kelaikan</th>
-                  <th style={thStyle}>Catatan Auditor</th>
+                  <th style={thStyle}>Register PICA</th>
                 </tr>
               </thead>
               <tbody>
@@ -154,6 +170,8 @@ export default function GiziKerjaTable() {
                   const totalKkal = (r.kalori_sarapan || 0) + (r.kalori_siang || 0) + (r.kalori_malam || 0);
                   const isLaik = rk?.statusLaik === 'laik';
                   const isBersyarat = rk?.statusLaik === 'laik_bersyarat';
+                  const picaStatus = r.pica_status || (rk && rk.totalTidakSesuai > 0 ? 'OPEN' : 'CLOSED');
+                  const picaColor = picaStatus === 'OPEN' ? '#FF2D2D' : picaStatus === 'IN_PROGRESS' ? '#FF7A00' : '#00B894';
 
                   return (
                     <tr key={r.id}>
@@ -212,8 +230,37 @@ export default function GiziKerjaTable() {
                           </span>
                         ) : '-'}
                       </td>
-                      <td style={{ ...tdStyle, maxWidth: 220, fontSize: 10.5, color: 'var(--muted-foreground)' }}>
-                        {r.catatan || '-'}
+                      <td style={{ ...tdStyle, minWidth: 220, fontSize: 10.5 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                          <span style={{
+                            padding: '1px 6px',
+                            borderRadius: 4,
+                            fontSize: 9.5,
+                            fontWeight: 800,
+                            background: `${picaColor}18`,
+                            color: picaColor,
+                            border: `1px solid ${picaColor}40`,
+                          }}>
+                            {picaStatus}
+                          </span>
+                          <span style={{ fontWeight: 700, fontSize: 10.5, color: 'var(--foreground)' }}>
+                            {r.pica_no || 'PICA Belum Diisi'}
+                          </span>
+                        </div>
+                        {r.pica_temuan && (
+                          <div style={{ color: 'var(--foreground)', fontWeight: 500, fontSize: 10, marginBottom: 2 }}>
+                            <b>Temuan:</b> {r.pica_temuan.slice(0, 90)}{r.pica_temuan.length > 90 ? '...' : ''}
+                          </div>
+                        )}
+                        {r.pica_tindakan && (
+                          <div style={{ color: 'var(--muted-foreground)', fontSize: 9.5 }}>
+                            <b>Tindakan:</b> {r.pica_tindakan.slice(0, 80)}{r.pica_tindakan.length > 80 ? '...' : ''}
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', gap: 10, marginTop: 4, fontSize: 9.5, color: 'var(--muted-foreground)' }}>
+                          {r.pica_pic && <span>PIC: <b>{r.pica_pic}</b></span>}
+                          {r.pica_due_date && <span>Target: <b>{fmtDate(r.pica_due_date)}</b></span>}
+                        </div>
                       </td>
                     </tr>
                   );
