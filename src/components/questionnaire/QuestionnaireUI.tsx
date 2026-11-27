@@ -82,6 +82,7 @@ export interface EmployeeIdentityView {
   nationalId: string;
   nama: string;
   jabatan: string;
+  departemen?: string;
   site: string;
   usia: string;
   jenisKelamin: string;
@@ -139,7 +140,11 @@ export function IdentityPanel({
             <strong>{identity.jabatan || '-'}</strong>
           </div>
           <div className="qh-identity-row">
-            <span>Departemen / Unit Kerja</span>
+            <span>Departemen</span>
+            <strong>{identity.departemen || '-'}</strong>
+          </div>
+          <div className="qh-identity-row">
+            <span>Jobsite</span>
             <strong>{identity.site || '-'}</strong>
           </div>
           <div className="qh-identity-row">

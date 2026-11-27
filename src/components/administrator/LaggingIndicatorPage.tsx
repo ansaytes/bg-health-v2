@@ -87,7 +87,7 @@ export default function LaggingIndicatorPage() {
   const [tab, setTab] = useState<'statistik' | 'karyawan-sakit'>('statistik');
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', width: '100%', height: '100%', margin: '0 auto', paddingBottom: 0 }}>
+    <div className="admin-form-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', width: '100%', height: '100%', margin: '0 auto', paddingBottom: 0 }}>
       <div className="admin-form-inner">
         {/* Header */}
         <div style={{ marginBottom: 8 }}>
@@ -318,7 +318,7 @@ function StatistikKesehatanForm() {
       <div className="admin-form-card" style={{ padding: '14px 16px' }}>
         {/* Section: Periode & Site */}
         <SectionHeader icon="calendar" title="Periode & Jobsite" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: 10 }}>
           <div>
             <label className="admin-label">Tahun <span style={{ color: 'var(--brand-primary)' }}>*</span></label>
             <input type="number" min="2020" max="2099"
@@ -356,7 +356,7 @@ function StatistikKesehatanForm() {
 
         {/* Section: Σ Man Power / Data Konteks Bulanan */}
         <SectionHeader icon="users" title="Data Konteks Bulanan" subtitle="Σ Man Power untuk perhitungan lagging indicators" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: 10 }}>
           {DENOMINATOR_FIELDS.map(f => (
             <div key={f.key}>
               <label className="admin-label">{f.label}</label>
@@ -383,7 +383,7 @@ function StatistikKesehatanForm() {
             </span>
           )}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: 10 }}>
           {AGGREGATE_FIELDS.map(f => (
             <div key={f.key}>
               <label className="admin-label">{f.label}</label>
@@ -415,7 +415,7 @@ function StatistikKesehatanForm() {
             Auto-Hitung
           </button>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: 10 }}>
           {LAGGING_FIELDS.map(f => {
             const exp = expected[f.key];
             const mismatch = isMismatch(f.key);

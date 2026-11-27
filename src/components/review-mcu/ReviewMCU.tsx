@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useCallback, useMemo, useEffect, Fragment } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -583,7 +583,7 @@ export default function ReviewMCU() {
                   </div>
                   <h3 style={{ fontSize: 12, fontWeight: 700, color: 'var(--foreground)' }}>Identitas Karyawan</h3>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: 8 }}>
                   {[
                     { label: 'NIK KTP', value: store.employee?.nationalId, desc: 'Nomor Induk Kependudukan' },
                     { label: 'NIK Karyawan', value: store.employee?.nikKaryawan, desc: 'Nomor Induk Karyawan' },

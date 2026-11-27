@@ -136,6 +136,7 @@ export async function POST(req: NextRequest) {
     nationalIdHash: match.national_id_hash || null,
     nama: String(decrypted.nama ?? match.nama ?? ''),
     jabatan: String(decrypted.job_position ?? match.job_position ?? ''),
+    departemen: String(decrypted.department ?? match.department ?? ''),
     site: String(decrypted.site_name ?? match.site_name ?? ''),
     usia: String(decrypted.age ?? match.age ?? '—'),
     jenisKelamin: String(decrypted.gender ?? match.gender ?? '—'),

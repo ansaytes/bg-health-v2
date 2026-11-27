@@ -422,6 +422,9 @@ export default function QuestionnaireTokenGate({ children }: QuestionnaireTokenG
           <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>
             {session.identity.nama} (NIK: {session.identity.nikKaryawan || session.identity.nationalId})
           </span>
+          {session.identity.departemen && (
+            <span style={{ color: 'var(--muted-foreground)' }}>• {session.identity.departemen}</span>
+          )}
           <span style={{ color: 'var(--muted-foreground)' }}>• {session.identity.site}</span>
         </div>
 

@@ -165,6 +165,7 @@ export interface EmployeeIdentity {
   nationalIdHash: string | null;
   nama: string;
   jabatan: string;
+  departemen: string;
   site: string;
   usia: string;
   jenisKelamin: string;
@@ -242,6 +243,7 @@ export async function findEmployeeIdentity(query: string): Promise<EmployeeIdent
     nationalIdHash: hashField(nationalId) || null,
     nama: String(decrypted.nama ?? ''),
     jabatan: String(decrypted.job_position ?? ''),
+    departemen: String(decrypted.department ?? ''),
     site: String(decrypted.site_name ?? ''),
     usia: String(decrypted.age ?? ''),
     jenisKelamin: String(decrypted.gender ?? ''),
@@ -315,6 +317,7 @@ export async function findEmployeeIdentityForCaller(caller: CallerProfile): Prom
       nationalIdHash: hashField(nationalId) || null,
       nama: String(decrypted.nama ?? ''),
       jabatan: String(decrypted.job_position ?? ''),
+      departemen: String(decrypted.department ?? ''),
       site: String(decrypted.site_name ?? caller.site ?? ''),
       usia: String(decrypted.age ?? ''),
       jenisKelamin: String(decrypted.gender ?? ''),

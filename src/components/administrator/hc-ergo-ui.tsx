@@ -33,9 +33,9 @@ export function Section({ title, children }: { title: string; children: ReactNod
   );
 }
 
-export const grid2: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, alignItems: 'end' };
-export const grid3: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, alignItems: 'end' };
-export const grid4: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, alignItems: 'end' };
+export const grid2: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', gap: 10, alignItems: 'end', width: '100%', maxWidth: '100%' };
+export const grid3: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: 10, alignItems: 'end', width: '100%', maxWidth: '100%' };
+export const grid4: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 170px), 1fr))', gap: 10, alignItems: 'end', width: '100%', maxWidth: '100%' };
 
 export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { key: T; label: string }[]; value: T; onChange: (k: T) => void }) {
   return (

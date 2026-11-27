@@ -616,7 +616,7 @@ export default function GiziKerjaForm() {
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#FF7A00' }}>
                     Tambah Bahan Makanan Baru ke Database Master DKBM
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr 1fr 1fr', gap: 6 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 110px), 1fr))', gap: 6 }}>
                     <div>
                       <label style={{ fontSize: 10, color: 'var(--muted-foreground)', display: 'block' }}>Nama Menu *</label>
                       <input

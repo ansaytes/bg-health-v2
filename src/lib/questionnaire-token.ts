@@ -7,6 +7,7 @@ export interface QuestionnaireTokenClaims {
   nationalIdHash: string | null;
   nama: string;
   jabatan: string;
+  departemen?: string;
   site: string;
   usia: string;
   jenisKelamin: string;

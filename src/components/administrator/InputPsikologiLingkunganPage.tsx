@@ -153,10 +153,10 @@ export default function InputPsikologiLingkunganPage() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -30 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            style={{ height: '100%', overflowY: 'auto' }}
+            style={{ minHeight: '100%', width: '100%' }}
           >
-            <div className="admin-form-container" style={{ padding: '0 16px 8px 16px', height: '100%', minHeight: 0 }}>
-              <div className="admin-form-inner" style={{ maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="admin-form-container" style={{ padding: '0 8px 8px 8px', minHeight: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+              <div className="admin-form-inner" style={{ maxWidth: 960, width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10, boxSizing: 'border-box' }}>
                 <div style={{ padding: '8px 0 4px', borderBottom: '1px solid var(--border)' }}>
                   <h1 className="admin-form-title">Psikologi Lingkungan Kerja (SDS-30)</h1>
                   <p className="admin-form-subtitle">
@@ -180,7 +180,7 @@ export default function InputPsikologiLingkunganPage() {
             Kategori/indikator TIDAK ditampilkan di samping soal: skor
             dihitung otomatis oleh sistem, sehingga responden tidak bisa
             menebak arah jawaban yang "diinginkan". */}
-        <span style={{ fontSize: 10, lineHeight: 1.5, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+        <span style={{ fontSize: 10, lineHeight: 1.5, display: 'block', whiteSpace: 'normal', wordBreak: 'break-word' }}>
           Pilih <b>1–7</b> tiap pernyataan (kondisi <b>1 bulan terakhir</b>):
           {SDS_OPTIONS.map((o, i) => (
             <span key={o.value}>·{i === 0 ? ' ' : ' '}<b>{o.value}</b> {o.label} </span>

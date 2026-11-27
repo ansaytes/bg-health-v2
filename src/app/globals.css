@@ -2980,6 +2980,15 @@ select.admin-input.compact-input {
     overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch;
   }
+  body {
+    display: block !important;
+  }
+  .app-shell {
+    display: block !important;
+    height: auto !important;
+    min-height: 100dvh;
+    overflow: visible !important;
+  }
   .main {
     height: auto !important;
     min-height: 100dvh;
@@ -3121,6 +3130,9 @@ select.admin-input.compact-input {
     flex-direction: column;
     flex: 0 0 auto !important;
     width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
   }
   .card-head {
     flex-shrink: 0;
@@ -3233,6 +3245,39 @@ select.admin-input.compact-input {
     flex: 0 0 auto !important;
     padding: 10px 8px !important;
     width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .admin-form-card,
+  .qh-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+  .qh-page {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 8px !important;
+    box-sizing: border-box !important;
+  }
+  .prokawan-split-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 0 !important;
+    gap: 10px !important;
+  }
+  .admin-scroll-body {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    flex: 0 0 auto !important;
   }
 }
 

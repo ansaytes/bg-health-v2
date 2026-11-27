@@ -595,7 +595,7 @@ export default function InventoryDashboard() {
               </div>
 
               {/* Grid grafik : dua baris, memenuhi satu halaman */}
-              <div key="charts-grid" style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 10 }}>
+              <div key="charts-grid" className="mcu-live-chart-row" style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 10 }}>
         {/* Chart 1: Top Sudah Expired */}
         <div className="card mcu-dashboard-card glow-coral" data-chart="expired" style={{ padding: '3px 6px' }}>
           <div className="card-head"><div><h2>Stok Obat/BHP Expired</h2><p className="mcu-dashboard-card-sub">10 item stok terbanyak, sudah kedaluwarsa</p></div></div>

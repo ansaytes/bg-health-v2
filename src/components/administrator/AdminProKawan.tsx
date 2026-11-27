@@ -396,7 +396,7 @@ export default function AdminProKawan() {
         </div>
       )}
 
-      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'minmax(240px, 320px) minmax(0, 1fr)', gap: 8 }}>
+      <div className="prokawan-split-grid" style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'minmax(240px, 320px) minmax(0, 1fr)', gap: 8 }}>
         {/* Daftar peserta */}
         <div className="card" style={{ minHeight: 0, display: 'flex', flexDirection: 'column', padding: '8px 6px' }}>
           <div className="card-head" style={{ flexShrink: 0, paddingBottom: 4 }}>

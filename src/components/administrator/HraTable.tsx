@@ -472,7 +472,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
       </div>
 
       {/* 2. Daftar Tabel Expandable */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 16px' }}>
+      <div className="admin-scroll-body" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 16px' }}>
         {error && (
           <div
             style={{

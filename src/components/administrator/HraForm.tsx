@@ -217,7 +217,7 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
   };
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px 20px', background: 'var(--background)' }}>
+    <div className="admin-scroll-body" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px 20px', background: 'var(--background)' }}>
       <div style={{ maxWidth: 980, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* macOS Window Toolbar Header */}
         <div
@@ -524,7 +524,7 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 220px', gap: 14, alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: 14, alignItems: 'start' }}>
               {/* Tingkat Paparan P (macOS Pill Stepper) */}
               <div>
                 <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted-foreground)', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
@@ -850,7 +850,7 @@ export default function HraForm({ initialData, onSuccess, onCancel }: HraFormPro
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 220px', gap: 14, alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: 14, alignItems: 'start' }}>
               {/* Tingkat Paparan Sisa res_p (macOS Pill Stepper) */}
               <div>
                 <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted-foreground)', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>

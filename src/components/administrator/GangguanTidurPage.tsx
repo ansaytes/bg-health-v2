@@ -156,8 +156,8 @@ export default function GangguanTidurPage() {
   const canSave = !!identity && filled > 0 && submit.status !== 'saving';
 
   return (
-    <div className="admin-form-container" style={{ padding: '0 16px 8px 16px', height: '100%', minHeight: 0, overflowY: 'auto' }}>
-      <div className="admin-form-inner" style={{ maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div className="admin-form-container" style={{ padding: '0 8px 8px 8px', minHeight: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+      <div className="admin-form-inner" style={{ maxWidth: 960, width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10, boxSizing: 'border-box' }}>
         <div style={{ padding: '8px 0 4px', borderBottom: '1px solid var(--border)' }}>
           <h1 className="admin-form-title">Gangguan Tidur</h1>
           <p className="admin-form-subtitle">
