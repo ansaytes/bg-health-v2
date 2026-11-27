@@ -81,7 +81,7 @@ export default function PencahayaanDashboard({ site }: { site?: string }) {
   const persenKepatuhan = r.sudahDiukur > 0 ? Math.round((r.luxMemenuhi / r.sudahDiukur) * 100) : 0;
 
   return (
-    <div className="dashboard mcu-live-dashboard" style={{ overflow: 'hidden', gap: 8 }}>
+    <div className="dashboard mcu-live-dashboard" style={{ gap: 8 }}>
       {/* Top Filter & Summary Bar */}
       <div className="mcu-live-top-bar" style={{ flexShrink: 0 }}>
         <div className="mcu-dashboard-filters">

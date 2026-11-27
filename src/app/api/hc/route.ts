@@ -97,10 +97,13 @@ function bad(msg: string) { return fail(msg, 400); }
 
 /* ───────── GET ───────── */
 export async function GET(req: NextRequest) {
-  const auth = await requireCaller(req);
-  if ('error' in auth) return auth.error;
   const p = new URL(req.url).searchParams;
   const resource = p.get('resource') || 'dashboard';
+  const readRoles = resource === 'dashboard'
+    ? ['superuser', 'administrator', 'manager', 'pic']
+    : ['superuser', 'administrator'];
+  const auth = await requireCaller(req, readRoles);
+  if ('error' in auth) return auth.error;
   try {
     if (resource === 'area') {
       const { data, error } = await db.from('v_hc_area_zona_terkini').select('*').order('site').order('nama_area');
@@ -122,7 +125,15 @@ export async function GET(req: NextRequest) {
       if (error) throw new Error(error.message);
       return ok((data || []).map(c => ({ ...c, nik: decrypt(c.nik_enc) || '', nama: decrypt(c.nama_enc) || '', nik_enc: undefined, nama_enc: undefined })));
     }
-    if (resource === 'dashboard') return ok(await buildDashboard(p.get('site') || ''));
+    if (resource === 'dashboard') {
+      if (auth.caller.role === 'pic' && !auth.caller.site) return fail('Site PIC belum ditentukan', 403);
+      const reqSite = p.get('site') || '';
+      if (auth.caller.role === 'pic' && reqSite && reqSite.toLowerCase() !== auth.caller.site!.toLowerCase()) {
+        return fail('PIC hanya dapat melihat site sendiri', 403);
+      }
+      const targetSite = auth.caller.role === 'pic' ? auth.caller.site! : reqSite;
+      return ok(await buildDashboard(targetSite));
+    }
     return bad('resource tidak dikenal');
   } catch (e) {
     return fail(e instanceof Error ? e.message : 'Gagal memuat data', 500);

@@ -25,6 +25,7 @@ import {
   MCURefreshButton,
 } from '@/components/dashboard/MCUDashboardShared';
 import { useSites } from '@/lib/site-list';
+import { useSiteLock } from '@/lib/auth-context';
 import PageLoading from '@/components/ui/page-loading';
 import { periodeBulan } from '@/lib/inspeksi-program';
 
@@ -74,7 +75,7 @@ export default function InspeksiDashboard() {
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [site, setSite] = useState('Head Office');
+  const { site, setSite, isLocked: isSiteLocked, lockedSite } = useSiteLock('Head Office');
   const [periode, setPeriode] = useState(periodeBulan());
 
   const load = useCallback(async () => {
@@ -147,6 +148,7 @@ export default function InspeksiDashboard() {
             <span>Site</span>
             <select
               value={site}
+              disabled={isSiteLocked}
               onChange={(ev) => setSite(ev.target.value)}
               style={{
                 height: 28,
@@ -159,15 +161,21 @@ export default function InspeksiDashboard() {
                 padding: '0 6px',
               }}
             >
-              <option value="">Semua Site</option>
-              {site && !daftarSite.includes(site) && (
-                <option key={site} value={site}>{site}</option>
+              {isSiteLocked && lockedSite ? (
+                <option value={lockedSite}>{lockedSite}</option>
+              ) : (
+                <>
+                  <option value="">Semua Site</option>
+                  {site && !daftarSite.includes(site) && (
+                    <option key={site} value={site}>{site}</option>
+                  )}
+                  {daftarSite.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </>
               )}
-              {daftarSite.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
             </select>
           </label>
         </div>

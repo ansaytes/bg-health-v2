@@ -19,6 +19,7 @@ import {
   MCURefreshButton,
 } from '@/components/dashboard/MCUDashboardShared';
 import { useSites } from '@/lib/site-list';
+import { useSiteLock } from '@/lib/auth-context';
 import PageLoading from '@/components/ui/page-loading';
 
 interface RiwayatSanitasi {
@@ -40,7 +41,7 @@ interface RiwayatSanitasi {
 
 export default function HigieneSanitasiDashboard({ site: initialSite }: { site?: string }) {
   const { sites: daftarSite } = useSites();
-  const [selectedSite, setSelectedSite] = useState(initialSite || '');
+  const { site: selectedSite, setSite: setSelectedSite, isLocked: isSiteLocked, lockedSite } = useSiteLock(initialSite || '');
   const [rows, setRows] = useState<RiwayatSanitasi[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -142,6 +143,7 @@ export default function HigieneSanitasiDashboard({ site: initialSite }: { site?:
             <span>Site</span>
             <select
               value={selectedSite}
+              disabled={isSiteLocked}
               onChange={(e) => setSelectedSite(e.target.value)}
               style={{
                 height: 28,
@@ -154,12 +156,18 @@ export default function HigieneSanitasiDashboard({ site: initialSite }: { site?:
                 padding: '0 6px',
               }}
             >
-              <option value="">Semua Site</option>
-              {daftarSite.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
+              {isSiteLocked && lockedSite ? (
+                <option value={lockedSite}>{lockedSite}</option>
+              ) : (
+                <>
+                  <option value="">Semua Site</option>
+                  {daftarSite.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </>
+              )}
             </select>
           </label>
         </div>

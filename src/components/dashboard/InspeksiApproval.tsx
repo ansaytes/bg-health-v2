@@ -65,7 +65,7 @@ export default function InspeksiApproval() {
   const [busyId, setBusyId] = useState<string | number | null>(null);
   const [approvingAll, setApprovingAll] = useState(false);
 
-  const canApprove = role === 'manager' || role === 'superuser' || role === 'administrator';
+  const canApprove = role === 'manager' || role === 'superuser';
 
   const loadData = useCallback(async () => {
     setLoading(true);

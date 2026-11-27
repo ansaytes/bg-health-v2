@@ -31,10 +31,10 @@ export default function HigieneIndustriTabs({ initialTab = 'hearing' }: { initia
   const [tab, setTab] = useState<HigieneTab>(initialTab);
 
   return (
-    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className="tab-module-container">
       <CenteredTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Higiene Industri" />
-      {/* flex:1 + minHeight:0 + overflowY:auto agar kartu tidak pernah terpotong */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
+      {/* flex:1 + minHeight:0 di PC, auto di mobile agar kartu tidak terpotong */}
+      <div className="tab-module-content">
         {tab === 'hearing' && <HearingConservationDashboard />}
         {tab === 'ergonomi' && <ErgonomiDashboard />}
         {tab === 'sanitasi' && <HigieneSanitasiDashboard />}

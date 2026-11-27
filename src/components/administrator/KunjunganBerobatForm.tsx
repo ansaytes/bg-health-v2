@@ -64,6 +64,8 @@ export default function KunjunganBerobatForm() {
   const [departmentList, setDepartmentList] = useState<string[]>([]);
   const [inventoryList, setInventoryList] = useState<InventoryItem[]>([]);
   const [savingMasterNotice, setSavingMasterNotice] = useState<string>('');
+  const [customDiagIds, setCustomDiagIds] = useState<Record<string, boolean>>({});
+  const [openMedDropdownId, setOpenMedDropdownId] = useState<string | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -423,39 +425,10 @@ export default function KunjunganBerobatForm() {
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', width: '94%', margin: '0 auto' }}>
-      {/* ─── Datalists terhubung ke Database ─── */}
-      <datalist id="dept-datalist">
-        {departmentList.map((d) => (
-          <option key={d} value={d} />
-        ))}
-      </datalist>
-
-      {/* Datalist Master Diagnosa (Tabel diagnosa) */}
-      <datalist id="master-diagnosa-list">
-        {masterDiagnosa.map((diag) => (
-          <option key={diag} value={diag} />
-        ))}
-      </datalist>
-
       {/* Datalist Master Dosis / Aturan Pakai (Tabel dosis_obat) */}
       <datalist id="master-dosis-list">
         {masterDosis.map((dosis) => (
           <option key={dosis} value={dosis} />
-        ))}
-      </datalist>
-
-      {/* Datalist Inventory (Tabel inventory_items / v_inventory_summary) */}
-      <datalist id="inventory-obat-list">
-        {inventoryList.map((item) => (
-          <option key={item.id} value={item.name}>
-            {item.name} | Satuan: {item.unit} {item.stock !== undefined ? `| Stok: ${item.stock}` : ''}
-          </option>
-        ))}
-      </datalist>
-
-      <datalist id="master-satuan-list">
-        {['Tablet', 'Pcs', 'Btl/Flash', 'Ampul', 'Tube', 'Kapsul', 'Sachet'].map((sat) => (
-          <option key={sat} value={sat} />
         ))}
       </datalist>
 
@@ -649,14 +622,22 @@ export default function KunjunganBerobatForm() {
                         ))}
                       </select>
                     ) : field.type === 'datalist' ? (
-                      <input
-                        type="text"
-                        list={field.listId}
+                      <select
                         value={form[field.id] || ''}
                         onChange={(e) => handleChange(field.id, e.target.value)}
-                        placeholder={field.placeholder}
                         className="admin-input"
-                      />
+                      >
+                        <option value="">{field.placeholder || 'Pilih...'}</option>
+                        {(() => {
+                          const cur = (form[field.id] || '').trim();
+                          const opts = cur && !departmentList.includes(cur)
+                            ? [cur, ...departmentList]
+                            : departmentList;
+                          return opts.map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ));
+                        })()}
+                      </select>
                     ) : field.type === 'jobsite' ? (
                       <select
                         value={form[field.id] || ''}
@@ -827,20 +808,66 @@ export default function KunjunganBerobatForm() {
               </div>
 
               {diagnoses.map((diag, index) => {
-                const isNew = diag.text.trim() && !masterDiagnosa.some(d => d.toLowerCase() === diag.text.trim().toLowerCase());
+                const inMaster = masterDiagnosa.some(d => d.toLowerCase() === diag.text.trim().toLowerCase());
+                const isCustomMode = !!customDiagIds[diag.id] || (!!diag.text.trim() && !inMaster);
+                const isNew = diag.text.trim() && !inMaster;
                 return (
                   <div key={diag.id} style={{ marginBottom: 10 }}>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <span style={{ fontSize: 13, color: 'var(--muted-foreground)', width: 20 }}>{index + 1}.</span>
-                      <input
-                        type="text"
-                        list="master-diagnosa-list"
-                        value={diag.text}
-                        onChange={e => handleDiagnosisChange(diag.id, e.target.value)}
-                        placeholder="Pilih atau ketik diagnosa (cth: Commond Cold, Faringitis...)"
-                        className="admin-input"
-                        style={{ flex: 1 }}
-                      />
+                      <span style={{ fontSize: 12, color: 'var(--muted-foreground)', width: 20 }}>{index + 1}.</span>
+                      {isCustomMode ? (
+                        <div style={{ display: 'flex', gap: 6, flex: 1, alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            value={diag.text}
+                            onChange={e => handleDiagnosisChange(diag.id, e.target.value)}
+                            placeholder="Ketik diagnosa baru (cth: Common Cold, Faringitis...)"
+                            className="admin-input"
+                            style={{ flex: 1 }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCustomDiagIds(prev => ({ ...prev, [diag.id]: false }));
+                              if (!inMaster) handleDiagnosisChange(diag.id, '');
+                            }}
+                            style={{
+                              height: 34,
+                              padding: '0 10px',
+                              borderRadius: 8,
+                              border: '1px solid var(--border)',
+                              background: 'var(--muted)',
+                              color: 'var(--foreground)',
+                              fontSize: 10.5,
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            Pilih dari Daftar
+                          </button>
+                        </div>
+                      ) : (
+                        <select
+                          value={diag.text}
+                          onChange={e => {
+                            if (e.target.value === '__custom__') {
+                              setCustomDiagIds(prev => ({ ...prev, [diag.id]: true }));
+                              handleDiagnosisChange(diag.id, '');
+                            } else {
+                              handleDiagnosisChange(diag.id, e.target.value);
+                            }
+                          }}
+                          className="admin-input"
+                          style={{ flex: 1 }}
+                        >
+                          <option value="">Pilih diagnosa...</option>
+                          {masterDiagnosa.map((d) => (
+                            <option key={d} value={d}>{d}</option>
+                          ))}
+                          <option value="__custom__">+ Ketik Diagnosa Baru...</option>
+                        </select>
+                      )}
                       <Button
                         type="button"
                         variant="ghost"
@@ -907,19 +934,81 @@ export default function KunjunganBerobatForm() {
 
               {medications.map((med, index) => {
                 const isNewDosis = med.aturan.trim() && !masterDosis.some(d => d.toLowerCase() === med.aturan.trim().toLowerCase());
+                const medQuery = med.nama.trim().toLowerCase();
+                const filteredInventory = inventoryList
+                  .filter((item) => !medQuery || item.name.toLowerCase().includes(medQuery))
+                  .slice(0, 30);
+                const satuanOpts = ['Tablet', 'Pcs', 'Btl/Flash', 'Ampul', 'Tube', 'Kapsul', 'Sachet'];
+                const curSatuan = med.satuan || 'Tablet';
+                const allSatuanOpts = satuanOpts.includes(curSatuan) ? satuanOpts : [curSatuan, ...satuanOpts];
                 return (
                   <div key={med.id} style={{ marginBottom: 6 }}>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <span style={{ fontSize: 13, color: 'var(--muted-foreground)', width: 20 }}>{index + 1}.</span>
-                      <input
-                        type="text"
-                        list="inventory-obat-list"
-                        value={med.nama}
-                        onChange={e => handleMedicationNameChange(med.id, e.target.value)}
-                        placeholder="Pilih obat dari inventory..."
-                        className="admin-input"
-                        style={{ flex: 2 }}
-                      />
+                      <span style={{ fontSize: 12, color: 'var(--muted-foreground)', width: 20 }}>{index + 1}.</span>
+                      <div style={{ flex: 2, position: 'relative' }}>
+                        <input
+                          type="text"
+                          value={med.nama}
+                          onFocus={() => setOpenMedDropdownId(med.id)}
+                          onBlur={() => setTimeout(() => setOpenMedDropdownId((cur) => (cur === med.id ? null : cur)), 150)}
+                          onChange={e => {
+                            handleMedicationNameChange(med.id, e.target.value);
+                            setOpenMedDropdownId(med.id);
+                          }}
+                          placeholder="Pilih obat dari inventory..."
+                          className="admin-input"
+                        />
+                        {openMedDropdownId === med.id && filteredInventory.length > 0 && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              top: 'calc(100% + 4px)',
+                              left: 0,
+                              right: 0,
+                              maxHeight: 220,
+                              overflowY: 'auto',
+                              background: 'var(--card)',
+                              border: '1px solid var(--border)',
+                              borderRadius: 8,
+                              boxShadow: '0 10px 24px rgba(0,0,0,0.14)',
+                              zIndex: 60,
+                              padding: 4,
+                            }}
+                          >
+                            {filteredInventory.map((item) => (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  handleMedicationNameChange(med.id, item.name);
+                                  setOpenMedDropdownId(null);
+                                }}
+                                style={{
+                                  width: '100%',
+                                  textAlign: 'left',
+                                  border: 'none',
+                                  background: 'transparent',
+                                  padding: '5px 8px',
+                                  borderRadius: 6,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: 1,
+                                }}
+                                className="hover:bg-black/5 dark:hover:bg-white/5"
+                              >
+                                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--foreground)', lineHeight: 1.25 }}>
+                                  {item.name}
+                                </span>
+                                <span style={{ fontSize: 9.5, color: 'var(--muted-foreground)', lineHeight: 1.2 }}>
+                                  Satuan: {item.unit}{item.stock !== undefined ? ` · Stok: ${item.stock}` : ''}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <input
                         type="text"
                         list="master-dosis-list"
@@ -937,15 +1026,16 @@ export default function KunjunganBerobatForm() {
                         className="admin-input"
                         style={{ width: 70 }}
                       />
-                      <input
-                        type="text"
-                        list="master-satuan-list"
-                        value={med.satuan || 'Tablet'}
+                      <select
+                        value={curSatuan}
                         onChange={e => handleMedicationFieldChange(med.id, 'satuan', e.target.value)}
-                        placeholder="Satuan"
                         className="admin-input"
                         style={{ width: 90 }}
-                      />
+                      >
+                        {allSatuanOpts.map((sat) => (
+                          <option key={sat} value={sat}>{sat}</option>
+                        ))}
+                      </select>
                       <Button
                         type="button"
                         variant="ghost"

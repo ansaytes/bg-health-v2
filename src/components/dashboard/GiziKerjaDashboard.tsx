@@ -20,6 +20,7 @@ import {
 } from '@/components/dashboard/MCUDashboardShared';
 import PageLoading from '@/components/ui/page-loading';
 import { SITES } from '@/components/administrator/hc-ergo-ui';
+import { useSiteLock } from '@/lib/auth-context';
 
 interface RekapGizi {
   totalDihitung: number;
@@ -50,7 +51,7 @@ interface InspeksiJasaboga {
 }
 
 export default function GiziKerjaDashboard({ site: initialSite }: { site?: string }) {
-  const [selectedSite, setSelectedSite] = useState(initialSite || '');
+  const { site: selectedSite, setSite: setSelectedSite, isLocked: isSiteLocked, lockedSite } = useSiteLock(initialSite || '');
   const [rekap, setRekap] = useState<RekapGizi | null>(null);
   const [inspeksi, setInspeksi] = useState<InspeksiJasaboga[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,16 +153,28 @@ export default function GiziKerjaDashboard({ site: initialSite }: { site?: strin
   const totalMenuDinilai = menuMemenuhi + menuKurang + menuLebih;
   const persenMenuSesuai = totalMenuDinilai > 0 ? Math.round((menuMemenuhi / totalMenuDinilai) * 100) : 0;
 
-  // Beban Kerja Fisik (Permenaker 5/2018)
-  const bebanLabels = (rekap?.perBebanKerja ?? []).map(([k]) => {
+  // Beban Kerja Fisik (Permenaker 5/2018) — urut dari Berat → Sedang → Ringan
+  const BEBAN_ORDER = ['sangat-berat', 'berat', 'sedang', 'ringan'];
+  const BEBAN_COLOR_MAP: Record<string, string> = {
+    'sangat-berat': '#FF2D2D',
+    berat: '#FF7A00',
+    sedang: '#F1C40F',
+    ringan: '#00B894',
+  };
+  const bebanSorted = [...(rekap?.perBebanKerja ?? [])].sort((a, b) => {
+    const ia = BEBAN_ORDER.indexOf(a[0]);
+    const ib = BEBAN_ORDER.indexOf(b[0]);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  });
+  const bebanLabels = bebanSorted.map(([k]) => {
     if (k === 'ringan') return 'Ringan (<100 dpm)';
     if (k === 'sedang') return 'Sedang (100-125 dpm)';
     if (k === 'berat') return 'Berat (125-150 dpm)';
     if (k === 'sangat-berat') return 'Sangat Berat (>150 dpm)';
     return k;
   });
-  const bebanValues = (rekap?.perBebanKerja ?? []).map(([, v]) => v);
-  const bebanColors = ['#3498DB', '#00B894', '#FF7A00', '#FF2D2D'];
+  const bebanValues = bebanSorted.map(([, v]) => v);
+  const bebanColors = bebanSorted.map(([k]) => BEBAN_COLOR_MAP[k] ?? '#3498DB');
 
   // Skor Sanitasi Jasaboga per Site
   const perSiteKepatuhan: { site: string; skor: number }[] = [];
@@ -182,6 +195,7 @@ export default function GiziKerjaDashboard({ site: initialSite }: { site?: strin
             <span>Site</span>
             <select
               value={selectedSite}
+              disabled={isSiteLocked}
               onChange={(e) => setSelectedSite(e.target.value)}
               style={{
                 height: 28,
@@ -194,12 +208,18 @@ export default function GiziKerjaDashboard({ site: initialSite }: { site?: strin
                 padding: '0 6px',
               }}
             >
-              <option value="">Semua Site</option>
-              {SITES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
+              {isSiteLocked && lockedSite ? (
+                <option value={lockedSite}>{lockedSite}</option>
+              ) : (
+                <>
+                  <option value="">Semua Site</option>
+                  {SITES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </>
+              )}
             </select>
           </label>
         </div>

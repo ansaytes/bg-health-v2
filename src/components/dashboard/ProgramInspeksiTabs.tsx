@@ -38,10 +38,10 @@ export default function ProgramInspeksiTabs({
   const [tab, setTab] = useState<ProgramInspeksiTab>(normTab);
 
   return (
-    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className="tab-module-container">
       <CenteredTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Program Inspeksi" />
 
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="tab-module-content">
         {tab === 'kinerja' ? <InspeksiDashboard /> : <InspeksiKelaikanDashboard />}
       </div>
     </div>

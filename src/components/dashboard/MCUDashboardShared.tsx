@@ -9,6 +9,7 @@ import {
 } from 'chart.js';
 import { ChartJS } from '@/lib/chart-register';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth-context';
 import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, STANDAR_ANIMASI_DONUT, animasiUlang, gradientBatang, skalaBar, useAnimationReady } from '@/lib/chart-standard';
 
 function contrastColor(background: unknown, fallback: string): string {
@@ -234,9 +235,13 @@ export function MCUDashboardFilters({
   onAreaChange: (value: string) => void;
   onClientsChange: (value: string[]) => void;
 }) {
+  const { role, profile } = useAuth();
+  const isSiteLocked = role === 'pic';
+  const lockedSite = (profile?.site || '').trim();
+  const effectiveSite = isSiteLocked && lockedSite ? lockedSite : site;
   const eligibleRows = rows.filter(row => !clients.length || (row.client && clients.includes(row.client)));
   const siteOptions = [...new Set(eligibleRows.map(row => row.site).filter((value): value is string => !!value))].sort();
-  const areaRows = eligibleRows.filter(row => site === 'All Site' || row.site === site);
+  const areaRows = eligibleRows.filter(row => effectiveSite === 'All Site' || row.site === effectiveSite);
   const areaOptions = [...new Set(areaRows.map(row => row.area).filter(Boolean))].sort();
   const clientOptions = [...new Set(rows.map(row => row.client).filter((value): value is string => !!value))].sort();
 
@@ -244,9 +249,15 @@ export function MCUDashboardFilters({
     <div className="mcu-dashboard-filters">
       <label>
         <span>Site</span>
-        <select value={site} onChange={event => onSiteChange(event.target.value)}>
-          <option value="All Site">All Site</option>
-          {siteOptions.map(value => <option key={value} value={value}>{value}</option>)}
+        <select value={effectiveSite} disabled={isSiteLocked} onChange={event => onSiteChange(event.target.value)}>
+          {isSiteLocked && lockedSite ? (
+            <option value={lockedSite}>{lockedSite}</option>
+          ) : (
+            <>
+              <option value="All Site">All Site</option>
+              {siteOptions.map(value => <option key={value} value={value}>{value}</option>)}
+            </>
+          )}
         </select>
       </label>
       <label>

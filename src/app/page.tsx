@@ -72,7 +72,7 @@ function AdminLayananKuratif() {
   const { isAdmin } = useAuth();
   const [tab, setTab] = useState<'kunjungan' | 'inventory'>('kunjungan');
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+    <div className="tab-module-container">
       <CenteredTabs
         tabs={[
           { key: 'kunjungan', label: 'Kunjungan Berobat' },
@@ -83,7 +83,7 @@ function AdminLayananKuratif() {
         ariaLabel="Layanan Kuratif: Input"
         compact
       />
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="tab-module-content">
         {tab === 'kunjungan' ? (
           <AdminTogglePanel
             formContent={<KunjunganBerobatForm />}
@@ -106,7 +106,7 @@ function AdminLayananKuratif() {
 function AdminHigieneIndustri() {
   const [tab, setTab] = useState<'hearing' | 'ergonomi' | 'sanitasi' | 'cahaya' | 'udara'>('hearing');
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+    <div className="tab-module-container">
       <CenteredTabs
         tabs={[
           { key: 'hearing', label: 'Hearing Conservation' },
@@ -121,7 +121,7 @@ function AdminHigieneIndustri() {
         ariaLabel="Higiene Industri: Input"
         compact
       />
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="tab-module-content">
         {tab === 'sanitasi' ? (
           <AdminTogglePanel
             formContent={<InspeksiSanitasi />}
@@ -353,16 +353,16 @@ const HOME_SIDEBAR: SidebarItem[] = [
 const DASH_SIDEBAR: SidebarItem[] = [
   { key: 'statistik', label: 'Statistik Kesehatan', icon: <IconStatistik /> },
   { key: 'monitoring', label: 'Monitoring MCU', icon: <IconMonitoring /> },
-  { key: 'prokawan-dashboard', label: 'ProKawan', icon: <IconProkawan />, adminOnly: true },
+  { key: 'prokawan-dashboard', label: 'ProKawan', icon: <IconProkawan /> },
   { key: 'layanan-kuratif', label: 'Layanan Kuratif', icon: <IconKuratif /> },
   // Program Inspeksi menggantikan menu SPIP: satu menu, dua tab —
   // "Eksekusi & PICA" (jadwal, PICA, petugas) dan "Kondisi Aset" (isi SPIP:
   // kelengkapan, kelayakan, item rusak/belum tersedia). Keduanya mengukur hal
   // berbeda sehingga tidak boleh saling menggantikan.
-  { key: 'inspeksi-dashboard', label: 'Program Inspeksi', icon: <IconSarana />, adminOnly: true },
-  { key: 'higiene-industri', label: 'Higiene Industri', icon: <IconHigiene />, adminOnly: true },
-  { key: 'gizi-kerja-dashboard', label: 'Gizi Kerja', icon: <IconGizi />, adminOnly: true },
-  { key: 'mental-health-dashboard', label: 'Kesehatan Mental', icon: <IconBrain />, adminOnly: true },
+  { key: 'inspeksi-dashboard', label: 'Program Inspeksi', icon: <IconSarana /> },
+  { key: 'higiene-industri', label: 'Higiene Industri', icon: <IconHigiene /> },
+  { key: 'gizi-kerja-dashboard', label: 'Gizi Kerja', icon: <IconGizi /> },
+  { key: 'mental-health-dashboard', label: 'Kesehatan Mental', icon: <IconBrain /> },
 ];
 
 /** Ikut ProKawan — kelompok orang bertopeng satu sama lain. */
@@ -637,29 +637,8 @@ function DashContent() {
     return () => clearTimeout(timer);
   }, [isLoggedIn, profile?.role]);
 
-  if (!isLoggedIn) {
-    return (
-      <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        flex: 1, textAlign: 'center', padding: 40,
-      }}>
-        <div style={{
-          width: 64, height: 64, borderRadius: 16,
-          background: 'rgba(255,77,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          marginBottom: 16,
-        }}>
-          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#ff4d00" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-        </div>
-        <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--foreground)', marginBottom: 6 }}>
-          Silahkan Login Untuk Mengakses Halaman Ini!
-        </p>
-        <p style={{ fontSize: 12, color: 'var(--muted-foreground)' }}>
-          Masuk dengan akun Anda untuk melihat data dashboard.
-        </p>
-      </div>
-    );
+  if (!isLoggedIn || profile?.role === 'employee') {
+    return null;
   }
 
   switch (activeDashSidebar) {
@@ -748,8 +727,8 @@ function AdminTogglePanel({ formContent, tableContents, hasTable, stepLabels }: 
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100%', position: 'relative', overflow: 'hidden' }}>
-      <div style={{ flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden' }}>
+    <div className="admin-toggle-container">
+      <div className="admin-toggle-viewport">
         <AnimatePresence mode="wait">
           <motion.div
             key={step}
@@ -757,7 +736,7 @@ function AdminTogglePanel({ formContent, tableContents, hasTable, stepLabels }: 
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: isForm ? -40 : 40 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}
+            className="admin-toggle-motion"
           >
             {panels[idx]}
           </motion.div>
@@ -787,10 +766,14 @@ function AdminTogglePanel({ formContent, tableContents, hasTable, stepLabels }: 
 
 function AdminContent() {
   const activeAdminSidebar = useMCUStore((s) => s.activeAdminSidebar);
-  const { isAdmin } = useAuth();
+  const { role, isAdmin, isSuperuser } = useAuth();
 
-  // Kelola Pengguna kini menjadi tab di dalam menu Pengaturan.
-  if (activeAdminSidebar === 'pengaturan' || activeAdminSidebar === 'kelola-pengguna') {
+  if (!['administrator', 'superuser'].includes(role || '')) {
+    return null;
+  }
+
+  // Kelola Pengguna kini menjadi tab di dalam menu Pengaturan (khusus Superuser).
+  if ((activeAdminSidebar === 'pengaturan' || activeAdminSidebar === 'kelola-pengguna') && isSuperuser) {
     return <div className="admin-form-container"><AppSettingsPage /></div>;
   }
 
@@ -1314,9 +1297,9 @@ export default function Home() {
   const { user, profile, loading: authLoading, isSuperuser, role } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const activePage = role === 'employee' ? 'home' : store.activePage;
 
   const isLoggedIn = !!user && !!profile;
+  const activePage = !isLoggedIn ? 'home' : store.activePage;
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('login') === '1') {
@@ -1325,20 +1308,29 @@ export default function Home() {
     }
   }, []);
 
-  // Employee accounts are limited to Home and questionnaire routes.
+  // Arahkan otomatis ke Home bila halaman aktif tidak sesuai wewenang role / guest.
   useEffect(() => {
     if (authLoading) return;
-    if (role === 'employee' && store.activePage !== 'home') {
+    if (!isLoggedIn) {
+      if (store.activePage !== 'home') store.setActivePage('home');
+      return;
+    }
+    if (role === 'employee' && !['home', 'data-entry'].includes(store.activePage)) {
       store.setActivePage('home');
       return;
     }
-    if (activePage === 'administrator' && !['administrator', 'superuser'].includes(role || '')) {
+    if (store.activePage === 'administrator' && !['administrator', 'superuser'].includes(role || '')) {
+      store.setActivePage('home');
+      return;
+    }
+    if (store.activePage === 'dashboard' && !['pic', 'manager', 'administrator', 'superuser'].includes(role || '')) {
+      store.setActivePage('home');
+      return;
+    }
+    if (store.activePage === 'data-entry' && !['employee', 'pic', 'manager', 'administrator', 'superuser'].includes(role || '')) {
       store.setActivePage('home');
     }
-    if (activePage === 'data-entry' && !['pic', 'administrator', 'superuser'].includes(role || '')) {
-      store.setActivePage('home');
-    }
-  }, [activePage, authLoading, role, store]);
+  }, [authLoading, isLoggedIn, role, store]);
 
   // Reset sub-sidebar to topmost when main page changes
   // Use ref to avoid infinite loop (don't depend on store object)
@@ -1353,11 +1345,13 @@ export default function Home() {
     resetSidebar(activePage);
   }, [activePage, resetSidebar]);
 
-  // Role-based header nav
+  // Role-based header nav: menu tanpa wewenang disembunyikan total.
   const headerNav = ALL_HEADER_NAV.filter((item) => {
-    if (role === 'employee') return item.key === 'home';
+    if (!isLoggedIn) return item.key === 'home';
+    if (role === 'employee') return item.key === 'home' || item.key === 'data-entry';
     if (item.key === 'administrator') return ['administrator', 'superuser'].includes(role || '');
-    if (item.key === 'data-entry') return ['pic', 'administrator', 'superuser', 'manager'].includes(role || '');
+    if (item.key === 'dashboard') return ['pic', 'manager', 'administrator', 'superuser'].includes(role || '');
+    if (item.key === 'data-entry') return ['employee', 'pic', 'manager', 'administrator', 'superuser'].includes(role || '');
     return true;
   });
 
@@ -1365,17 +1359,9 @@ export default function Home() {
   const getSidebarItems = (): SidebarItem[] => {
     if (activePage === 'home') return HOME_SIDEBAR;
     if (activePage === 'dashboard') {
-      return DASH_SIDEBAR.filter((item) => {
-        if (item.adminOnly && !['administrator', 'superuser'].includes(role || '')) return false;
-        if (item.approverOnly && !['manager', 'superuser'].includes(role || '')) return false;
-        if (item.superuserOnly && !isSuperuser) return false;
-        return true;
-      });
+      return DASH_SIDEBAR;
     }
     if (activePage === 'data-entry') {
-      if (role === 'manager') {
-        return DATA_ENTRY_SIDEBAR.filter((item) => item.approverOnly);
-      }
       return DATA_ENTRY_SIDEBAR.filter((item) => {
         if (item.approverOnly && !['manager', 'superuser'].includes(role || '')) return false;
         return true;
@@ -1400,10 +1386,11 @@ export default function Home() {
   const pageTransitionKey = activePage === 'home' ? 'home' : `${activePage}:${activeSidebarKey}`;
 
   const handleNav = (tab: PageTab) => {
-    if (role === 'employee' && tab !== 'home') return;
-    // Prevent non-admins from going to administrator
+    if (!isLoggedIn && tab !== 'home') return;
+    if (role === 'employee' && !['home', 'data-entry'].includes(tab)) return;
     if (tab === 'administrator' && !['administrator', 'superuser'].includes(role || '')) return;
-    if (tab === 'data-entry' && !['pic', 'administrator', 'superuser', 'manager'].includes(role || '')) return;
+    if (tab === 'dashboard' && !['pic', 'manager', 'administrator', 'superuser'].includes(role || '')) return;
+    if (tab === 'data-entry' && !['employee', 'pic', 'manager', 'administrator', 'superuser'].includes(role || '')) return;
     store.setActivePage(tab);
     setMobileOpen(false);
   };

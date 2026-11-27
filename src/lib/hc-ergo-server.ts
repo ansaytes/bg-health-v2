@@ -10,7 +10,7 @@ export const db = createClient(url, serviceKey || 'missing-service-role-key');
 
 export const ADMIN_ROLES = ['administrator', 'superuser'];
 export const ALLOWED_ROLES = ADMIN_ROLES;                 // dipakai /api/hc
-/** Penyetuju dokumen ergonomi (FORM/116-118: "Disetujui oleh QSHE Manager / PJO"). */
+/** Penyetuju dokumen ergonomi: hanya Manager dan Superuser. */
 export const APPROVER_ROLES = ['manager', 'superuser'];
 
 export interface Caller { role: string; name: string; jabatan: string | null; site: string | null; userId: string; }

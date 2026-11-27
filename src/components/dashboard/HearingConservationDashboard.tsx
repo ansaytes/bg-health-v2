@@ -14,6 +14,7 @@ import { ChartJS } from '@/lib/chart-register';
 import { authFetch } from '@/lib/api-client';
 import { ZONA_COLOR } from '@/lib/hc-ergo';
 import { useSites } from '@/lib/site-list';
+import { useSiteLock } from '@/lib/auth-context';
 import { BAR_LAYOUT, STANDAR_ANIMASI_BAR, gradientBatangArray, skalaBar, useAnimationReady } from '@/lib/chart-standard';
 import PageLoading from '@/components/ui/page-loading';
 import { MCUChart, MCUChartCard, MCURefreshButton } from '@/components/dashboard/MCUDashboardShared';
@@ -33,7 +34,7 @@ const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sa
 export default function HearingConservationDashboard() {
   const { sites: daftarSite } = useSites();
   const [d, setD] = useState<D | null>(null);
-  const [site, setSite] = useState('');
+  const { site, setSite, isLocked: isSiteLocked, lockedSite } = useSiteLock('');
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
   const [isDark, setIsDark] = useState(
@@ -197,6 +198,7 @@ export default function HearingConservationDashboard() {
             <span>Site</span>
             <select
               value={site}
+              disabled={isSiteLocked}
               onChange={(e) => setSite(e.target.value)}
               style={{
                 height: 28,
@@ -209,10 +211,16 @@ export default function HearingConservationDashboard() {
                 padding: '0 6px',
               }}
             >
-              <option value="">Semua Site</option>
-              {daftarSite.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
+              {isSiteLocked && lockedSite ? (
+                <option value={lockedSite}>{lockedSite}</option>
+              ) : (
+                <>
+                  <option value="">Semua Site</option>
+                  {daftarSite.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </>
+              )}
             </select>
           </label>
         </div>

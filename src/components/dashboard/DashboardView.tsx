@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { useSiteLock } from '@/lib/auth-context';
 import { ChartJS } from '@/lib/chart-register';
 import { MONTHS, JOBSITES } from '@/lib/lagging-data';
 import { fetchDashboardData } from '@/lib/dashboard-data';
@@ -116,7 +117,7 @@ function getRagKaptk(val: number) {
    ────────────────────────────────────────────────────────────── */
 
 export default function DashboardView() {
-  const [selectedSite, setSelectedSite] = useState<string>('All Site');
+  const { site: selectedSite, setSite: setSelectedSite, isLocked: isSiteLocked, lockedSite } = useSiteLock('All Site');
   // Default: current year + current month (Statistik Kesehatan)
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number | 'all'>(new Date().getMonth() + 1);
@@ -647,8 +648,8 @@ export default function DashboardView() {
           </svg>
           Filtering
         </div>
-        <select value={selectedSite} onChange={(e) => { setSelectedSite(e.target.value); setChartReady(false); }}>
-          {JOBSITES.map(s => <option key={s} value={s}>{s}</option>)}
+        <select value={selectedSite} disabled={isSiteLocked} onChange={(e) => { setSelectedSite(e.target.value); setChartReady(false); }}>
+          {isSiteLocked && lockedSite ? <option value={lockedSite}>{lockedSite}</option> : JOBSITES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         <select value={String(selectedMonth)} onChange={handleMonthChange}>
           <option value="all">Bulan (YTD)</option>

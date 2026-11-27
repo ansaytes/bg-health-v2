@@ -95,7 +95,7 @@ export default function ProKawanDashboard() {
   };
 
   return (
-    <div className="dashboard mcu-live-dashboard" style={{ overflow: 'hidden', gap: 8 }}>
+    <div className="dashboard mcu-live-dashboard" style={{ gap: 8 }}>
       {/* Filter bar : mengikuti pola Monitoring MCU */}
       <div className="mcu-live-top-bar" style={{ flexShrink: 0 }}>
         <div className="mcu-dashboard-filters">

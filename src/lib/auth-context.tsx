@@ -52,6 +52,28 @@ export function useAuth() {
   return ctx;
 }
 
+/**
+ * Untuk role `pic`, site otomatis dikunci ke `profile.site` dan tidak dapat diganti.
+ * Role lain bebas memilih filter site.
+ */
+export function useSiteLock(initialSite = ''): {
+  site: string;
+  setSite: (s: string) => void;
+  isLocked: boolean;
+  lockedSite: string;
+} {
+  const { role, profile } = useAuth();
+  const isLocked = role === 'pic';
+  const lockedSite = (profile?.site || '').trim();
+  const [selectedSite, setSelectedSite] = useState(initialSite);
+  const site = isLocked && lockedSite ? lockedSite : selectedSite;
+  const setSite = useCallback((next: string) => {
+    if (isLocked) return;
+    setSelectedSite(next);
+  }, [isLocked]);
+  return { site, setSite, isLocked, lockedSite };
+}
+
 async function fetchProfile(userId: string): Promise<UserProfile | null> {
   const { data, error } = await supabase
     .from('user_profiles')
@@ -74,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAdmin = role === 'superuser' || role === 'administrator' || role === 'pic';
   const isSuperuser = role === 'superuser';
   const isManager = role === 'manager';
-  // Hanya Manager (QSHE Manager / PJO) dan superuser yang dapat menyetujui / menolak survei ergonomi
+  // Hanya Manager (QSHE Manager / PJO) dan superuser yang dapat menyetujui survei ergonomi
   const canApproveErgo = role === 'superuser' || role === 'manager';
 
   const refreshProfile = useCallback(async () => {

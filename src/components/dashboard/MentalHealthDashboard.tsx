@@ -22,6 +22,7 @@ import {
   MCURefreshButton,
 } from '@/components/dashboard/MCUDashboardShared';
 import { useSites } from '@/lib/site-list';
+import { useSiteLock } from '@/lib/auth-context';
 import PageLoading from '@/components/ui/page-loading';
 
 interface DataMentalHealth {
@@ -84,7 +85,7 @@ export default function MentalHealthDashboard() {
   const [data, setData] = useState<DataMentalHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [site, setSite] = useState('');
+  const { site, setSite, isLocked: isSiteLocked, lockedSite } = useSiteLock('');
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -140,6 +141,7 @@ export default function MentalHealthDashboard() {
             <span>Site</span>
             <select
               value={site}
+              disabled={isSiteLocked}
               onChange={(e) => setSite(e.target.value)}
               style={{
                 height: 28,
@@ -152,12 +154,18 @@ export default function MentalHealthDashboard() {
                 padding: '0 6px',
               }}
             >
-              <option value="">Semua Site</option>
-              {daftarSite.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
+              {isSiteLocked && lockedSite ? (
+                <option value={lockedSite}>{lockedSite}</option>
+              ) : (
+                <>
+                  <option value="">Semua Site</option>
+                  {daftarSite.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </>
+              )}
             </select>
           </label>
         </div>

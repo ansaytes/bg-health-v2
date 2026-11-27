@@ -21,10 +21,10 @@ export default function LayananKuratifTabs({ initialTab = 'kunjungan' }: { initi
   const [tab, setTab] = useState<KuratifTab>(initialTab);
 
   return (
-    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className="tab-module-container">
       <CenteredTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Layanan Kuratif" />
 
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="tab-module-content">
         {tab === 'kunjungan' && <KunjunganBerobat />}
         {tab === 'inventory' && <InventoryDashboard />}
       </div>

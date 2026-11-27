@@ -20,11 +20,11 @@ export default function MonitoringMCUTabs({ initialTab = 'monitoring' }: { initi
   const [tab, setTab] = useState<Tab>(initialTab);
 
   return (
-    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className="tab-module-container">
       <CenteredTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Halaman MCU" />
 
-      {/* flex:1 + minHeight:0 agar masing-masing halaman tetap mengisi satu frame */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* flex:1 + minHeight:0 di PC, auto di mobile agar kartu mengalir vertikal */}
+      <div className="tab-module-content">
         {tab === 'monitoring' ? <MonitoringMCU /> : <HasilTindakLanjutMCU />}
       </div>
     </div>

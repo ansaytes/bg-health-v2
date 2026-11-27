@@ -23,7 +23,7 @@ const TINGKAT_TEXT: Record<string, string> = { RINGAN: '#00895f', SEDANG: '#b06a
 
 function ChartCard({ title, sub, accent = '#ff4d00', empty, children }: { title: string; sub?: string; accent?: string; empty?: boolean; children: React.ReactNode }) {
   return (
-    <div className="card" style={{ padding: '10px 12px', minHeight: 0 }}>
+    <div className="card mcu-dashboard-card" style={{ padding: '10px 12px' }}>
       <div className="card-head">
         <span style={{ width: 4, height: 26, borderRadius: 2, background: accent, flexShrink: 0 }} />
         <div style={{ minWidth: 0 }}>
@@ -31,7 +31,7 @@ function ChartCard({ title, sub, accent = '#ff4d00', empty, children }: { title:
           {sub && <p>{sub}</p>}
         </div>
       </div>
-      <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+      <div className="mcu-dashboard-chart" style={{ position: 'relative' }}>
         {/* Canvas selalu dirender agar ref tidak null saat data datang belakangan. */}
         <div style={{ position: 'absolute', inset: 0, visibility: empty ? 'hidden' : 'visible' }}>{children}</div>
         {empty && (
@@ -229,7 +229,7 @@ export default function PemetaanPsikologisDashboard() {
   const indikator = (d.indikator || []) as D[];
 
   return (
-    <div className="dashboard" style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className="dashboard" style={{ flex: 1, minHeight: 0, padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div className="kunjungan-filter-bar" style={{ flexShrink: 0, flexWrap: 'wrap' }}>
         <select className="admin-filter-select" value={site} onChange={(e) => setSite(e.target.value)}><option value="">All Site</option>{SITES.map((s) => <option key={s}>{s}</option>)}</select>
         <select className="admin-filter-select" value={kelompok} onChange={(e) => setKelompok(e.target.value as 'departemen' | 'jabatan')} title="Kelompokkan hasil per">
@@ -262,7 +262,7 @@ export default function PemetaanPsikologisDashboard() {
         </span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8, flex: 1, minHeight: 0 }}>
+      <div className="pemetaan-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8, flex: 1, minHeight: 0 }}>
         <ChartCard title="Komposisi Indikator" sub="6 indikator × 5 item · warna = tingkat risiko" accent="#E74C3C"
           empty={!memadai.length}>
           <canvas ref={heatRef} />
@@ -273,18 +273,18 @@ export default function PemetaanPsikologisDashboard() {
         </ChartCard>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flex: 1, minHeight: 0 }}>
+      <div className="pemetaan-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flex: 1, minHeight: 0 }}>
         <ChartCard title="Prioritas Intervensi" sub="Rata-rata indikator tertinggi (skala 5–35)" accent="#ff4d00"
           empty={!memadai.length}>
           <canvas ref={rankRef} />
         </ChartCard>
 
-        <div className="card" style={{ padding: '8px 10px', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <div className="card mcu-dashboard-card" style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column' }}>
           <div className="card-head" style={{ flexShrink: 0 }}>
             <span style={{ width: 4, height: 20, borderRadius: 2, background: '#778899', flexShrink: 0 }} />
             <div><h2>Rincian</h2><p>{memadai.length} departemen · skor rata-rata per indikator</p></div>
           </div>
-          <div style={{ overflow: 'auto', flex: 1, minHeight: 0 }}>
+          <div style={{ overflow: 'auto', flex: 1, minHeight: 180, maxHeight: 320 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10.5 }}>
               <thead>
                 <tr style={{ position: 'sticky', top: 0, background: 'var(--card)', zIndex: 1 }}>

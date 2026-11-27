@@ -13,15 +13,23 @@ type Row = Record<string, any>;
 const METODE: Metode[] = ['RULA', 'ROSA', 'WERA'];
 
 export async function GET(req: NextRequest) {
-  const auth = await requireCaller(req, [...ADMIN_ROLES, 'manager']);
+  const auth = await requireCaller(req, [...ADMIN_ROLES, 'manager', 'pic']);
   if ('error' in auth) return auth.error;
   const p = new URL(req.url).searchParams;
   const resource = p.get('resource') || 'dashboard';
   try {
     if (auth.caller.role === 'manager' && resource === 'recommendation') return fail('Akses ditolak', 403);
+    if (auth.caller.role === 'pic' && resource !== 'dashboard' && resource !== 'survey') return fail('Akses ditolak', 403);
     if (resource === 'survey') {
       let q = db.from('ergo_survey').select('*').order('tanggal', { ascending: false }).limit(500);
-      for (const k of ['site', 'metode', 'status']) { const v = p.get(k); if (v && v !== 'all') q = q.eq(k, v); }
+      for (const k of ['metode', 'status']) { const v = p.get(k); if (v && v !== 'all') q = q.eq(k, v); }
+      if (auth.caller.role === 'pic') {
+        if (!auth.caller.site) return fail('Site PIC belum ditentukan', 403);
+        q = q.eq('site', auth.caller.site);
+      } else {
+        const s = p.get('site');
+        if (s && s !== 'all') q = q.eq('site', s);
+      }
       const tahun = p.get('tahun');
       if (tahun && tahun !== 'all') q = q.gte('tanggal', `${tahun}-01-01`).lte('tanggal', `${tahun}-12-31`);
       const { data, error } = await q;
@@ -37,8 +45,13 @@ export async function GET(req: NextRequest) {
       return ok(data);
     }
     if (resource === 'dashboard') {
-      if (!ADMIN_ROLES.includes(auth.caller.role) && auth.caller.role !== 'manager') return fail('Akses ditolak', 403);
-      return ok(await buildDashboard(p.get('site') || ''));
+      if (auth.caller.role === 'pic' && !auth.caller.site) return fail('Site PIC belum ditentukan', 403);
+      const reqSite = p.get('site') || '';
+      if (auth.caller.role === 'pic' && reqSite && reqSite.toLowerCase() !== auth.caller.site!.toLowerCase()) {
+        return fail('PIC hanya dapat melihat site sendiri', 403);
+      }
+      const targetSite = auth.caller.role === 'pic' ? auth.caller.site! : reqSite;
+      return ok(await buildDashboard(targetSite));
     }
     return fail('resource tidak dikenal');
   } catch (e) {
