@@ -338,7 +338,7 @@ export default function InventoryAdmin() {
     <div className="admin-form-container" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '0 16px 8px 16px', height: '100%', minHeight: 0 }}>
 
       {/* HEADER LAYOUT: Standard Admin Form Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0 4px', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0 4px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap', gap: 8 }}>
         <div>
           <h1 className="admin-form-title">Stok Obat &amp; BHP</h1>
           <p className="admin-form-subtitle">Sistem FEFO/FIFO otomatis berbasis batch untuk pengelolaan obat &amp; bahan medis habis pakai.</p>
@@ -355,8 +355,8 @@ export default function InventoryAdmin() {
       </div>
 
       {/* Toolbar */}
-      <div className="mcu-records-toolbar" style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'transparent', padding: '0', border: 'none', flexWrap: 'nowrap' }}>
-        <div className="mcu-records-search" style={{ flex: '1 1 0px', minWidth: 0, display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--card)', padding: '0 10px', height: '28px', borderRadius: '8px', border: '1px solid var(--border)', boxSizing: 'border-box' }}>
+      <div className="mcu-records-toolbar" style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'transparent', padding: '0', border: 'none', flexWrap: 'wrap' }}>
+        <div className="mcu-records-search" style={{ flex: '1 1 180px', minWidth: 0, display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--card)', padding: '0 10px', height: '28px', borderRadius: '8px', border: '1px solid var(--border)', boxSizing: 'border-box' }}>
           <Search size={13} className="text-muted-foreground" style={{ flexShrink: 0 }} />
           <input
             type="text"
@@ -366,7 +366,7 @@ export default function InventoryAdmin() {
             style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontSize: '11px', height: '100%' }}
           />
         </div>
-        <div style={{ flexShrink: 0, width: '150px' }}>
+        <div style={{ flex: '1 1 130px', maxWidth: 180 }}>
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
@@ -378,7 +378,7 @@ export default function InventoryAdmin() {
             <option value="Lainnya">Lainnya</option>
           </select>
         </div>
-        <div style={{ flexShrink: 0, width: '160px' }}>
+        <div style={{ flex: '1 1 140px', maxWidth: 190 }}>
           <select
             value={stockFilter}
             onChange={(e) => setStockFilter(e.target.value as StockFilter)}

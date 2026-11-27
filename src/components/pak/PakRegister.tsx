@@ -259,8 +259,8 @@ export default function PakRegister() {
       </div>
 
       {/* Toolbar */}
-      <div className="mcu-records-toolbar" style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'transparent', padding: '0', border: 'none', flexWrap: 'nowrap' }}>
-        <div className="mcu-records-search" style={{ flex: '1 1 0px', minWidth: 0, display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--card)', padding: '0 10px', height: '30px', borderRadius: '6px', border: '1px solid var(--border)', boxSizing: 'border-box' }}>
+      <div className="mcu-records-toolbar" style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'transparent', padding: '0', border: 'none', flexWrap: 'wrap' }}>
+        <div className="mcu-records-search" style={{ flex: '1 1 180px', minWidth: 0, display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--card)', padding: '0 10px', height: '30px', borderRadius: '6px', border: '1px solid var(--border)', boxSizing: 'border-box' }}>
           <Search size={14} className="text-muted-foreground" style={{ flexShrink: 0 }} />
           <input
             value={search}
@@ -269,7 +269,7 @@ export default function PakRegister() {
             style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '11.5px', color: 'var(--foreground)', width: '100%', height: '100%' }}
           />
         </div>
-        <div style={{ flexShrink: 0, width: '180px' }}>
+        <div style={{ flex: '0 1 180px', minWidth: 120 }}>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}

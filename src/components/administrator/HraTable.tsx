@@ -255,6 +255,8 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
             style={{
               display: 'inline-flex',
               alignItems: 'center',
+              flexWrap: 'wrap',
+              maxWidth: '100%',
               padding: 3,
               borderRadius: 8,
               background: 'var(--muted)',
@@ -365,7 +367,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
               borderRadius: 8,
               padding: '0 12px',
               flex: 1,
-              minWidth: 220,
+              minWidth: 'min(100%, 200px)',
               height: 32,
               boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.03)',
             }}
