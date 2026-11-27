@@ -15,7 +15,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  AlertTriangle, CalendarClock, CheckCircle2, ClipboardList, Loader2,
+  AlertTriangle, ArrowLeft, CalendarClock, CheckCircle2, ClipboardList, Loader2,
   Phone, Plus, RefreshCw, Search, ShieldAlert,
 } from 'lucide-react';
 
@@ -86,6 +86,7 @@ export default function MonitoringKaryawanSakit() {
   const [filterStatus, setFilterStatus] = useState('AKTIF');
   const [filterFase, setFilterFase] = useState('semua');
   const [selected, setSelected] = useState<string | null>(null);
+  const [mobileShowDetail, setMobileShowDetail] = useState(false);
   const [membuat, setMembuat] = useState(false);
 
   const load = useCallback(async () => {
@@ -118,7 +119,10 @@ export default function MonitoringKaryawanSakit() {
           (e.nama && e.nama.toLowerCase().includes(query.toLowerCase())) ||
           (e.nik && e.nik.toLowerCase() === query.toLowerCase()),
       );
-      if (match) setSelected(match.id);
+      if (match) {
+        setSelected(match.id);
+        setMobileShowDetail(true);
+      }
     }
   }, [mcuFocusRequest?.requestId, episodes]);
 
@@ -187,9 +191,9 @@ export default function MonitoringKaryawanSakit() {
 
       {membuat && <FormEpisodeBaru onSelesai={() => { setMembuat(false); void load(); }} />}
 
-      <div className="sick-monitor-grid">
+      <div className={`sick-monitor-grid ${mobileShowDetail && aktifTerpilih ? 'is-mobile-detail' : 'is-mobile-list'}`}>
         {/* Daftar episode */}
-        <div className="card" style={{ minHeight: 0, display: 'flex', flexDirection: 'column', padding: '8px 6px' }}>
+        <div className="card mobile-master-list-col" style={{ minHeight: 0, display: 'flex', flexDirection: 'column', padding: '8px 6px' }}>
           <div className="card-head" style={{ flexShrink: 0, paddingBottom: 4 }}>
             <span style={{ width: 3, height: 18, borderRadius: 2, background: '#E63946', flexShrink: 0 }} />
             <div>
@@ -214,7 +218,7 @@ export default function MonitoringKaryawanSakit() {
                 <button
                   key={e.id}
                   type="button"
-                  onClick={() => setSelected(e.id)}
+                  onClick={() => { setSelected(e.id); setMobileShowDetail(true); }}
                   style={{
                     display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
                     padding: '7px 9px', marginBottom: 2, borderRadius: 8, border: 'none',
@@ -252,7 +256,14 @@ export default function MonitoringKaryawanSakit() {
         </div>
 
         {/* Detail episode */}
-        <div style={{ minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 2 }}>
+        <div className="mobile-master-detail-col" style={{ minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 2 }}>
+          <button
+            type="button"
+            className="mobile-back-to-list-btn"
+            onClick={() => setMobileShowDetail(false)}
+          >
+            <ArrowLeft size={14} /> Kembali ke Daftar Episode
+          </button>
           {!aktifTerpilih && !loading && (
             <div className="card" style={{ padding: 24, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 12 }}>
               {episodes.length ? 'Pilih episode di daftar kiri.' : 'Belum ada episode karyawan sakit.'}

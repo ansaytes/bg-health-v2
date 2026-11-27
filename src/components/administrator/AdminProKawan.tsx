@@ -15,7 +15,7 @@
 // jalur (sama seperti dashboard ProKawan).
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CalendarClock, CheckCircle2, ExternalLink, Loader2, RefreshCw, Search, Save, UserRound, XCircle, MessageCircle } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CalendarClock, CheckCircle2, ExternalLink, Loader2, RefreshCw, Search, Save, UserRound, XCircle, MessageCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -109,6 +109,7 @@ export default function AdminProKawan() {
   const [filterZona, setFilterZona] = useState<'semua' | 'Kuning' | 'Merah'>('semua');
   const [filterSite, setFilterSite] = useState('semua');
   const [selectedNik, setSelectedNik] = useState<string | null>(null);
+  const [mobileShowDetail, setMobileShowDetail] = useState(false);
   const [saving, setSaving] = useState(false);
   // Hasil usulan jadwal (GET) — belum menulis apa pun sampai dikonfirmasi.
   const [jadwalUsulan, setJadwalUsulan] = useState<{
@@ -151,7 +152,10 @@ export default function AdminProKawan() {
           (p.nik && p.nik.toLowerCase() === query.toLowerCase()) ||
           (p.nama && p.nama.toLowerCase().includes(query.toLowerCase())),
       );
-      if (match) setSelectedNik(match.nik);
+      if (match) {
+        setSelectedNik(match.nik);
+        setMobileShowDetail(true);
+      }
     }
   }, [mcuFocusRequest?.requestId, peserta]);
 
@@ -396,9 +400,9 @@ export default function AdminProKawan() {
         </div>
       )}
 
-      <div className="prokawan-split-grid" style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'minmax(240px, 320px) minmax(0, 1fr)', gap: 8 }}>
+      <div className={`prokawan-split-grid ${mobileShowDetail && selected ? 'is-mobile-detail' : 'is-mobile-list'}`} style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'minmax(240px, 320px) minmax(0, 1fr)', gap: 8 }}>
         {/* Daftar peserta */}
-        <div className="card" style={{ minHeight: 0, display: 'flex', flexDirection: 'column', padding: '8px 6px' }}>
+        <div className="card mobile-master-list-col" style={{ minHeight: 0, display: 'flex', flexDirection: 'column', padding: '8px 6px' }}>
           <div className="card-head" style={{ flexShrink: 0, paddingBottom: 4 }}>
             <span style={{ width: 3, height: 20, borderRadius: 2, background: '#ff4d00', flexShrink: 0 }} />
             <div style={{ minWidth: 0 }}>
@@ -423,7 +427,7 @@ export default function AdminProKawan() {
                 <button
                   key={p.nik}
                   type="button"
-                  onClick={() => setSelectedNik(p.nik)}
+                  onClick={() => { setSelectedNik(p.nik); setMobileShowDetail(true); }}
                   style={{
                     display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
                     padding: '7px 9px', marginBottom: 2, borderRadius: 8, border: 'none',
@@ -454,7 +458,14 @@ export default function AdminProKawan() {
         </div>
 
         {/* Detail peserta */}
-        <div style={{ minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 2 }}>
+        <div className="mobile-master-detail-col" style={{ minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 2 }}>
+          <button
+            type="button"
+            className="mobile-back-to-list-btn"
+            onClick={() => setMobileShowDetail(false)}
+          >
+            <ArrowLeft size={14} /> Kembali ke Daftar Peserta
+          </button>
           {loading && (
             <div className="card" style={{ padding: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'var(--muted-foreground)', fontSize: 12 }}>
               <Loader2 className="size-4 animate-spin" /> Memuat detail peserta ProKawan…

@@ -549,10 +549,11 @@ export default function InventoryDashboard() {
 
   return (
     <div className="dashboard" style={{ overflow: 'hidden', padding: '12px 16px', position: 'relative', flex: 1, minHeight: 0, height: '100%' }}>
-      <div style={{ position: 'relative', flex: 1, minHeight: 0, width: '100%', overflow: 'hidden' }}>
+      <div className="admin-toggle-viewport" style={{ position: 'relative', flex: 1, minHeight: 0, width: '100%', overflow: 'hidden' }}>
         <AnimatePresence mode="wait">
           <motion.div
             key="inventory-dashboard"
+            className="admin-toggle-motion"
             initial={{ opacity: 0, x: -36 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -36 }}

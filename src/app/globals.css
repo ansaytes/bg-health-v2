@@ -3279,6 +3279,49 @@ select.admin-input.compact-input {
     overflow: visible !important;
     flex: 0 0 auto !important;
   }
+  .raw-table-container {
+    position: relative !important;
+    inset: auto !important;
+    height: auto !important;
+    min-height: 360px !important;
+    overflow: visible !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+  }
+  .raw-table-filter-bar {
+    flex-wrap: wrap !important;
+  }
+  .sick-monitor-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 0 !important;
+    grid-template-rows: none !important;
+  }
+  .is-mobile-list .mobile-master-detail-col {
+    display: none !important;
+  }
+  .is-mobile-detail .mobile-master-list-col {
+    display: none !important;
+  }
+  .mobile-back-to-list-btn {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--foreground);
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+    align-self: flex-start;
+  }
+}
+
+.mobile-back-to-list-btn {
+  display: none;
 }
 
 /* Responsive — Small Phone <=640px */
@@ -3290,8 +3333,10 @@ select.admin-input.compact-input {
   .health-left-col { flex: unset; height: auto; }
   .sick-monitor-grid {
     flex: 0 0 auto;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(220px, 38vh) auto;
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    grid-template-rows: none !important;
   }
   .sick-episode-form-grid,
   .kunjungan-form-grid,
