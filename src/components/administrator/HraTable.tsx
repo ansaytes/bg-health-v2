@@ -518,6 +518,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {/* Table Header Columns (Rata Kiri Terstandarisasi) */}
             <div
+              className="hra-table-header"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -560,6 +561,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                 >
                   {/* Row Summary Bar (Clickable macOS List Item) */}
                   <div
+                    className="hra-row-summary"
                     onClick={() => toggleExpand(item.id)}
                     style={{
                       padding: '10px 14px',
@@ -598,7 +600,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                     </div>
 
                     {/* Departemen Badge Area (Rata Kiri Terstandarisasi) */}
-                    <div style={{ width: 140, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                    <div className="hra-col-dept" style={{ width: 140, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
                       <span
                         style={{
                           fontSize: 9.5,
@@ -623,7 +625,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                     </div>
 
                     {/* Main Title: Jenis Pekerjaan & Kelompok (Rata Kiri) */}
-                    <div style={{ flex: 1, minWidth: 180, textAlign: 'left' }}>
+                    <div className="hra-col-title" style={{ flex: 1, minWidth: 180, textAlign: 'left' }}>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--foreground)', letterSpacing: '-0.01em' }}>
                           {item.jenis_pekerjaan}
@@ -633,6 +635,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                         </span>
                       </div>
                       <div
+                        className="hra-col-title-source"
                         style={{
                           fontSize: 10.5,
                           color: 'var(--muted-foreground)',
@@ -647,7 +650,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                     </div>
 
                     {/* Hazard Category Tag (Rata Kiri Terstandarisasi) */}
-                    <div style={{ width: 110, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                    <div className="hra-col-hazard" style={{ width: 110, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
                       <span
                         style={{
                           fontSize: 10,
@@ -670,7 +673,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                     </div>
 
                     {/* Risk Badge (Initial -> Residual: P x E = R) (Rata Kiri Terstandarisasi) */}
-                    <div style={{ width: 175, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div className="hra-col-risk" style={{ width: 175, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
                       <div
                         title={`Initial Risk: P=${item.init_p} × E=${item.init_e} = R=${item.init_r} (${katInit})`}
                         style={{
@@ -715,7 +718,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                     </div>
 
                     {/* macOS Action Buttons */}
-                    <div style={{ width: 64, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }} onClick={(e) => e.stopPropagation()}>
+                    <div className="hra-col-actions" style={{ width: 64, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }} onClick={(e) => e.stopPropagation()}>
                       {onEdit && (
                         <button
                           type="button"
@@ -776,7 +779,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                       }}
                     >
                       {/* Grid 2 Kolom: Detail Bahaya & Efek */}
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: 12 }}>
                         {/* Kolom 1: Sumber & Efek Kesehatan (macOS Inset Card) */}
                         <div
                           style={{
@@ -808,7 +811,7 @@ export default function HraTable({ onEdit, onAddNew }: HraTableProps) {
                             background: 'var(--card)',
                             border: '1px solid var(--border)',
                             display: 'grid',
-                            gridTemplateColumns: '1fr 1fr',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 120px), 1fr))',
                             gap: 10,
                             boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
                           }}

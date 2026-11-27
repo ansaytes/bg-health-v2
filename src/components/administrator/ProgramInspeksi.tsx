@@ -155,56 +155,62 @@ export default function ProgramInspeksi() {
     <div className="mcu-records-modern" style={{ flex: 1, minHeight: 0, padding: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div className="mcu-records-card" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Header Toolbar Perencanaan */}
-        <div className="mcu-records-header" style={{ flexShrink: 0, marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-          <div style={{ flexShrink: 0 }}>
+        <div className="mcu-records-header" style={{ flexShrink: 0, marginBottom: 12, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
+          <div style={{ width: '100%' }}>
             <div className="mcu-records-kicker">FORM PERENCANAAN OPERASIONAL</div>
             <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>Perencanaan Target Jadwal Inspeksi Lapangan</h3>
           </div>
-          <div className="mcu-records-actions" style={{ flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
-              <span>Periode</span>
-              <input
-                type="month"
-                value={periode}
-                onChange={e => setPeriode(e.target.value || periodeBulan())}
-                style={{ height: 32, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 8px' }}
-              />
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
-              <span>Site</span>
-              <select
-                value={site}
-                onChange={e => setSite(e.target.value)}
-                style={{ height: 32, minWidth: 120, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 8px' }}
-              >
-                <option value="">Semua site</option>
-                {daftarSite.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
-              <span>Jenis</span>
-              <select
-                value={jenis}
-                onChange={e => setJenis(e.target.value as JenisInspeksi | '')}
-                style={{ height: 32, minWidth: 150, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--background)', fontSize: 11, padding: '0 8px' }}
-              >
-                <option value="">Semua jenis</option>
-                {JENIS_INSPEKSI_LIST.map(j => <option key={j} value={j}>{JENIS_META[j].label}</option>)}
-              </select>
-            </label>
-            <button type="button" className="mcu-dashboard-refresh" onClick={() => void load()} disabled={loading} style={{ height: 32 }}>
-              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
-            </button>
-            {isAdmin && (
-              <>
-                <Button size="sm" onClick={buatRencana} disabled={bekerja} style={{ height: 32, fontSize: 11 }}>
-                  <Plus size={13} className="mr-1" /> Buat Rencana Periode
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => { setTambahSite(site || daftarSite[0] || ''); setModalBuka(true); }} disabled={bekerja} style={{ height: 32, fontSize: 11 }}>
-                  <Plus size={13} className="mr-1" /> Jadwal Khusus
-                </Button>
-              </>
-            )}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8, width: '100%' }}>
+            {/* Baris 1: Filter Periode, Site, Jenis (rata kiri) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 155px), 1fr))', gap: 8, width: '100%', maxWidth: 640 }}>
+              <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3, fontSize: 10.5, fontWeight: 600, color: 'var(--muted-foreground)' }}>
+                <span>Periode</span>
+                <input
+                  type="month"
+                  value={periode}
+                  onChange={e => setPeriode(e.target.value || periodeBulan())}
+                  style={{ width: '100%', height: 32, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--foreground)', fontSize: 11, padding: '0 8px' }}
+                />
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3, fontSize: 10.5, fontWeight: 600, color: 'var(--muted-foreground)' }}>
+                <span>Site</span>
+                <select
+                  value={site}
+                  onChange={e => setSite(e.target.value)}
+                  style={{ width: '100%', height: 32, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--foreground)', fontSize: 11, padding: '0 8px' }}
+                >
+                  <option value="">Semua site</option>
+                  {daftarSite.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3, fontSize: 10.5, fontWeight: 600, color: 'var(--muted-foreground)' }}>
+                <span>Jenis</span>
+                <select
+                  value={jenis}
+                  onChange={e => setJenis(e.target.value as JenisInspeksi | '')}
+                  style={{ width: '100%', height: 32, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--foreground)', fontSize: 11, padding: '0 8px' }}
+                >
+                  <option value="">Semua jenis</option>
+                  {JENIS_INSPEKSI_LIST.map(j => <option key={j} value={j}>{JENIS_META[j].label}</option>)}
+                </select>
+              </label>
+            </div>
+            {/* Baris 2: Tombol Aksi (rata kiri) */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'flex-start', width: '100%' }}>
+              <button type="button" className="mcu-dashboard-refresh" onClick={() => void load()} disabled={loading} style={{ height: 32 }}>
+                <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
+              </button>
+              {isAdmin && (
+                <>
+                  <Button size="sm" onClick={buatRencana} disabled={bekerja} style={{ height: 32, fontSize: 11 }}>
+                    <Plus size={13} className="mr-1" /> Buat Rencana Periode
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { setTambahSite(site || daftarSite[0] || ''); setModalBuka(true); }} disabled={bekerja} style={{ height: 32, fontSize: 11 }}>
+                    <Plus size={13} className="mr-1" /> Jadwal Khusus
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </div>
 

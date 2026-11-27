@@ -2928,9 +2928,7 @@ select.admin-input.compact-input {
     justify-content: space-around;
     height: calc(56px + env(safe-area-inset-bottom, 0px));
     padding: 4px 8px calc(4px + env(safe-area-inset-bottom, 0px));
-    background: color-mix(in srgb, var(--card) 94%, transparent);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: var(--card);
     border-top: 1px solid var(--border);
     box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.08);
   }
@@ -3345,6 +3343,44 @@ select.admin-input.compact-input {
     font-weight: 700;
     cursor: pointer;
     align-self: flex-start;
+  }
+  /* HRA Table Mobile Card Layout */
+  .hra-table-header {
+    display: none !important;
+  }
+  .hra-row-summary {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 12px !important;
+    align-items: center !important;
+  }
+  .hra-col-dept {
+    width: auto !important;
+    max-width: 100%;
+  }
+  .hra-col-hazard {
+    width: auto !important;
+    max-width: 100%;
+  }
+  .hra-col-actions {
+    width: auto !important;
+    margin-left: auto;
+  }
+  .hra-col-title {
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    order: 4;
+  }
+  .hra-col-title-source {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
+  .hra-col-risk {
+    width: 100% !important;
+    flex-wrap: wrap !important;
+    order: 5;
   }
 }
 
