@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
+import { useMCUStore } from '@/lib/store';
 
 type Schedule = {
   id: string | null;
@@ -57,6 +58,16 @@ export default function InputJadwalMCU() {
   const [siteOptions, setSiteOptions] = useState<string[]>([]);
   const [departmentOptions, setDepartmentOptions] = useState<string[]>([]);
   const [sort, setSort] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({ key: 'nama', direction: 'asc' });
+
+  const mcuFocusRequest = useMCUStore((s) => s.mcuFocusRequest);
+  useEffect(() => {
+    if (!mcuFocusRequest) return;
+    const target = (mcuFocusRequest.nikKaryawan || mcuFocusRequest.nama || '').trim();
+    if (target) {
+      setQuery(target);
+      setPage(1);
+    }
+  }, [mcuFocusRequest?.requestId]);
 
   const getAuthHeaders = async (): Promise<HeadersInit> => {
     const accessToken = session?.access_token || (await supabase.auth.getSession()).data.session?.access_token;

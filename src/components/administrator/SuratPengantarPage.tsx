@@ -369,6 +369,17 @@ export default function SuratPengantarPage() {
     void load();
   }, [load]);
 
+  const mcuFocusRequest = useMCUStore((s) => s.mcuFocusRequest);
+  useEffect(() => {
+    if (!mcuFocusRequest || mcuFocusRequest.sumber !== 'surat-pengantar') return;
+    const q = (mcuFocusRequest.nama || mcuFocusRequest.nikKaryawan || '').trim();
+    if (q) {
+      setTab('daftar');
+      setSearch(q);
+      setStatusFilter('ALL');
+    }
+  }, [mcuFocusRequest?.requestId]);
+
   // Terima draft otomatis dari ReviewMCU saat klik "Ajukan Surat Follow Up"
   useEffect(() => {
     if (!draftFromReview) return;
@@ -746,7 +757,7 @@ export default function SuratPengantarPage() {
                 </div>
               )}
               <div>
-                <label className="admin-label">Jabatan / Posisi Dilamar</label>
+                <label className="admin-label">{isCalon ? 'Jabatan / Posisi Dilamar' : 'Jabatan'}</label>
                 <input type="text" className="admin-input" value={jabatan} onChange={(e) => setJabatan(e.target.value)} placeholder="mis. Driver / Operator / Mekanik" />
               </div>
               <div>

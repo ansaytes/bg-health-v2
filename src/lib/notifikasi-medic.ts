@@ -96,8 +96,8 @@ export const AMBANG = {
 // yang sama dan akan langsung memilih baris yang dimaksud (lihat fokusBaris).
 export const JENIS_META: Record<JenisNotifikasi, { label: string; ikon: string; tautanDefault: string }> = {
   'kontrol-prokawan': { label: 'Kontrol ProKawan', ikon: 'heart', tautanDefault: '/?page=administrator&menu=prokawan-admin' },
-  'mcu-expired': { label: 'MCU Expired', ikon: 'alert', tautanDefault: '/?page=administrator&menu=review-mcu' },
-  'mcu-akan-expired': { label: 'MCU Akan Expired', ikon: 'clock', tautanDefault: '/?page=administrator&menu=review-mcu' },
+  'mcu-expired': { label: 'MCU Expired', ikon: 'alert', tautanDefault: '/?page=data-entry&menu=input-jadwal-mcu' },
+  'mcu-akan-expired': { label: 'MCU Akan Expired', ikon: 'clock', tautanDefault: '/?page=data-entry&menu=input-jadwal-mcu' },
   'surat-kelayakan': { label: 'Surat Kelayakan Kerja', ikon: 'file', tautanDefault: '/?page=administrator&menu=karyawan-sakit' },
   'pak-batas-waktu': { label: 'Batas Waktu PAK', ikon: 'shield', tautanDefault: '/?page=administrator&menu=pak-register' },
   'karyawan-sakit': { label: 'Jadwal Pemantauan Sakit', ikon: 'bed', tautanDefault: '/?page=administrator&menu=karyawan-sakit' },

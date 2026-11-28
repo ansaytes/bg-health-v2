@@ -179,11 +179,13 @@ export async function GET(req: NextRequest) {
         subjek: namaTerbaca(r.nama),
         tanggal: String(r.tgl_expired).slice(0, 10),
         sisaHari: sisa,
-        tautan: JENIS_META[expired ? 'mcu-expired' : 'mcu-akan-expired'].tautanDefault,
+        tautan: janggal
+          ? '/?page=administrator&menu=review-mcu'
+          : JENIS_META[expired ? 'mcu-expired' : 'mcu-akan-expired'].tautanDefault,
         aksi: janggal ? 'Periksa tanggal MCU' : 'Jadwalkan MCU',
-        // Membuka baris record MCU ini di tabel Record MCU.
         fokusBaris: {
           nikKaryawan: nik,
+          nama: namaTerbaca(r.nama),
           tglMCU: r.tgl_mcu ? String(r.tgl_mcu).slice(0, 10) : null,
         },
       });

@@ -430,7 +430,6 @@ export default function EmployeeLookupInput({
                       padding: '1px 6px',
                       borderRadius: 4,
                       flexShrink: 0,
-                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
                     }}>
                       {emp.nik}
                     </span>
@@ -447,7 +446,7 @@ export default function EmployeeLookupInput({
                   {emp.job_position && <span>Jabatan: <b style={{ color: 'var(--foreground)', fontWeight: 600 }}>{emp.job_position}</b></span>}
                   {emp.department && <span>Dept: <b style={{ color: 'var(--foreground)', fontWeight: 600 }}>{emp.department}</b></span>}
                   {emp.site_name && <span>Site: <b style={{ color: 'var(--foreground)', fontWeight: 600 }}>{emp.site_name}</b></span>}
-                  {emp.national_id && <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }}>KTP: {emp.national_id}</span>}
+                  {emp.national_id && <span>KTP: {emp.national_id}</span>}
                 </div>
               </div>
             );
