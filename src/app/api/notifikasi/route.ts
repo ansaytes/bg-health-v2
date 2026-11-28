@@ -37,7 +37,7 @@ export const dynamic = 'force-dynamic';
  *
  * Akses: QSHE Medic (superuser/administrator). PIC dibatasi site-nya.
  */
-const ROLES = ['superuser', 'administrator', 'pic'];
+const ROLES = ['superuser', 'administrator', 'pic', 'hc'];
 
 /** Cache singkat: bell bisa diklik berkali-kali; hitung ulang tiap klik membebani DB. */
 const CACHE_MS = 5 * 60 * 1000;
@@ -343,6 +343,45 @@ export async function GET(req: NextRequest) {
     // Modul karyawan sakit belum dimigrasi → lewati.
   }
 
+  /* ── 7. Surat Pengantar MCU & Follow Up ───────────────────────────── */
+  try {
+    let spQ = client
+      .from('surat_pengantar_mcu')
+      .select('id, jenis_pengantar, nama_enc, site, tanggal_rencana, status')
+      .in('status', ['MENUNGGU_HC', 'MENUNGGU_QSHE'])
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (role === 'pic' && site) spQ = spQ.eq('site', site);
+
+    const { data: spRows } = await spQ;
+    for (const sp of spRows ?? []) {
+      const spStatus = String(sp.status || '');
+      if (role === 'hc' && spStatus !== 'MENUNGGU_HC') continue;
+      if (role === 'administrator' && spStatus !== 'MENUNGGU_QSHE') continue;
+
+      const subjekNama = namaTerbaca(sp.nama_enc);
+      const tglRencana = sp.tanggal_rencana ? String(sp.tanggal_rencana).slice(0, 10) : null;
+      const sisa = selisihHari(tglRencana, sekarang);
+      const menungguSiapa = spStatus === 'MENUNGGU_HC' ? 'HC' : 'QSHE Medic';
+
+      daftar.push({
+        id: `surat-pengantar:${sp.id}:${spStatus}`,
+        jenis: 'surat-pengantar',
+        prioritas: spStatus === 'MENUNGGU_QSHE' ? 'penting' : 'informasi',
+        judul: `Pengajuan Surat Pengantar menunggu ${menungguSiapa}`,
+        keterangan: `${String(sp.jenis_pengantar || 'MCU')} · ${String(sp.site || '-')} · Rencana ${formatTanggal(tglRencana)}`,
+        subjek: subjekNama,
+        tanggal: tglRencana,
+        sisaHari: sisa,
+        tautan: JENIS_META['surat-pengantar'].tautanDefault,
+        aksi: 'Proses surat',
+      });
+    }
+  } catch {
+    // Tabel surat_pengantar_mcu belum dibuat → lewati.
+  }
+
 //  FILTER SESUAI ROLE
   // Notifikasi hanya boleh muncul bila pengguna memang dapat membuka halaman
   // tujuannya. Tanpa ini, PIC melihat notifikasi yang membawa ke halaman
@@ -355,6 +394,7 @@ export async function GET(req: NextRequest) {
     'surat-kelayakan': ['superuser', 'administrator'].includes(role),
     'pak-batas-waktu': ['superuser', 'administrator'].includes(role),
     'karyawan-sakit': ['superuser', 'administrator', 'pic'].includes(role),
+    'surat-pengantar': ['superuser', 'administrator', 'hc', 'pic'].includes(role),
   };
 
   const tersaring = daftar.filter((n) => bolehAkses[n.jenis]);

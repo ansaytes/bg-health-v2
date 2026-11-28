@@ -1576,8 +1576,8 @@ export default function Home() {
               {isLoggedIn && (
                 <NotificationBell
                   isSuperuser={isSuperuser}
-                  // Notifikasi tindak lanjut hanya untuk QSHE Medic.
-                  canMedic={['superuser', 'administrator', 'pic'].includes(role ?? '')}
+                  // Notifikasi tindak lanjut untuk QSHE Medic, PIC, HC & Superuser.
+                  canMedic={['superuser', 'administrator', 'pic', 'hc'].includes(role ?? '')}
                 />
               )}
               <button

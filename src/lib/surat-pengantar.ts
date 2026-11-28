@@ -179,14 +179,13 @@ export function getSiteCodeForSurat(site: string): string {
 
 export function formatNomorSuratPengantar(
   nomorUrut: number,
-  site: string,
+  _site?: string,
   date: Date = new Date(),
 ): string {
   const urut = String(Math.max(1, nomorUrut)).padStart(4, '0');
-  const code = getSiteCodeForSurat(site);
   const roman = ROMAN_MONTHS[date.getMonth()] || 'I';
   const year = date.getFullYear();
-  return `MC${urut}/QSHE-BDM/${code}/${roman}/${year}`;
+  return `MC${urut}/QSHE-BDM/HO/${roman}/${year}`;
 }
 
 export const DEFAULT_PARAGRAF_FOLLOW_UP =

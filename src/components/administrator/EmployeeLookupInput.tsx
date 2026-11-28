@@ -27,6 +27,7 @@ interface EmployeeLookupInputProps {
   autoFill?: Record<string, string>;
   onAutoFill?: (formFieldId: string, value: string) => void;
   onNewIdentity?: () => void;
+  newIdentityLabel?: string;
   minLength?: number;
   debounceMs?: number;
   inputStyle?: React.CSSProperties;
@@ -66,6 +67,7 @@ export default function EmployeeLookupInput({
   autoFill,
   onAutoFill,
   onNewIdentity,
+  newIdentityLabel = '+ Tambah Identitas Baru',
   minLength: minLengthProp,
   debounceMs = 400,
   inputStyle,
@@ -354,7 +356,7 @@ export default function EmployeeLookupInput({
                 marginLeft: 8,
               }}
             >
-              + Tambah Identitas Baru
+              {newIdentityLabel}
             </button>
           )}
         </div>

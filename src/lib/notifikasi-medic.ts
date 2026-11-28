@@ -33,7 +33,8 @@ export type JenisNotifikasi =
   | 'mcu-akan-expired'
   | 'surat-kelayakan'
   | 'pak-batas-waktu'
-  | 'karyawan-sakit';
+  | 'karyawan-sakit'
+  | 'surat-pengantar';
 
 export type PrioritasNotifikasi = 'kritis' | 'penting' | 'informasi';
 
@@ -100,6 +101,7 @@ export const JENIS_META: Record<JenisNotifikasi, { label: string; ikon: string; 
   'surat-kelayakan': { label: 'Surat Kelayakan Kerja', ikon: 'file', tautanDefault: '/?page=administrator&menu=karyawan-sakit' },
   'pak-batas-waktu': { label: 'Batas Waktu PAK', ikon: 'shield', tautanDefault: '/?page=administrator&menu=pak-register' },
   'karyawan-sakit': { label: 'Jadwal Pemantauan Sakit', ikon: 'bed', tautanDefault: '/?page=administrator&menu=karyawan-sakit' },
+  'surat-pengantar': { label: 'Surat Pengantar MCU', ikon: 'file', tautanDefault: '/?page=data-entry&menu=surat-pengantar' },
 };
 
 export const PRIORITAS_WARNA: Record<PrioritasNotifikasi, string> = {

@@ -5,6 +5,7 @@ import QRCode from 'qrcode';
 import {
   CheckCircle2,
   ClipboardList,
+  Edit2,
   FileCheck2,
   Loader2,
   Plus,
@@ -12,6 +13,7 @@ import {
   RefreshCw,
   Search,
   Send,
+  Trash2,
   UserPlus,
   X,
   XCircle,
@@ -136,8 +138,8 @@ function buildPrintHtml(item: SuratPengantarItem, qrDataUrl: string): string {
         <div>Kepanjen, ${esc(tglSurat)}</div>
         <div>Hormat Kami,</div>
         ${qrImgHtml}
-        <div style="font-style:italic;">${esc(item.qshe_by_name ? `QSHE Medic (${item.qshe_by_name})` : 'QSHE Medic Head Office')}</div>
-        <div style="font-weight:800;">PT. Bagong Dekaka Makmur</div>
+        <div><b>${esc(item.qshe_by_name || '-')}</b></div>
+        <div>QSHE Medic</div>
       </div>
     </div>
 
@@ -209,43 +211,38 @@ function buildPrintHtml(item: SuratPengantarItem, qrDataUrl: string): string {
   <meta charset="utf-8" />
   <title>Surat Pengantar MCU - ${esc(item.nama)}</title>
   <style>
-    @page { size: A4 portrait; margin: 15mm; }
+    @page { size: A4 portrait; margin: 18mm 16mm; }
     * { box-sizing: border-box; }
     body { font-family: Arial, Helvetica, sans-serif; color: #111; margin: 0; font-size: 11px; line-height: 1.5; }
-    .kop { display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #111; padding-bottom: 8px; margin-bottom: 12px; }
-    .kop-title { font-size: 15px; font-weight: 800; }
-    .kop-sub { font-size: 10px; color: #444; }
-    .hdr-table { border-collapse: collapse; margin-bottom: 12px; font-size: 11px; }
-    .hdr-table td { padding: 1.5px 6px 1.5px 0; vertical-align: top; }
-    .hdr-table td.lbl { width: 125px; }
-    .mcu-table { width: 100%; border-collapse: collapse; margin: 12px 0 14px; font-size: 10px; }
+    .hdr-table { border-collapse: collapse; border-top: 1.5px solid #111; padding-top: 8px; margin-bottom: 14px; font-size: 11px; width: 100%; }
+    .hdr-table td { padding: 2px 6px 2px 0; vertical-align: top; }
+    .hdr-table td.lbl { width: 130px; }
+    .mcu-table { width: 100%; border-collapse: collapse; margin: 12px 0 12px; font-size: 10px; }
     .mcu-table th, .mcu-table td { border: 1px solid #222; padding: 6px 5px; text-align: center; vertical-align: middle; }
-    .mcu-table th { background: #f3f4f6; font-weight: 700; }
+    .mcu-table th { background: #f8f9fa; font-weight: 700; }
+    .sign-wrap { margin-top: 22px; display: flex; justify-content: flex-end; }
+    .sign-box { width: 220px; text-align: left; font-size: 11px; }
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
   </style>
 </head>
 <body>
-  <div class="kop">
-    <div>
-      <div class="kop-title">PT. BAGONG DEKAKA MAKMUR</div>
-      <div class="kop-sub">Quality, Safety, Health &amp; Environment (QSHE)</div>
-    </div>
-    <div style="font-size:10px;color:#444;">www.bagongbis.com</div>
+  <div style="border-top: 1.5px solid #111; padding-top: 8px; margin-bottom: 14px;">
+    <table class="hdr-table" style="border-top:none;margin-bottom:0;">
+      <tr><td class="lbl">Nomor</td><td>: ${esc(noSurat)}</td></tr>
+      <tr><td class="lbl">Tempat / Tanggal</td><td>: Kepanjen, ${esc(tglSurat)}</td></tr>
+      <tr><td class="lbl">Perihal</td><td>: Permohonan <i>Medical Check Up</i> Karyawan (${esc(jenisShort)})</td></tr>
+    </table>
   </div>
 
-  <table class="hdr-table">
-    <tr><td class="lbl">Nomor</td><td>: <b>${esc(noSurat)}</b></td></tr>
-    <tr><td class="lbl">Tempat / Tanggal</td><td>: Kepanjen, ${esc(tglSurat)}</td></tr>
-    <tr><td class="lbl">Perihal</td><td>: Permohonan <i>Medical Check Up</i> Karyawan (${esc(jenisShort)})</td></tr>
-  </table>
-
-  <div style="margin-bottom:12px;">
+  <div style="margin-bottom:14px;">
     Kepada Yth,<br/>
     <b>${esc(item.faskes_tujuan)}</b>
   </div>
 
-  <p style="margin:0 0 6px;">Dengan Hormat,</p>
-  <p style="margin:0 0 8px;">${esc(item.paragraf_pendukung || DEFAULT_PARAGRAF_MCU)}</p>
+  <p style="margin:0 0 8px;">Dengan Hormat,</p>
+  <p style="margin:0 0 10px;">
+    Bersama dengan surat ini, mohon untuk dapat dilakukan <i>Medical Check Up</i> kepada karyawan PT. Bagong Dekaka Makmur, dengan data diri sebagai berikut :
+  </p>
 
   <table class="mcu-table">
     <thead>
@@ -266,7 +263,7 @@ function buildPrintHtml(item: SuratPengantarItem, qrDataUrl: string): string {
         <td>1</td>
         <td>${esc(fmtTanggal(item.tanggal_rencana))}</td>
         <td>${esc(item.nik_karyawan || item.nik_ktp)}</td>
-        <td><b>${esc(item.nama)}</b>${item.is_calon_karyawan ? '<br/>(Calon Karyawan)' : ''}</td>
+        <td>${esc(item.nama)}${item.is_calon_karyawan ? '<br/><span style="font-size:9px;color:#555;">(Calon Karyawan)</span>' : ''}</td>
         <td>${item.usia != null ? esc(String(item.usia)) : '-'}</td>
         <td>${esc(item.jenis_kelamin || '-')}</td>
         <td>${esc(item.jabatan || '-')}</td>
@@ -276,16 +273,24 @@ function buildPrintHtml(item: SuratPengantarItem, qrDataUrl: string): string {
     </tbody>
   </table>
 
+  <p style="margin:0 0 8px;text-align:justify;">
+    Seluruh biaya yang timbul sehubungan dengan pelaksanaan <i>Medical Check Up</i> tersebut diatas akan menjadi tanggungan <b>PT. Bagong Dekaka Makmur</b> dan dijamin pembayarannya dengan mengirimkan tagihan ke alamat <b>Head Office PT. Bagong Dekaka Makmur, Jl. Panglima Sudirman No. 8 Kepanjen, Kab. Malang (Telp. +62 811-3337-2199)</b>.
+  </p>
+  <p style="margin:0 0 8px;text-align:justify;">
+    Untuk hasil berupa soft copy dapat dikirim melalui email: qshemedic@bagongbis.co.id, medicalbagong@gmail.com dengan cc: mcu.recruitmentbagong@gmail.com, employee.servicesbagong@gmail.com.
+  </p>
   <p style="margin:0 0 18px;">
-    Demikian surat pengantar ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.
+    Demikian permohonan MCU ini kami sampaikan atas perhatian dan kerjasamanya kami ucapkan, terima kasih.
   </p>
 
-  <div style="margin-top:16px;">
-    <div>Kepanjen, ${esc(tglSurat)}</div>
-    <div>Hormat Kami,</div>
-    ${qrImgHtml}
-    <div style="font-style:italic;">${esc(item.qshe_by_name ? `QSHE Medic (${item.qshe_by_name})` : 'QSHE Medic Head Office')}</div>
-    <div style="font-weight:800;">PT. Bagong Dekaka Makmur</div>
+  <div class="sign-wrap">
+    <div class="sign-box">
+      <div>Hormat kami,</div>
+      <div><b>PT Bagong Dekaka Makmur</b></div>
+      ${qrImgHtml}
+      <div><b>${esc(item.qshe_by_name || '-')}</b></div>
+      <div>QSHE Medic</div>
+    </div>
   </div>
 </body>
 </html>`;
@@ -295,6 +300,8 @@ export default function SuratPengantarPage() {
   const { role, profile, isSuperuser, isHc } = useAuth();
   const isQsheMedic = role === 'administrator' || isSuperuser;
   const canApproveHc = isHc || isSuperuser;
+  const canEdit = isQsheMedic || isHc;
+  const canDelete = isSuperuser;
   const canCreate = ['pic', 'hc', 'administrator', 'superuser'].includes(role || '');
 
   const draftFromReview = useMCUStore((s) => s.suratPengantarDraft);
@@ -313,6 +320,7 @@ export default function SuratPengantarPage() {
   const [jenisFilter, setJenisFilter] = useState<string>('ALL');
 
   // Form state
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [lookupQuery, setLookupQuery] = useState('');
   const [jenis, setJenis] = useState<JenisPengantar>('ANNUAL');
   const [isCalon, setIsCalon] = useState(false);
@@ -416,10 +424,12 @@ export default function SuratPengantarPage() {
         .split('\n')
         .map((s) => s.trim())
         .filter(Boolean);
+      const isEditing = Boolean(editingId);
       const res = await authFetch('/api/surat-pengantar', {
-        method: 'POST',
+        method: isEditing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          ...(isEditing ? { id: editingId } : {}),
           jenis_pengantar: jenis,
           is_calon_karyawan: isCalon,
           nik_karyawan: nikKaryawan,
@@ -440,16 +450,58 @@ export default function SuratPengantarPage() {
           catatan_pic: catatanPic,
         }),
       });
-      setItems((prev) => [res.data as SuratPengantarItem, ...prev]);
-      setMsg({ kind: 'ok', text: 'Pengajuan surat pengantar berhasil dikirim ke antrean persetujuan HC.' });
+      const saved = res.data as SuratPengantarItem;
+      if (isEditing) {
+        setItems((prev) => prev.map((it) => (it.id === saved.id ? saved : it)));
+        setMsg({ kind: 'ok', text: 'Perubahan surat pengantar berhasil disimpan.' });
+      } else {
+        setItems((prev) => [saved, ...prev]);
+        setMsg({ kind: 'ok', text: 'Pengajuan surat pengantar berhasil dikirim ke antrean persetujuan HC.' });
+      }
+      setEditingId(null);
       setTab('daftar');
       setCatatanPic('');
       setParameterAbnormal('');
       setMcuRecordId(null);
     } catch (err) {
-      setMsg({ kind: 'err', text: err instanceof Error ? err.message : 'Gagal mengirim pengajuan.' });
+      setMsg({ kind: 'err', text: err instanceof Error ? err.message : 'Gagal menyimpan pengajuan.' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleStartEdit = (item: SuratPengantarItem) => {
+    setEditingId(item.id);
+    setJenis(item.jenis_pengantar);
+    setIsCalon(item.is_calon_karyawan);
+    setNikKaryawan(item.nik_karyawan || '');
+    setNikKtp(item.nik_ktp || '');
+    setNama(item.nama || '');
+    setJenisKelamin(item.jenis_kelamin || '');
+    setUsia(item.usia != null ? String(item.usia) : '');
+    setJabatan(item.jabatan || '');
+    setDepartemen(item.departemen || '');
+    setSite(item.site || 'HEAD OFFICE');
+    setMcuRecordId(item.mcu_record_id || null);
+    setTglMcu(item.tgl_mcu || '');
+    setFaskes(item.faskes_tujuan || '');
+    setTanggalRencana(item.tanggal_rencana || todayIso());
+    setPaketText((item.paket_pemeriksaan || []).join('\n'));
+    setParameterAbnormal(item.parameter_abnormal || '');
+    setParagraf(item.paragraf_pendukung || '');
+    setCatatanPic(item.catatan_pic || '');
+    setTab('ajukan');
+  };
+
+  const handleDelete = async (item: SuratPengantarItem) => {
+    if (!window.confirm(`Hapus surat pengantar untuk "${item.nama}" (${item.no_surat || 'Draft'})?`)) return;
+    setMsg(null);
+    try {
+      await authFetch(`/api/surat-pengantar?id=${encodeURIComponent(item.id)}`, { method: 'DELETE' });
+      setItems((prev) => prev.filter((it) => it.id !== item.id));
+      setMsg({ kind: 'ok', text: 'Surat pengantar berhasil dihapus.' });
+    } catch (err) {
+      setMsg({ kind: 'err', text: err instanceof Error ? err.message : 'Gagal menghapus surat.' });
     }
   };
 
@@ -606,7 +658,9 @@ export default function SuratPengantarPage() {
         {tab === 'ajukan' ? (
           <form onSubmit={handleSubmit} className="admin-form-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-              <h2 style={{ fontSize: 13.5, fontWeight: 700, margin: 0 }}>Form Pengajuan Surat Pengantar</h2>
+              <h2 style={{ fontSize: 13.5, fontWeight: 700, margin: 0 }}>
+                {editingId ? 'Edit Surat Pengantar' : 'Form Pengajuan Surat Pengantar'}
+              </h2>
               <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: '4px 10px', borderRadius: 8, background: isCalon ? 'rgba(255,77,0,0.1)' : 'var(--muted)', color: isCalon ? '#FF4D00' : 'var(--foreground)' }}>
                 <input
                   type="checkbox"
@@ -618,14 +672,27 @@ export default function SuratPengantarPage() {
               </label>
             </div>
 
-            {!isCalon && (
+            {!editingId && (
               <div>
                 <EmployeeLookupInput
                   value={lookupQuery}
                   onChange={setLookupQuery}
                   onEmployeeFound={handleSelectEmployee}
-                  label={<span className="admin-label">Cari Karyawan Tetap (NIK / Nama / KTP)</span>}
-                  placeholder="Ketik NIK atau nama karyawan..."
+                  required={false}
+                  newIdentityLabel="Tambahkan Data"
+                  onNewIdentity={() => {
+                    setIsCalon(true);
+                    const q = lookupQuery.trim();
+                    if (/^\d{16}$/.test(q)) {
+                      setNikKtp(q);
+                      setNama('');
+                    } else if (q && !/^\d+$/.test(q)) {
+                      setNama(q);
+                    }
+                    setNikKaryawan('');
+                  }}
+                  label={<span className="admin-label">Cari Data Karyawan (Auto-Fill dari Tabel Employee)</span>}
+                  placeholder="Ketik NIK, NIK KTP, atau nama karyawan..."
                 />
               </div>
             )}
@@ -935,6 +1002,28 @@ export default function SuratPengantarPage() {
                               style={{ height: 30, fontSize: 11 }}
                             >
                               <Printer size={13} className="mr-1" /> Cetak Surat
+                            </Button>
+                          )}
+                          {canEdit && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleStartEdit(item)}
+                              style={{ height: 30, fontSize: 11 }}
+                              title="Edit Surat (HC / QSHE Medic)"
+                            >
+                              <Edit2 size={13} className="mr-1" /> Edit
+                            </Button>
+                          )}
+                          {canDelete && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void handleDelete(item)}
+                              style={{ height: 30, fontSize: 11, color: '#FF2D2D', borderColor: 'rgba(255,45,45,0.35)' }}
+                              title="Hapus Surat (Khusus Superuser)"
+                            >
+                              <Trash2 size={13} className="mr-1" /> Hapus
                             </Button>
                           )}
                         </div>

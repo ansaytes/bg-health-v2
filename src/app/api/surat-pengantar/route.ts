@@ -22,8 +22,10 @@ const supabase = () => integrationAdminClient();
 
 const ROLES_READ = ['superuser', 'administrator', 'hc', 'pic', 'manager'] as const;
 const ROLES_CREATE = ['superuser', 'administrator', 'hc', 'pic'] as const;
+const ROLES_EDIT = ['superuser', 'administrator', 'hc'] as const;
 const ROLES_HC = ['superuser', 'hc'] as const;
 const ROLES_QSHE = ['superuser', 'administrator'] as const;
+const ROLES_DELETE = ['superuser'] as const;
 
 function isMissingTableError(err: { code?: string; message?: string } | null): boolean {
   if (!err) return false;
@@ -357,5 +359,99 @@ export async function PATCH(req: NextRequest) {
   } catch (err) {
     console.error('PATCH /api/surat-pengantar error:', err);
     return NextResponse.json({ error: 'Gagal memproses persetujuan surat pengantar' }, { status: 500 });
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  try {
+    const caller = await getServerCaller(req);
+    const denied = requireServerRole(caller, ROLES_EDIT);
+    if (denied) return denied;
+
+    const body = await req.json();
+    const id = String(body.id || '').trim();
+    if (!id) {
+      return NextResponse.json({ error: 'ID surat wajib diisi' }, { status: 400 });
+    }
+
+    const nama = String(body.nama || '').trim();
+    const nikKaryawan = String(body.nik_karyawan || '').trim();
+    const nikKtp = String(body.nik_ktp || '').trim();
+    const faskes = String(body.faskes_tujuan || '').trim();
+    const tanggalRencana = String(body.tanggal_rencana || '').trim();
+    const jenis = String(body.jenis_pengantar || '') as JenisPengantar;
+
+    if (!JENIS_PENGANTAR_LIST.includes(jenis)) {
+      return NextResponse.json({ error: 'Jenis pengantar tidak valid' }, { status: 400 });
+    }
+    if (!nama || (!nikKaryawan && !nikKtp) || !faskes || !/^\d{4}-\d{2}-\d{2}$/.test(tanggalRencana)) {
+      return NextResponse.json({ error: 'Data wajib (nama, NIK/KTP, faskes, tanggal rencana) belum lengkap' }, { status: 400 });
+    }
+
+    const paketRaw = Array.isArray(body.paket_pemeriksaan)
+      ? body.paket_pemeriksaan.map((p: unknown) => String(p).trim()).filter(Boolean)
+      : [];
+    const paket = paketRaw.length > 0 ? paketRaw : JENIS_PENGANTAR_META[jenis].defaultPaket;
+    const usiaNum = body.usia !== undefined && body.usia !== null && String(body.usia).trim() !== ''
+      ? Number(body.usia)
+      : null;
+
+    const { data: updated, error } = await supabase()
+      .from('surat_pengantar_mcu')
+      .update({
+        jenis_pengantar: jenis,
+        is_calon_karyawan: Boolean(body.is_calon_karyawan) || !nikKaryawan,
+        nik_karyawan_enc: nikKaryawan ? encrypt(nikKaryawan) : null,
+        nik_karyawan_hash: nikKaryawan ? hashField(nikKaryawan) : null,
+        nik_ktp_enc: nikKtp ? encrypt(nikKtp) : null,
+        nik_ktp_hash: nikKtp ? hashField(nikKtp) : null,
+        nama_enc: encrypt(nama) || nama,
+        jenis_kelamin: String(body.jenis_kelamin || '').trim() || null,
+        usia: Number.isFinite(usiaNum) ? usiaNum : null,
+        jabatan: String(body.jabatan || '').trim() || null,
+        departemen: String(body.departemen || '').trim() || null,
+        site: String(body.site || 'HEAD OFFICE').trim(),
+        tgl_mcu: body.tgl_mcu && /^\d{4}-\d{2}-\d{2}$/.test(String(body.tgl_mcu)) ? String(body.tgl_mcu) : null,
+        faskes_tujuan: faskes,
+        tanggal_rencana: tanggalRencana,
+        paket_pemeriksaan: paket,
+        parameter_abnormal: String(body.parameter_abnormal || '').trim() || null,
+        paragraf_pendukung: String(body.paragraf_pendukung || '').trim() || null,
+        catatan_pic: String(body.catatan_pic || '').trim() || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ data: mapRow(updated as Record<string, any>) });
+  } catch (err) {
+    console.error('PUT /api/surat-pengantar error:', err);
+    return NextResponse.json({ error: 'Gagal memperbarui surat pengantar' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const caller = await getServerCaller(req);
+    const denied = requireServerRole(caller, ROLES_DELETE);
+    if (denied) return denied;
+
+    const id = new URL(req.url).searchParams.get('id')?.trim() || '';
+    if (!id) {
+      return NextResponse.json({ error: 'ID surat wajib diisi' }, { status: 400 });
+    }
+
+    const { error } = await supabase()
+      .from('surat_pengantar_mcu')
+      .delete()
+      .eq('id', id);
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error('DELETE /api/surat-pengantar error:', err);
+    return NextResponse.json({ error: 'Gagal menghapus surat pengantar' }, { status: 500 });
   }
 }
