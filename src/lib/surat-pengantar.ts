@@ -50,6 +50,7 @@ export interface SuratPengantarItem {
   qshe_by_name: string | null;
   qshe_at: string | null;
   qshe_catatan: string | null;
+  verify_sig?: string | null;
   created_at: string;
   updated_at: string;
 }

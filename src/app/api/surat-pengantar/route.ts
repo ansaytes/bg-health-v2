@@ -4,6 +4,7 @@ import { decrypt, encrypt, hashField } from '@/lib/encryption';
 import { integrationAdminClient } from '@/lib/integration-settings';
 import { getServerCaller, requireServerRole } from '@/lib/server-auth';
 import { siteBatch } from '@/lib/site-filter';
+import { signSuratId } from '@/lib/surat-pengantar-sig';
 import {
   DEFAULT_PARAGRAF_FOLLOW_UP,
   DEFAULT_PARAGRAF_MCU,
@@ -74,6 +75,7 @@ function mapRow(row: Record<string, any>): SuratPengantarItem {
     qshe_by_name: row.qshe_by_name ? String(row.qshe_by_name) : null,
     qshe_at: row.qshe_at ? String(row.qshe_at) : null,
     qshe_catatan: row.qshe_catatan ? String(row.qshe_catatan) : null,
+    verify_sig: row.status === 'DISETUJUI' ? signSuratId(String(row.id)) : null,
     created_at: String(row.created_at || ''),
     updated_at: String(row.updated_at || ''),
   };

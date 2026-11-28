@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import QRCode from 'qrcode';
 import {
   CheckCircle2,
   ClipboardList,
@@ -46,7 +47,7 @@ function fmtTanggal(v: string | null | undefined): string {
   return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
-function buildPrintHtml(item: SuratPengantarItem): string {
+function buildPrintHtml(item: SuratPengantarItem, qrDataUrl: string): string {
   const esc = (s: string | null | undefined) =>
     String(s ?? '')
       .replace(/&/g, '&amp;')
@@ -54,158 +55,142 @@ function buildPrintHtml(item: SuratPengantarItem): string {
       .replace(/>/g, '&gt;');
 
   const isFollowUp = item.jenis_pengantar === 'FOLLOW_UP';
-  const jenisLabel = JENIS_PENGANTAR_META[item.jenis_pengantar]?.label || item.jenis_pengantar;
+  const jenisShort = JENIS_PENGANTAR_META[item.jenis_pengantar]?.short || item.jenis_pengantar;
   const noSurat = item.no_surat || '(DRAFT — BELUM TERBIT)';
   const tglSurat = fmtTanggal(item.qshe_at || item.created_at);
-  const paketHtml = (item.paket_pemeriksaan || [])
-    .map((p) => `<li>${esc(p)}</li>`)
-    .join('');
+  const qrImgHtml = qrDataUrl
+    ? `<img src="${qrDataUrl}" alt="QR Verifikasi" style="width:76px;height:76px;display:block;margin:4px 0;" />`
+    : `<div style="width:76px;height:76px;border:1px dashed #999;display:flex;align-items:center;justify-content:center;font-size:8px;margin:4px 0;">QR</div>`;
 
   if (isFollowUp) {
     return `<!doctype html>
 <html lang="id">
 <head>
   <meta charset="utf-8" />
-  <title>Surat Pengantar Follow Up - ${esc(item.nama)}</title>
+  <title>Tindak Lanjut MCU - ${esc(item.nama)}</title>
   <style>
-    @page { size: A4 landscape; margin: 12mm; }
+    @page { size: A4 landscape; margin: 10mm; }
     * { box-sizing: border-box; }
     body { font-family: Arial, Helvetica, sans-serif; color: #111; margin: 0; font-size: 10.5px; line-height: 1.45; }
-    .kop { display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #111; padding-bottom: 6px; margin-bottom: 10px; }
-    .kop-title { font-size: 14px; font-weight: 800; letter-spacing: 0.02em; }
-    .kop-sub { font-size: 10px; color: #444; }
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: stretch; }
-    .col-box { border: 1.2px solid #222; border-radius: 4px; padding: 10px 12px; display: flex; flex-direction: column; justify-content: space-between; min-height: 162mm; }
-    .col-head { font-size: 11.5px; font-weight: 800; text-transform: uppercase; border-bottom: 1.5px solid #222; padding-bottom: 4px; margin-bottom: 8px; text-align: center; }
-    .meta-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 10px; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #111; padding-bottom: 5px; margin-bottom: 0; }
+    .top-brand { font-size: 10px; font-weight: 800; letter-spacing: 0.03em; }
+    .top-title { font-size: 12px; font-weight: 800; text-transform: uppercase; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; border: 1.5px solid #111; border-top: none; min-height: 172mm; }
+    .col-left { padding: 10px 14px; border-right: 1.5px solid #111; display: flex; flex-direction: column; justify-content: space-between; }
+    .col-right { padding: 10px 14px; display: flex; flex-direction: column; justify-content: space-between; }
+    .col-head { font-size: 11px; font-weight: 800; text-transform: uppercase; text-align: center; margin-bottom: 10px; }
+    .meta-table { width: 100%; border-collapse: collapse; margin: 6px 0 8px; font-size: 10px; }
     .meta-table td { padding: 2px 4px; vertical-align: top; }
-    .meta-table td.lbl { width: 115px; color: #333; font-weight: 700; }
-    .temuan-box { border: 1px solid #444; background: #fff8f5; padding: 7px 9px; border-radius: 4px; margin: 6px 0 8px; font-size: 10px; }
-    .temuan-title { font-weight: 800; color: #b91c1c; margin-bottom: 3px; text-transform: uppercase; font-size: 9.5px; }
-    .sign-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; text-align: center; font-size: 9.5px; }
-    .sign-space { height: 34px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #0f766e; font-size: 9px; }
-    .lines-box { flex: 1; display: flex; flex-direction: column; gap: 13px; margin: 8px 0 10px; }
-    .write-line { border-bottom: 1px dotted #666; height: 14px; }
-    .chk-group { border: 1px solid #222; padding: 8px 10px; border-radius: 4px; margin-bottom: 10px; }
-    .chk-title { font-weight: 800; font-size: 10px; margin-bottom: 6px; text-transform: uppercase; }
-    .chk-row { display: flex; gap: 14px; flex-wrap: wrap; font-size: 10.5px; font-weight: 700; }
-    .chk-item { display: inline-flex; align-items: center; gap: 5px; }
-    .chk-box { display: inline-block; width: 13px; height: 13px; border: 1.5px solid #111; }
-    .doc-sign { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 10px; font-size: 9.5px; }
+    .meta-table td.lbl { width: 132px; color: #222; }
+    .right-meta { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 10px; }
+    .right-meta td { padding: 2px 4px; vertical-align: top; }
+    .lines-section { margin-bottom: 12px; }
+    .lines-label { font-weight: 700; font-size: 10.5px; margin-bottom: 6px; }
+    .dot-line { border-bottom: 1.2px dotted #333; height: 18px; width: 100%; }
+    .chk-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+    .chk-box { border: 1.2px solid #222; padding: 5px 6px; text-align: center; font-style: italic; font-weight: 700; font-size: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .sq { display: inline-block; width: 11px; height: 11px; border: 1.2px solid #111; }
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
   </style>
 </head>
 <body>
-  <div class="kop">
-    <div>
-      <div class="kop-title">PT BAGONG DEKAKA MAKMUR</div>
-      <div class="kop-sub">Quality, Safety, Health &amp; Environment (QSHE) &amp; Human Capital</div>
-    </div>
-    <div style="text-align:right;font-size:10px;">
-      <div><b>No. Surat:</b> ${esc(noSurat)}</div>
-      <div><b>Tanggal:</b> ${esc(tglSurat)}</div>
-    </div>
+  <div class="top-bar">
+    <div class="top-brand">PT BAGONG DEKAKA MAKMUR</div>
+    <div class="top-title">TINDAK LANJUT HASIL PEMERIKSAAN <i>MEDICAL CHECK UP</i> (MCU)</div>
   </div>
 
   <div class="two-col">
-    <!-- KOLOM KIRI: Identitas, Temuan Abnormal, Paragraf Pendukung -->
-    <div class="col-box">
+    <!-- KOLOM KIRI: SURAT RUJUKAN -->
+    <div class="col-left">
       <div>
-        <div class="col-head">Surat Pengantar Follow Up MCU</div>
-        <div style="margin-bottom:8px;font-size:10px;">
-          Kepada Yth.<br/>
-          <b>Dokter Pemeriksa / Pimpinan ${esc(item.faskes_tujuan)}</b><br/>
+        <div class="col-head">SURAT RUJUKAN</div>
+        <div style="margin-bottom:8px;">No. : <b>${esc(noSurat)}</b></div>
+        <div style="margin-bottom:10px;">
+          Kepada Yth :<br/>
+          <b>${esc(item.faskes_tujuan)}</b><br/>
           Di Tempat
         </div>
 
+        <div style="margin-bottom:4px;">Mohon dapat dilakukan pemeriksaan / pengobatan dan tindak lanjut terhadap :</div>
         <table class="meta-table">
-          <tr><td class="lbl">Nama</td><td>: <b>${esc(item.nama)}</b> ${item.is_calon_karyawan ? '(Calon Karyawan)' : ''}</td></tr>
-          <tr><td class="lbl">${item.nik_karyawan ? 'NIK Karyawan' : 'NIK KTP'}</td><td>: ${esc(item.nik_karyawan || item.nik_ktp)}</td></tr>
-          ${item.nik_karyawan && item.nik_ktp ? `<tr><td class="lbl">NIK KTP</td><td>: ${esc(item.nik_ktp)}</td></tr>` : ''}
-          <tr><td class="lbl">Jenis Kelamin / Usia</td><td>: ${esc(item.jenis_kelamin || '-')} / ${item.usia != null ? `${item.usia} th` : '-'}</td></tr>
-          <tr><td class="lbl">Jabatan / Posisi</td><td>: ${esc(item.jabatan || '-')}</td></tr>
-          <tr><td class="lbl">Departemen / Site</td><td>: ${esc(item.departemen || '-')} / ${esc(item.site)}</td></tr>
-          <tr><td class="lbl">Tanggal MCU</td><td>: ${esc(fmtTanggal(item.tgl_mcu))}</td></tr>
-          <tr><td class="lbl">Rencana Follow Up</td><td>: ${esc(fmtTanggal(item.tanggal_rencana))}</td></tr>
+          <tr><td class="lbl">No. ID</td><td>: ${esc(item.nik_ktp || item.nik_karyawan)}</td></tr>
+          <tr><td class="lbl">Nama</td><td>: <b>${esc(item.nama)}</b>${item.is_calon_karyawan ? ' (Calon Karyawan)' : ''}</td></tr>
+          <tr><td class="lbl">Jabatan</td><td>: ${esc(item.jabatan || '-')}</td></tr>
+          <tr><td class="lbl">Site</td><td>: ${esc(item.site)}</td></tr>
+          <tr><td class="lbl">Temuan MCU</td><td>: <b>${esc(item.parameter_abnormal || '-')}</b></td></tr>
+          <tr><td class="lbl">Pemeriksaan Tambahan</td><td>: ${esc(item.catatan_pic || '-')}</td></tr>
+          <tr><td class="lbl">Rencana Kunjungan</td><td>: ${esc(fmtTanggal(item.tanggal_rencana))}</td></tr>
         </table>
 
-        <div class="temuan-box">
-          <div class="temuan-title">Temuan Nilai Abnormal / Indikasi Follow Up</div>
-          <div>${esc(item.parameter_abnormal || 'Sesuai lampiran hasil MCU terlampir.')}</div>
+        <div style="margin-top:8px;">
+          Untuk jawaban, mohon dapat melampirkan :
+          <ul style="margin:3px 0 6px 16px;padding:0;">
+            <li>Terapi dan pemeriksaan ulang/lanjutan hasil temuan MCU</li>
+            <li>Bukti Konsultasi/Surat Rekomendasi apabila diijinkan untuk bekerja</li>
+          </ul>
         </div>
-
-        <p style="margin:6px 0;text-align:justify;font-size:10px;">
-          ${esc(item.paragraf_pendukung || DEFAULT_PARAGRAF_FOLLOW_UP)}
-        </p>
-        ${item.catatan_pic ? `<p style="margin:4px 0;font-size:9.5px;color:#444;"><b>Catatan Tambahan:</b> ${esc(item.catatan_pic)}</p>` : ''}
+        <p style="margin:6px 0;">Atas Kerjasamanya kami ucapkan terimakasih</p>
       </div>
 
-      <div>
-        <div class="sign-grid">
-          <div>
-            <div>Diajukan oleh (PIC),</div>
-            <div class="sign-space">[Approved]</div>
-            <div><b>${esc(item.created_by_name || 'PIC Site')}</b></div>
-          </div>
-          <div>
-            <div>Disetujui oleh (HC),</div>
-            <div class="sign-space">${item.hc_status === 'DISETUJUI' ? '[Disetujui HC]' : '-'}</div>
-            <div><b>${esc(item.hc_by_name || 'Human Capital')}</b></div>
-          </div>
-          <div>
-            <div>Disetujui oleh (QSHE Medic),</div>
-            <div class="sign-space">${item.qshe_status === 'DISETUJUI' ? '[Disetujui QSHE]' : '-'}</div>
-            <div><b>${esc(item.qshe_by_name || 'QSHE Medic')}</b></div>
-          </div>
-        </div>
+      <div style="margin-top:8px;">
+        <div>Kepanjen, ${esc(tglSurat)}</div>
+        <div>Hormat Kami,</div>
+        ${qrImgHtml}
+        <div style="font-style:italic;">${esc(item.qshe_by_name ? `QSHE Medic (${item.qshe_by_name})` : 'QSHE Medic Head Office')}</div>
+        <div style="font-weight:800;">PT. Bagong Dekaka Makmur</div>
       </div>
     </div>
 
-    <!-- KOLOM KANAN: Keterangan Hasil Pemeriksaan / Jawaban Dokter + Kotak Centang Kesimpulan -->
-    <div class="col-box">
+    <!-- KOLOM KANAN: JAWABAN RUJUKAN -->
+    <div class="col-right">
       <div>
-        <div class="col-head">Keterangan Hasil Pemeriksaan / Jawaban Dokter</div>
-        <div style="font-size:10px;color:#333;margin-bottom:4px;">
-          <b>Hasil Pemeriksaan Klinis / Penunjang &amp; Terapi / Anjuran Dokter:</b>
-        </div>
-        <div class="lines-box">
-          <div class="write-line"></div>
-          <div class="write-line"></div>
-          <div class="write-line"></div>
-          <div class="write-line"></div>
-          <div class="write-line"></div>
-          <div class="write-line"></div>
-          <div class="write-line"></div>
-          <div class="write-line"></div>
-          <div class="write-line"></div>
-          <div class="write-line"></div>
+        <div class="col-head">JAWABAN RUJUKAN</div>
+        <table class="right-meta">
+          <tr>
+            <td style="width:58px;">No. ID</td><td style="width:42%;">: ${esc(item.nik_ktp || item.nik_karyawan)}</td>
+            <td style="width:55px;">Jabatan</td><td>: ${esc(item.jabatan || '-')}</td>
+          </tr>
+          <tr>
+            <td>Nama</td><td>: <b>${esc(item.nama)}</b></td>
+            <td>Usia</td><td>: ${item.usia != null ? `${item.usia} Tahun` : '-'}</td>
+          </tr>
+        </table>
+
+        <div class="lines-section">
+          <div class="lines-label">Hasil Pemeriksaan Penunjang :</div>
+          <div class="dot-line"></div>
+          <div class="dot-line"></div>
+          <div class="dot-line"></div>
         </div>
 
-        <div class="chk-group">
-          <div class="chk-title">Kesimpulan Kelaikan Kerja (Beri Tanda Centang ✓)</div>
+        <div class="lines-section">
+          <div class="lines-label">Diagnosa :</div>
+          <div class="dot-line"></div>
+          <div class="dot-line"></div>
+        </div>
+
+        <div class="lines-section">
+          <div class="lines-label">Therapy &amp; Rekomendasi Tindak Lanjut :</div>
+          <div class="dot-line"></div>
+          <div class="dot-line"></div>
+          <div class="dot-line"></div>
+          <div class="dot-line"></div>
+        </div>
+
+        <div>
+          <div class="lines-label">Kesimpulan Kelaikan Kerja :</div>
           <div class="chk-row">
-            <span class="chk-item"><span class="chk-box"></span> Fit To Work</span>
-            <span class="chk-item"><span class="chk-box"></span> Fit With Note</span>
-            <span class="chk-item"><span class="chk-box"></span> Unfit</span>
-          </div>
-          <div style="margin-top:8px;font-size:9.5px;color:#333;">
-            <b>Catatan / Pembatasan Kerja (bila Fit With Note / Unfit):</b>
-            <div class="write-line" style="margin-top:6px;"></div>
-            <div class="write-line" style="margin-top:8px;"></div>
+            <div class="chk-box"><span class="sq"></span> Fit To Work</div>
+            <div class="chk-box"><span class="sq"></span> Fit With Note</div>
+            <div class="chk-box"><span class="sq"></span> Unfit</div>
           </div>
         </div>
       </div>
 
-      <div class="doc-sign">
-        <div>
-          <div>Tanggal Pemeriksaan: ____ / ____ / 20____</div>
-          <div style="margin-top:4px;color:#555;font-size:9px;">Mohon sertakan stempel Faskes Rekanan.</div>
-        </div>
-        <div style="text-align:center;min-width:165px;">
-          <div>Dokter Pemeriksa,</div>
-          <div style="height:42px;"></div>
-          <div>( ___________________________ )</div>
-          <div style="font-size:9px;color:#444;">Nama Terang &amp; Stempel Faskes</div>
+      <div style="margin-top:16px;">
+        <div style="margin-bottom:36px;">................................., ................................. 20......</div>
+        <div style="border-top:1px dotted #333;width:230px;padding-top:3px;font-style:italic;">
+          (Nama dan Stempel Dokter Pemeriksa)
         </div>
       </div>
     </div>
@@ -214,84 +199,93 @@ function buildPrintHtml(item: SuratPengantarItem): string {
 </html>`;
   }
 
+  const paketText = (item.paket_pemeriksaan || []).length > 0
+    ? item.paket_pemeriksaan.join(', ')
+    : `Paket ${jenisShort}`;
+
   return `<!doctype html>
 <html lang="id">
 <head>
   <meta charset="utf-8" />
   <title>Surat Pengantar MCU - ${esc(item.nama)}</title>
   <style>
-    @page { size: A4 portrait; margin: 16mm; }
+    @page { size: A4 portrait; margin: 15mm; }
     * { box-sizing: border-box; }
-    body { font-family: Arial, Helvetica, sans-serif; color: #111; margin: 0; font-size: 11.5px; line-height: 1.5; }
-    .kop { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #111; padding-bottom: 8px; margin-bottom: 14px; }
-    .kop-title { font-size: 16px; font-weight: 800; }
-    .kop-sub { font-size: 10.5px; color: #444; }
-    .title { text-align: center; font-size: 14px; font-weight: 800; text-transform: uppercase; text-decoration: underline; margin: 10px 0 4px; }
-    .sub-no { text-align: center; font-size: 11px; margin-bottom: 16px; }
-    .meta-table { width: 100%; border-collapse: collapse; margin: 10px 0 12px; }
-    .meta-table td { padding: 3px 6px; vertical-align: top; }
-    .meta-table td.lbl { width: 165px; font-weight: 700; color: #333; }
-    .box { border: 1px solid #333; border-radius: 5px; padding: 10px 14px; margin: 10px 0; background: #fafafa; }
-    .sign-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 28px; text-align: center; font-size: 10.5px; }
-    .sign-space { height: 48px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #0f766e; font-size: 10px; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #111; margin: 0; font-size: 11px; line-height: 1.5; }
+    .kop { display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #111; padding-bottom: 8px; margin-bottom: 12px; }
+    .kop-title { font-size: 15px; font-weight: 800; }
+    .kop-sub { font-size: 10px; color: #444; }
+    .hdr-table { border-collapse: collapse; margin-bottom: 12px; font-size: 11px; }
+    .hdr-table td { padding: 1.5px 6px 1.5px 0; vertical-align: top; }
+    .hdr-table td.lbl { width: 125px; }
+    .mcu-table { width: 100%; border-collapse: collapse; margin: 12px 0 14px; font-size: 10px; }
+    .mcu-table th, .mcu-table td { border: 1px solid #222; padding: 6px 5px; text-align: center; vertical-align: middle; }
+    .mcu-table th { background: #f3f4f6; font-weight: 700; }
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
   </style>
 </head>
 <body>
   <div class="kop">
     <div>
-      <div class="kop-title">PT BAGONG DEKAKA MAKMUR</div>
-      <div class="kop-sub">Quality, Safety, Health &amp; Environment (QSHE) &amp; Human Capital</div>
+      <div class="kop-title">PT. BAGONG DEKAKA MAKMUR</div>
+      <div class="kop-sub">Quality, Safety, Health &amp; Environment (QSHE)</div>
     </div>
-    <div style="text-align:right;font-size:10.5px;">
-      <div>Tanggal: ${esc(tglSurat)}</div>
-    </div>
+    <div style="font-size:10px;color:#444;">www.bagongbis.com</div>
   </div>
 
-  <div class="title">Surat Pengantar Medical Check Up (MCU)</div>
-  <div class="sub-no">Nomor: <b>${esc(noSurat)}</b></div>
-
-  <p style="margin:0 0 10px;">
-    Kepada Yth.<br/>
-    <b>Pimpinan / Tim Medis ${esc(item.faskes_tujuan)}</b><br/>
-    Di Tempat
-  </p>
-
-  <p style="margin:0 0 8px;">Dengan hormat,<br/>${esc(item.paragraf_pendukung || DEFAULT_PARAGRAF_MCU)}</p>
-
-  <table class="meta-table">
-    <tr><td class="lbl">Jenis MCU</td><td>: <b>${esc(jenisLabel)}</b></td></tr>
-    <tr><td class="lbl">Nama Lengkap</td><td>: <b>${esc(item.nama)}</b> ${item.is_calon_karyawan ? '(Calon Karyawan)' : ''}</td></tr>
-    <tr><td class="lbl">${item.nik_karyawan ? 'NIK Karyawan' : 'NIK KTP'}</td><td>: ${esc(item.nik_karyawan || item.nik_ktp)}</td></tr>
-    ${item.nik_karyawan && item.nik_ktp ? `<tr><td class="lbl">NIK KTP</td><td>: ${esc(item.nik_ktp)}</td></tr>` : ''}
-    <tr><td class="lbl">Jenis Kelamin / Usia</td><td>: ${esc(item.jenis_kelamin || '-')} / ${item.usia != null ? `${item.usia} tahun` : '-'}</td></tr>
-    <tr><td class="lbl">Jabatan / Posisi</td><td>: ${esc(item.jabatan || '-')}</td></tr>
-    <tr><td class="lbl">Departemen / Site</td><td>: ${esc(item.departemen || '-')} / ${esc(item.site)}</td></tr>
-    <tr><td class="lbl">Tanggal Rencana MCU</td><td>: <b>${esc(fmtTanggal(item.tanggal_rencana))}</b></td></tr>
+  <table class="hdr-table">
+    <tr><td class="lbl">Nomor</td><td>: <b>${esc(noSurat)}</b></td></tr>
+    <tr><td class="lbl">Tempat / Tanggal</td><td>: Kepanjen, ${esc(tglSurat)}</td></tr>
+    <tr><td class="lbl">Perihal</td><td>: Permohonan <i>Medical Check Up</i> Karyawan (${esc(jenisShort)})</td></tr>
   </table>
 
-  <div class="box">
-    <div style="font-weight:800;margin-bottom:4px;">Paket / Item Pemeriksaan yang Dimohonkan:</div>
-    <ul style="margin:4px 0 0 18px;padding:0;">${paketHtml}</ul>
+  <div style="margin-bottom:12px;">
+    Kepada Yth,<br/>
+    <b>${esc(item.faskes_tujuan)}</b>
   </div>
 
-  ${item.catatan_pic ? `<p style="font-size:10.5px;color:#444;"><b>Catatan:</b> ${esc(item.catatan_pic)}</p>` : ''}
+  <p style="margin:0 0 6px;">Dengan Hormat,</p>
+  <p style="margin:0 0 8px;">${esc(item.paragraf_pendukung || DEFAULT_PARAGRAF_MCU)}</p>
 
-  <div class="sign-grid">
-    <div>
-      <div>Diajukan oleh (PIC),</div>
-      <div class="sign-space">[Diajukan]</div>
-      <div><b>${esc(item.created_by_name || 'PIC Site')}</b></div>
-    </div>
-    <div>
-      <div>Disetujui oleh (HC),</div>
-      <div class="sign-space">${item.hc_status === 'DISETUJUI' ? '[Disetujui HC]' : '-'}</div>
-      <div><b>${esc(item.hc_by_name || 'Human Capital')}</b></div>
-    </div>
-    <div>
-      <div>Disetujui oleh (QSHE Medic),</div>
-      <div class="sign-space">${item.qshe_status === 'DISETUJUI' ? '[Disetujui QSHE]' : '-'}</div>
-      <div><b>${esc(item.qshe_by_name || 'QSHE Medic')}</b></div>
-    </div>
+  <table class="mcu-table">
+    <thead>
+      <tr>
+        <th style="width:28px;">No</th>
+        <th>Tanggal MCU</th>
+        <th>NIK</th>
+        <th>Nama</th>
+        <th>Usia</th>
+        <th>Jenis Kelamin</th>
+        <th>Posisi</th>
+        <th>Jenis Pemeriksaan</th>
+        <th>Tambahan Pemeriksaan</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>${esc(fmtTanggal(item.tanggal_rencana))}</td>
+        <td>${esc(item.nik_karyawan || item.nik_ktp)}</td>
+        <td><b>${esc(item.nama)}</b>${item.is_calon_karyawan ? '<br/>(Calon Karyawan)' : ''}</td>
+        <td>${item.usia != null ? esc(String(item.usia)) : '-'}</td>
+        <td>${esc(item.jenis_kelamin || '-')}</td>
+        <td>${esc(item.jabatan || '-')}</td>
+        <td>${esc(paketText)}</td>
+        <td>${esc(item.catatan_pic || '-')}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p style="margin:0 0 18px;">
+    Demikian surat pengantar ini kami sampaikan. Atas perhatian dan kerjasamanya kami ucapkan terima kasih.
+  </p>
+
+  <div style="margin-top:16px;">
+    <div>Kepanjen, ${esc(tglSurat)}</div>
+    <div>Hormat Kami,</div>
+    ${qrImgHtml}
+    <div style="font-style:italic;">${esc(item.qshe_by_name ? `QSHE Medic (${item.qshe_by_name})` : 'QSHE Medic Head Office')}</div>
+    <div style="font-weight:800;">PT. Bagong Dekaka Makmur</div>
   </div>
 </body>
 </html>`;
@@ -504,14 +498,23 @@ export default function SuratPengantarPage() {
     }
   };
 
-  const handlePrint = (item: SuratPengantarItem) => {
+  const handlePrint = async (item: SuratPengantarItem) => {
+    let qrDataUrl = '';
+    if (item.verify_sig) {
+      const verifyUrl = `${window.location.origin}/verifikasi-surat?id=${encodeURIComponent(item.id)}&sig=${encodeURIComponent(item.verify_sig)}`;
+      try {
+        qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 160, margin: 1 });
+      } catch {
+        qrDataUrl = '';
+      }
+    }
     const win = window.open('', '_blank', 'width=1024,height=760');
     if (!win) {
       setMsg({ kind: 'err', text: 'Popup diblokir browser. Izinkan popup untuk mencetak surat.' });
       return;
     }
     win.document.open();
-    win.document.write(buildPrintHtml(item));
+    win.document.write(buildPrintHtml(item, qrDataUrl));
     win.document.close();
     win.focus();
     setTimeout(() => win.print(), 250);
@@ -928,7 +931,7 @@ export default function SuratPengantarPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handlePrint(item)}
+                              onClick={() => void handlePrint(item)}
                               style={{ height: 30, fontSize: 11 }}
                             >
                               <Printer size={13} className="mr-1" /> Cetak Surat
