@@ -79,7 +79,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'ID dan role wajib diisi' }, { status: 400 });
     }
 
-    const validRoles = ['superuser', 'administrator', 'manager', 'pic', 'employee', 'disabled'];
+    const validRoles = ['superuser', 'administrator', 'manager', 'hc', 'pic', 'employee', 'disabled'];
     if (!validRoles.includes(role)) {
       return NextResponse.json({ error: 'Role tidak valid' }, { status: 400 });
     }

@@ -894,7 +894,7 @@ export default function ReviewMCU() {
                 egfrEstimate={zonasiEgfrEstimate}
               />
 
-              <motion.div {...buttonTap} className="mt-3">
+              <motion.div {...buttonTap} className="mt-3 flex flex-col gap-2">
                 <Button
                   onClick={handleSave}
                   disabled={store.saving}
@@ -908,6 +908,39 @@ export default function ReviewMCU() {
                   )}
                   Simpan Data
                 </Button>
+                {(triggers.length > 0 || (zonasi && zonasi !== 'Hijau' && zonasi !== 'Belum Lengkap')) && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const fd = store.formData;
+                      const namaVal = (fd.nama || store.employee?.nama || '').trim();
+                      const siteVal = (fd.site || store.employee?.site || 'HEAD OFFICE').trim();
+                      const nikKar = (fd.nikKaryawan || store.employee?.nikKaryawan || '').trim();
+                      const nikKtp = (fd.nationalId || store.employee?.nationalId || '').trim();
+                      store.setSuratPengantarDraft({
+                        jenis_pengantar: 'FOLLOW_UP',
+                        is_calon_karyawan: !nikKar || /batch/i.test(siteVal),
+                        nik_karyawan: nikKar,
+                        nik_ktp: nikKtp,
+                        nama: namaVal,
+                        jenis_kelamin: fd.gender || store.employee?.gender || '',
+                        usia: fd.usia || store.employee?.usia || '',
+                        jabatan: fd.jabatan || store.employee?.jabatan || '',
+                        departemen: fd.department || store.employee?.department || '',
+                        site: siteVal,
+                        tgl_mcu: fd.tglMCU || '',
+                        faskes_tujuan: fd.tempatMCU || '',
+                        parameter_abnormal: triggers.map((t) => t.replace(/ \(Merah\)| \(Kuning\)/, '')).join(', '),
+                      });
+                      store.setActivePage('data-entry');
+                      store.setActiveDataEntrySidebar('surat-pengantar');
+                    }}
+                    className="w-full h-10 rounded-xl text-xs font-bold border-orange-500/40 text-orange-600 dark:text-orange-400"
+                  >
+                    Ajukan Surat Pengantar Follow Up
+                  </Button>
+                )}
               </motion.div>
             </div>
           </motion.div>

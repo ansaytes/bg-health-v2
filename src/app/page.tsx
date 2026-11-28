@@ -38,6 +38,7 @@ const GiziKerjaDashboard = lazy(() => import('@/components/dashboard/GiziKerjaDa
 const ProgramInspeksiAdminTabs = lazy(() => import('@/components/administrator/ProgramInspeksiAdminTabs'));
 const SaranaKlinikWithChecklist = lazy(() => import('@/components/administrator/SaranaKlinikWithChecklist'));
 const InputJadwalMCU = lazy(() => import('@/components/administrator/InputJadwalMCUModern'));
+const SuratPengantarPage = lazy(() => import('@/components/administrator/SuratPengantarPage'));
 const GangguanTidurPage = lazy(() => import('@/components/administrator/GangguanTidurPage'));
 const InputMentalHealthPage = lazy(() => import('@/components/administrator/InputMentalHealthPage'));
 const InputPsikologiLingkunganPage = lazy(() => import('@/components/administrator/InputPsikologiLingkunganPage'));
@@ -503,6 +504,7 @@ const ADMIN_SIDEBAR: SidebarItem[] = [
 ];
 const DATA_ENTRY_SIDEBAR: SidebarItem[] = [
   { key: 'input-jadwal-mcu', label: 'Input Jadwal MCU', icon: <IconChecklist /> },
+  { key: 'surat-pengantar', label: 'Surat Pengantar MCU', icon: <IconChecklist /> },
   { key: 'gangguan-tidur', label: 'Gangguan Tidur', icon: <IconTidur /> },
   { key: 'kesehatan-mental', label: 'Kesehatan Mental', icon: <IconBrain /> },
   { key: 'psikologi-lingkungan', label: 'Psikologi Lingkungan Kerja', icon: <IconPsikologiLingkungan /> },
@@ -549,6 +551,9 @@ function DataEntryContent() {
   }
   if (activeDataEntrySidebar === 'persetujuan-inspeksi') {
     return <div className="admin-form-container" style={{ overflow: 'hidden' }}><InspeksiApproval /></div>;
+  }
+  if (activeDataEntrySidebar === 'surat-pengantar') {
+    return <SuratPengantarPage />;
   }
   return activeDataEntrySidebar === 'input-jadwal-mcu'
     ? <div className="admin-form-container"><InputJadwalMCU /></div>
@@ -1365,11 +1370,11 @@ export default function Home() {
       store.setActivePage('home');
       return;
     }
-    if (store.activePage === 'dashboard' && !['pic', 'manager', 'administrator', 'superuser'].includes(role || '')) {
+    if (store.activePage === 'dashboard' && !['pic', 'hc', 'manager', 'administrator', 'superuser'].includes(role || '')) {
       store.setActivePage('home');
       return;
     }
-    if (store.activePage === 'data-entry' && !['employee', 'pic', 'manager', 'administrator', 'superuser'].includes(role || '')) {
+    if (store.activePage === 'data-entry' && !['employee', 'pic', 'hc', 'manager', 'administrator', 'superuser'].includes(role || '')) {
       store.setActivePage('home');
     }
   }, [authLoading, isLoggedIn, role, store]);
@@ -1379,9 +1384,9 @@ export default function Home() {
   const resetSidebar = useCallback((page: string) => {
     if (page === 'home') setActiveHomeSidebar('semua-feed');
     else if (page === 'dashboard') setActiveDashSidebar('statistik');
-    else if (page === 'data-entry') setActiveDataEntrySidebar('input-jadwal-mcu');
+    else if (page === 'data-entry') setActiveDataEntrySidebar(role === 'hc' ? 'surat-pengantar' : 'input-jadwal-mcu');
     else if (page === 'administrator') setActiveAdminSidebar('layanan-kuratif-admin');
-  }, [setActiveHomeSidebar, setActiveDashSidebar, setActiveDataEntrySidebar, setActiveAdminSidebar]);
+  }, [role, setActiveHomeSidebar, setActiveDashSidebar, setActiveDataEntrySidebar, setActiveAdminSidebar]);
 
   useEffect(() => {
     resetSidebar(activePage);
@@ -1392,8 +1397,8 @@ export default function Home() {
     if (!isLoggedIn) return false;
     if (role === 'employee') return item.key === 'home' || item.key === 'data-entry';
     if (item.key === 'administrator') return ['administrator', 'superuser'].includes(role || '');
-    if (item.key === 'dashboard') return ['pic', 'manager', 'administrator', 'superuser'].includes(role || '');
-    if (item.key === 'data-entry') return ['employee', 'pic', 'manager', 'administrator', 'superuser'].includes(role || '');
+    if (item.key === 'dashboard') return ['pic', 'hc', 'manager', 'administrator', 'superuser'].includes(role || '');
+    if (item.key === 'data-entry') return ['employee', 'pic', 'hc', 'manager', 'administrator', 'superuser'].includes(role || '');
     return true;
   });
 
@@ -1406,6 +1411,7 @@ export default function Home() {
     if (activePage === 'data-entry') {
       return DATA_ENTRY_SIDEBAR.filter((item) => {
         if (item.approverOnly && !['manager', 'superuser'].includes(role || '')) return false;
+        if (item.key === 'surat-pengantar' && role === 'employee') return false;
         return true;
       });
     }
@@ -1431,8 +1437,8 @@ export default function Home() {
     if (!isLoggedIn && tab !== 'home') return;
     if (role === 'employee' && !['home', 'data-entry'].includes(tab)) return;
     if (tab === 'administrator' && !['administrator', 'superuser'].includes(role || '')) return;
-    if (tab === 'dashboard' && !['pic', 'manager', 'administrator', 'superuser'].includes(role || '')) return;
-    if (tab === 'data-entry' && !['employee', 'pic', 'manager', 'administrator', 'superuser'].includes(role || '')) return;
+    if (tab === 'dashboard' && !['pic', 'hc', 'manager', 'administrator', 'superuser'].includes(role || '')) return;
+    if (tab === 'data-entry' && !['employee', 'pic', 'hc', 'manager', 'administrator', 'superuser'].includes(role || '')) return;
     store.setActivePage(tab);
     setMobileOpen(false);
   };
@@ -1466,9 +1472,10 @@ export default function Home() {
   const displayName = profile?.full_name || profile?.username || 'User';
   const roleLabel = profile?.role === 'superuser' ? 'Superuser'
     : profile?.role === 'administrator' ? 'QSHE Medic'
-      : profile?.role === 'pic' ? 'PIC Site'
-        : profile?.role === 'employee' ? 'Employee'
-          : profile?.role === 'manager' ? 'Manager' : 'Akun dinonaktifkan';
+      : profile?.role === 'hc' ? 'HC (Human Capital)'
+        : profile?.role === 'pic' ? 'PIC Site'
+          : profile?.role === 'employee' ? 'Employee'
+            : profile?.role === 'manager' ? 'Manager' : 'Akun dinonaktifkan';
 
   return (
     <div className="app-shell">

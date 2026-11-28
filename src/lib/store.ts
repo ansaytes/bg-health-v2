@@ -4,11 +4,12 @@ import { MCU_FIELDS, parseUlToParams } from './mcu-fields';
 import { getMissingZonasiInputs } from './zonasi-engine';
 import { applyMCUCalculations, buildAutomaticFollowUpRecommendations, suggestRekQSHE } from './mcu-calculations';
 import { AUTO_INTERPRETATION_FIELDS } from './clinical-classification';
+import type { SuratPengantarDraft } from './surat-pengantar';
 
 export type PageTab = 'home' | 'dashboard' | 'data-entry' | 'administrator';
 export type DashSidebar = 'statistik' | 'monitoring' | 'tindak-lanjut' | 'kunjungan' | 'layanan-kuratif' | 'inventory-dashboard' | 'hearing-dashboard' | 'ergonomi-dashboard' | 'mental-health-dashboard' | 'pemetaan-psikologis' | 'higiene-industri' | 'persetujuan-ergonomi' | 'prokawan-dashboard' | 'spip' | 'inspeksi-dashboard' | 'gizi-kerja-dashboard' | 'sanitasi-dashboard';
 export type AdminSidebar = 'lagging-indicator' | 'review-mcu' | 'input-jadwal-mcu' | 'kunjungan-admin' | 'health-campaign' | 'kelola-pengguna' | 'hearing-conservation' | 'ergonomi' | 'layanan-kuratif-admin' | 'higiene-industri-admin' | 'hra-admin' | 'gizi-kerja-admin' | 'pak-register' | 'prokawan-admin' | 'karyawan-sakit' | 'sarana-klinik' | 'inspeksi-sanitasi' | 'checklist-fasilitas' | 'program-inspeksi' | 'pica' | 'checklist-p3k' | 'checklist-ambulans' | 'checklist-ergonomi' | 'pengaturan';
-export type DataEntrySidebar = 'gangguan-tidur' | 'kesehatan-mental' | 'psikologi-lingkungan' | 'input-jadwal-mcu' | 'persetujuan-ergonomi' | 'persetujuan-inspeksi';
+export type DataEntrySidebar = 'gangguan-tidur' | 'kesehatan-mental' | 'psikologi-lingkungan' | 'input-jadwal-mcu' | 'surat-pengantar' | 'persetujuan-ergonomi' | 'persetujuan-inspeksi';
 export type HomeSidebar = 'semua-feed' | 'health-campaign' | 'health-talk' | 'podcast' | 'news';
 export type ReviewStep = 'search' | 'ocr' | 'form';
 
@@ -121,6 +122,10 @@ interface MCUStore {
   // Toast
   showToast: (message: string, type: 'success' | 'error' | 'info') => void;
 
+  // Draft pengajuan surat pengantar (dikirim dari ReviewMCU ke SuratPengantarPage)
+  suratPengantarDraft: SuratPengantarDraft | null;
+  setSuratPengantarDraft: (draft: SuratPengantarDraft | null) => void;
+
   // Auto-calc
   runAutoCalcs: () => void;
 
@@ -231,6 +236,9 @@ export const useMCUStore = create<MCUStore>((set, get) => ({
     else if (type === 'error') toast.error(message);
     else toast.info(message);
   },
+
+  suratPengantarDraft: null,
+  setSuratPengantarDraft: (draft) => set({ suratPengantarDraft: draft }),
 
   runAutoCalcs: () => {
     const currentState = get();

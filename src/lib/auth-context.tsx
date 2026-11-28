@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { supabase } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
-export type UserRole = 'superuser' | 'administrator' | 'manager' | 'pic' | 'employee' | 'disabled';
+export type UserRole = 'superuser' | 'administrator' | 'manager' | 'hc' | 'pic' | 'employee' | 'disabled';
 
 export interface UserProfile {
   id: string;
@@ -27,6 +27,7 @@ interface AuthContextValue {
   isAdmin: boolean;
   isSuperuser: boolean;
   isManager: boolean;
+  isHc: boolean;
   canApproveErgo: boolean;
   refreshProfile: () => Promise<void>;
 }
@@ -40,6 +41,7 @@ const AuthContext = createContext<AuthContextValue>({
   isAdmin: false,
   isSuperuser: false,
   isManager: false,
+  isHc: false,
   canApproveErgo: false,
   refreshProfile: async () => {},
 });
@@ -96,6 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAdmin = role === 'superuser' || role === 'administrator' || role === 'pic';
   const isSuperuser = role === 'superuser';
   const isManager = role === 'manager';
+  const isHc = role === 'hc';
   // Hanya Manager (QSHE Manager / PJO) dan superuser yang dapat menyetujui survei ergonomi
   const canApproveErgo = role === 'superuser' || role === 'manager';
 
@@ -150,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, session, profile, role, loading, isAdmin, isSuperuser, isManager, canApproveErgo, refreshProfile }}
+      value={{ user, session, profile, role, loading, isAdmin, isSuperuser, isManager, isHc, canApproveErgo, refreshProfile }}
     >
       {children}
     </AuthContext.Provider>

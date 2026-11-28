@@ -61,5 +61,5 @@ export function requireServerRole(
 }
 
 export const STAFF_ROLES = ['superuser', 'administrator', 'pic'] as const;
-export const READ_ROLES = ['superuser', 'administrator', 'pic', 'manager'] as const;
+export const READ_ROLES = ['superuser', 'administrator', 'pic', 'manager', 'hc'] as const;
 export const SYSTEM_ROLES = ['superuser'] as const;

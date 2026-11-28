@@ -35,6 +35,7 @@ const ROLE_STYLES: Record<string, { bg: string; color: string }> = {
   superuser: { bg: 'rgba(239,68,68,0.12)', color: '#ef4444' },
   administrator: { bg: 'rgba(255,77,0,0.12)', color: '#ff4d00' },
   manager: { bg: 'rgba(139,92,246,0.12)', color: '#7c3aed' },
+  hc: { bg: 'rgba(14,165,233,0.12)', color: '#0284c7' },
   pic: { bg: 'rgba(0,184,148,0.12)', color: '#00a884' },
   employee: { bg: 'rgba(59,130,246,0.12)', color: '#2563eb' },
   disabled: { bg: 'var(--muted)', color: 'var(--muted-foreground)' },
@@ -43,6 +44,7 @@ const ROLE_STYLES: Record<string, { bg: string; color: string }> = {
 const ROLE_OPTIONS = [
   { value: 'employee', label: 'Employee' },
   { value: 'pic', label: 'PIC Site' },
+  { value: 'hc', label: 'HC (Human Capital)' },
   { value: 'manager', label: 'Manager (QSHE)' },
   { value: 'administrator', label: 'QSHE Medic' },
   { value: 'superuser', label: 'Superuser' },
