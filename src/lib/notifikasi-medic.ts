@@ -158,8 +158,12 @@ export function perluMunculMcu(sisaHari: number): boolean {
   return AMBANG.mcuSebelum.includes(sisaHari);
 }
 
-/** Urutan tampil: kritis dulu, lalu yang paling mendesak. */
+/** Urutan tampil: kritis dulu, lalu yang paling mendesak; ProKawan selalu paling bawah. */
 export function urutkanNotifikasi(a: Notifikasi, b: Notifikasi): number {
+  const aPro = a.jenis === 'kontrol-prokawan' ? 1 : 0;
+  const bPro = b.jenis === 'kontrol-prokawan' ? 1 : 0;
+  if (aPro !== bPro) return aPro - bPro;
+
   const bobot: Record<PrioritasNotifikasi, number> = { kritis: 0, penting: 1, informasi: 2 };
   if (bobot[a.prioritas] !== bobot[b.prioritas]) return bobot[a.prioritas] - bobot[b.prioritas];
   const sa = a.sisaHari ?? 9999;

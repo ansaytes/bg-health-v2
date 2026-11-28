@@ -228,8 +228,7 @@ export default function NotificationBell({ isSuperuser, canMedic = false }: {
     });
   };
 
-  // Kelompokkan per kategori. Urutan kategori mengikuti urutan JENIS_META
-  // sehingga konsisten; di dalam kelompok, urutan dari server (kritis dulu).
+  // Kelompokkan per kategori. ProKawan selalu ditempatkan di paling bawah.
   const grup = useMemo(() => {
     const map = new Map<JenisNotifikasi, Notifikasi[]>();
     for (const n of medic) {
@@ -237,7 +236,11 @@ export default function NotificationBell({ isSuperuser, canMedic = false }: {
       list.push(n);
       map.set(n.jenis, list);
     }
-    return [...map.entries()];
+    return [...map.entries()].sort(([a], [b]) => {
+      if (a === 'kontrol-prokawan' && b !== 'kontrol-prokawan') return 1;
+      if (b === 'kontrol-prokawan' && a !== 'kontrol-prokawan') return -1;
+      return 0;
+    });
   }, [medic]);
 
   if (!canView) return null;

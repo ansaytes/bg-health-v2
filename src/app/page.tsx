@@ -503,8 +503,8 @@ const ADMIN_SIDEBAR: SidebarItem[] = [
   { key: 'pengaturan', label: 'Pengaturan', icon: <IconSetting />, superuserOnly: true },
 ];
 const DATA_ENTRY_SIDEBAR: SidebarItem[] = [
-  { key: 'input-jadwal-mcu', label: 'Input Jadwal MCU', icon: <IconChecklist /> },
   { key: 'surat-pengantar', label: 'Surat Pengantar MCU', icon: <IconChecklist /> },
+  { key: 'input-jadwal-mcu', label: 'Input Jadwal MCU', icon: <IconChecklist /> },
   { key: 'gangguan-tidur', label: 'Gangguan Tidur', icon: <IconTidur /> },
   { key: 'kesehatan-mental', label: 'Kesehatan Mental', icon: <IconBrain /> },
   { key: 'psikologi-lingkungan', label: 'Psikologi Lingkungan Kerja', icon: <IconPsikologiLingkungan /> },
@@ -1384,7 +1384,7 @@ export default function Home() {
   const resetSidebar = useCallback((page: string) => {
     if (page === 'home') setActiveHomeSidebar('semua-feed');
     else if (page === 'dashboard') setActiveDashSidebar('statistik');
-    else if (page === 'data-entry') setActiveDataEntrySidebar(role === 'hc' ? 'surat-pengantar' : 'input-jadwal-mcu');
+    else if (page === 'data-entry') setActiveDataEntrySidebar(role === 'employee' ? 'input-jadwal-mcu' : 'surat-pengantar');
     else if (page === 'administrator') setActiveAdminSidebar('layanan-kuratif-admin');
   }, [role, setActiveHomeSidebar, setActiveDashSidebar, setActiveDataEntrySidebar, setActiveAdminSidebar]);
 

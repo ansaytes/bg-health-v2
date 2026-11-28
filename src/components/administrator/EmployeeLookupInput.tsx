@@ -365,164 +365,93 @@ export default function EmployeeLookupInput({
       {showSuggestions && suggestions.length > 0 && (
         <div className="emp-suggestions" style={{
           position: 'absolute',
-          top: 'calc(100% + 6px)',
+          top: 'calc(100% + 4px)',
           left: 0,
           right: 0,
-          background: '#ffffff',
-          border: '1px solid rgba(0, 0, 0, 0.08)',
-          borderRadius: 12,
-          boxShadow: '0 12px 28px rgba(0,0,0,0.12), 0 4px 10px rgba(0,0,0,0.06)',
+          background: 'var(--popover)',
+          border: '1px solid var(--border)',
+          borderRadius: 10,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.14)',
           zIndex: 1000,
-          maxHeight: 360,
+          maxHeight: 320,
           overflowY: 'auto',
-          padding: 6,
+          padding: 4,
           fontFamily: 'inherit',
         }}>
           <div style={{
-            padding: '6px 10px 8px',
+            padding: '5px 10px 6px',
             fontSize: 10,
-            fontWeight: 700,
-            color: '#888',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-            borderBottom: '1px solid rgba(0,0,0,0.06)',
+            fontWeight: 600,
+            color: 'var(--muted-foreground)',
+            borderBottom: '1px solid var(--border)',
             marginBottom: 4,
+            display: 'flex',
+            justifyContent: 'space-between',
           }}>
-            {suggestions.length} karyawan ditemukan
+            <span>Hasil pencarian karyawan</span>
+            <span>{suggestions.length} ditemukan</span>
           </div>
-          {suggestions.map((emp, idx) => (
-            <div
-              key={`${emp.nik}-${idx}`}
-              onClick={() => handleSelectSuggestion(emp)}
-              onMouseEnter={() => setActiveSuggestion(idx)}
-              style={{
-                padding: '10px 12px',
-                cursor: 'pointer',
-                background: idx === activeSuggestion ? 'rgba(255,77,0,0.08)' : 'transparent',
-                borderRadius: 8,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                transition: 'background 0.12s, transform 0.12s',
-                transform: idx === activeSuggestion ? 'translateX(2px)' : 'none',
-              }}
-            >
-              <div style={{
-                width: 36,
-                height: 36,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #ff4d00 0%, #ff6b2b 50%, #ff8c42 100%)',
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 13,
-                fontWeight: 700,
-                flexShrink: 0,
-                boxShadow: '0 2px 6px rgba(255,77,0,0.25)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.3px',
-              }}>
-                {(emp.nama || '?').charAt(0).toUpperCase()}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: '#1a1a1a',
-                  lineHeight: 1.3,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  fontFamily: 'inherit',
-                }}>
-                  {emp.nama || '(Tanpa nama)'}
+          {suggestions.map((emp, idx) => {
+            const isActive = idx === activeSuggestion;
+            return (
+              <div
+                key={`${emp.nik}-${idx}`}
+                onClick={() => handleSelectSuggestion(emp)}
+                onMouseEnter={() => setActiveSuggestion(idx)}
+                style={{
+                  padding: '8px 10px',
+                  cursor: 'pointer',
+                  background: isActive ? 'var(--accent)' : 'transparent',
+                  borderLeft: isActive ? '2px solid #ff4d00' : '2px solid transparent',
+                  borderRadius: 6,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 3,
+                  transition: 'background 0.1s ease',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <span style={{
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    color: 'var(--foreground)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {emp.nama || '(Tanpa nama)'}
+                  </span>
+                  {emp.nik && (
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: isActive ? '#ff4d00' : 'var(--foreground)',
+                      background: 'var(--muted)',
+                      padding: '1px 6px',
+                      borderRadius: 4,
+                      flexShrink: 0,
+                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                    }}>
+                      {emp.nik}
+                    </span>
+                  )}
                 </div>
                 <div style={{
                   fontSize: 10.5,
-                  marginTop: 4,
+                  color: 'var(--muted-foreground)',
                   display: 'flex',
-                  gap: 6,
                   flexWrap: 'wrap',
-                  alignItems: 'center',
-                  fontFamily: 'inherit',
+                  gap: '2px 10px',
+                  lineHeight: 1.35,
                 }}>
-                  {emp.job_position && (
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 3,
-                      background: 'rgba(52, 152, 219, 0.08)',
-                      color: '#2980b9',
-                      border: '1px solid rgba(52, 152, 219, 0.2)',
-                      padding: '1px 6px',
-                      borderRadius: 4,
-                      fontWeight: 500,
-                    }}>
-                      <span style={{ fontSize: 9, opacity: 0.7, textTransform: 'uppercase' }}>Jabatan:</span> {emp.job_position}
-                    </span>
-                  )}
-                  {emp.department && (
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 3,
-                      background: 'rgba(155, 89, 182, 0.08)',
-                      color: '#8e44ad',
-                      border: '1px solid rgba(155, 89, 182, 0.2)',
-                      padding: '1px 6px',
-                      borderRadius: 4,
-                      fontWeight: 500,
-                    }}>
-                      <span style={{ fontSize: 9, opacity: 0.7, textTransform: 'uppercase' }}>Dept:</span> {emp.department}
-                    </span>
-                  )}
-                  {emp.site_name && (
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 3,
-                      background: 'rgba(46, 204, 113, 0.08)',
-                      color: '#27ae60',
-                      border: '1px solid rgba(46, 204, 113, 0.2)',
-                      padding: '1px 6px',
-                      borderRadius: 4,
-                      fontWeight: 500,
-                    }}>
-                      <span style={{ fontSize: 9, opacity: 0.7, textTransform: 'uppercase' }}>Site:</span> {emp.site_name}
-                    </span>
-                  )}
-                  {emp.national_id && (
-                    <span style={{
-                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                      fontSize: 10,
-                      color: '#666',
-                      background: 'rgba(0,0,0,0.04)',
-                      padding: '1px 5px',
-                      borderRadius: 4,
-                    }}>
-                      KTP: {emp.national_id}
-                    </span>
-                  )}
+                  {emp.job_position && <span>Jabatan: <b style={{ color: 'var(--foreground)', fontWeight: 600 }}>{emp.job_position}</b></span>}
+                  {emp.department && <span>Dept: <b style={{ color: 'var(--foreground)', fontWeight: 600 }}>{emp.department}</b></span>}
+                  {emp.site_name && <span>Site: <b style={{ color: 'var(--foreground)', fontWeight: 600 }}>{emp.site_name}</b></span>}
+                  {emp.national_id && <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }}>KTP: {emp.national_id}</span>}
                 </div>
               </div>
-              {emp.nik && (
-                <div style={{
-                  fontSize: 11,
-                  color: '#ff4d00',
-                  fontWeight: 700,
-                  background: 'rgba(255,77,0,0.1)',
-                  padding: '4px 8px',
-                  borderRadius: 6,
-                  flexShrink: 0,
-                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                  border: '1px solid rgba(255,77,0,0.15)',
-                }}>
-                  {emp.nik}
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

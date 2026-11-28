@@ -804,16 +804,6 @@ export default function SuratPengantarPage() {
             )}
 
             <div>
-              <label className="admin-label">Paragraf Pendukung Surat</label>
-              <textarea
-                className="admin-input"
-                style={{ height: 70, padding: '8px 10px' }}
-                value={paragraf}
-                onChange={(e) => setParagraf(e.target.value)}
-              />
-            </div>
-
-            <div>
               <label className="admin-label">Catatan Pengaju (PIC)</label>
               <input type="text" className="admin-input" value={catatanPic} onChange={(e) => setCatatanPic(e.target.value)} placeholder="Catatan tambahan untuk HC / QSHE Medic (opsional)" />
             </div>

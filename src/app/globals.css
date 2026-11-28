@@ -3382,6 +3382,15 @@ select.admin-input.compact-input {
     flex-wrap: wrap !important;
     order: 5;
   }
+  .notification-dropdown {
+    position: fixed !important;
+    top: 52px !important;
+    left: 10px !important;
+    right: 10px !important;
+    width: auto !important;
+    max-width: calc(100vw - 20px) !important;
+    z-index: 995 !important;
+  }
 }
 
 .mobile-back-to-list-btn {
